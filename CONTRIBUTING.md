@@ -24,6 +24,16 @@ The Kilo Community is [on Discord](https://kilo.ai/discord).
   bun dev
   ```
 
+### Developing the VS Code Extension
+
+Build and launch the extension in an isolated VS Code instance:
+
+```bash
+bun run extension        # Build + launch in dev mode
+```
+
+This auto-detects VS Code on macOS, Linux, and Windows. Override with `--app-path PATH` or `VSCODE_EXEC_PATH`. Use `--insiders` to prefer Insiders, `--workspace PATH` to open a specific folder, or `--clean` to reset cached state.
+
 ### Running against a different directory
 
 By default, `bun dev` runs Kilo CLI in the `packages/opencode` directory. To run it against a different directory or repository:
@@ -69,6 +79,26 @@ kilo --help          # Show all available commands
 kilo serve           # Start headless API server
 kilo web             # Start server + open web interface
 ```
+
+### Testing with a local backend
+
+To point the CLI at a local backend (e.g., a locally running Kilo API server on port 3000), set the `KILO_API_URL` environment variable:
+
+```bash
+KILO_API_URL=http://localhost:3000 bun dev
+```
+
+This redirects all gateway traffic (auth, model listing, provider routing, profile, etc.) to your local server. The default is `https://api.kilo.ai`.
+
+There are also optional overrides for other services:
+
+| Variable                  | Default                          | Purpose                                   |
+| ------------------------- | -------------------------------- | ----------------------------------------- |
+| `KILO_API_URL`            | `https://api.kilo.ai`            | Kilo API (gateway, auth, models, profile) |
+| `KILO_SESSION_INGEST_URL` | `https://ingest.kilosessions.ai` | Session export / cloud sync               |
+| `KILO_MODELS_URL`         | `https://models.dev`             | Model metadata                            |
+
+> **VS Code:** The repo includes a "VSCode - Run Extension (Local Backend)" launch config in `.vscode/launch.json` that sets `KILO_API_URL=http://localhost:3000` automatically.
 
 ### Pull Request Expectations
 

@@ -38,8 +38,8 @@ export const dict = {
   "agentManager.tab.terminal": "Terminal",
   "agentManager.tab.openTerminal": "Open Terminal",
 
-  "agentManager.setup.failed": "Workspace setup failed",
-  "agentManager.setup.settingUp": "Setting up workspace",
+  "agentManager.setup.failed": "Worktree setup failed",
+  "agentManager.setup.settingUp": "Setting up worktree",
   "agentManager.setup.error.git_not_found":
     "Git is not installed or not found in PATH. Please install Git and restart VS Code.",
   "agentManager.setup.error.not_git_repo": "Open a folder that contains a git repository to use worktrees.",
@@ -61,8 +61,9 @@ export const dict = {
   "agentManager.shortcuts.newTab": "New tab",
   "agentManager.shortcuts.closeTab": "Close tab",
   "agentManager.shortcuts.toggleTerminal": "Toggle terminal",
-  "agentManager.shortcuts.focusPanel": "Focus panel",
   "agentManager.shortcuts.openAgentManager": "Open Agent Manager",
+  "agentManager.shortcuts.cycleAgentMode": "Next agent mode",
+  "agentManager.shortcuts.cyclePreviousAgentMode": "Previous agent mode",
   "agentManager.shortcuts.showShortcuts": "Show keyboard shortcuts",
 
   "agentManager.dialog.removeStaleWorktree.title": "Remove Stale Worktree",
@@ -88,10 +89,11 @@ export const dict = {
   "agentManager.dialog.versions": "Versions",
   "agentManager.dialog.versionHint": "{{count}} worktrees will run in parallel",
   "agentManager.dialog.compareModels": "Compare Models",
+  "agentManager.dialog.compareModels.tooltip": "Run agents on different models in parallel to compare results",
   "agentManager.dialog.compareModels.searchModels": "Search models...",
   "agentManager.dialog.compareModels.selectModels": "Select models...",
   "agentManager.dialog.creating": "Creating...",
-  "agentManager.dialog.createWorkspace": "Create Worktree",
+  "agentManager.dialog.createWorktree": "Create Worktree",
   "agentManager.dialog.removeImage": "Remove image",
   "agentManager.dialog.advanced": "Advanced...",
 
