@@ -277,8 +277,16 @@
   border-color: var(--vscode-textLink-foreground, #3794ff);
 }
 
+.feedback-button [data-component="icon"] {
+  --icon-base: currentColor;
+}
+
 .feedback-button:hover [data-slot="icon-svg"] {
   color: var(--vscode-editor-background, #1e1e1e);
+}
+
+.feedback-button:hover [data-component="icon"] {
+  --icon-base: var(--vscode-editor-background, #1e1e1e);
 }
 
 /* Feedback Dialog */
