@@ -2,13 +2,17 @@ import { createOpenRouter } from "@openrouter/ai-sdk-provider"
 import { createAnthropic } from "@ai-sdk/anthropic"
 import { createOpenAI } from "@ai-sdk/openai"
 import { createOpenAICompatible } from "@ai-sdk/openai-compatible"
-import type { Provider as SDK } from "ai"
+import type { LanguageModel, Provider as SDK } from "ai"
 import type { KiloProviderOptions } from "./types.js"
 import { getKiloUrlFromToken, getApiKey } from "./auth/token.js"
 import { buildKiloHeaders, DEFAULT_HEADERS } from "./headers.js"
 import { KILO_API_BASE, ANONYMOUS_API_KEY } from "./api/constants.js"
 
-type AiSdkProvider = "anthropic" | "openai" | "openai-compatible" | "openrouter"
+export type KiloProvider = SDK & {
+  anthropic(modelId: string): LanguageModel
+  openai(modelId: string): LanguageModel
+  openaiCompatible(modelId: string): LanguageModel
+}
 
 /**
  * Create a KiloCode provider instance
@@ -26,7 +30,7 @@ type AiSdkProvider = "anthropic" | "openai" | "openai-compatible" | "openrouter"
  * const model = provider.languageModel("anthropic/claude-sonnet-4")
  * ```
  */
-export function createKilo(options: KiloProviderOptions = {}): SDK {
+export function createKilo(options: KiloProviderOptions = {}): KiloProvider {
   // Get API key from options or environment
   const apiKey = getApiKey(options)
 
@@ -79,19 +83,7 @@ export function createKilo(options: KiloProviderOptions = {}): SDK {
   }
 
   return {
-    languageModel(modelId, aiSdkProvider?: AiSdkProvider) {
-      if (aiSdkProvider === "anthropic") {
-        return createAnthropic(sdkOptions)(modelId)
-      }
-      if (aiSdkProvider === "openai") {
-        return createOpenAI(sdkOptions)(modelId)
-      }
-      if (aiSdkProvider === "openai-compatible") {
-        return createOpenAICompatible({
-          ...sdkOptions,
-          name: "kilo.openai-compatible",
-        })(modelId)
-      }
+    languageModel(modelId) {
       return createOpenRouter(sdkOptions)(modelId)
     },
     textEmbeddingModel(modelId) {
@@ -99,6 +91,18 @@ export function createKilo(options: KiloProviderOptions = {}): SDK {
     },
     imageModel(modelId) {
       return createOpenRouter(sdkOptions).imageModel(modelId)
+    },
+    anthropic(modelId) {
+      return createAnthropic(sdkOptions)(modelId)
+    },
+    openai(modelId) {
+      return createOpenAI(sdkOptions)(modelId)
+    },
+    openaiCompatible(modelId) {
+      return createOpenAICompatible({
+        ...sdkOptions,
+        name: "kilo.openai-compatible",
+      })(modelId)
     },
   }
 }

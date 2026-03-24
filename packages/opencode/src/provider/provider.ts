@@ -30,7 +30,7 @@ import { createOpenAI } from "@ai-sdk/openai"
 import { createOpenAICompatible } from "@ai-sdk/openai-compatible"
 import { createOpenRouter, type LanguageModelV2 } from "@openrouter/ai-sdk-provider"
 import { createOpenaiCompatible as createGitHubCopilotOpenAICompatible } from "./sdk/copilot"
-import { createKilo } from "@kilocode/kilo-gateway" // kilocode_change
+import { createKilo, type KiloProvider } from "@kilocode/kilo-gateway" // kilocode_change
 import { createXai } from "@ai-sdk/xai"
 import { createMistral } from "@ai-sdk/mistral"
 import { createGroq } from "@ai-sdk/groq"
@@ -616,9 +616,18 @@ export namespace Provider {
       return {
         autoload: Object.keys(input.models).length > 0,
         options,
-        async getModel(sdk: any, modelID: string) {
+        async getModel(sdk: KiloProvider, modelID: string) {
           const aiSdkProvider = input.models[modelID]?.ai_sdk_provider
-          return sdk.languageModel(modelID, aiSdkProvider)
+          if (aiSdkProvider === "anthropic") {
+            return sdk.anthropic(modelID)
+          }
+          if (aiSdkProvider === "openai") {
+            return sdk.openai(modelID)
+          }
+          if (aiSdkProvider === "openai-compatible") {
+            return sdk.openaiCompatible(modelID)
+          }
+          return sdk.languageModel(modelID)
         },
       }
     },
