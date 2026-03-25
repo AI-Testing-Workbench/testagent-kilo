@@ -1355,6 +1355,11 @@ export namespace Config {
       const data = parseJsonc(text) ?? {}
       if (data.permission?.bash) return
     }
+    // also check legacy TOML config for bash permission
+    if (hasLegacy) {
+      const toml = await import(pathToFileURL(legacy).href, { with: { type: "toml" } }).catch(() => undefined)
+      if (toml?.default?.permission?.bash) return
+    }
     // existing user without bash permission in any file → write bash:allow to the
     // highest-precedence existing file to preserve their current behavior.
     // if only the legacy TOML file exists, write to config.json (the TOML migration will merge into it)
