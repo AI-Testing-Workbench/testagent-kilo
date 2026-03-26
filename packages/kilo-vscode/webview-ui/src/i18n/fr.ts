@@ -1122,6 +1122,12 @@ export const dict = {
     "Aucun serveur MCP configuré. Modifiez le fichier de configuration opencode pour ajouter des serveurs MCP.",
   "settings.agentBehaviour.workflowsPlaceholder":
     "Les workflows sont gérés via les fichiers de workflow dans votre espace de travail.",
+  "settings.agentBehaviour.workflows.description":
+    "Les workflows sont des commandes slash personnalisées définies dans votre configuration. Tapez /command-name dans le chat pour les invoquer. Les commandes sont configurées dans opencode.json dans la section 'command'.",
+  "settings.agentBehaviour.workflows.empty":
+    "Aucune commande personnalisée configurée. Ajoutez des commandes à opencode.json pour les voir ici.",
+  "settings.agentBehaviour.workflows.detail.description": "Description",
+  "settings.agentBehaviour.workflows.detail.template": "Modèle",
   "settings.agentBehaviour.notImplemented": "Pas encore implémenté.",
   "settings.autoApprove.description":
     "Définissez comment les outils sont autorisés à s'exécuter. La plupart des outils sont définis sur Autoriser par défaut. doom_loop et external_directory sont définis sur Demander par défaut.",

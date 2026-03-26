@@ -61,7 +61,7 @@ export const TaskTool = Tool.define("task", async (ctx) => {
       const agent = await Agent.get(params.subagent_type)
       if (!agent) throw new Error(`Unknown agent type: ${params.subagent_type} is not a valid agent type`)
 
-      const allowsTask = agent.permission.some((rule) => rule.permission === "task" && rule.action === "allow")
+      const allowsTask = agent.permission.some((rule) => rule.permission === "task" && rule.action === "allow") // kilocode_change
 
       const session = await iife(async () => {
         if (params.task_id) {

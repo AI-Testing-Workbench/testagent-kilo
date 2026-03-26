@@ -2063,7 +2063,6 @@ ToolRegistry.register({
                         path={file().relativePath.includes("/") ? getDirectory(file().relativePath) : undefined}
                         changes={{ additions: file().additions, deletions: file().deletions }}
                         animate={reveal()}
-                        soft
                         onClick={
                           data.openFile && file().filePath
                             ? (e: MouseEvent) => {

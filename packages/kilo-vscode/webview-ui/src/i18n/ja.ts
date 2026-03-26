@@ -1099,6 +1099,12 @@ export const dict = {
     "MCPサーバーが設定されていません。opencode設定ファイルを編集してMCPサーバーを追加してください。",
   "settings.agentBehaviour.workflowsPlaceholder":
     "ワークフローはワークスペース内のワークフローファイルを通じて管理されます。",
+  "settings.agentBehaviour.workflows.description":
+    "ワークフローは設定で定義されたカスタムスラッシュコマンドです。チャットで /command-name と入力して呼び出します。コマンドは opencode.json の 'command' セクションで設定します。",
+  "settings.agentBehaviour.workflows.empty":
+    "カスタムコマンドが設定されていません。opencode.json にコマンドを追加するとここに表示されます。",
+  "settings.agentBehaviour.workflows.detail.description": "説明",
+  "settings.agentBehaviour.workflows.detail.template": "テンプレート",
   "settings.agentBehaviour.notImplemented": "まだ実装されていません。",
   "settings.autoApprove.description":
     "ツールの実行許可を定義します。ほとんどのツールはデフォルトで「許可」されます。doom_loop と external_directory はデフォルトで「確認」になります。",

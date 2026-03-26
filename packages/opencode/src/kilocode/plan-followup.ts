@@ -12,7 +12,6 @@ import { LLM } from "@/session/llm"
 import { MessageV2 } from "@/session/message-v2"
 import { Todo } from "@/session/todo"
 import { Log } from "@/util/log"
-import fs from "fs/promises"
 import path from "path"
 
 function toText(item: MessageV2.WithParts): string {
@@ -115,20 +114,20 @@ export namespace PlanFollowup {
   export const ANSWER_NEW_SESSION = "Start new session"
   export const ANSWER_CONTINUE = "Continue here"
 
-  function resolveVariant(input: { value: string | undefined; model: Provider.Model | undefined }) {
-    if (!input.value) return undefined
-    if (!input.model?.variants?.[input.value]) return undefined
-    return input.value
+  function resolveVariant(value: string | undefined, model: Provider.Model | undefined) {
+    if (!value) return undefined
+    if (!model?.variants?.[value]) return undefined
+    return value
   }
 
   async function resolveCodeModel(input: Pick<MessageV2.User, "model" | "variant">) {
     const state =
       Flag.KILO_CLIENT === "cli"
-        ? await fs
-            .readFile(path.join(Global.Path.state, "model.json"), "utf-8")
+        ? await Bun.file(path.join(Global.Path.state, "model.json"))
+            .text()
             .then(
-              (item) =>
-                JSON.parse(item) as {
+              (raw) =>
+                JSON.parse(raw) as {
                   model?: Record<string, MessageV2.User["model"]>
                   variant?: Record<string, string | undefined>
                 },
@@ -142,10 +141,7 @@ export namespace PlanFollowup {
         const key = `${saved.providerID}/${saved.modelID}`
         return {
           model: saved,
-          variant: resolveVariant({
-            value: state?.variant?.[key],
-            model: full,
-          }),
+          variant: resolveVariant(state?.variant?.[key], full),
         }
       }
     }
@@ -156,12 +152,7 @@ export namespace PlanFollowup {
       if (full) {
         return {
           model: agent.model,
-          variant: agent.variant
-            ? resolveVariant({
-                value: agent.variant,
-                model: full,
-              })
-            : undefined,
+          variant: resolveVariant(agent.variant, full),
         }
       }
     }

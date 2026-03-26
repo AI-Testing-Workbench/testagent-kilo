@@ -13,6 +13,7 @@ import { useLanguage } from "../../context/language"
 import type { AgentInfo, SkillInfo } from "../../types/messages"
 import ModeEditView from "./ModeEditView"
 import ModeCreateView from "./ModeCreateView"
+import WorkflowsTab from "./agent-behaviour/WorkflowsTab"
 
 type SubtabId = "agents" | "mcpServers" | "rules" | "workflows" | "skills"
 
@@ -807,7 +808,7 @@ const AgentBehaviourTab: Component = () => {
       case "rules":
         return renderRulesSubtab()
       case "workflows":
-        return <Placeholder text={language.t("settings.agentBehaviour.workflowsPlaceholder")} />
+        return <WorkflowsTab />
       case "skills":
         return renderSkillsSubtab()
       default:

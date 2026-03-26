@@ -14,6 +14,7 @@ export namespace Snapshot {
   const log = Log.create({ service: "snapshot" })
   const hour = 60 * 60 * 1000
   const prune = "7.days"
+  export const MAX_DIFF_SIZE = 256 * 1024 // kilocode_change
 
   export function init() {
     Scheduler.register({
@@ -229,13 +230,22 @@ export namespace Snapshot {
       if (!line) continue
       const [additions, deletions, file] = line.split("\t")
       const isBinaryFile = additions === "-" && deletions === "-"
-      const before = isBinaryFile
+      // kilocode_change start
+      const oversized =
+        !isBinaryFile &&
+        ((parseInt(await $`git --git-dir ${git} cat-file -s ${from}:${file}`.quiet().nothrow().text()) || 0) >
+          MAX_DIFF_SIZE ||
+          (parseInt(await $`git --git-dir ${git} cat-file -s ${to}:${file}`.quiet().nothrow().text()) || 0) >
+            MAX_DIFF_SIZE)
+      const skip = isBinaryFile || oversized
+      // kilocode_change end
+      const before = skip
         ? ""
         : await $`git -c core.autocrlf=false -c core.longpaths=true -c core.symlinks=true --git-dir ${git} --work-tree ${Instance.worktree} show ${from}:${file}`
             .quiet()
             .nothrow()
             .text()
-      const after = isBinaryFile
+      const after = skip
         ? ""
         : await $`git -c core.autocrlf=false -c core.longpaths=true -c core.symlinks=true --git-dir ${git} --work-tree ${Instance.worktree} show ${to}:${file}`
             .quiet()

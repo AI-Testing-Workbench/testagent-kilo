@@ -1110,6 +1110,12 @@ export const dict = {
     "No hay servidores MCP configurados. Edite el archivo de configuración de opencode para añadir servidores MCP.",
   "settings.agentBehaviour.workflowsPlaceholder":
     "Los flujos de trabajo se gestionan mediante archivos de flujo de trabajo en su espacio de trabajo.",
+  "settings.agentBehaviour.workflows.description":
+    "Los flujos de trabajo son comandos de barra personalizados definidos en su configuración. Escriba /command-name en el chat para invocarlos. Los comandos se configuran en opencode.json en la sección 'command'.",
+  "settings.agentBehaviour.workflows.empty":
+    "No hay comandos personalizados configurados. Añada comandos a opencode.json para verlos aquí.",
+  "settings.agentBehaviour.workflows.detail.description": "Descripción",
+  "settings.agentBehaviour.workflows.detail.template": "Plantilla",
   "settings.agentBehaviour.notImplemented": "Aún no implementado.",
   "settings.autoApprove.description":
     "Defina cómo se permite la ejecución de las herramientas. La mayoría de las herramientas tienen como valor predeterminado Permitir. doom_loop y external_directory tienen como valor predeterminado Preguntar.",

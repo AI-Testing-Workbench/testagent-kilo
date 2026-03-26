@@ -1099,6 +1099,12 @@ export const dict = {
   "settings.agentBehaviour.mcpEmpty":
     "Ingen MCP-servere konfigureret. Rediger opencode-konfigurationsfilen for at tilføje MCP-servere.",
   "settings.agentBehaviour.workflowsPlaceholder": "Workflows administreres via workflow-filer i dit arbejdsområde.",
+  "settings.agentBehaviour.workflows.description":
+    "Workflows er brugerdefinerede slash-kommandoer defineret i din konfiguration. Skriv /command-name i chatten for at aktivere dem. Kommandoer konfigureres i opencode.json under sektionen 'command'.",
+  "settings.agentBehaviour.workflows.empty":
+    "Ingen brugerdefinerede kommandoer konfigureret. Tilføj kommandoer til opencode.json for at se dem her.",
+  "settings.agentBehaviour.workflows.detail.description": "Beskrivelse",
+  "settings.agentBehaviour.workflows.detail.template": "Skabelon",
   "settings.agentBehaviour.notImplemented": "Endnu ikke implementeret.",
   "settings.autoApprove.description":
     "Definer, hvordan værktøjer må køre. De fleste værktøjer er som standard indstillet til Tillad. doom_loop og external_directory er som standard indstillet til Spørg.",

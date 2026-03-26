@@ -1104,6 +1104,12 @@ export const dict = {
   "settings.agentBehaviour.mcpEmpty":
     "Nema konfiguriranih MCP servera. Uredite konfiguracijsku datoteku opencode za dodavanje MCP servera.",
   "settings.agentBehaviour.workflowsPlaceholder": "Tokovi rada se upravljaju putem datoteka tokova rada.",
+  "settings.agentBehaviour.workflows.description":
+    "Tokovi rada su prilagođene slash komande definirane u vašoj konfiguraciji. Upišite /command-name u chat da ih pokrenete. Komande se konfiguriraju u opencode.json pod sekcijom 'command'.",
+  "settings.agentBehaviour.workflows.empty":
+    "Nema konfiguriranih prilagođenih komandi. Dodajte komande u opencode.json da ih vidite ovdje.",
+  "settings.agentBehaviour.workflows.detail.description": "Opis",
+  "settings.agentBehaviour.workflows.detail.template": "Predložak",
   "settings.agentBehaviour.notImplemented": "Još nije implementirano.",
   "settings.autoApprove.description":
     "Definišite kako je dozvoljeno pokretanje alata. Većina alata je podrazumijevano na Dozvoli. doom_loop i external_directory su podrazumijevano na Pitaj.",
