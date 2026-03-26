@@ -61,9 +61,13 @@ function createEventSource(getter: () => RpcClient): EventSource & { rebind(): v
   return {
     on: (handler) => {
       handlers.add(handler)
-      unsubs.push(getter().on<Event>("event", handler))
+      const unsub = getter().on<Event>("event", handler)
+      unsubs.push(unsub)
       return () => {
         handlers.delete(handler)
+        unsub()
+        const idx = unsubs.indexOf(unsub)
+        if (idx !== -1) unsubs.splice(idx, 1)
       }
     },
     setWorkspace: (workspaceID) => {
