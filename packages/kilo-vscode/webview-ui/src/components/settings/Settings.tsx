@@ -17,8 +17,7 @@ import DisplayTab from "./DisplayTab"
 import AutocompleteTab from "./AutocompleteTab"
 import NotificationsTab from "./NotificationsTab"
 import ContextTab from "./ContextTab"
-import TerminalTab from "./TerminalTab"
-import PromptsTab from "./PromptsTab"
+
 import ExperimentalTab from "./ExperimentalTab"
 import LanguageTab from "./LanguageTab"
 import AboutKiloCodeTab from "./AboutKiloCodeTab"
@@ -30,13 +29,31 @@ export interface SettingsProps {
   onMigrateClick?: () => void // legacy-migration
 }
 
+const TABS = new Set([
+  "models",
+  "providers",
+  "agentBehaviour",
+  "autoApprove",
+  "browser",
+  "checkpoints",
+  "display",
+  "autocomplete",
+  "notifications",
+  "context",
+  "experimental",
+  "language",
+  "aboutKiloCode",
+])
+
+const validTab = (tab: string | undefined) => (tab && TABS.has(tab) ? tab : "models")
+
 const Settings: Component<SettingsProps> = (props) => {
   const server = useServer()
   const language = useLanguage()
   const vscode = useVSCode()
   const { isDirty, saveConfig, discardConfig } = useConfig()
   const session = useSession()
-  const [active, setActive] = createSignal(props.tab ?? "models")
+  const [active, setActive] = createSignal(validTab(props.tab))
 
   const busyCount = () => Object.values(session.allStatusMap()).filter((s) => s.type === "busy").length
 
@@ -63,7 +80,7 @@ const Settings: Component<SettingsProps> = (props) => {
     on(
       () => props.tab,
       (tab) => {
-        if (tab) setActive(tab)
+        if (tab) setActive(validTab(tab))
       },
     ),
   )
@@ -138,14 +155,7 @@ const Settings: Component<SettingsProps> = (props) => {
             <Icon name="server" />
             <span class="label">{language.t("settings.context.title")}</span>
           </Tabs.Trigger>
-          <Tabs.Trigger value="terminal">
-            <Icon name="console" />
-            <span class="label">{language.t("settings.terminal.title")}</span>
-          </Tabs.Trigger>
-          <Tabs.Trigger value="prompts">
-            <Icon name="comment" />
-            <span class="label">{language.t("settings.prompts.title")}</span>
-          </Tabs.Trigger>
+
           <Tabs.Trigger value="experimental">
             <Icon name="settings-gear" />
             <span class="label">{language.t("settings.experimental.title")}</span>
@@ -200,14 +210,7 @@ const Settings: Component<SettingsProps> = (props) => {
           <h3>{language.t("settings.context.title")}</h3>
           <ContextTab />
         </Tabs.Content>
-        <Tabs.Content value="terminal">
-          <h3>{language.t("settings.terminal.title")}</h3>
-          <TerminalTab />
-        </Tabs.Content>
-        <Tabs.Content value="prompts">
-          <h3>{language.t("settings.prompts.title")}</h3>
-          <PromptsTab />
-        </Tabs.Content>
+
         <Tabs.Content value="experimental">
           <h3>{language.t("settings.experimental.title")}</h3>
           <ExperimentalTab />
