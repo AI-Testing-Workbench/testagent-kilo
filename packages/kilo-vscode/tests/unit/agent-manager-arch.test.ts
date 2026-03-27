@@ -321,13 +321,12 @@ describe("Agent Manager Webview — non-git sessionsLoaded fix", () => {
   /**
    * Regression: when isGitRepo is false, the Kilo server never sends a
    * "sessionsLoaded" message, so the skeleton was stuck forever.
-   * The fix must set sessionsLoaded(true) when receiving a state message
-   * with isGitRepo === false.
+   * The fix must set sessionsLoaded(true) from the state-application path
+   * when isGitRepo === false.
    */
   it("sets sessionsLoaded when agentManager.state arrives with isGitRepo false", () => {
-    // Find the agentManager.state handler block
-    const start = tsx.indexOf('"agentManager.state"')
-    expect(start, "agentManager.state handler must exist").toBeGreaterThan(-1)
+    const start = tsx.indexOf("const applyState =")
+    expect(start, "applyState helper must exist").toBeGreaterThan(-1)
     const snippet = tsx.slice(start, start + 800)
     expect(snippet, "must call setSessionsLoaded in the non-git branch").toContain("setSessionsLoaded")
     expect(snippet, "must check isGitRepo === false before setting sessionsLoaded").toMatch(
