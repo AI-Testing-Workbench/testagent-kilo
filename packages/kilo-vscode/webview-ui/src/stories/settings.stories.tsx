@@ -232,7 +232,7 @@ export const McpEditViewLocal: Story = {
         } as any
       }
     >
-      <div style={{ width: "420px", height: "700px", overflow: "auto" }}>
+      <div style={{ "max-height": "700px", overflow: "auto" }}>
         <McpEditView name="filesystem" onBack={noop} onRemove={noop} />
       </div>
     </StoryProviders>
@@ -255,7 +255,7 @@ export const McpEditViewLocalWithEnv: Story = {
         } as any
       }
     >
-      <div style={{ width: "420px", height: "700px", overflow: "auto" }}>
+      <div style={{ "max-height": "700px", overflow: "auto" }}>
         <McpEditView name="my-mcp" onBack={noop} onRemove={noop} />
       </div>
     </StoryProviders>
@@ -277,7 +277,7 @@ export const McpEditViewRemote: Story = {
         } as any
       }
     >
-      <div style={{ width: "420px", height: "700px", overflow: "auto" }}>
+      <div style={{ "max-height": "700px", overflow: "auto" }}>
         <McpEditView name="remote-mcp" onBack={noop} onRemove={noop} />
       </div>
     </StoryProviders>
