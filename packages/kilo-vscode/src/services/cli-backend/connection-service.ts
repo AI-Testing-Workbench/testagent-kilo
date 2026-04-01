@@ -258,21 +258,38 @@ export class KiloConnectionService {
 
   /**
    * Reject all pending permission requests and questions across every
-   * directory known to any KiloProvider. Must be called before operations
-   * that trigger Instance.disposeAll() (e.g. config save) to prevent
-   * orphaned Promises from freezing sessions.
+   * directory known to any KiloProvider **and** every project the CLI
+   * backend has ever opened. The project list covers worktree sessions
+   * whose provider was disposed (panel/sidebar closed) while the CLI
+   * backend kept running.
+   *
+   * Must be called before operations that trigger Instance.disposeAll()
+   * (e.g. config save) to prevent orphaned Promises from freezing
+   * sessions.
    *
    * Throws if any list/reject call fails so callers can abort the
    * destructive operation.
    */
   async drainPendingPrompts(): Promise<void> {
     if (!this.client) return
+
+    // Collect directories from all mounted providers (root + worktree dirs).
     const dirs = new Set<string>()
     for (const provider of this.directoryProviders) {
       for (const dir of provider()) {
         dirs.add(dir)
       }
     }
+
+    // Also include every project directory the CLI backend knows about.
+    // This covers worktree sessions whose KiloProvider was already disposed.
+    const { data: projects } = await this.client.project.list()
+    if (projects) {
+      for (const p of projects) {
+        dirs.add(p.worktree)
+      }
+    }
+
     for (const dir of dirs) {
       const { data: perms, error: permsErr } = await this.client.permission.list({ directory: dir })
       if (permsErr) throw new Error(`Failed to list permissions for ${dir}: ${String(permsErr)}`)
