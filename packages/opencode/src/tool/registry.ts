@@ -119,7 +119,7 @@ export namespace ToolRegistry {
       CodeSearchTool,
       ...(config.experimental?.codebase_search === true ? [CodebaseSearchTool] : []), // kilocode_change
       SkillTool,
-      ...(config.experimental?.recall === true ? [RecallTool] : []), // kilocode_change
+      RecallTool, // kilocode_change
       ApplyPatchTool,
       ...(Flag.KILO_EXPERIMENTAL_LSP_TOOL ? [LspTool] : []),
       ...(config.experimental?.batch_tool === true ? [BatchTool] : []),
