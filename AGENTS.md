@@ -2,6 +2,12 @@
 
 Kilo CLI is an open source AI coding agent that generates code from natural language, automates tasks, and supports 500+ AI models.
 
+## Project Overview
+
+**testagent** is a project based on [Kilo Code](https://github.com/Kilo-Org/kilocode). It extends Kilo with custom features, integrations, and modifications tailored to specific use cases. testagent tracks upstream Kilo changes and merges them regularly, similar to how Kilo tracks upstream opencode.
+
+The fork chain is: `opencode` → `kilo` → `testagent`
+
 - ALWAYS USE PARALLEL TOOLS WHEN APPLICABLE.
 - The default branch in this repo is `main`.
 - Prefer automation: execute requested actions without confirmation unless blocked by missing info or safety/irreversibility.
@@ -225,3 +231,55 @@ Code in these paths is Kilo Code-specific and does NOT need `kilocode_change` ma
 - Any other path containing `kilocode` in filename or directory name
 
 These paths are entirely Kilo Code additions and won't conflict with upstream.
+
+## testagent Fork Process
+
+testagent is a fork of [Kilo Code](https://github.com/Kilo-Org/kilocode). We regularly merge upstream Kilo changes. The same conflict-minimization principles apply.
+
+### Minimizing Merge Conflicts
+
+1. **Prefer `testagent` directories** - Place testagent-specific code in dedicated directories:
+   - `packages/opencode/src/testagent/` - testagent-specific source code
+   - `packages/opencode/test/testagent/` - testagent-specific tests
+
+2. **Minimize changes to shared files** - Keep modifications to upstream Kilo files as small and isolated as possible.
+
+3. **Use `testagent_change` markers** - When modifying shared Kilo code, mark your changes with `testagent_change` comments so they can be identified during merges.
+   Do not use these markers in files within directories with `testagent` in the name.
+
+4. **Avoid restructuring upstream code** - Don't refactor or reorganize code that comes from Kilo unless absolutely necessary.
+
+### testagent Change Markers
+
+Mark testagent-specific changes in shared Kilo code with `testagent_change` comments.
+
+**Single line:**
+
+```typescript
+const value = 42 // testagent_change
+```
+
+**Multi-line:**
+
+```typescript
+// testagent_change start
+const foo = 1
+const bar = 2
+// testagent_change end
+```
+
+**New files:**
+
+```typescript
+// testagent_change - new file
+```
+
+#### When markers are NOT needed
+
+Code in these paths is testagent-specific and does NOT need `testagent_change` markers:
+
+- `packages/opencode/src/testagent/` - All files in this directory
+- `packages/opencode/test/testagent/` - All test files for testagent
+- Any other path containing `testagent` in filename or directory name
+
+These paths are entirely testagent additions and won't conflict with upstream Kilo.
