@@ -16,6 +16,7 @@ import { SessionCompaction } from "./compaction"
 import { PermissionNext } from "@/permission/next"
 import { Question } from "@/question"
 import { Telemetry } from "@kilocode/kilo-telemetry" // kilocode_change
+import { Flag } from "@/flag/flag" // kilocode_change
 import { SessionNetwork } from "./network"
 
 export namespace SessionProcessor {
@@ -135,6 +136,30 @@ export namespace SessionProcessor {
                   break
 
                 case "tool-call": {
+                  // kilocode_change start
+                  // If tool-input-start was never emitted, this can happen if arguments are unparseable,
+                  // create the tool part now to prevent missing tool results down the line.
+                  if (!toolcalls[value.toolCallId] && !value.providerExecuted) {
+                    log.warn("tool-call without prior tool-input-start", {
+                      toolCallId: value.toolCallId,
+                      toolName: value.toolName,
+                    })
+                    const created = await Session.updatePart({
+                      id: Identifier.ascending("part"),
+                      messageID: input.assistantMessage.id,
+                      sessionID: input.assistantMessage.sessionID,
+                      type: "tool",
+                      tool: value.toolName,
+                      callID: value.toolCallId,
+                      state: {
+                        status: "pending",
+                        input: {},
+                        raw: "",
+                      },
+                    })
+                    toolcalls[value.toolCallId] = created as MessageV2.ToolPart
+                  }
+                  // kilocode_change end
                   const match = toolcalls[value.toolCallId]
                   if (match) {
                     const part = await Session.updatePart({
@@ -425,16 +450,19 @@ export namespace SessionProcessor {
                   SessionStatus.set(input.sessionID, { type: "retry", attempt: 1, message: retry, next: Date.now() })
                   continue
                 }
-                attempt++
-                const delay = SessionRetry.delay(attempt, error.name === "APIError" ? error : undefined)
-                SessionStatus.set(input.sessionID, {
-                  type: "retry",
-                  attempt,
-                  message: retry,
-                  next: Date.now() + delay,
-                })
-                await SessionRetry.sleep(delay, input.abort).catch(() => {})
-                continue
+                if (Flag.KILO_SESSION_RETRY_LIMIT === undefined || attempt < Flag.KILO_SESSION_RETRY_LIMIT) {
+                  // kilocode_change
+                  attempt++
+                  const delay = SessionRetry.delay(attempt, error.name === "APIError" ? error : undefined)
+                  SessionStatus.set(input.sessionID, {
+                    type: "retry",
+                    attempt,
+                    message: retry,
+                    next: Date.now() + delay,
+                  })
+                  await SessionRetry.sleep(delay, input.abort).catch(() => {})
+                  continue
+                }
               }
               input.assistantMessage.error = error
               Bus.publish(Session.Event.Error, {
@@ -475,6 +503,13 @@ export namespace SessionProcessor {
               })
             }
           }
+          // kilocode_change start — guard empty tool-calls (#7756)
+          const empty = input.assistantMessage.finish === "tool-calls" && !p.some((part) => part.type === "tool")
+          if (empty) {
+            log.warn("empty tool-calls", { messageID: input.assistantMessage.id })
+            input.assistantMessage.finish = "stop"
+          }
+          // kilocode_change end
           input.assistantMessage.time.completed = Date.now()
           await Session.updateMessage(input.assistantMessage)
           if (needsCompaction) return "compact"

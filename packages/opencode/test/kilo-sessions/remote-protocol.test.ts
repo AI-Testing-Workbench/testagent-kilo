@@ -17,6 +17,18 @@ describe("RemoteProtocol", () => {
     }
   })
 
+  test("heartbeat with parentSessionId parses", () => {
+    const msg = {
+      type: "heartbeat",
+      sessions: [{ id: "ses_child", status: "busy", title: "Sub task", parentSessionId: "ses_root" }],
+    }
+    const result = RemoteProtocol.Heartbeat.safeParse(msg)
+    expect(result.success).toBe(true)
+    if (result.success) {
+      expect(result.data.sessions[0].parentSessionId).toBe("ses_root")
+    }
+  })
+
   test("valid event parses", () => {
     const msg = {
       type: "event",
@@ -224,5 +236,23 @@ describe("RemoteProtocol", () => {
   test("session info rejects missing fields", () => {
     const result = RemoteProtocol.SessionInfo.safeParse({ id: "x" })
     expect(result.success).toBe(false)
+  })
+
+  test("valid heartbeat_ack parses", () => {
+    const msg = { type: "heartbeat_ack" }
+    const result = RemoteProtocol.HeartbeatAck.safeParse(msg)
+    expect(result.success).toBe(true)
+    if (result.success) {
+      expect(result.data.type).toBe("heartbeat_ack")
+    }
+  })
+
+  test("inbound union picks heartbeat_ack", () => {
+    const msg = { type: "heartbeat_ack" }
+    const result = RemoteProtocol.Inbound.safeParse(msg)
+    expect(result.success).toBe(true)
+    if (result.success) {
+      expect(result.data.type).toBe("heartbeat_ack")
+    }
   })
 })

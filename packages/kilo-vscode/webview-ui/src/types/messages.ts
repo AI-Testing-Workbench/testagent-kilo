@@ -128,6 +128,7 @@ export interface SessionFileDiff {
 // Session info (simplified for webview)
 export interface SessionInfo {
   id: string
+  parentID?: string | null
   title?: string
   createdAt: string
   updatedAt: string
@@ -219,6 +220,7 @@ export interface AgentInfo {
   mode: "subagent" | "primary" | "all"
   native?: boolean
   hidden?: boolean
+  deprecated?: boolean
   color?: string
 }
 
@@ -324,6 +326,8 @@ export interface AgentConfig {
   prompt?: string
   description?: string
   mode?: "subagent" | "primary" | "all"
+  hidden?: boolean
+  disable?: boolean
   temperature?: number
   top_p?: number
   steps?: number
@@ -449,6 +453,7 @@ export interface SendMessageFailedMessage {
   error: string
   text: string
   sessionID?: string
+  draftID?: string
   messageID?: string
   files?: FileAttachment[]
 }
@@ -501,6 +506,7 @@ export interface TodoUpdatedMessage {
 export interface SessionCreatedMessage {
   type: "sessionCreated"
   session: SessionInfo
+  draftID?: string
 }
 
 export interface SessionUpdatedMessage {
@@ -632,7 +638,7 @@ export interface DeviceAuthCancelledMessage {
 
 export interface NavigateMessage {
   type: "navigate"
-  view: "newTask" | "marketplace" | "history" | "profile" | "settings" | "migration" | "subAgentViewer" // legacy-migration: "migration"
+  view: "newTask" | "marketplace" | "history" | "profile" | "settings" | "subAgentViewer"
   tab?: string
 }
 
@@ -717,6 +723,11 @@ export interface ConfigLoadedMessage {
 
 export interface ConfigUpdatedMessage {
   type: "configUpdated"
+  config: Config
+}
+
+export interface GlobalConfigLoadedMessage {
+  type: "globalConfigLoaded"
   config: Config
 }
 
@@ -845,6 +856,11 @@ export interface RecentsLoadedMessage {
   recents: ModelSelection[]
 }
 
+export interface FavoritesLoadedMessage {
+  type: "favoritesLoaded"
+  favorites: ModelSelection[]
+}
+
 export interface BranchInfo {
   name: string
   isLocal: boolean
@@ -961,6 +977,14 @@ export interface AgentManagerLocalStatsMessage {
   stats: LocalGitStats
 }
 
+// Sidebar: Live worktree diff stats (extension → webview)
+export interface WorktreeStatsLoadedMessage {
+  type: "worktreeStatsLoaded"
+  files: number
+  additions: number
+  deletions: number
+}
+
 // Set the model for a session (extension → webview, used during multi-version creation)
 export interface AgentManagerSetSessionModelMessage {
   type: "agentManager.setSessionModel"
@@ -1030,12 +1054,26 @@ export interface MigrationResultItem {
   message?: string
 }
 
+export interface MigrationStateMessage {
+  type: "migrationState"
+  needed: boolean
+  data?: {
+    providers: MigrationProviderInfo[]
+    mcpServers: MigrationMcpServerInfo[]
+    customModes: MigrationCustomModeInfo[]
+    sessions?: string[]
+    defaultModel?: { provider: string; model: string }
+    settings?: LegacySettings
+  }
+}
+
 export interface LegacyMigrationDataMessage {
   type: "legacyMigrationData"
   data: {
     providers: MigrationProviderInfo[]
     mcpServers: MigrationMcpServerInfo[]
     customModes: MigrationCustomModeInfo[]
+    sessions?: string[]
     defaultModel?: { provider: string; model: string }
     settings?: LegacySettings
   }
@@ -1072,6 +1110,7 @@ export interface StartLegacyMigrationMessage {
     providers: string[]
     mcpServers: string[]
     customModes: string[]
+    sessions?: string[]
     defaultModel: boolean
     settings: {
       autoApproval: MigrationAutoApprovalSelections
@@ -1118,6 +1157,10 @@ export interface DiffViewerDiffsMessage {
 export interface DiffViewerLoadingMessage {
   type: "diffViewer.loading"
   loading: boolean
+}
+
+export interface ClearPendingPromptsMessage {
+  type: "clearPendingPrompts"
 }
 
 // ============================================
@@ -1200,6 +1243,15 @@ export interface ProviderActionErrorMessage {
   message: string
 }
 
+export interface CustomProviderModelsFetchedMessage {
+  type: "customProviderModelsFetched"
+  requestId: string
+  models?: Array<{ id: string; name: string }>
+  error?: string
+  /** True when error was HTTP 401/403 — hints the user to check their API key */
+  auth?: boolean
+}
+
 export type ExtensionMessage =
   | ReadyMessage
   | ConnectionStateMessage
@@ -1239,8 +1291,10 @@ export type ExtensionMessage =
   | QuestionResolvedMessage
   | QuestionErrorMessage
   | BrowserSettingsLoadedMessage
+  | ClaudeCompatSettingLoadedMessage
   | ConfigLoadedMessage
   | ConfigUpdatedMessage
+  | GlobalConfigLoadedMessage
   | NotificationSettingsLoadedMessage
   | NotificationsLoadedMessage
   | AgentManagerSessionMetaMessage
@@ -1273,6 +1327,7 @@ export type ExtensionMessage =
   | AgentManagerWorktreeStatsMessage
   | AgentManagerLocalStatsMessage
   // legacy-migration start
+  | MigrationStateMessage
   | LegacyMigrationDataMessage
   | LegacyMigrationProgressMessage
   | LegacyMigrationCompleteMessage
@@ -1289,9 +1344,14 @@ export type ExtensionMessage =
   | ProviderConnectedMessage
   | ProviderDisconnectedMessage
   | ProviderActionErrorMessage
+  | CustomProviderModelsFetchedMessage
   | RecentsLoadedMessage
+  | FavoritesLoadedMessage
   | LanguageChangedMessage
   | ContinueInWorktreeProgressMessage
+  | WorktreeStatsLoadedMessage
+  | McpStatusLoadedMessage
+  | ClearPendingPromptsMessage
 
 // ============================================
 // Messages FROM webview TO extension
@@ -1308,6 +1368,7 @@ export interface SendMessageRequest {
   text: string
   messageID?: string
   sessionID?: string
+  draftID?: string
   providerID?: string
   modelID?: string
   agent?: string
@@ -1440,6 +1501,15 @@ export interface OpenSettingsPanelRequest {
   tab?: string
 }
 
+export interface OpenVSCodeSettingsRequest {
+  type: "openVSCodeSettings"
+  query: string
+}
+
+export interface OpenMarketplacePanelRequest {
+  type: "openMarketplacePanel"
+}
+
 export interface RequestAgentsMessage {
   type: "requestAgents"
 }
@@ -1458,6 +1528,7 @@ export interface SendCommandRequest {
   arguments: string
   messageID?: string
   sessionID?: string
+  draftID?: string
   providerID?: string
   modelID?: string
   agent?: string
@@ -1480,6 +1551,30 @@ export interface RemoveMcpMessage {
   name: string
 }
 
+export interface RequestMcpStatusMessage {
+  type: "requestMcpStatus"
+}
+
+export interface ConnectMcpMessage {
+  type: "connectMcp"
+  name: string
+}
+
+export interface DisconnectMcpMessage {
+  type: "disconnectMcp"
+  name: string
+}
+
+export interface McpStatusEntry {
+  status: "connected" | "disabled" | "failed" | "needs_auth" | "needs_client_registration"
+  error?: string
+}
+
+export interface McpStatusLoadedMessage {
+  type: "mcpStatusLoaded"
+  status: Record<string, McpStatusEntry>
+}
+
 export interface SetLanguageRequest {
   type: "setLanguage"
   locale: string
@@ -1488,12 +1583,14 @@ export interface SetLanguageRequest {
 export interface QuestionReplyRequest {
   type: "questionReply"
   requestID: string
+  sessionID?: string
   answers: string[][]
 }
 
 export interface QuestionRejectRequest {
   type: "questionReject"
   requestID: string
+  sessionID?: string
 }
 
 export interface DeleteSessionRequest {
@@ -1543,8 +1640,21 @@ export interface RequestBrowserSettingsMessage {
   type: "requestBrowserSettings"
 }
 
+export interface RequestClaudeCompatSettingMessage {
+  type: "requestClaudeCompatSetting"
+}
+
+export interface ClaudeCompatSettingLoadedMessage {
+  type: "claudeCompatSettingLoaded"
+  enabled: boolean
+}
+
 export interface RequestConfigMessage {
   type: "requestConfig"
+}
+
+export interface RequestGlobalConfigMessage {
+  type: "requestGlobalConfig"
 }
 
 export interface UpdateConfigMessage {
@@ -1681,6 +1791,12 @@ export interface ShowLocalTerminalRequest {
 export interface OpenWorktreeRequest {
   type: "agentManager.openWorktree"
   worktreeId: string
+}
+
+// Copy text to the system clipboard via the extension host
+export interface CopyToClipboardRequest {
+  type: "agentManager.copyToClipboard"
+  text: string
 }
 
 // Show existing local terminal when switching to local context (no-op if none exists)
@@ -1892,6 +2008,15 @@ export interface SaveCustomProviderMessage {
   providerID: string
   config: ProviderConfig
   apiKey?: string
+  apiKeyChanged?: boolean
+}
+
+export interface FetchCustomProviderModelsMessage {
+  type: "fetchCustomProviderModels"
+  requestId: string
+  baseURL: string
+  apiKey?: string
+  headers?: Record<string, string>
 }
 
 export interface PersistRecentsRequest {
@@ -1901,6 +2026,17 @@ export interface PersistRecentsRequest {
 
 export interface RequestRecentsMessage {
   type: "requestRecents"
+}
+
+export interface ToggleFavoriteRequest {
+  type: "toggleFavorite"
+  action: "add" | "remove"
+  providerID: string
+  modelID: string
+}
+
+export interface RequestFavoritesMessage {
+  type: "requestFavorites"
 }
 
 // Continue in Worktree: transfer sidebar session + git state to an isolated worktree
@@ -1943,6 +2079,8 @@ export type WebviewMessage =
   | RefreshProfileRequest
   | OpenExternalRequest
   | OpenSettingsPanelRequest
+  | OpenVSCodeSettingsRequest
+  | OpenMarketplacePanelRequest
   | OpenFileRequest
   | CancelLoginRequest
   | SetOrganizationRequest
@@ -1956,6 +2094,9 @@ export type WebviewMessage =
   | RemoveSkillMessage
   | RemoveModeMessage
   | RemoveMcpMessage
+  | RequestMcpStatusMessage
+  | ConnectMcpMessage
+  | DisconnectMcpMessage
   | SetLanguageRequest
   | QuestionReplyRequest
   | QuestionRejectRequest
@@ -1968,7 +2109,9 @@ export type WebviewMessage =
   | ChatCompletionAcceptedMessage
   | UpdateSettingRequest
   | RequestBrowserSettingsMessage
+  | RequestClaudeCompatSettingMessage
   | RequestConfigMessage
+  | RequestGlobalConfigMessage
   | UpdateConfigMessage
   | RequestNotificationSettingsMessage
   | ResetAllSettingsRequest
@@ -1993,6 +2136,7 @@ export type WebviewMessage =
   | ShowTerminalRequest
   | ShowLocalTerminalRequest
   | OpenWorktreeRequest
+  | CopyToClipboardRequest
   | ShowExistingLocalTerminalRequest
   | AgentManagerOpenFileRequest
   | CreateMultiVersionRequest
@@ -2036,8 +2180,11 @@ export type WebviewMessage =
   | CompleteProviderOAuthMessage
   | DisconnectProviderMessage
   | SaveCustomProviderMessage
+  | FetchCustomProviderModelsMessage
   | PersistRecentsRequest
   | RequestRecentsMessage
+  | ToggleFavoriteRequest
+  | RequestFavoritesMessage
   | ContinueInWorktreeRequest
 
 // ============================================
