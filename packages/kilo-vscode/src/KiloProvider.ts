@@ -45,6 +45,7 @@ import {
   checkAndShowMigrationWizard,
   handleRequestLegacyMigrationData,
   handleStartLegacyMigration,
+  handleFinalizeLegacyMigration,
   handleSkipLegacyMigration,
   handleClearLegacyData,
   type MigrationContext,
@@ -786,6 +787,9 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
         case "requestBrowserSettings":
           this.sendBrowserSettings()
           break
+        case "requestClaudeCompatSetting":
+          this.sendClaudeCompatSetting()
+          break
         case "requestNotificationSettings":
           this.sendNotificationSettings()
           break
@@ -890,6 +894,9 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
           break
         case "clearLegacyData":
           void handleClearLegacyData(this.migrationCtx)
+          break
+        case "finalizeLegacyMigration":
+          void handleFinalizeLegacyMigration(this.migrationCtx)
           break
         // legacy-migration end
         case "enhancePrompt": {
@@ -2548,6 +2555,17 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
         useSystemChrome: config.get<boolean>("useSystemChrome", true),
         headless: config.get<boolean>("headless", false),
       },
+    })
+  }
+
+  /**
+   * Read the current Claude Code compatibility setting and push it to the webview.
+   */
+  private sendClaudeCompatSetting(): void {
+    const enabled = vscode.workspace.getConfiguration("kilo-code.new").get<boolean>("claudeCodeCompat", false)
+    this.postMessage({
+      type: "claudeCompatSettingLoaded",
+      enabled: enabled ?? false,
     })
   }
 

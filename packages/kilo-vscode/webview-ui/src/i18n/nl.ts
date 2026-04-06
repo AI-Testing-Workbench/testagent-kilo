@@ -1125,6 +1125,10 @@ export const dict = {
   "settings.agentBehaviour.instructionFiles": "Aanvullende Instructiebestanden",
   "settings.agentBehaviour.instructionFiles.description":
     "Paden naar aanvullende instructiebestanden die zijn opgenomen in de systeem prompt",
+  "settings.agentBehaviour.claudeCompat.heading": "Claude Code-compatibiliteit",
+  "settings.agentBehaviour.claudeCompat.title": "Claude Code-bestanden laden",
+  "settings.agentBehaviour.claudeCompat.description":
+    "Laad CLAUDE.md instructies en vaardigheden uit je Claude Code configuratiemap in sessies. Schakel dit in als je wilt dat Kilo je Claude Code instructies en vaardigheden gebruikt. Herstart vereist.",
   "settings.agentBehaviour.removeMcp.title": "Verwijder MCP-server",
   "settings.agentBehaviour.removeMcp.confirm":
     'MCP-server "{{name}}" verwijderen? Dit zal deze uit je configuratie verwijderen.',
@@ -1299,6 +1303,36 @@ export const dict = {
   "migration.error.continue": "Doorgaan",
   "migration.error.action.copy": "Kopiëren",
   "migration.error.toast.copied": "Fout gekopieerd naar het klembord",
+
+  "migration.sessionSummary.title": "Samenvatting:",
+  "migration.sessionSummary.copy": "Rapport kopiëren",
+  "migration.sessionSummary.toast.copied": "Rapport gekopieerd",
+  "migration.sessionSummary.successful": "Geslaagd",
+  "migration.sessionSummary.skipped": "Overgeslagen",
+  "migration.sessionSummary.alreadyMigrated": "Al gemigreerd",
+  "migration.sessionSummary.errored": "Met fouten",
+  "migration.sessionSummary.none": "Geen",
+  "migration.forceReimport.title": "Herimport forceren",
+  "migration.forceReimport.description":
+    "Het opnieuw importeren van {{target}} zal deze overschrijven en alle nieuwe berichten verwijderen die al in die sessies zijn gemaakt.",
+  "migration.forceReimport.target.one": "deze sessie",
+  "migration.forceReimport.target.many": "deze {{count}} sessies",
+  "migration.forceReimport.button": "Herimport forceren",
+  "migration.forceReimport.all": "Alles opnieuw importeren",
+  "migration.forceReimport.proceed": "Doorgaan",
+  "migration.forceReimport.toast.started": "Geforceerde herimport gestart",
+  "migration.running.title": "Migratie bezig",
+  "migration.running.description.line1": "Je staat op het punt af te ronden terwijl er nog sessies worden gemigreerd.",
+  "migration.running.description.line2": "Als je nu vertrekt, kunnen sommige sessies onvolledig blijven.",
+  "migration.running.stay": "Blijven",
+  "migration.running.proceed": "Doorgaan",
+  "migration.sessionProgress.preparing": "Sessie voorbereiden",
+  "migration.sessionProgress.storing": "Sessie opslaan",
+  "migration.sessionProgress.skipped": "Sessie overgeslagen",
+  "migration.sessionProgress.header": "Bezig met migreren van {{current}} van {{total}}",
+  "migration.sessionFormat.unknownDate": "Onbekende datum",
+  "migration.sessionFormat.unknown": "Onbekend",
+  "migration.sessionFormat.unknownError": "Onbekende fout",
   // legacy-migration end
 
   "error.details.show": "Details",
