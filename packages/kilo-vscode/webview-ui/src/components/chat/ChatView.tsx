@@ -28,6 +28,8 @@ interface ChatViewProps {
   readonly?: boolean
   /** When true, show the "Continue in Worktree" button. Defaults to true in the sidebar. */
   continueInWorktree?: boolean
+  promptBoxId?: string
+  pendingSessionID?: string
 }
 
 export const ChatView: Component<ChatViewProps> = (props) => {
@@ -218,7 +220,7 @@ export const ChatView: Component<ChatViewProps> = (props) => {
             </div>
           </Show>
           <Show when={!props.readonly}>
-            <PromptInput blocked={blocked} />
+            <PromptInput blocked={blocked} boxId={props.promptBoxId} pendingSessionID={props.pendingSessionID} />
           </Show>
         </div>
       </Show>
