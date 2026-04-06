@@ -329,6 +329,7 @@
   width: 48px;
   height: 48px;
   opacity: 0.85;
+  margin-bottom: 16px;
 }
 
 .kilo-logo img {
@@ -2226,6 +2227,43 @@
    Working Indicator
    ============================================ */
 
+@keyframes ta-eye-shift {
+  0%   { transform: translateX(-3px); }
+  30%  { transform: translateX(-3px); }
+  50%  { transform: translateX(3px); }
+  80%  { transform: translateX(3px); }
+  100% { transform: translateX(-3px); }
+}
+@keyframes ta-ring-pulse {
+  0%, 100% { r: 12.75; opacity: 0.6; }
+  50%       { r: 14;    opacity: 1; }
+}
+@keyframes ta-ring-pulse-bg {
+  0%, 100% { r: 12.75; opacity: 0.2; }
+  50%       { r: 14.5;  opacity: 0.5; }
+}
+@keyframes ta-float {
+  0%, 100% { transform: translateY(0); }
+  50%       { transform: translateY(-2px); }
+}
+
+.thinking-avatar {
+  width: 36px;
+  height: 36px;
+  flex-shrink: 0;
+  animation: ta-float 3.2s ease-in-out infinite;
+  overflow: visible;
+}
+.thinking-avatar .ta-eyes {
+  animation: ta-eye-shift 2s ease-in-out infinite;
+}
+.thinking-avatar .ta-ring {
+  animation: ta-ring-pulse 2s ease-in-out infinite;
+}
+.thinking-avatar .ta-ring-bg {
+  animation: ta-ring-pulse-bg 2s ease-in-out infinite;
+}
+
 .working-indicator {
   display: flex;
   align-items: center;
@@ -2247,6 +2285,62 @@
   flex-shrink: 0;
   font-variant-numeric: tabular-nums;
   opacity: 0.7;
+}
+
+.testagent-label {
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--vscode-descriptionForeground);
+  padding: 6px 16px 2px;
+  opacity: 0.7;
+}
+
+@keyframes th-blink {
+  0%, 88%, 100% { ry: 2.62; }
+  93%            { ry: 0.2; }
+}
+@keyframes th-float {
+  0%, 100% { transform: translateY(0); }
+  50%       { transform: translateY(-2px); }
+}
+
+.testagent-avatar-inline {
+  width: 36px;
+  height: 36px;
+  flex-shrink: 0;
+  vertical-align: middle;
+  margin-right: 6px;
+  animation: th-float 3.2s ease-in-out infinite;
+  overflow: visible;
+}
+.testagent-avatar-inline .th-blink {
+  animation: th-blink 4s ease-in-out infinite;
+}
+
+[data-slot="task-header-title"] {
+  display: flex;
+  align-items: center;
+}
+
+@keyframes home-blink {
+  0%, 88%, 100% { ry: 2.62; }
+  93%            { ry: 0.2; }
+}
+@keyframes home-float {
+  0%, 100% { transform: translateY(0); }
+  50%       { transform: translateY(-6px); }
+}
+
+.testagent-avatar-home {
+  width: 80px;
+  height: 80px;
+  animation: home-float 3.2s ease-in-out infinite;
+  overflow: visible;
+}
+.testagent-avatar-home .home-blink {
+  animation: home-blink 4s ease-in-out infinite;
 }
 
 /* Session List (inside History View) */

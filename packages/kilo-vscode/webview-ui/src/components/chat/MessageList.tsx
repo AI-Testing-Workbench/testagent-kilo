@@ -25,14 +25,21 @@ import { WorkingIndicator } from "../shared/WorkingIndicator"
 import { activeUserMessageID as getActiveUserMessageID } from "../../context/session-queue"
 
 const KiloLogo = (): JSX.Element => {
-  const iconsBaseUri = (window as { ICONS_BASE_URI?: string }).ICONS_BASE_URI || ""
-  const isLight =
-    document.body.classList.contains("vscode-light") || document.body.classList.contains("vscode-high-contrast-light")
-  const iconFile = isLight ? "kilo-light.svg" : "kilo-dark.svg"
-
   return (
     <div class="kilo-logo">
-      <img src={`${iconsBaseUri}/${iconFile}`} alt="Kilo Code" />
+      <svg class="testagent-avatar-home" viewBox="-4 -4 32 32" xmlns="http://www.w3.org/2000/svg">
+        <defs>
+          <linearGradient id="home-rg" x1="0%" y1="0%" x2="100%" y2="100%">
+            <stop offset="0%" stop-color="#4fc3f7" />
+            <stop offset="50%" stop-color="#2979ff" />
+            <stop offset="100%" stop-color="#69f0ae" />
+          </linearGradient>
+        </defs>
+        <circle cx="12" cy="12" r="12" fill="#e8f4ff" />
+        <circle cx="12" cy="12" r="12.75" fill="none" stroke="url(#home-rg)" stroke-width="1.5" />
+        <ellipse class="home-blink" cx="8" cy="9.33" rx="1.63" ry="2.62" fill="#2979ff" />
+        <ellipse class="home-blink" cx="16" cy="9.33" rx="1.63" ry="2.62" fill="#2979ff" />
+      </svg>
     </div>
   )
 }

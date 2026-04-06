@@ -75,6 +75,19 @@ export const TaskHeader: Component<TaskHeaderProps> = (props) => {
     <Show when={hasMessages()}>
       <div data-component="task-header">
         <div data-slot="task-header-title" title={title()}>
+          <svg class="testagent-avatar-inline" viewBox="-4 -4 32 32" xmlns="http://www.w3.org/2000/svg">
+            <defs>
+              <linearGradient id="th-rg" x1="0%" y1="0%" x2="100%" y2="100%">
+                <stop offset="0%" stop-color="#4fc3f7" />
+                <stop offset="50%" stop-color="#2979ff" />
+                <stop offset="100%" stop-color="#69f0ae" />
+              </linearGradient>
+            </defs>
+            <circle cx="12" cy="12" r="12" fill="#e8f4ff" />
+            <circle cx="12" cy="12" r="12.75" fill="none" stroke="url(#th-rg)" stroke-width="1.5" />
+            <ellipse class="th-blink" cx="8" cy="9.33" rx="1.63" ry="2.62" fill="#2979ff" />
+            <ellipse class="th-blink" cx="16" cy="9.33" rx="1.63" ry="2.62" fill="#2979ff" />
+          </svg>
           {title()}
         </div>
         <div data-slot="task-header-stats">
