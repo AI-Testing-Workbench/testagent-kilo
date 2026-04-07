@@ -223,11 +223,11 @@ Toggle notifications, Toggle animations, Toggle diff wrapping, Toggle sidebar (`
 
 ### Config files (kilo.json)
 
-| Scope   | Path                                                                                                                                                                              |
-| ------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Project | `./kilo.json`, `./kilo.jsonc`, `./opencode.json` (legacy), `./opencode.jsonc` (legacy)                                                                                            |
-| Global  | `~/.config/kilo/kilo.json`, `~/.config/kilo/kilo.jsonc`, `~/.config/kilo/opencode.json` (legacy), `~/.config/kilo/opencode.jsonc` (legacy), `~/.config/kilo/config.json` (legacy) |
-| Managed | Linux: `/etc/kilo/kilo.json`, macOS: `/Library/Application Support/kilo/kilo.json`, Windows: `%ProgramData%\kilo\kilo.json` (enterprise, highest priority)                        |
+| Scope   | Path                                                                                                                                                                                                 |
+| ------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Project | `./kilo.json`, `./kilo.jsonc`, `./opencode.json` (legacy), `./opencode.jsonc` (legacy)                                                                                                               |
+| Global  | `~/.config/kilo/kilo.json`, `~/.config/kilo/kilo.jsonc`, `~/.config/kilo/opencode.json` (legacy), `~/.config/kilo/opencode.jsonc` (legacy), `~/.config/kilo/config.json` (legacy)                    |
+| Managed | Linux: `/etc/kilo/`, macOS: `/Library/Application Support/kilo/`, Windows: `%ProgramData%\kilo\` — loads `kilo.json`, `kilo.jsonc`, `opencode.json`, `opencode.jsonc` (enterprise, highest priority) |
 
 Each config directory (`.kilo/`, `.kilocode/`, `.opencode/`) can also contain `kilo.json`, `kilo.jsonc`, `opencode.json`, or `opencode.jsonc`.
 
