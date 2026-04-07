@@ -43,7 +43,7 @@
     "@types/node": "catalog:",
     "typescript": "catalog:",
     "@typescript/native-preview": "catalog:",
-    "solid-js": "1.9.10",
+    "solid-js": "catalog:",
     "@opentui/core": "0.1.75",
     "@opentui/solid": "0.1.75"
   },

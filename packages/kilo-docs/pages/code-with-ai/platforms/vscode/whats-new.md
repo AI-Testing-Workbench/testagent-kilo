@@ -70,6 +70,10 @@ In the model picker dropdown, click the expand button in the upper-right corner 
 
 If you're using a custom model (e.g. via your own API key or a self-hosted provider), you can configure the context window size, max output tokens, and other parameters in your model settings. See the [Custom Models](/docs/code-with-ai/agents/custom-models) documentation for the full guide on adding and configuring custom models.
 
+### Where did my custom profiles go?
+
+In the new extension we simplified the model selection by removing the profile layer. To keep models easily reachable you don't need a profile — you can just star them in the model selector to mark them as favorites.
+
 ### Where did orchestrator mode go?
 
 Orchestrator mode is deprecated.

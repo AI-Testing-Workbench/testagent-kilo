@@ -1250,6 +1250,7 @@ export const dict = {
   "migration.whatsNew.features.foundation.detail":
     "모든 Kilo 제품에 걸쳐 하나의 작고 효율적인 코어. 어떤 방식으로 작업하든 익숙한 경험을 제공합니다.",
   "migration.whatsNew.blogLink": "전체 공지 읽기",
+  "migration.whatsNew.docsLink": "새로운 기능 및 자주 묻는 질문",
   "migration.whatsNew.continue": "계속",
 
   // Screen 2 — Migrate Settings

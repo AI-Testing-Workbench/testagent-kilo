@@ -1262,6 +1262,7 @@ export const dict = {
   "migration.whatsNew.features.foundation.detail":
     "すべてのKilo製品で共有される小さく効率的なコア。どのような作業スタイルでも馴染みのある体験を提供します。",
   "migration.whatsNew.blogLink": "完全なアナウンスを読む",
+  "migration.whatsNew.docsLink": "新機能とよくある質問",
   "migration.whatsNew.continue": "続行",
 
   // Screen 2 — Migrate Settings

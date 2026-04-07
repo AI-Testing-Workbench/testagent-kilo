@@ -1226,6 +1226,7 @@ export const dict = {
   "migration.whatsNew.features.foundation.detail":
     "所有 Kilo 產品共享一個小巧高效的核心。無論你選擇哪種方式工作，都能獲得熟悉的體驗。",
   "migration.whatsNew.blogLink": "閱讀完整公告",
+  "migration.whatsNew.docsLink": "新功能與常見問題",
   "migration.whatsNew.continue": "繼續",
 
   // Screen 2 — Migrate Settings

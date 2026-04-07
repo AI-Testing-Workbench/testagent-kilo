@@ -1259,6 +1259,7 @@ export const dict = {
   "migration.whatsNew.features.foundation.detail":
     "Her Kilo ürününde küçük ve verimli bir çekirdek. Nasıl çalışmayı tercih ederseniz edin, tanıdık bir deneyim.",
   "migration.whatsNew.blogLink": "Tam duyuruyu oku",
+  "migration.whatsNew.docsLink": "Yenilikler ve sık sorulan sorular",
   "migration.whatsNew.continue": "Devam",
 
   // Screen 2 — Migrate Settings

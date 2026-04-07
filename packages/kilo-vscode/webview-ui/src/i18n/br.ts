@@ -1276,6 +1276,7 @@ export const dict = {
   "migration.whatsNew.features.foundation.detail":
     "Um núcleo pequeno e eficiente em todos os produtos Kilo. Uma experiência familiar independentemente de como você escolha trabalhar.",
   "migration.whatsNew.blogLink": "Leia o anúncio completo",
+  "migration.whatsNew.docsLink": "Novidades e perguntas frequentes",
   "migration.whatsNew.continue": "Continuar",
 
   // Screen 2 — Migrate Settings

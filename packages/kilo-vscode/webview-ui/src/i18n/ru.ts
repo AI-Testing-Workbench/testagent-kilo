@@ -1270,6 +1270,7 @@ export const dict = {
   "migration.whatsNew.features.foundation.detail":
     "Одно компактное и эффективное ядро для всех продуктов Kilo. Знакомый опыт независимо от выбранного способа работы.",
   "migration.whatsNew.blogLink": "Читать полный анонс",
+  "migration.whatsNew.docsLink": "Что нового и часто задаваемые вопросы",
   "migration.whatsNew.continue": "Продолжить",
 
   // Screen 2 — Migrate Settings

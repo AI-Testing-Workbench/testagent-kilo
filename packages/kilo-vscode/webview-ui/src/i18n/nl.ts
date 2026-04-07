@@ -1266,6 +1266,7 @@ export const dict = {
   "migration.whatsNew.features.foundation.detail":
     "Één kleine, efficiënte kern voor elk Kilo-product. Een vertrouwde ervaring, hoe je ook wilt werken.",
   "migration.whatsNew.blogLink": "Lees de volledige aankondiging",
+  "migration.whatsNew.docsLink": "Wat is er nieuw & veelgestelde vragen",
   "migration.whatsNew.continue": "Doorgaan",
 
   // Screen 2 — Migrate Settings

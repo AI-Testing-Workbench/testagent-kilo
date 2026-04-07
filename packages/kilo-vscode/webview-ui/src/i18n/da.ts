@@ -1262,6 +1262,7 @@ export const dict = {
   "migration.whatsNew.features.foundation.detail":
     "Én lille, effektiv kerne på tværs af alle Kilo-produkter. En velkendt oplevelse uanset hvordan du vælger at arbejde.",
   "migration.whatsNew.blogLink": "Læs den fulde meddelelse",
+  "migration.whatsNew.docsLink": "Nyheder og ofte stillede spørgsmål",
   "migration.whatsNew.continue": "Fortsæt",
 
   // Screen 2 — Migrate Settings

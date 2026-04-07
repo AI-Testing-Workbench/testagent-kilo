@@ -1246,6 +1246,7 @@ export const dict = {
   "migration.whatsNew.features.foundation.detail":
     "แกนหลักขนาดเล็กและมีประสิทธิภาพเดียวกันในทุกผลิตภัณฑ์ Kilo ประสบการณ์ที่คุ้นเคยไม่ว่าคุณจะเลือกทำงานอย่างไร",
   "migration.whatsNew.blogLink": "อ่านประกาศฉบับเต็ม",
+  "migration.whatsNew.docsLink": "มีอะไรใหม่และคำถามที่พบบ่อย",
   "migration.whatsNew.continue": "ดำเนินการต่อ",
 
   // Screen 2 — Migrate Settings

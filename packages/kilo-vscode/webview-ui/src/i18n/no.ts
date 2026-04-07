@@ -1263,6 +1263,7 @@ export const dict = {
   "migration.whatsNew.features.foundation.detail":
     "Én liten, effektiv kjerne på tvers av alle Kilo-produkter. En kjent opplevelse uansett hvordan du velger å jobbe.",
   "migration.whatsNew.blogLink": "Les hele kunngjøringen",
+  "migration.whatsNew.docsLink": "Nyheter og ofte stilte spørsmål",
   "migration.whatsNew.continue": "Fortsett",
 
   // Screen 2 — Migrate Settings
