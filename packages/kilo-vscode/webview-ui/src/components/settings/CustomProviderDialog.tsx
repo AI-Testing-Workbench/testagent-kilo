@@ -1,4 +1,5 @@
 import { Button } from "@kilocode/kilo-ui/button"
+import { Checkbox } from "@kilocode/kilo-ui/checkbox"
 import { useDialog } from "@kilocode/kilo-ui/context/dialog"
 import { Dialog } from "@kilocode/kilo-ui/dialog"
 import { IconButton } from "@kilocode/kilo-ui/icon-button"
@@ -37,6 +38,7 @@ type Translator = ReturnType<typeof useLanguage>["t"]
 type ModelRow = {
   id: string
   name: string
+  reasoning: boolean
 }
 
 type HeaderRow = {
@@ -122,7 +124,9 @@ function validateCustomProvider(input: ValidateArgs) {
     return { id: modelIdError, name: modelNameError }
   })
   const modelsValid = modelErrors.every((m) => !m.id && !m.name)
-  const models = Object.fromEntries(input.form.models.map((m) => [m.id.trim(), { name: m.name.trim() }]))
+  const models = Object.fromEntries(
+    input.form.models.map((m) => [m.id.trim(), { name: m.name.trim(), ...(m.reasoning ? { reasoning: true } : {}) }]),
+  )
 
   const seenHeaders = new Set<string>()
   const headerErrors = input.form.headers.map((h) => {
@@ -205,10 +209,14 @@ const CustomProviderDialog = (props: CustomProviderDialogProps) => {
 
   function initModels(): ModelRow[] {
     const cfg = props.existing?.config
-    if (!cfg?.models || typeof cfg.models !== "object") return [{ id: "", name: "" }]
+    if (!cfg?.models || typeof cfg.models !== "object") return [{ id: "", name: "", reasoning: false }]
     const entries = Object.entries(cfg.models)
-    if (entries.length === 0) return [{ id: "", name: "" }]
-    return entries.map(([id, m]) => ({ id, name: (m as { name?: string })?.name ?? id }))
+    if (entries.length === 0) return [{ id: "", name: "", reasoning: false }]
+    return entries.map(([id, m]) => ({
+      id,
+      name: (m as { name?: string })?.name ?? id,
+      reasoning: (m as { reasoning?: boolean })?.reasoning ?? false,
+    }))
   }
 
   function initHeaders(): HeaderRow[] {
@@ -410,7 +418,9 @@ const CustomProviderDialog = (props: CustomProviderDialogProps) => {
     // Replace the single empty row or append
     const row = form.models[0]
     const empty = form.models.length === 1 && !!row && !row.id.trim() && !row.name.trim()
-    const merged = empty ? picked : [...form.models, ...picked]
+    const merged = empty
+      ? picked.map((m) => ({ ...m, reasoning: false }))
+      : [...form.models, ...picked.map((m) => ({ ...m, reasoning: false }))]
 
     setForm("models", merged)
     setErrors(
@@ -438,7 +448,7 @@ const CustomProviderDialog = (props: CustomProviderDialogProps) => {
   }
 
   function addModel() {
-    setForm("models", (v) => [...v, { id: "", name: "" }])
+    setForm("models", (v) => [...v, { id: "", name: "", reasoning: false }])
     setErrors("models", (v) => [...v, {}])
   }
 
@@ -641,6 +651,11 @@ const CustomProviderDialog = (props: CustomProviderDialogProps) => {
                       validationState={errors.models[i()]?.name ? "invalid" : undefined}
                       error={errors.models[i()]?.name}
                     />
+                  </div>
+                  <div style={{ display: "flex", "align-items": "center", "margin-top": "6px" }}>
+                    <Checkbox checked={m.reasoning} onChange={(v) => setForm("models", i(), "reasoning", v)}>
+                      {language.t("provider.custom.models.reasoning.label")}
+                    </Checkbox>
                   </div>
                   <IconButton
                     type="button"

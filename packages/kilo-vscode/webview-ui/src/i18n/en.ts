@@ -754,6 +754,7 @@ export const dict = {
   "provider.custom.models.id.placeholder": "model-id",
   "provider.custom.models.name.label": "Name",
   "provider.custom.models.name.placeholder": "Display Name",
+  "provider.custom.models.reasoning.label": "Reasoning",
   "provider.custom.models.remove": "Remove model",
   "provider.custom.models.add": "Add model",
   "provider.custom.models.fetch": "Fetch models",
