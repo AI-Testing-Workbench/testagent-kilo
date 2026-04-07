@@ -166,6 +166,9 @@ export const dict = {
   "model.tag.free": "Free",
   "model.tag.latest": "Latest",
   "model.group.recommended": "Recommended",
+  "model.group.favorites": "Favorites",
+  "model.favorite.add": "Add to favorites",
+  "model.favorite.remove": "Remove from favorites",
   "model.provider.anthropic": "Anthropic",
   "model.provider.openai": "OpenAI",
   "model.provider.google": "Google",
@@ -268,6 +271,7 @@ export const dict = {
   "mcp.status.connected": "connected",
   "mcp.status.failed": "failed",
   "mcp.status.needs_auth": "needs auth",
+  "mcp.status.needs_registration": "needs client registration",
   "mcp.status.disabled": "disabled",
 
   "dialog.fork.empty": "No messages to fork from",
@@ -752,6 +756,20 @@ export const dict = {
   "provider.custom.models.name.placeholder": "Display Name",
   "provider.custom.models.remove": "Remove model",
   "provider.custom.models.add": "Add model",
+  "provider.custom.models.fetch": "Fetch models",
+  "provider.custom.models.fetching": "Fetching\u2026",
+  "provider.custom.models.fetch.error": "Failed to fetch models: {{error}}",
+  "provider.custom.models.fetch.authError": "Authentication failed. Check the API key above and try again.",
+  "provider.custom.models.fetch.empty": "No models found on this server.",
+  "provider.custom.models.fetch.added": "Added {{count}} model(s).",
+  "provider.custom.models.fetch.allExist": "All fetched models are already added.",
+  "provider.custom.models.fetch.selectAll": "Select all",
+  "provider.custom.models.fetch.deselectAll": "Deselect all",
+  "provider.custom.models.fetch.found": "{{count}} models found",
+  "provider.custom.models.fetch.showing": "Showing {{shown}} of {{total}}",
+  "provider.custom.models.fetch.search": "Search models\u2026",
+  "provider.custom.models.fetch.add": "Add {{count}} model(s)",
+  "provider.custom.edit.title": "Edit provider",
   "provider.custom.headers.label": "Headers (optional)",
   "provider.custom.headers.key.label": "Header",
   "provider.custom.headers.key.placeholder": "Header-Name",
@@ -930,6 +948,7 @@ export const dict = {
   "prompt.placeholder.error": "Connection failed. Check the output panel or restart the extension.",
 
   "context.usage.sessionCost": "Session cost",
+  "context.stats.thisSession": "This session",
 
   "time.justNow": "just now",
   "time.minutesAgo": "{{count}} min ago",
@@ -958,8 +977,24 @@ export const dict = {
   "settings.aboutKiloCode.support.prefix": "For billing or account questions, contact Customer Support at",
   "settings.aboutKiloCode.resetSettings.title": "Reset Settings",
   "settings.aboutKiloCode.resetSettings.description":
-    "Reset all Kilo Code extension settings to their default values. This does not affect CLI or backend configuration.",
+    "This resets only VS Code extension-specific settings to their default values. Settings shared with the CLI, such as modes and auto-approve rules, are stored in the CLI configuration and will not be reset.",
   "settings.aboutKiloCode.resetSettings.button": "Reset All Settings",
+  "settings.aboutKiloCode.settingsTransfer.title": "Settings Transfer",
+  "settings.aboutKiloCode.settingsTransfer.description":
+    "Export or import your settings to transfer them between VS Code instances.",
+  "settings.aboutKiloCode.exportSettings": "Export",
+  "settings.aboutKiloCode.importSettings": "Import",
+  "settings.aboutKiloCode.importSettings.invalidJson": "Invalid JSON file. Please select a valid settings file.",
+  "settings.aboutKiloCode.importSettings.invalidConfig": "File does not contain valid Kilo settings.",
+  "settings.aboutKiloCode.importSettings.tooLarge": "File is too large. Settings files must be under 1 MB.",
+  "settings.aboutKiloCode.importSettings.newerVersion":
+    "This file was exported from a newer version of Kilo. Some settings may be ignored.",
+  "settings.aboutKiloCode.importSettings.success": "Settings imported. Review the changes above, then click Save.",
+
+  "settings.aboutKiloCode.telemetry.title": "Telemetry",
+  "settings.aboutKiloCode.telemetry.description":
+    'Telemetry is controlled by VS Code\'s built-in telemetry setting. To disable it, go to Settings > Telemetry > Telemetry Level and set it to "off". Restart VS Code to apply the change.',
+  "settings.aboutKiloCode.telemetry.openSettings": "Open Telemetry Settings",
 
   "settings.agentBehaviour.subtab.modes": "Modes",
   "settings.agentBehaviour.subtab.agents": "Agents",
@@ -1052,6 +1087,7 @@ export const dict = {
   "settings.agentBehaviour.disable.description": "Fully disable this agent — it will not appear anywhere",
   "settings.agentBehaviour.badge.hidden": "hidden",
   "settings.agentBehaviour.badge.disabled": "disabled",
+  "settings.agentBehaviour.badge.deprecated": "deprecated",
   "settings.agentBehaviour.discoveredSkills": "Discovered Skills",
   "settings.agentBehaviour.noSkillsFound":
     "No skills discovered. Add skill folder paths or URLs below to make skills available.",
@@ -1071,6 +1107,10 @@ export const dict = {
   "settings.agentBehaviour.instructionFiles": "Additional Instruction Files",
   "settings.agentBehaviour.instructionFiles.description":
     "Paths to additional instruction files that are included in the system prompt",
+  "settings.agentBehaviour.claudeCompat.heading": "Claude Code Compatibility",
+  "settings.agentBehaviour.claudeCompat.title": "Load Claude Code Files",
+  "settings.agentBehaviour.claudeCompat.description":
+    "Load CLAUDE.md instructions and skills from your Claude Code configuration directory into sessions. Enable this if you want Kilo to use your Claude Code instructions and skills. Requires restart.",
   "settings.agentBehaviour.removeMcp.title": "Remove MCP server",
   "settings.agentBehaviour.removeMcp.confirm": 'Remove MCP server "{{name}}"? This will remove it from your config.',
   "settings.agentBehaviour.removeMcp.button": "Remove",
@@ -1090,7 +1130,9 @@ export const dict = {
   "settings.agentBehaviour.addMcp.args.placeholder": "e.g.\n-y\n@modelcontextprotocol/server-filesystem\n/tmp",
   "settings.agentBehaviour.addMcp.url": "Server URL",
   "settings.agentBehaviour.addMcp.url.placeholder": "e.g. http://localhost:3000/sse",
-  "settings.agentBehaviour.mcpEmpty": "No MCP servers configured. Edit the opencode config file to add MCP servers.",
+  "settings.agentBehaviour.mcpBrowseMarketplace": "Browse Marketplace",
+  "settings.agentBehaviour.mcpEmpty":
+    "No MCP servers configured. Add MCP servers in kilo.jsonc, or ask the agent to add them for you.",
   "settings.agentBehaviour.workflowsPlaceholder": "Workflows are managed via workflow files in your workspace.",
   "settings.agentBehaviour.workflows.description":
     "Workflows are custom slash commands defined in your config. Type /command-name in the chat to invoke them. Commands are configured in opencode.json under the 'command' section.",
@@ -1217,7 +1259,6 @@ export const dict = {
 
   // Screen 1 — What's New
   "migration.whatsNew.title": "What's New in Kilo Code",
-  "migration.whatsNew.badge": "Beta",
   "migration.whatsNew.subtitle": "We've rebuilt the extension on a faster, more efficient foundation.",
   "migration.whatsNew.features.performance.title": "Faster Agent Performance",
   "migration.whatsNew.features.performance.detail":
@@ -1242,10 +1283,10 @@ export const dict = {
   "migration.migrate.chatHistoryDesc": "Incompatible with the new architecture",
   "migration.migrate.button": "Migrate Settings",
   "migration.migrate.skip": "Skip",
-  "migration.migrate.back": "Back",
   "migration.migrate.keysDetected": "{{count}} keys detected",
   "migration.migrate.serversConfigured": "{{count}} server(s) configured",
   "migration.migrate.modesFound": "{{count}} mode(s) found",
+  "migration.migrate.sessionsDetected": "{{count}} sessions detected",
   "migration.migrate.nothingToMigrate": "Nothing to migrate was found in the legacy settings.",
 
   // Migrate — item labels (reused from old select keys)
@@ -1263,6 +1304,39 @@ export const dict = {
   "migration.complete.cleanupDescription":
     "This removes the old settings from VS Code storage. You will not be able to re-run this migration.",
   "migration.complete.done": "Done",
+  "migration.error.sessionFailed": "Session migration failed",
+  "migration.error.continue": "Continue",
+  "migration.error.action.copy": "Copy",
+  "migration.error.toast.copied": "Error copied to clipboard",
+  "migration.sessionSummary.title": "Summary:",
+  "migration.sessionSummary.copy": "Copy Report",
+  "migration.sessionSummary.toast.copied": "Copied report",
+  "migration.sessionSummary.successful": "Successful",
+  "migration.sessionSummary.skipped": "Skipped",
+  "migration.sessionSummary.alreadyMigrated": "Already migrated",
+  "migration.sessionSummary.errored": "Errored",
+  "migration.sessionSummary.none": "None",
+  "migration.forceReimport.title": "Force Re-import",
+  "migration.forceReimport.description":
+    "Re-importing {{target}} will overwrite them and delete any new messages already made in those sessions.",
+  "migration.forceReimport.target.one": "this session",
+  "migration.forceReimport.target.many": "these {{count}} sessions",
+  "migration.forceReimport.button": "Force Re-import",
+  "migration.forceReimport.all": "Re-import all",
+  "migration.forceReimport.proceed": "Proceed",
+  "migration.forceReimport.toast.started": "Force re-import started",
+  "migration.running.title": "Migration in Progress",
+  "migration.running.description.line1": "You are about to finish while there are still sessions being migrated.",
+  "migration.running.description.line2": "If you leave now, some sessions may remain incomplete.",
+  "migration.running.stay": "Stay",
+  "migration.running.proceed": "Proceed",
+  "migration.sessionProgress.preparing": "Preparing session",
+  "migration.sessionProgress.storing": "Storing session",
+  "migration.sessionProgress.skipped": "Session skipped",
+  "migration.sessionProgress.header": "Migrating {{current}} of {{total}}",
+  "migration.sessionFormat.unknownDate": "Unknown date",
+  "migration.sessionFormat.unknown": "Unknown",
+  "migration.sessionFormat.unknownError": "Unknown error",
   // legacy-migration end
 
   "error.details.show": "Details",
@@ -1278,8 +1352,7 @@ export const dict = {
   "settings.saveBar.saveAnyway": "Save anyway",
   "settings.saveBar.cancel": "Cancel",
 
-  "notifications.action.previous": "Previous",
   "notifications.action.next": "Next",
   "notifications.action.close": "Close",
-  "notifications.action.tryModel": "Try model",
+  "notifications.action.tryModel": "Try {{model}}",
 }
