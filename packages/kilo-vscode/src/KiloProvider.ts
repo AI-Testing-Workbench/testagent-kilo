@@ -126,6 +126,7 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
   private cachedMcpStatusMessage: unknown = null
   /** Ref-count of in-flight handleUpdateConfig calls; prevents fetchAndSendConfig from sending stale data */
   private pending = 0
+  private configWarningsShown = false
   /** Cached notificationsLoaded payload */
   private cachedNotificationsMessage: unknown = null
   private pendingReviewComments: { comments: unknown[]; autoSend: boolean }[] = []
@@ -1055,6 +1056,9 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
         this.postMessage({ type: "connectionState", state })
 
         if (state === "connected") {
+          // Fire config warnings independently so a failure in the
+          // sequential await chain doesn't prevent warnings from being shown
+          void this.checkConfigWarnings("state")
           try {
             // Profile fetch is best-effort — returns 401 when user isn't logged into gateway.
             const sdkClient = this.client
@@ -1130,6 +1134,14 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
       }
 
       this.postMessage({ type: "connectionState", state: this.connectionState })
+
+      // connect() can resolve after SSE reaches "connected" but before this
+      // provider subscribes to onStateChange(). In that case the initial
+      // connected callback is missed, so run the warning check here too.
+      if (this.connectionState === "connected") {
+        void this.checkConfigWarnings("init")
+      }
+
       await this.syncWebviewState("initializeConnection")
       await this.flushPendingSessionRefresh("initializeConnection")
 
@@ -1962,6 +1974,49 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
       this.postMessage({ type: "configUpdated", config })
     } catch (error) {
       console.error("[Kilo New] KiloProvider: Failed to fetch config after update:", error)
+    }
+  }
+
+  /**
+   * Fetch config warnings from the server and display a single consolidated
+   * VS Code warning with a "Show Details" action button.
+   * Only shown once per provider lifecycle (flag resets on dispose/re-create, not on SSE reconnect).
+   */
+  private async checkConfigWarnings(from: string): Promise<void> {
+    if (this.configWarningsShown) {
+      console.log("[Kilo New] KiloProvider: config warnings already shown", { from })
+      return
+    }
+    if (!this.client) {
+      console.log("[Kilo New] KiloProvider: config warnings skipped (no client)", { from })
+      return
+    }
+    try {
+      const dir = this.getWorkspaceDirectory()
+      console.log("[Kilo New] KiloProvider: checking config warnings", { from, dir })
+      const result = await this.client.config.warnings({ directory: dir })
+      const list = result?.data ?? []
+      console.log("[Kilo New] KiloProvider: config warnings fetched", { from, count: list.length })
+      if (list.length === 0) return
+      this.configWarningsShown = true
+
+      const first = list[0]!
+      const summary = list.length === 1 ? first.message : `${first.message} (and ${list.length - 1} more)`
+      console.warn("[Kilo New] KiloProvider: showing config warnings", { from, count: list.length, path: first.path })
+
+      const action = await vscode.window.showWarningMessage(`Config: ${summary}`, "Show Details")
+      if (action === "Show Details") {
+        const lines = list.map((w) => {
+          const base = `${w.path}\n  ${w.message}`
+          return w.detail ? `${base}\n  ${w.detail}` : base
+        })
+        const channel = vscode.window.createOutputChannel("Kilo Config Warnings")
+        channel.clear()
+        channel.appendLine(lines.join("\n\n"))
+        channel.show()
+      }
+    } catch (err) {
+      console.warn("[Kilo New] KiloProvider: checkConfigWarnings failed:", { from, err })
     }
   }
 

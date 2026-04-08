@@ -636,6 +636,7 @@ export function Prompt(props: PromptProps) {
         })
         .catch(() => {})
     }
+    toast.dismiss() // kilocode_change - dismiss persistent config warning on first submit
     history.append({
       ...store.prompt,
       mode: currentMode,

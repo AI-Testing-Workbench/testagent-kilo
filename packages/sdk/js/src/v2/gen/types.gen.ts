@@ -2462,6 +2462,29 @@ export type ConfigUpdateResponses = {
 
 export type ConfigUpdateResponse = ConfigUpdateResponses[keyof ConfigUpdateResponses]
 
+export type ConfigWarningsData = {
+  body?: never
+  path?: never
+  query?: {
+    directory?: string
+    workspace?: string
+  }
+  url: "/config/warnings"
+}
+
+export type ConfigWarningsResponses = {
+  /**
+   * Config warnings
+   */
+  200: Array<{
+    path: string
+    message: string
+    detail?: string
+  }>
+}
+
+export type ConfigWarningsResponse = ConfigWarningsResponses[keyof ConfigWarningsResponses]
+
 export type ConfigProvidersData = {
   body?: never
   path?: never

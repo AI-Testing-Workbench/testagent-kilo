@@ -15,6 +15,7 @@ import { FormatError } from "./cli/error"
 import { ServeCommand } from "./cli/cmd/serve"
 import { WorkspaceServeCommand } from "./cli/cmd/workspace-serve"
 import { Filesystem } from "./util/filesystem"
+import { ConfigCommand as ConfigCLICommand } from "./cli/cmd/config" // kilocode_change
 import { DebugCommand } from "./cli/cmd/debug"
 import { StatsCommand } from "./cli/cmd/stats"
 import { McpCommand } from "./cli/cmd/mcp"
@@ -195,6 +196,7 @@ let cli = yargs(hideBin(process.argv))
   .command(SessionCommand)
   .command(RemoteCommand) // kilocode_change
   .command(DbCommand)
+  .command(ConfigCLICommand) // kilocode_change
 
 if (Installation.isLocal()) {
   cli = cli.command(WorkspaceServeCommand)
