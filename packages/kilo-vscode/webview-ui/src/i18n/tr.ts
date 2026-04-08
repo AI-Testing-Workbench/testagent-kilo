@@ -1370,7 +1370,8 @@ export const dict = {
   "settings.agentBehaviour.editMode": "Modu Düzenle",
   "settings.agentBehaviour.editMode.back": "Listeye dön",
   "settings.agentBehaviour.editMode.description": "Açıklama",
-  "settings.agentBehaviour.editMode.native": "Yerleşik mod (salt okunur tanım)",
+  "settings.agentBehaviour.editMode.native":
+    "Bu yerleşik bir moddur. Temel tanımı değiştirilemez, ancak aşağıdan geçersiz kılmaları yapılandırabilirsiniz.",
   "settings.agentBehaviour.editMode.prompt": "Sistem İstemi",
   "settings.agentBehaviour.editMode.promptOverride": "Bu yerleşik mod için özel sistem istemi geçersiz kılma",
   "settings.agentBehaviour.editMode.save": "Tamam",

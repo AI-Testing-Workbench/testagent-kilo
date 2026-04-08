@@ -1377,7 +1377,8 @@ export const dict = {
   "settings.agentBehaviour.editMode": "Modus bewerken",
   "settings.agentBehaviour.editMode.back": "Terug naar lijst",
   "settings.agentBehaviour.editMode.description": "Beschrijving",
-  "settings.agentBehaviour.editMode.native": "Ingebouwde modus (alleen-lezen definitie)",
+  "settings.agentBehaviour.editMode.native":
+    "Dit is een ingebouwde modus. De basisdefinitie kan niet worden gewijzigd, maar u kunt hieronder overrides configureren.",
   "settings.agentBehaviour.editMode.prompt": "Systeemprompt",
   "settings.agentBehaviour.editMode.promptOverride": "Aangepaste systeemprompt voor deze ingebouwde modus",
   "settings.agentBehaviour.editMode.save": "Klaar",

@@ -1371,7 +1371,8 @@ export const dict = {
   "settings.agentBehaviour.editMode": "Редагувати режим",
   "settings.agentBehaviour.editMode.back": "Назад до списку",
   "settings.agentBehaviour.editMode.description": "Опис",
-  "settings.agentBehaviour.editMode.native": "Вбудований режим (визначення лише для читання)",
+  "settings.agentBehaviour.editMode.native":
+    "Це вбудований режим. Його базове визначення неможливо змінити, але ви можете налаштувати перевизначення нижче.",
   "settings.agentBehaviour.editMode.prompt": "Системний запит",
   "settings.agentBehaviour.editMode.promptOverride":
     "Власне перевизначення системного запиту для цього вбудованого режиму",
