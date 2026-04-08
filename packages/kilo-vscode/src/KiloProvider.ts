@@ -197,6 +197,8 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
     | ((sessionId: string, progress: (status: string, detail?: string, error?: string) => void) => Promise<void>)
     | null = null
 
+  private diffVirtualProvider: import("./DiffVirtualProvider").DiffVirtualProvider | undefined
+
   constructor(
     private readonly extensionUri: vscode.Uri,
     private readonly connectionService: KiloConnectionService,
@@ -213,6 +215,10 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
     if (this.projectDirectory === directory) return
     this.projectDirectory = directory
     this.postMessage({ type: "workspaceDirectoryChanged", directory: directory ?? "" })
+  }
+
+  public setDiffVirtualProvider(provider: import("./DiffVirtualProvider").DiffVirtualProvider): void {
+    this.diffVirtualProvider = provider
   }
 
   getTelemetryProperties(): Record<string, unknown> {
@@ -626,6 +632,11 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
           break
         case "openChanges":
           vscode.commands.executeCommand("kilo-code.new.showChanges")
+          break
+        case "openDiffVirtual":
+          if (this.diffVirtualProvider && message.diff) {
+            this.diffVirtualProvider.open(message.diff)
+          }
           break
         case "continueInWorktree":
           if (message.sessionId && this.continueInWorktreeHandler) {

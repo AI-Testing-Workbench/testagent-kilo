@@ -523,6 +523,24 @@ export const SessionProvider: ParentComponent = (props) => {
     vscode.postMessage({ type: "removeSkill", location })
   }
 
+  // Handle permission events immediately (not in onMount) so we never miss
+  // the first permission request that may arrive before the DOM mounts.
+  // This matches the pattern already used for agentsLoaded and skillsLoaded.
+  const unsubPermissions = vscode.onMessage((message: ExtensionMessage) => {
+    switch (message.type) {
+      case "permissionRequest":
+        handlePermissionRequest(message.permission)
+        break
+      case "permissionResolved":
+        handlePermissionResolved(message.permissionID)
+        break
+      case "permissionError":
+        handlePermissionError(message.permissionID)
+        break
+    }
+  })
+  onCleanup(unsubPermissions)
+
   // MCP status loaded from CLI backend
   const unsubMcpStatus = vscode.onMessage((message: ExtensionMessage) => {
     if (message.type === "mcpStatusLoaded") {
@@ -643,18 +661,6 @@ export const SessionProvider: ParentComponent = (props) => {
 
         case "sessionStatus":
           handleSessionStatus(message.sessionID, message.status, message.attempt, message.message, message.next)
-          break
-
-        case "permissionRequest":
-          handlePermissionRequest(message.permission)
-          break
-
-        case "permissionResolved":
-          handlePermissionResolved(message.permissionID)
-          break
-
-        case "permissionError":
-          handlePermissionError(message.permissionID)
           break
 
         case "todoUpdated":

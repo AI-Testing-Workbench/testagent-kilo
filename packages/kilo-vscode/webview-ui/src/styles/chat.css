@@ -1996,6 +1996,101 @@
     word-break: break-all;
   }
 
+  [data-slot="permission-diff"] {
+    margin: 8px 0;
+    border: 1px solid var(--border-weak-base);
+    border-radius: 4px;
+    overflow: hidden;
+    --diffs-light-bg: var(--vscode-editor-background, #1e1e1e);
+    --diffs-dark-bg: var(--vscode-editor-background, #1e1e1e);
+    --syntax-diff-add: #2ea043;
+    --syntax-diff-delete: #da3633;
+    --diffs-bg-deletion-override: color-mix(
+      in lab,
+      var(--vscode-editor-background, #1e1e1e) 82%,
+      var(--syntax-diff-delete, #da3633)
+    );
+    --diffs-bg-deletion-number-override: color-mix(
+      in lab,
+      var(--vscode-editor-background, #1e1e1e) 72%,
+      var(--syntax-diff-delete, #da3633)
+    );
+    --diffs-bg-addition-override: color-mix(
+      in lab,
+      var(--vscode-editor-background, #1e1e1e) 82%,
+      var(--syntax-diff-add, #2ea043)
+    );
+    --diffs-bg-addition-number-override: color-mix(
+      in lab,
+      var(--vscode-editor-background, #1e1e1e) 72%,
+      var(--syntax-diff-add, #2ea043)
+    );
+  }
+
+  [data-slot="permission-diff-header"] {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+    padding: 6px 12px;
+    background: var(--surface-base, var(--vscode-editorWidget-background));
+    border-bottom: 1px solid var(--border-weak-base);
+  }
+
+  [data-slot="permission-diff-file-info"] {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    min-width: 0;
+    flex: 1;
+  }
+
+  [data-slot="permission-diff-icon"] {
+    flex-shrink: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  [data-slot="permission-diff-filename"] {
+    display: flex;
+    align-items: center;
+    font-size: 12px;
+    font-family: var(--vscode-editor-font-family, monospace);
+    color: var(--text-base, var(--vscode-foreground));
+    min-width: 0;
+    flex: 1;
+  }
+
+  [data-slot="permission-diff-directory"] {
+    color: var(--text-weak, var(--vscode-descriptionForeground));
+    flex-shrink: 1;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    direction: rtl;
+    text-align: left;
+  }
+
+  [data-slot="permission-diff-name"] {
+    flex-shrink: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  [data-slot="permission-diff-actions"] {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    flex-shrink: 0;
+  }
+
+  [data-slot="permission-diff-content"] {
+    max-height: 300px;
+    overflow: auto;
+  }
+
   [data-slot="permission-rules"] {
     margin: 0;
     max-height: 160px;

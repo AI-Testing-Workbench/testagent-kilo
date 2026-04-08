@@ -3,6 +3,7 @@ import { KiloProvider } from "./KiloProvider"
 import { AgentManagerProvider } from "./agent-manager/AgentManagerProvider"
 import { VscodeHost } from "./agent-manager/vscode-host"
 import { DiffViewerProvider } from "./DiffViewerProvider"
+import { DiffVirtualProvider } from "./DiffVirtualProvider"
 import { SettingsEditorProvider } from "./SettingsEditorProvider"
 import { SubAgentViewerProvider } from "./SubAgentViewerProvider"
 import { EXTENSION_DISPLAY_NAME } from "./constants"
@@ -127,6 +128,11 @@ export function activate(context: vscode.ExtensionContext) {
     void provider.appendReviewComments(comments, autoSend)
   })
   context.subscriptions.push(diffViewerProvider)
+
+  // Create diff virtual provider (lightweight single-file diff for permission approval)
+  const diffVirtualProvider = new DiffVirtualProvider(context.extensionUri)
+  provider.setDiffVirtualProvider(diffVirtualProvider)
+  context.subscriptions.push(diffVirtualProvider)
 
   // Create settings/profile editor provider (opens in editor area, not sidebar)
   const settingsEditorProvider = new SettingsEditorProvider(context.extensionUri, connectionService, context)
