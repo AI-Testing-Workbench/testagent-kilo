@@ -19,7 +19,24 @@
   },
   "workspaces": {
     "packages": [
-      "packages/*",
+      "packages/app",
+      "packages/app",
+      "packages/desktop",
+      "packages/desktop-electron",
+      "packages/kilo-docs",
+      "packages/kilo-gateway",
+      "packages/kilo-i18n",
+      "packages/kilo-jetbrains",
+      "packages/kilo-telemetry",
+      "packages/kilo-ui",
+      "packages/kilo-vscode",
+      "packages/opencode",
+      "packages/plugin",
+      "packages/script",
+      "packages/sdk/js",
+      "packages/storybook",
+      "packages/ui",
+      "packages/util",
       "packages/sdk/js"
     ],
     "catalog": {
@@ -109,8 +126,7 @@
   },
   "patchedDependencies": {
     "@standard-community/standard-openapi@0.2.9": "patches/@standard-community%2Fstandard-openapi@0.2.9.patch",
-    "@openrouter/ai-sdk-provider@1.5.4": "patches/@openrouter%2Fai-sdk-provider@1.5.4.patch",
-    "ghostty-web@0.3.0": "patches/ghostty-web@0.3.0.patch"
+    "@openrouter/ai-sdk-provider@1.5.4": "patches/@openrouter%2Fai-sdk-provider@1.5.4.patch"
   },
   "version": "7.1.21",
   "peerDependencies": {}
