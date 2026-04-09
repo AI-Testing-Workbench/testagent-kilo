@@ -1,3 +1,20 @@
+// testagent_change start - patch fs.readFileSync to handle EPERM on Bun virtual fs (Windows)
+// Bun compiled binaries on Windows mount a virtual fs at B:\~BUN\ which throws EPERM
+// when y18n tries to read locale files. Return empty string for those paths.
+import fs from "fs"
+const _readFileSync = fs.readFileSync.bind(fs)
+// @ts-ignore
+fs.readFileSync = (...args: Parameters<typeof fs.readFileSync>) => {
+  try {
+    return _readFileSync(...args)
+  } catch (err: any) {
+    const p = typeof args[0] === "string" ? args[0] : ""
+    if (err?.code === "EPERM" && (p.startsWith("B:\\~BUN\\") || p.startsWith("/$bunfs/"))) return ""
+    throw err
+  }
+}
+// testagent_change end
+
 import yargs from "yargs"
 import { hideBin } from "yargs/helpers"
 import { RunCommand } from "./cli/cmd/run"

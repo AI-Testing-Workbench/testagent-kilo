@@ -22,7 +22,7 @@ const packagesDir = join(kiloVscodeDir, "..")
 const opencodeDir = join(packagesDir, "opencode")
 
 const targetBinDir = join(kiloVscodeDir, "bin")
-const binName = process.platform === "win32" ? "kilo.exe" : "kilo"
+const binName = process.platform === "win32" ? "testagent.exe" : "testagent"
 const targetBinPath = join(targetBinDir, binName)
 const versionFile = join(targetBinDir, ".cli-version")
 
@@ -103,7 +103,7 @@ async function findKiloBinaryInOpencodeDist(): Promise<string | null> {
         queue.push(p)
         continue
       }
-      if (e.isFile() && (e.name === "kilo" || e.name === "kilo.exe") && basename(dirname(p)) === "bin") {
+      if (e.isFile() && (e.name === "testagent" || e.name === "testagent.exe") && basename(dirname(p)) === "bin") {
         return p
       }
     }

@@ -1,0 +1,3 @@
+[submodule "packages/testagent-opencode"]
+	path = packages/testagent-opencode
+	url = git@github.com:AI-Testing-Workbench/testagent-opencode.git

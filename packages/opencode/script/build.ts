@@ -60,6 +60,36 @@ const singleFlag = process.argv.includes("--single")
 const baselineFlag = process.argv.includes("--baseline")
 const skipInstall = process.argv.includes("--skip-install")
 
+// testagent_change start - patch y18n at bundle time to handle EPERM on Windows Bun virtual fs
+// node_modules patch only affects local dev; the Bun build plugin patches the bundled output.
+const y18nPath = path.join(dir, "../../node_modules/.bun/y18n@5.0.8/node_modules/y18n/build/lib/index.js")
+const y18nSrc = await Bun.file(y18nPath).text()
+if (y18nSrc.includes("err.code === 'EPERM'")) {
+  console.log("y18n patch: already applied")
+} else {
+  const patched = y18nSrc.replace(
+    /if \(err\.code === 'ENOENT'\)/,
+    `if (err.code === 'ENOENT' || err.code === 'EPERM')`,
+  )
+  if (patched === y18nSrc) console.warn("y18n patch: pattern not found, y18n version may have changed")
+  else {
+    await Bun.write(y18nPath, patched)
+    console.log("y18n patched: EPERM handled in _readLocaleFile")
+  }
+}
+
+const y18nPlugin: import("bun").BunPlugin = {
+  name: "y18n-eperm-patch",
+  setup(build) {
+    build.onLoad({ filter: /y18n.*index\.js$/ }, async (args) => {
+      const src = await Bun.file(args.path).text()
+      const out = src.replace(/if \(err\.code === 'ENOENT'\)/, `if (err.code === 'ENOENT' || err.code === 'EPERM')`)
+      return { contents: out, loader: "js" }
+    })
+  },
+}
+// testagent_change end
+
 const allTargets: {
   os: string
   arch: "arm64" | "x64"
@@ -179,7 +209,7 @@ for (const item of targets) {
   await Bun.build({
     conditions: ["browser"],
     tsconfig: "./tsconfig.json",
-    plugins: [solidPlugin],
+    plugins: [solidPlugin, y18nPlugin],
     sourcemap: "external",
     compile: {
       autoloadBunfig: false,
