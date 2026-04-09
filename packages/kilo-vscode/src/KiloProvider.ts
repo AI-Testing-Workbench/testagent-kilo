@@ -175,6 +175,8 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
   private unsubscribeDirectoryProvider: (() => void) | null = null
   private initConnectionPromise: Promise<void> | null = null
   private webviewMessageDisposable: vscode.Disposable | null = null
+  private viewStateDisposable: vscode.Disposable | null = null
+  private visibilityDisposable: vscode.Disposable | null = null
 
   /** Lazily initialized ignore controller for .kilocodeignore filtering */
   private ignoreController: FileIgnoreController | null = null
@@ -373,21 +375,16 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
       localResourceRoots: [this.extensionUri],
     }
 
-    // Set HTML content
     webviewView.webview.html = this._getHtmlForWebview(webviewView.webview)
-
-    // Handle messages from webview (shared handler)
     this.setupWebviewMessageHandler(webviewView.webview)
 
-    // Track sidebar visibility for keybinding when-clauses and stats polling
     vscode.commands.executeCommand("setContext", "kilo-code.new.sidebarVisible", webviewView.visible)
-    webviewView.onDidChangeVisibility(() => {
+    this.visibilityDisposable?.dispose()
+    this.visibilityDisposable = webviewView.onDidChangeVisibility(() => {
       vscode.commands.executeCommand("setContext", "kilo-code.new.sidebarVisible", webviewView.visible)
       this.statsPoller?.setEnabled(webviewView.visible)
       this.focusSession(webviewView.visible ? this.currentSession?.id : undefined)
     })
-
-    // Initialize connection to CLI backend
     this.initializeConnection()
   }
 
@@ -406,12 +403,11 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
 
     panel.webview.html = this._getHtmlForWebview(panel.webview)
 
-    // Handle messages from webview (shared handler)
     this.setupWebviewMessageHandler(panel.webview)
-
-    // Unregister focus when the editor tab becomes inactive, re-register when active
-    panel.onDidChangeViewState(() => this.focusSession(panel.active ? this.currentSession?.id : undefined))
-
+    this.viewStateDisposable?.dispose()
+    this.viewStateDisposable = panel.onDidChangeViewState(() =>
+      this.focusSession(panel.active ? this.currentSession?.id : undefined),
+    )
     this.initializeConnection()
   }
 
@@ -3288,6 +3284,8 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
     this.unsubscribeMigrationComplete?.()
     this.unsubscribeClearPendingPrompts?.()
     this.unsubscribeDirectoryProvider?.()
+    this.viewStateDisposable?.dispose()
+    this.visibilityDisposable?.dispose()
     this.webviewMessageDisposable?.dispose()
     this.trackedSessionIds.clear()
     this.syncedChildSessions.clear()
