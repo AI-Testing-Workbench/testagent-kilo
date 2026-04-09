@@ -22,6 +22,7 @@
  *   - packages/opencode/src/kilocode/**
  *   - packages/opencode/test/kilocode/**
  *   - Any path containing "kilocode" in directory or filename
+ *   - Any path with a directory starting with "kilo-" (e.g. kilo-sessions/)
  */
 
 import { spawnSync } from "node:child_process"
@@ -52,7 +53,7 @@ function changedFiles() {
 
 function isExempt(file: string) {
   const norm = file.replaceAll("\\", "/").toLowerCase()
-  return norm.split("/").some((part) => part.includes("kilocode"))
+  return norm.split("/").some((part) => part.includes("kilocode") || part.startsWith("kilo-"))
 }
 
 function isSource(file: string) {
@@ -180,6 +181,7 @@ console.error(
     "  - packages/opencode/src/kilocode/**",
     "  - packages/opencode/test/kilocode/**",
     "  - Any path containing 'kilocode' in the directory or filename",
+    "  - Any directory starting with 'kilo-' (e.g. kilo-sessions/)",
     "",
     "See AGENTS.md for details.",
   ].join("\n"),

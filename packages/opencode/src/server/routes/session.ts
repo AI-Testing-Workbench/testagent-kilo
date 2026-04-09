@@ -971,6 +971,7 @@ export const SessionRoutes = lazy(() =>
     )
     .post(
       "/viewed",
+      // kilocode_change start
       describeRoute({
         summary: "Set viewed sessions",
         description: "Notify the server which sessions the user is currently viewing, or clear all.",
@@ -993,6 +994,7 @@ export const SessionRoutes = lazy(() =>
         const { KiloSessions } = await import("../../kilo-sessions/kilo-sessions")
         const body = c.req.valid("json")
         KiloSessions.setViewedSessions({ focused: body.focused ?? [], open: body.open ?? [] })
+        // kilocode_change end
         return c.json(true)
       },
     ),
