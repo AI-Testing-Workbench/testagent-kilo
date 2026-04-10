@@ -220,6 +220,21 @@ const bar = 2
 // kilocode_change - new file
 ```
 
+<!-- prettier-ignore -->
+**JSX/TSX (inside JSX templates):**
+
+<!-- prettier-ignore -->
+```tsx
+{/* kilocode_change */}
+```
+
+<!-- prettier-ignore -->
+```tsx
+{/* kilocode_change start */}
+<MyComponent />
+{/* kilocode_change end */}
+```
+
 #### When markers are NOT needed
 
 Code in these paths is Kilo Code-specific and does NOT need `kilocode_change` markers:
