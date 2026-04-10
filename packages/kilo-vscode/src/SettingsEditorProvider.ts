@@ -6,9 +6,9 @@ import type { KiloConnectionService } from "./services/cli-backend"
 type PanelView = "settings" | "profile" | "marketplace"
 
 const PANEL_TITLES: Record<PanelView, string> = {
-  settings: "Kilo Settings",
-  profile: "Kilo Profile",
-  marketplace: "Kilo Marketplace",
+  settings: "TestAgent Settings",
+  profile: "TestAgent Profile",
+  marketplace: "TestAgent Marketplace",
 }
 
 /**

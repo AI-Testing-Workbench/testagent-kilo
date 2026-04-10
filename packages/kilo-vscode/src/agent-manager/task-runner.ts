@@ -1,3 +1,4 @@
+// testagent_change
 /**
  * VS Code adapter implementing the RunTask callback via vscode.tasks API.
  */
@@ -17,7 +18,7 @@ export async function executeVscodeTask(config: SetupTaskConfig): Promise<number
     { type: "kilo-worktree-setup", script: config.command },
     vscode.TaskScope.Workspace,
     "Worktree Setup",
-    "Kilo Code",
+    "TestAgent",
     proc,
     [],
   )

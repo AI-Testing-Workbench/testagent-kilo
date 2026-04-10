@@ -49,7 +49,7 @@ const SessionList: Component<SessionListProps> = (props) => {
   const [renameValue, setRenameValue] = createSignal("")
 
   onMount(() => {
-    console.log("[Kilo New] SessionList mounted, loading sessions")
+    console.log("[testagent] SessionList mounted, loading sessions")
     session.loadSessions()
   })
 

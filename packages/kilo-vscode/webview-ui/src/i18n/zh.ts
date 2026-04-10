@@ -124,7 +124,7 @@ export const dict = {
   "dialog.model.expand": "展开",
   "dialog.model.collapse": "收起",
 
-  "dialog.model.unpaid.freeModels.title": "Kilo 提供的免费模型",
+  "dialog.model.unpaid.freeModels.title": "TestAgent 提供的免费模型",
   "dialog.model.unpaid.addMore.title": "从热门提供商添加更多模型",
 
   "dialog.provider.viewAll": "查看更多提供商",
@@ -137,7 +137,7 @@ export const dict = {
   "provider.connect.status.waiting": "等待授权...",
   "provider.connect.status.failed": "授权失败：{{error}}",
   "provider.connect.apiKey.description":
-    "输入你的 {{provider}} API 密钥以连接帐户，并在 Kilo 中使用 {{provider}} 模型。",
+    "输入你的 {{provider}} API 密钥以连接帐户，并在 TestAgent 中使用 {{provider}} 模型。",
   "provider.connect.apiKey.label": "{{provider}} API 密钥",
   "provider.connect.apiKey.placeholder": "API 密钥",
   "provider.connect.apiKey.required": "API 密钥为必填项",
@@ -148,14 +148,14 @@ export const dict = {
   "provider.connect.opencodeZen.visit.suffix": " 获取你的 API 密钥。",
   "provider.connect.oauth.code.visit.prefix": "访问 ",
   "provider.connect.oauth.code.visit.link": "此链接",
-  "provider.connect.oauth.code.visit.suffix": " 获取授权码，以连接你的帐户并在 Kilo 中使用 {{provider}} 模型。",
+  "provider.connect.oauth.code.visit.suffix": " 获取授权码，以连接你的帐户并在 TestAgent 中使用 {{provider}} 模型。",
   "provider.connect.oauth.code.label": "{{method}} 授权码",
   "provider.connect.oauth.code.placeholder": "授权码",
   "provider.connect.oauth.code.required": "授权码为必填项",
   "provider.connect.oauth.code.invalid": "授权码无效",
   "provider.connect.oauth.auto.visit.prefix": "访问 ",
   "provider.connect.oauth.auto.visit.link": "此链接",
-  "provider.connect.oauth.auto.visit.suffix": " 并输入以下代码，以连接你的帐户并在 Kilo 中使用 {{provider}} 模型。",
+  "provider.connect.oauth.auto.visit.suffix": " 并输入以下代码，以连接你的帐户并在 TestAgent 中使用 {{provider}} 模型。",
   "provider.connect.oauth.auto.confirmationCode": "确认码",
   "provider.connect.toast.connected.title": "{{provider}} 已连接",
   "provider.connect.toast.connected.description": "现在可以使用 {{provider}} 模型了。",
@@ -279,7 +279,7 @@ export const dict = {
   "dialog.directory.empty": "未找到文件夹",
 
   "dialog.server.title": "服务器",
-  "dialog.server.description": "切换此应用连接的 Kilo 服务器。",
+  "dialog.server.description": "切换此应用连接的 TestAgent 服务器。",
   "dialog.server.search.placeholder": "搜索服务器",
   "dialog.server.empty": "暂无服务器",
   "dialog.server.add.title": "添加服务器",
@@ -403,7 +403,7 @@ export const dict = {
   "toast.session.listFailed.title": "无法加载 {{project}} 的会话",
 
   "toast.update.title": "有可用更新",
-  "toast.update.description": "Kilo 有新版本 ({{version}}) 可安装。",
+  "toast.update.description": "TestAgent 有新版本 ({{version}}) 可安装。",
   "toast.update.action.installRestart": "安装并重启",
   "toast.update.action.notYet": "稍后",
 
@@ -414,7 +414,7 @@ export const dict = {
   "error.page.action.checking": "检查中...",
   "error.page.action.checkUpdates": "检查更新",
   "error.page.action.updateTo": "更新到 {{version}}",
-  "error.page.report.prefix": "请将此错误报告给 Kilo 团队",
+  "error.page.report.prefix": "请将此错误报告给 TestAgent 团队",
   "error.page.report.discord": "在 Discord 上",
   "error.page.version": "版本：{{version}}",
 
@@ -440,7 +440,7 @@ export const dict = {
   "error.chain.didYouMean": "你是不是想输入：{{suggestions}}",
   "error.chain.modelNotFound": "未找到模型：{{provider}}/{{model}}",
   "error.chain.checkConfig": "请检查你的配置 (opencode.json) 中的 provider/model 名称",
-  "error.chain.mcpFailed": 'MCP 服务器 "{{name}}" 启动失败。注意: Kilo 暂不支持 MCP 认证。',
+  "error.chain.mcpFailed": 'MCP 服务器 "{{name}}" 启动失败。注意: TestAgent 暂不支持 MCP 认证。',
   "error.chain.providerAuthFailed": "提供商认证失败（{{provider}}）：{{message}}",
   "error.chain.providerInitFailed": '无法初始化提供商 "{{provider}}"。请检查凭据和配置。',
   "error.chain.configJsonInvalid": "配置文件 {{path}} 不是有效的 JSON(C)",
@@ -578,12 +578,12 @@ export const dict = {
   "sidebar.workspaces.enable": "启用工作区",
   "sidebar.workspaces.disable": "禁用工作区",
   "sidebar.gettingStarted.title": "入门",
-  "sidebar.gettingStarted.line1": "Kilo 提供免费模型，你可以立即开始使用。",
+  "sidebar.gettingStarted.line1": "TestAgent 提供免费模型，你可以立即开始使用。",
   "sidebar.gettingStarted.line2": "连接任意提供商即可使用更多模型，如 Claude、GPT、Gemini 等。",
   "sidebar.project.recentSessions": "最近会话",
   "sidebar.project.viewAllSessions": "查看全部会话",
 
-  "app.name.desktop": "Kilo Desktop",
+  "app.name.desktop": "TestAgent Desktop",
   "settings.section.desktop": "桌面",
   "settings.section.server": "服务器",
   "settings.tab.general": "通用",
@@ -595,24 +595,24 @@ export const dict = {
   "settings.general.section.sounds": "音效",
 
   "settings.general.row.language.title": "语言",
-  "settings.general.row.language.description": "更改 Kilo 的显示语言",
+  "settings.general.row.language.description": "更改 TestAgent 的显示语言",
   "settings.general.row.appearance.title": "外观",
-  "settings.general.row.appearance.description": "自定义 Kilo 在你的设备上的外观",
+  "settings.general.row.appearance.description": "自定义 TestAgent 在你的设备上的外观",
   "settings.general.row.theme.title": "主题",
-  "settings.general.row.theme.description": "自定义 Kilo 的主题。",
+  "settings.general.row.theme.description": "自定义 TestAgent 的主题。",
   "settings.general.row.font.title": "字体",
   "settings.general.row.font.description": "自定义代码块使用的等宽字体",
   "settings.general.row.releaseNotes.title": "发行说明",
   "settings.general.row.releaseNotes.description": "更新后显示“新功能”弹窗",
 
   "settings.updates.row.startup.title": "启动时检查更新",
-  "settings.updates.row.startup.description": "在 Kilo 启动时自动检查更新",
+  "settings.updates.row.startup.description": "在 TestAgent 启动时自动检查更新",
   "settings.updates.row.check.title": "检查更新",
   "settings.updates.row.check.description": "手动检查更新并在有更新时安装",
   "settings.updates.action.checkNow": "立即检查",
   "settings.updates.action.checking": "正在检查...",
   "settings.updates.toast.latest.title": "已是最新版本",
-  "settings.updates.toast.latest.description": "你正在使用最新版本的 Kilo。",
+  "settings.updates.toast.latest.description": "你正在使用最新版本的 TestAgent。",
 
   "font.option.ibmPlexMono": "IBM Plex Mono",
   "font.option.cascadiaCode": "Cascadia Code",
@@ -706,7 +706,7 @@ export const dict = {
   "settings.providers.title": "提供商",
   "settings.providers.description": "提供商设置将在此处可配置。",
   "settings.providers.betaNotice":
-    "目前只能在设置界面中配置 Kilo Gateway 提供商。在 Beta 测试期间即将支持配置其他提供商。在此期间，您可以使用 CLI 或配置文件来配置提供商。我们致力于保持 Kilo 开放，无锁定。",
+    "目前只能在设置界面中配置 TestAgent Gateway 提供商。在 Beta 测试期间即将支持配置其他提供商。在此期间，您可以使用 CLI 或配置文件来配置提供商。我们致力于保持 TestAgent 开放，无锁定。",
   "settings.providers.section.connected": "已连接的提供商",
   "settings.providers.connected.empty": "没有已连接的提供商",
   "settings.providers.section.popular": "热门提供商",
@@ -843,7 +843,7 @@ export const dict = {
   "feedback.dialog.discord": "加入我们的 Discord 社区",
   "feedback.dialog.support": "客户支持",
   "session.cloud.import.title": "从云端导入",
-  "session.cloud.import.placeholder": "会话 ID、URL 或 kilo import 命令",
+  "session.cloud.import.placeholder": "会话 ID、URL 或 testagent import 命令",
   "session.cloud.import.button": "导入",
   "session.cloud.import.invalid": "会话 ID 格式无效",
   "session.cloud.import.legacy": "这似乎是一个旧版会话，已不再受支持。",
@@ -879,7 +879,7 @@ export const dict = {
   "deviceAuth.toast.codeCopied": "代码已复制到剪贴板",
   "deviceAuth.toast.errorCopied": "错误已复制到剪贴板",
   "deviceAuth.status.initiating": "正在启动登录...",
-  "deviceAuth.title": "登录 Kilo Code",
+  "deviceAuth.title": "登录 TestAgent Code",
   "deviceAuth.step1": "步骤 1：打开此 URL",
   "deviceAuth.action.copyUrl": "复制 URL",
   "deviceAuth.action.openBrowser": "打开浏览器",
@@ -900,7 +900,7 @@ export const dict = {
 
   "profile.title": "个人资料",
   "profile.notLoggedIn": "未登录",
-  "profile.action.login": "使用 Kilo Code 登录",
+  "profile.action.login": "使用 TestAgent Code 登录",
   "profile.balance.title": "余额",
   "profile.balance.refresh": "刷新余额",
   "profile.action.dashboard": "控制面板",
@@ -918,10 +918,10 @@ export const dict = {
 
   "settings.experimental.title": "实验性功能",
   "settings.language.title": "语言",
-  "settings.aboutKiloCode.title": "关于 Kilo Code",
+  "settings.aboutKiloCode.title": "关于 TestAgent",
 
   "session.messages.empty": "在下方输入消息以开始对话。",
-  "session.messages.welcome": "Kilo Code 是一个 AI 编程助手。让它帮你构建功能、修复 bug 或解释代码库。",
+  "session.messages.welcome": "TestAgent Code 是一个 AI 编程助手。让它帮你构建功能、修复 bug 或解释代码库。",
   "session.messages.scrollToBottom": "滚动到底部",
   "session.status.writingResponse": "正在撰写回复…",
   "session.status.retry": "正在重试…",
@@ -957,7 +957,7 @@ export const dict = {
   "settings.aboutKiloCode.port.label": "端口：",
   "settings.aboutKiloCode.versionInfo": "版本信息",
   "settings.aboutKiloCode.version.label": "版本：",
-  "settings.aboutKiloCode.extensionName": "Kilo Code 扩展",
+  "settings.aboutKiloCode.extensionName": "TestAgent Code 扩展",
   "settings.aboutKiloCode.community": "社区与支持",
   "settings.aboutKiloCode.feedback.prefix": "如果您有任何问题或反馈，欢迎在以下平台提交 issue",
   "settings.aboutKiloCode.feedback.or": "或",
@@ -971,9 +971,9 @@ export const dict = {
   "settings.aboutKiloCode.exportSettings": "导出",
   "settings.aboutKiloCode.importSettings": "导入",
   "settings.aboutKiloCode.importSettings.invalidJson": "无效的 JSON 文件。请选择有效的设置文件。",
-  "settings.aboutKiloCode.importSettings.invalidConfig": "文件不包含有效的 Kilo 设置。",
+  "settings.aboutKiloCode.importSettings.invalidConfig": "文件不包含有效的 TestAgent 设置。",
   "settings.aboutKiloCode.importSettings.tooLarge": "文件过大。设置文件必须小于 1 MB。",
-  "settings.aboutKiloCode.importSettings.newerVersion": "此文件由较新版本的 Kilo 导出。部分设置可能会被忽略。",
+  "settings.aboutKiloCode.importSettings.newerVersion": "此文件由较新版本的 TestAgent 导出。部分设置可能会被忽略。",
   "settings.aboutKiloCode.importSettings.success": "设置已导入。请查看上方的更改，然后点击保存。",
 
   "settings.aboutKiloCode.telemetry.title": "遥测",
@@ -997,7 +997,7 @@ export const dict = {
   "settings.browser.headless.title": "无头模式",
   "settings.browser.headless.description": "以无头模式运行（无可见浏览器窗口）。",
 
-  "settings.language.description": '"自动"将使用 VS Code 的显示语言。选择 Kilo Code 界面的语言。',
+  "settings.language.description": '"自动"将使用 VS Code 的显示语言。选择 TestAgent Code 界面的语言。',
   "settings.language.auto": "自动（VS Code 语言）",
   "settings.language.current": "当前：",
 
@@ -1131,13 +1131,13 @@ export const dict = {
   "settings.agentBehaviour.claudeCompat.heading": "Claude Code 兼容性",
   "settings.agentBehaviour.claudeCompat.title": "加载 Claude Code 文件",
   "settings.agentBehaviour.claudeCompat.description":
-    "将 Claude Code 配置目录中的 CLAUDE.md 指令和技能加载到会话中。如果您希望 Kilo 使用您的 Claude Code 指令和技能，请启用此选项。需要重启。",
+    "将 Claude Code 配置目录中的 CLAUDE.md 指令和技能加载到会话中。如果您希望 TestAgent 使用您的 Claude Code 指令和技能，请启用此选项。需要重启。",
   "settings.agentBehaviour.mcpDetail.command": "命令",
   "settings.agentBehaviour.mcpDetail.args": "参数",
   "settings.agentBehaviour.mcpDetail.env": "环境",
   "settings.agentBehaviour.mcpDetail.disabled": "此服务器已禁用。",
   "settings.agentBehaviour.mcpBrowseMarketplace": "浏览市场",
-  "settings.agentBehaviour.mcpEmpty": "未配置 MCP 服务器。在 kilo.jsonc 中添加 MCP 服务器，或让代理为您添加。",
+  "settings.agentBehaviour.mcpEmpty": "未配置 MCP 服务器。在 testagent.jsonc 中添加 MCP 服务器，或让代理为您添加。",
   "settings.agentBehaviour.workflowsPlaceholder": "工作流通过工作区中的工作流文件管理。",
   "settings.agentBehaviour.workflows.description":
     "工作流是在配置中定义的自定义斜杠命令。在聊天中输入 /command-name 来调用它们。命令在 opencode.json 的 'command' 部分中配置。",
@@ -1206,10 +1206,10 @@ export const dict = {
   "settings.legacyMigration.link": "从旧版迁移",
   "settings.aboutKiloCode.legacyMigration.title": "旧版迁移",
   "settings.aboutKiloCode.legacyMigration.description":
-    "从旧版 Kilo Code 安装迁移设置，包括提供商 API 密钥和默认模型。",
+    "从旧版 TestAgent Code 安装迁移设置，包括提供商 API 密钥和默认模型。",
 
   // Screen 1 — What's New
-  "migration.whatsNew.title": "Kilo Code 新功能",
+  "migration.whatsNew.title": "TestAgent Code 新功能",
   "migration.whatsNew.subtitle": "我们在更快、更高效的基础上重新构建了扩展。",
   "migration.whatsNew.features.performance.title": "更快的智能体性能",
   "migration.whatsNew.features.performance.detail":
@@ -1221,7 +1221,7 @@ export const dict = {
     "一个统一的界面，可以并行运行多个智能体，每个智能体各自使用独立的 worktree——在同一个地方监控进度、切换上下文和审查变更。",
   "migration.whatsNew.features.foundation.title": "共享基础",
   "migration.whatsNew.features.foundation.detail":
-    "所有 Kilo 产品共享一个小巧高效的核心。无论你选择哪种方式工作，都能获得熟悉的体验。",
+    "所有 TestAgent 产品共享一个小巧高效的核心。无论你选择哪种方式工作，都能获得熟悉的体验。",
   "migration.whatsNew.blogLink": "阅读完整公告",
   "migration.whatsNew.continue": "继续",
 

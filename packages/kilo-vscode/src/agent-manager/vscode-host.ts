@@ -144,7 +144,7 @@ export class VscodeHost implements Host {
   }
 
   extensionKeybindings(): Array<{ command: string; key?: string; mac?: string }> {
-    const ext = vscode.extensions.getExtension("kilocode.kilo-code")
+    const ext = vscode.extensions.getExtension("testagent.testagent-vscode")
     return ext?.packageJSON?.contributes?.keybindings ?? []
   }
 

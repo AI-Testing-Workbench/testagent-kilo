@@ -124,7 +124,8 @@ const ProvidersTab: Component = () => {
   return (
     <div>
       {/* Kilo Gateway — always at the top, not editable */}
-      <Card>
+      {/* testagent_change */}
+      {/* <Card>
         <div
           style={{
             display: "flex",
@@ -149,7 +150,7 @@ const ProvidersTab: Component = () => {
             <Tag>{language.t("settings.providers.tag.gateway")}</Tag>
           </Show>
         </div>
-      </Card>
+      </Card> */}
 
       {/* Connected providers (excluding Kilo) */}
       <h4 style={{ "margin-top": "16px", "margin-bottom": "8px" }}>

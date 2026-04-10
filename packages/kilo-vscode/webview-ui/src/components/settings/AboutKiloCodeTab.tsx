@@ -180,7 +180,8 @@ const AboutKiloCodeTab: Component<AboutKiloCodeTabProps> = (props) => {
       </div>
 
       {/* Community & Support */}
-      <div style={sectionStyle}>
+      {/* testagent_change */}
+      {/* <div style={sectionStyle}>
         <h4 style={headingStyle}>{language.t("settings.aboutKiloCode.community")}</h4>
         <p
           style={{
@@ -218,7 +219,7 @@ const AboutKiloCodeTab: Component<AboutKiloCodeTabProps> = (props) => {
           </span>
           .
         </p>
-      </div>
+      </div> */}
 
       {/* Telemetry */}
       <div style={sectionStyle}>
