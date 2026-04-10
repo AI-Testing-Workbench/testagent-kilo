@@ -1,4 +1,5 @@
 import * as vscode from "vscode"
+import * as path from "path"
 import { KiloProvider } from "./KiloProvider"
 import { AgentManagerProvider } from "./agent-manager/AgentManagerProvider"
 import { VscodeHost } from "./agent-manager/vscode-host"
@@ -218,6 +219,32 @@ export function activate(context: vscode.ExtensionContext) {
     }),
     vscode.commands.registerCommand("kilo-code.new.openInTab", () => {
       return openKiloInNewTab(context, connectionService, agentManagerProvider, tabPanels)
+    }),
+    vscode.commands.registerCommand("kilo-code.new.openTestagentTerminal", async () => {
+      const port = Math.floor(Math.random() * (65535 - 16384 + 1)) + 16384
+
+      const binName = process.platform === "win32" ? "testagent.exe" : "testagent"
+      const cliPath = path.join(context.extensionPath, "bin", binName)
+
+      const existingTerminal = vscode.window.terminals.find((t) => t.name === "testagent")
+      if (existingTerminal) {
+        existingTerminal.show()
+        existingTerminal.sendText(`${cliPath} --port ${port}`)
+        return
+      }
+
+      const terminal = vscode.window.createTerminal({
+        name: "testagent",
+        iconPath: {
+          light: vscode.Uri.file(context.asAbsolutePath("assets/icons/testagent_chat.png")),
+          dark: vscode.Uri.file(context.asAbsolutePath("assets/icons/testagent_chat.png")),
+        },
+        location: { viewColumn: vscode.ViewColumn.Beside },
+        env: { TESTAGENT_CALLER: "vscode" },
+      })
+
+      terminal.show()
+      terminal.sendText(`${cliPath} --port ${port}`)
     }),
     vscode.commands.registerCommand("kilo-code.new.showChanges", () => {
       diffViewerProvider.openPanel()

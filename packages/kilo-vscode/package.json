@@ -309,6 +309,15 @@
         "command": "kilo-code.new.generateTerminalCommand",
         "title": "Generate Terminal Command",
         "category": "Kilo Code"
+      },
+      {
+        "command": "kilo-code.new.openTestagentTerminal",
+        "title": "Open testagent Terminal",
+        "category": "Kilo Code",
+        "icon": {
+          "light": "assets/icons/testagent_chat.png",
+          "dark": "assets/icons/testagent_chat.png"
+        }
       }
     ],
     "submenus": [
@@ -369,6 +378,11 @@
         }
       ],
       "editor/title": [
+        {
+          "command": "kilo-code.new.openTestagentTerminal",
+          "group": "navigation@0",
+          "when": "editorIsOpen"
+        },
         {
           "command": "kilo-code.new.openInTab",
           "group": "navigation",
