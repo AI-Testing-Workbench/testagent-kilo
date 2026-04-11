@@ -117,8 +117,8 @@ describe("installation", () => {
         () => jsonResponse({ versions: { stable: "2.0.0" } }),
         (cmd, args) => {
           // getBrewFormula: return core formula (no tap)
-          if (cmd === "brew" && args.includes("--formula") && args.includes("anomalyco/tap/opencode")) return ""
-          if (cmd === "brew" && args.includes("--formula") && args.includes("opencode")) return "opencode"
+          if (cmd === "brew" && args.includes("--formula") && args.includes("Kilo-Org/tap/kilo")) return ""
+          if (cmd === "brew" && args.includes("--formula") && args.includes("kilo")) return "kilo"
           return ""
         },
       )
@@ -136,7 +136,7 @@ describe("installation", () => {
       const layer = testLayer(
         () => jsonResponse({}), // HTTP not used for tap formula
         (cmd, args) => {
-          if (cmd === "brew" && args.includes("anomalyco/tap/opencode") && args.includes("--formula")) return "opencode"
+          if (cmd === "brew" && args.includes("Kilo-Org/tap/kilo") && args.includes("--formula")) return "opencode"
           if (cmd === "brew" && args.includes("--json=v2")) return brewInfoJson
           return ""
         },

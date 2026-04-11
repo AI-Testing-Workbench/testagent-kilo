@@ -726,7 +726,7 @@ export namespace Provider {
         autoload: false,
         options: {
           headers: {
-            "X-Cerebras-3rd-Party-Integration": "opencode",
+            "X-Cerebras-3rd-Party-Integration": "kilo", // kilocode_change
           },
         },
       }

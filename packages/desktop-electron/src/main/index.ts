@@ -124,7 +124,7 @@ async function initialize() {
   sidecar = child
   serverReady.resolve({
     url,
-    username: "opencode",
+    username: "kilo", // kilocode_change
     password,
   })
 

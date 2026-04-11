@@ -172,7 +172,7 @@ export namespace Installation {
         )
 
         const methodImpl = Effect.fn("Installation.method")(function* () {
-          if (process.execPath.includes(path.join(".opencode", "bin"))) return "curl" as Method
+          if (process.execPath.includes(path.join(".kilo", "bin")) || process.execPath.includes(path.join(".opencode", "bin"))) return "curl" as Method // kilocode_change
           if (process.execPath.includes(path.join(".local", "bin"))) return "curl" as Method
           const exec = process.execPath.toLowerCase()
 
@@ -240,7 +240,7 @@ export namespace Installation {
           if (detectedMethod === "choco") {
             const response = yield* httpOk.execute(
               HttpClientRequest.get(
-                "https://community.chocolatey.org/api/v2/Packages?$filter=Id%20eq%20%27opencode%27%20and%20IsLatestVersion&$select=Version",
+                "https://community.chocolatey.org/api/v2/Packages?$filter=Id%20eq%20%27kilo%27%20and%20IsLatestVersion&$select=Version",
               ).pipe(HttpClientRequest.setHeaders({ Accept: "application/json;odata=verbose" })),
             )
             const data = yield* HttpClientResponse.schemaBodyJson(ChocoPackage)(response)
@@ -307,7 +307,7 @@ export namespace Installation {
               result = yield* run(["choco", "upgrade", "kilo", `--version=${target}`, "-y"])
               break
             case "scoop":
-              result = yield* run(["scoop", "install", `opencode@${target}`])
+              result = yield* run(["scoop", "install", `kilo@${target}`])
               break
             default:
               return yield* new UpgradeFailedError({ stderr: `Unknown method: ${m}` })
