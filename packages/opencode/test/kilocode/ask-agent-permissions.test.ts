@@ -1,9 +1,11 @@
 import { test, expect, describe } from "bun:test"
 import { Permission } from "../../src/permission"
 
-// Reconstruct the Ask agent's readOnlyBash allowlist (mirrors agent.ts)
+// Reconstruct the Ask agent's readOnlyBash allowlist (mirrors kilocode/agent/index.ts)
+// Uses an allow-list approach for git: deny by default, allow specific read-only subcommands.
 const readOnlyBash: Record<string, "allow" | "ask" | "deny"> = {
   "*": "deny",
+  // read-only / informational
   "cat *": "allow",
   "head *": "allow",
   "tail *": "allow",
@@ -24,6 +26,7 @@ const readOnlyBash: Record<string, "allow" | "ask" | "deny"> = {
   "whoami *": "allow",
   "printenv *": "allow",
   "man *": "allow",
+  // text processing (stdout only, no file modification)
   "grep *": "allow",
   "rg *": "allow",
   "ag *": "allow",
@@ -32,37 +35,29 @@ const readOnlyBash: Record<string, "allow" | "ask" | "deny"> = {
   "cut *": "allow",
   "tr *": "allow",
   "jq *": "allow",
-  "git *": "allow",
-  "git add *": "deny",
-  "git commit *": "deny",
-  "git push *": "deny",
-  "git merge *": "deny",
-  "git rebase *": "deny",
-  "git cherry-pick *": "deny",
-  "git reset *": "deny",
-  "git checkout *": "deny",
-  "git switch *": "deny",
-  "git stash *": "deny",
-  "git tag *": "deny",
-  "git am *": "deny",
-  "git apply *": "deny",
-  "git remote set-url *": "deny",
-  "git remote add *": "deny",
-  "git remote remove *": "deny",
-  "git clean *": "deny",
-  "git mv *": "deny",
-  "git rm *": "deny",
-  "git config *": "deny",
-  "git clone *": "deny",
-  "git pull *": "deny",
-  "git init *": "deny",
-  "git worktree *": "deny",
-  "git submodule *": "deny",
-  "git revert *": "deny",
-  "git bisect *": "deny",
-  "git filter-branch *": "deny",
-  "git fetch *": "deny",
-  "git restore *": "deny",
+  // git — allowlist of read-only subcommands, deny everything else
+  "git *": "deny",
+  "git log *": "allow",
+  "git show *": "allow",
+  "git diff *": "allow",
+  "git status *": "allow",
+  "git blame *": "allow",
+  "git rev-parse *": "allow",
+  "git rev-list *": "allow",
+  "git ls-files *": "allow",
+  "git ls-tree *": "allow",
+  "git ls-remote *": "allow",
+  "git shortlog *": "allow",
+  "git describe *": "allow",
+  "git cat-file *": "allow",
+  "git name-rev *": "allow",
+  "git stash list *": "allow",
+  "git tag -l *": "allow",
+  "git branch --list *": "allow",
+  "git branch -a *": "allow",
+  "git branch -r *": "allow",
+  "git remote -v *": "allow",
+  // gh — require user approval since commands vary widely
   "gh *": "ask",
 }
 

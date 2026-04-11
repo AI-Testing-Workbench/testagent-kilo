@@ -124,6 +124,7 @@ const loaders: Record<Exclude<Locale, "en">, () => Promise<Dictionary>> = {
   br: () => merge(import("@/i18n/br"), import("@opencode-ai/ui/i18n/br")),
   th: () => merge(import("@/i18n/th"), import("@opencode-ai/ui/i18n/th")),
   bs: () => merge(import("@/i18n/bs"), import("@opencode-ai/ui/i18n/bs")),
+  nl: () => merge(import("@/i18n/nl"), import("@opencode-ai/ui/i18n/nl")),
   tr: () => merge(import("@/i18n/tr"), import("@opencode-ai/ui/i18n/tr")),
 }
 

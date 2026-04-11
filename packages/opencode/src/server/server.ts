@@ -32,6 +32,19 @@ import { ConfigRoutes } from "./routes/config"
 import { ExperimentalRoutes } from "./routes/experimental"
 import { ProviderRoutes } from "./routes/provider"
 import { EventRoutes } from "./routes/event"
+import { TelemetryRoutes } from "./routes/telemetry" // kilocode_change
+import { CommitMessageRoutes } from "./routes/commit-message" // kilocode_change
+import { EnhancePromptRoutes } from "./routes/enhance-prompt" // kilocode_change
+import { KilocodeRoutes } from "./routes/kilocode" // kilocode_change
+import { PermissionKilocodeRoutes } from "../kilocode/permission/routes" // kilocode_change
+import { RemoteRoutes } from "./routes/remote" // kilocode_change
+import { NetworkRoutes } from "./routes/network" // kilocode_change
+import { createKiloRoutes } from "@kilocode/kilo-gateway" // kilocode_change
+import { Database } from "../storage/db" // kilocode_change
+import { Session } from "../session" // kilocode_change
+import { Identifier } from "../id/id" // kilocode_change
+import { SessionTable, MessageTable, PartTable } from "../session/session.sql" // kilocode_change
+import { Bus } from "@/bus" // kilocode_change
 import { InstanceBootstrap } from "../project/bootstrap"
 import { NotFoundError } from "../storage/db"
 import type { ContentfulStatusCode } from "hono/utils/http-status"
@@ -44,24 +57,6 @@ import { PermissionRoutes } from "./routes/permission"
 import { GlobalRoutes } from "./routes/global"
 import { MDNS } from "./mdns"
 import { lazy } from "@/util/lazy"
-
-
-// kilocode_change start
-// KILO ROUTES
-import { TelemetryRoutes } from "./routes/telemetry"
-import { CommitMessageRoutes } from "./routes/commit-message"
-import { EnhancePromptRoutes } from "./routes/enhance-prompt"
-import { KilocodeRoutes } from "./routes/kilocode"
-import { PermissionKilocodeRoutes } from "../kilocode/permission/routes"
-import { RemoteRoutes } from "./routes/remote"
-import { NetworkRoutes } from "./routes/network"
-import { Database } from "../storage/db"
-import { Session } from "../session"
-import { Identifier } from "../id/id"
-import { SessionTable, MessageTable, PartTable } from "../session/session.sql"
-import { Bus } from "@/bus"
-import { createKiloRoutes } from "@kilocode/kilo-gateway"
-// kilocode_change end
 
 // @ts-ignore This global is needed to prevent ai-sdk from logging warnings to stdout https://github.com/vercel/ai/blob/2dc67e0ef538307f21368db32d5a12345d98831b/packages/ai/src/logger/log-warnings.ts#L85
 globalThis.AI_SDK_LOG_WARNINGS = false
@@ -94,19 +89,14 @@ export namespace Server {
             status: 500,
           })
         })
-        if (err instanceof NamedError) {
-          let status: ContentfulStatusCode
-          if (err instanceof NotFoundError) status = 404
-          else if (err instanceof Provider.ModelNotFoundError) status = 400
-          else if (err.name === "ProviderAuthValidationFailed") status = 400
-          else if (err.name.startsWith("Worktree")) status = 400
-          else status = 500
-          return c.json(err.toObject(), { status })
-        }
-        if (err instanceof HTTPException) return err.getResponse()
-        const message = err instanceof Error && err.stack ? err.stack : err.toString()
-        return c.json(new NamedError.Unknown({ message }).toObject(), {
-          status: 500,
+        .use((c, next) => {
+          // Allow CORS preflight requests to succeed without auth.
+          // Browser clients sending Authorization headers will preflight with OPTIONS.
+          if (c.req.method === "OPTIONS") return next()
+          const password = Flag.KILO_SERVER_PASSWORD // kilocode_change
+          if (!password) return next()
+          const username = Flag.KILO_SERVER_USERNAME ?? "kilo" // kilocode_change
+          return basicAuth({ username, password })(c, next)
         })
         .use(async (c, next) => {
           // kilocode_change start
@@ -122,357 +112,43 @@ export namespace Server {
             method: c.req.method,
             path: c.req.path,
           })
-        }
-        const timer = log.time("request", {
-          method: c.req.method,
-          path: c.req.path,
-        })
-        await next()
-        if (!skipLogging) {
-          timer.stop()
-        }
-      })
-      .use(
-        cors({
-          origin(input) {
-            if (!input) return
-
-            if (input.startsWith("http://localhost:")) return input
-            if (input.startsWith("http://127.0.0.1:")) return input
-            if (
-              input === "tauri://localhost" ||
-              input === "http://tauri.localhost" ||
-              input === "https://tauri.localhost"
-            )
-              return input
-
-            // *.opencode.ai (https only, adjust if needed)
-            if (/^https:\/\/([a-z0-9-]+\.)*opencode\.ai$/.test(input)) {
-              return input
-            }
-            if (opts?.cors?.includes(input)) {
-              return input
-            }
-
-            return
-          },
-        }),
-      )
-      .route("/global", GlobalRoutes())
-      .put(
-        "/auth/:providerID",
-        describeRoute({
-          summary: "Set auth credentials",
-          description: "Set authentication credentials",
-          operationId: "auth.set",
-          responses: {
-            200: {
-              description: "Successfully set authentication credentials",
-              content: {
-                "application/json": {
-                  schema: resolver(z.boolean()),
-                },
-              },
-            },
-            ...errors(400),
-          },
-        }),
-        validator(
-          "param",
-          z.object({
-            providerID: ProviderID.zod,
-          }),
-        ),
-        validator("json", Auth.Info.zod),
-        async (c) => {
-          const providerID = c.req.valid("param").providerID
-          const info = c.req.valid("json")
-          await Auth.set(providerID, info)
-          return c.json(true)
-        },
-      )
-      .delete(
-        "/auth/:providerID",
-        describeRoute({
-          summary: "Remove auth credentials",
-          description: "Remove authentication credentials",
-          operationId: "auth.remove",
-          responses: {
-            200: {
-              description: "Successfully removed authentication credentials",
-              content: {
-                "application/json": {
-                  schema: resolver(z.boolean()),
-                },
-              },
-            },
-            ...errors(400),
-          },
-        }),
-        validator(
-          "param",
-          z.object({
-            providerID: ProviderID.zod,
-          }),
-        ),
-        async (c) => {
-          const providerID = c.req.valid("param").providerID
-          await Auth.remove(providerID)
-          return c.json(true)
-        },
-      )
-      .use(async (c, next) => {
-        if (c.req.path === "/log") return next()
-        const rawWorkspaceID = c.req.query("workspace") || c.req.header("x-opencode-workspace")
-        const raw = c.req.query("directory") || c.req.header("x-opencode-directory") || process.cwd()
-        const directory = Filesystem.resolve(
-          (() => {
-            try {
-              return decodeURIComponent(raw)
-            } catch {
-              return raw
-            }
-          })(),
-        )
-
-        return WorkspaceContext.provide({
-          workspaceID: rawWorkspaceID ? WorkspaceID.make(rawWorkspaceID) : undefined,
-          async fn() {
-            return Instance.provide({
-              directory,
-              init: InstanceBootstrap,
-              async fn() {
-                return next()
-              },
-            })
-          },
-        })
-      })
-      .use(WorkspaceRouterMiddleware)
-      .get(
-        "/doc",
-        openAPIRouteHandler(app, {
-          documentation: {
-            info: {
-              title: "opencode",
-              version: "0.0.3",
-              description: "opencode api",
-            },
-            openapi: "3.1.1",
-          },
-        }),
-      )
-      .use(
-        validator(
-          "query",
-          z.object({
-            directory: z.string().optional(),
-            workspace: z.string().optional(),
-          }),
-        ),
-      )
-      .route("/project", ProjectRoutes())
-      .route("/pty", PtyRoutes())
-      .route("/config", ConfigRoutes())
-      .route("/experimental", ExperimentalRoutes())
-      .route("/session", SessionRoutes())
-      .route("/permission", PermissionRoutes())
-      .route("/question", QuestionRoutes())
-      .route("/provider", ProviderRoutes())
-      .route("/", FileRoutes())
-      .route("/", EventRoutes())
-      .route("/mcp", McpRoutes())
-      .route("/tui", TuiRoutes())
-      .post(
-        "/instance/dispose",
-        describeRoute({
-          summary: "Dispose instance",
-          description: "Clean up and dispose the current OpenCode instance, releasing all resources.",
-          operationId: "instance.dispose",
-          responses: {
-            200: {
-              description: "Instance disposed",
-              content: {
-                "application/json": {
-                  schema: resolver(z.boolean()),
-                },
-              },
-            },
-          },
-        }),
-        async (c) => {
-          await Instance.dispose()
-          return c.json(true)
-        },
-      )
-      .get(
-        "/path",
-        describeRoute({
-          summary: "Get paths",
-          description: "Retrieve the current working directory and related path information for the OpenCode instance.",
-          operationId: "path.get",
-          responses: {
-            200: {
-              description: "Path",
-              content: {
-                "application/json": {
-                  schema: resolver(
-                    z
-                      .object({
-                        home: z.string(),
-                        state: z.string(),
-                        config: z.string(),
-                        worktree: z.string(),
-                        directory: z.string(),
-                      })
-                      .meta({
-                        ref: "Path",
-                      }),
-                  ),
-                },
-              },
-            },
-          },
-        }),
-        async (c) => {
-          return c.json({
-            home: Global.Path.home,
-            state: Global.Path.state,
-            config: Global.Path.config,
-            worktree: Instance.worktree,
-            directory: Instance.directory,
+          const timer = log.time("request", {
+            method: c.req.method,
+            path: c.req.path,
           })
           await next()
           if (!skipLogging) {
             timer.stop()
           }
+        })
+        .use(
+          cors({
+            origin(input) {
+              if (!input) return
 
-          return c.json(true)
-        },
-      )
-      .get(
-        "/agent",
-        describeRoute({
-          summary: "List agents",
-          description: "Get a list of all available AI agents in the OpenCode system.",
-          operationId: "app.agents",
-          responses: {
-            200: {
-              description: "List of agents",
-              content: {
-                "application/json": {
-                  schema: resolver(Agent.Info.array()),
-                },
-              },
+              if (input.startsWith("http://localhost:")) return input
+              if (input.startsWith("http://127.0.0.1:")) return input
+              if (
+                input === "tauri://localhost" ||
+                input === "http://tauri.localhost" ||
+                input === "https://tauri.localhost"
+              )
+                return input
+
+              // kilocode_change start
+              // *.opencode.ai (https only, adjust if needed)
+              if (/^https:\/\/([a-z0-9-]+\.)*kilo\.ai$/.test(input)) {
+                return input
+              }
+              // kilocode_change end
+              if (opts?.cors?.includes(input)) {
+                return input
+              }
+
+              return
             },
-          },
-        }),
-        async (c) => {
-          const modes = await Agent.list()
-          return c.json(modes)
-        },
-      )
-      .get(
-        "/skill",
-        describeRoute({
-          summary: "List skills",
-          description: "Get a list of all available skills in the OpenCode system.",
-          operationId: "app.skills",
-          responses: {
-            200: {
-              description: "List of skills",
-              content: {
-                "application/json": {
-                  schema: resolver(Skill.Info.array()),
-                },
-              },
-            },
-          },
-        }),
-        async (c) => {
-          const skills = await Skill.all()
-          return c.json(skills)
-        },
-      )
-      .get(
-        "/lsp",
-        describeRoute({
-          summary: "Get LSP status",
-          description: "Get LSP server status",
-          operationId: "lsp.status",
-          responses: {
-            200: {
-              description: "LSP server status",
-              content: {
-                "application/json": {
-                  schema: resolver(LSP.Status.array()),
-                },
-              },
-            },
-          },
-        }),
-        async (c) => {
-          return c.json(await LSP.status())
-        },
-      )
-      .get(
-        "/formatter",
-        describeRoute({
-          summary: "Get formatter status",
-          description: "Get formatter status",
-          operationId: "formatter.status",
-          responses: {
-            200: {
-              description: "Formatter status",
-              content: {
-                "application/json": {
-                  schema: resolver(Format.Status.array()),
-                },
-              },
-            },
-          },
-        }),
-        async (c) => {
-          return c.json(await Format.status())
-        },
-      )
-      // kilocode_change start - disable proxy
-      // .all("/*", async (c) => {
-      //   const path = c.req.path
-
-      //   const response = await proxy(`https://app.opencode.ai${path}`, {
-      //     ...c.req,
-      //     headers: {
-      //       ...c.req.raw.headers,
-      //       host: "app.opencode.ai",
-      //     },
-      //   })
-      //   .use(
-      //     cors({
-      //       origin(input) {
-      //         if (!input) return
-
-      //         if (input.startsWith("http://localhost:")) return input
-      //         if (input.startsWith("http://127.0.0.1:")) return input
-      //         if (
-      //           input === "tauri://localhost" ||
-      //           input === "http://tauri.localhost" ||
-      //           input === "https://tauri.localhost"
-      //         )
-      //           return input
-
-      //         // *.opencode.ai (https only, adjust if needed)
-      //         if (/^https:\/\/([a-z0-9-]+\.)*opencode\.ai$/.test(input)) {
-      //           return input
-      //         }
-      //         if (opts?.cors?.includes(input)) {
-      //           return input
-      //         }
-
-      //         return
-      //       },
-      //     }),
-      //   )
+          }),
+        )
         .route("/global", GlobalRoutes())
         .put(
           "/auth/:providerID",
@@ -886,7 +562,7 @@ export namespace Server {
         .all("/*", async (c) => {
           return c.notFound()
         })
-        // kilocode_change end
+      // kilocode_change end
     )
   }
 
