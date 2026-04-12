@@ -3,7 +3,7 @@ plugins {
     alias(libs.plugins.kotlin)
     alias(libs.plugins.kotlin.serialization)
     alias(libs.plugins.openapi.generator)
-    id("ai.kilocode.jetbrains.build-tasks")
+    id("build-tasks")
 }
 
 kotlin {
@@ -18,8 +18,6 @@ sourceSets {
         kotlin.srcDir(generatedApi)
     }
 }
-
-// ── OpenAPI client generation ───────────────────────────────────────
 
 openApiGenerate {
     generatorName.set("kotlin")
@@ -64,8 +62,6 @@ val fixGeneratedApi by tasks.registering(FixGeneratedApiTask::class) {
 tasks.named("compileKotlin") {
     dependsOn(fixGeneratedApi)
 }
-
-// ── CLI binary packaging ────────────────────────────────────────────
 
 val cliDir = layout.buildDirectory.dir("generated/cli/cli")
 val production = providers.gradleProperty("production").map { it.toBoolean() }.orElse(false)
@@ -115,8 +111,6 @@ val checkCli by tasks.registering(CheckCliTask::class) {
 tasks.processResources {
     dependsOn(checkCli)
 }
-
-// ── Dependencies ────────────────────────────────────────────────────
 
 dependencies {
     intellijPlatform {

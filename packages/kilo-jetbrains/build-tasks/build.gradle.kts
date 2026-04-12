@@ -9,7 +9,7 @@ repositories {
 gradlePlugin {
     plugins {
         create("build-tasks") {
-            id = "ai.kilocode.jetbrains.build-tasks"
+            id = "build-tasks"
             implementationClass = "BuildTasksPlugin"
         }
     }

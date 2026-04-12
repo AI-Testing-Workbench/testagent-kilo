@@ -58,17 +58,11 @@ class KiloBackendAppService(private val cs: CoroutineScope) : Disposable {
     private var router: Job? = null
     private var loader: Job? = null
 
-    // ── App state ───────────────────────────────────────────────────
-
     private val _appState = MutableStateFlow<KiloAppState>(KiloAppState.Disconnected)
     val appState: StateFlow<KiloAppState> = _appState.asStateFlow()
 
-    // ── Delegated from connection (internal use) ────────────────────
-
     val events: SharedFlow<SseEvent> get() = connection.events
     val api: DefaultApi? get() = connection.api
-
-    // ── Cached data (also held inside KiloAppState.Ready) ───────────
 
     @Volatile var profile: KiloProfile200Response? = null
         private set
@@ -78,8 +72,6 @@ class KiloBackendAppService(private val cs: CoroutineScope) : Disposable {
 
     @Volatile var notifications: List<KiloNotifications200ResponseInner> = emptyList()
         private set
-
-    // ── Lifecycle ────────────────────────────────────────────────────
 
     suspend fun connect() {
         mutex.withLock {
@@ -109,8 +101,6 @@ class KiloBackendAppService(private val cs: CoroutineScope) : Disposable {
         val response = client.globalHealth()
         return HealthDto(healthy = true, version = response.version)
     }
-
-    // ── Internals ───────────────────────────────────────────────────
 
     private suspend fun reconnect() {
         mutex.withLock {
@@ -210,8 +200,6 @@ class KiloBackendAppService(private val cs: CoroutineScope) : Disposable {
         }
     }
 
-    // ── Individual fetch functions ──────────────────────────────────
-
     private suspend fun fetchProfile(): ProfileResult {
         val client = connection.api ?: return ProfileResult.NOT_LOGGED_IN
         return try {
@@ -266,8 +254,6 @@ class KiloBackendAppService(private val cs: CoroutineScope) : Disposable {
         }
     }
 
-    // ── Retry helper ────────────────────────────────────────────────
-
     private suspend fun <T> fetchWithRetry(
         name: String,
         block: suspend () -> FetchResult<T>,
@@ -284,8 +270,6 @@ class KiloBackendAppService(private val cs: CoroutineScope) : Disposable {
         LOG.error("$name: all $MAX_RETRIES attempts failed")
         return last
     }
-
-    // ── SSE event routing ───────────────────────────────────────────
 
     private fun ensureRouter() {
         if (router?.isActive == true) return
@@ -308,8 +292,6 @@ class KiloBackendAppService(private val cs: CoroutineScope) : Disposable {
             }
         }
     }
-
-    // ── Cleanup ─────────────────────────────────────────────────────
 
     private fun clear() {
         loader?.cancel()

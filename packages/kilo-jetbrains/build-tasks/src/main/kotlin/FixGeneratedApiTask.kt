@@ -32,7 +32,6 @@ abstract class FixGeneratedApiTask : DefaultTask() {
         root.walkTopDown().filter { it.extension == "kt" }.forEach { fix(it) }
     }
 
-    // ── Fix 7: empty anyOf wrapper classes → JsonElement ─────────────
     private fun fixEmptyWrappers(root: File) {
         val models = File(root, "ai/kilocode/jetbrains/api/model")
         if (!models.isDirectory) return
@@ -63,7 +62,7 @@ abstract class FixGeneratedApiTask : DefaultTask() {
         var text = file.readText()
         var changed = false
 
-        // ── Fix 1: boolean const enums ──────────────────────────────
+        // Fix 1: boolean const enums
         val decl = Regex("""enum class (\w+)\(val value: kotlin\.Boolean\)""")
         for (name in decl.findAll(text).map { it.groupValues[1] }.toList()) {
             text = text.replace(Regex("""(val \w+:\s*)\w+\.$name""")) { m ->
@@ -78,13 +77,13 @@ abstract class FixGeneratedApiTask : DefaultTask() {
             changed = true
         }
 
-        // ── Fix 2: double parentheses `HashMap<…>()()` ─────────────
+        // Fix 2: double parentheses `HashMap<…>()()`
         if (text.contains("()()")) {
             text = text.replace("()()", "()")
             changed = true
         }
 
-        // ── Fix 3: `kotlin.Double("…")` → double literal ───────────
+        // Fix 3: `kotlin.Double("…")` → double literal
         val ctor = Regex("""kotlin\.Double\("(\d+(?:\.\d+)?)"\)""")
         if (ctor.containsMatchIn(text)) {
             text = ctor.replace(text) { m ->
@@ -94,7 +93,7 @@ abstract class FixGeneratedApiTask : DefaultTask() {
             changed = true
         }
 
-        // ── Fix 4: @Contextual on bare kotlin.Any ───────────────────
+        // Fix 4: @Contextual on bare kotlin.Any
         if (text.contains("kotlin.Any") &&
             text.contains("import kotlinx.serialization.Contextual") &&
             text.contains("@Serializable") &&
@@ -107,7 +106,7 @@ abstract class FixGeneratedApiTask : DefaultTask() {
             changed = true
         }
 
-        // ── Fix 5: nullable body in ApiClient ───────────────────────
+        // Fix 5: nullable body in ApiClient
         if (file.name == "ApiClient.kt") {
             val guard = "val body = response.body"
             if (text.contains(guard) && !text.contains("if (body == null) return null")) {
@@ -121,7 +120,7 @@ abstract class FixGeneratedApiTask : DefaultTask() {
             }
         }
 
-        // ── Fix 6: AnySerializer in Serializer.kt ───────────────────
+        // Fix 6: AnySerializer in Serializer.kt
         if (file.name == "Serializer.kt" && !text.contains("AnySerializer")) {
             text = text.replace(
                 "import kotlinx.serialization.modules.SerializersModuleBuilder",
