@@ -2,15 +2,12 @@
 
 package ai.kilocode.client
 
-import ai.kilocode.client.plugin.KiloBundle
 import ai.kilocode.rpc.KiloAppRpcApi
 import ai.kilocode.rpc.dto.ConnectionStateDto
 import ai.kilocode.rpc.dto.ConnectionStatusDto
 import ai.kilocode.rpc.dto.HealthDto
 import com.intellij.openapi.components.Service
 import com.intellij.openapi.diagnostic.Logger
-import com.intellij.openapi.project.Project
-import com.intellij.openapi.wm.ToolWindowManager
 import fleet.rpc.client.durable
 import java.util.concurrent.atomic.AtomicBoolean
 import kotlinx.coroutines.CoroutineScope
@@ -22,16 +19,16 @@ import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 
 /**
- * Frontend project-level service for Kilo CLI interaction.
+ * App-level frontend service for Kilo CLI interaction.
  *
  * Communicates with the backend via [KiloAppRpcApi]. All operations
- * are app-scoped — no project ID is needed.
+ * are app-scoped — no project context is needed.
+ *
+ * Callers of [watch] are responsible for scheduling UI updates on
+ * the EDT and converting [ConnectionStateDto] to display text.
  */
-@Service(Service.Level.PROJECT)
-class KiloAppService(
-    private val project: Project,
-    private val cs: CoroutineScope,
-) {
+@Service(Service.Level.APP)
+class KiloAppService(private val cs: CoroutineScope) {
     companion object {
         private val LOG = Logger.getInstance(KiloAppService::class.java)
         private val init = ConnectionStateDto(ConnectionStatusDto.DISCONNECTED)
@@ -113,27 +110,18 @@ class KiloAppService(
         }
     }
 
-    fun watch(fn: (String) -> Unit): Job {
-        val mgr = ToolWindowManager.getInstance(project)
+    /**
+     * Collect connection state changes and invoke [fn] for each update.
+     *
+     * The callback receives raw [ConnectionStateDto] — the caller is
+     * responsible for converting to display text and scheduling on the EDT.
+     */
+    fun watch(fn: (ConnectionStateDto) -> Unit): Job {
         return cs.launch {
             state.collect { next ->
-                // Fetch CLI version when we become connected
                 if (next.status == ConnectionStatusDto.CONNECTED) fetchVersionAsync()
-                mgr.invokeLater {
-                    fn(text(next))
-                }
+                fn(next)
             }
         }
     }
-
-    private fun text(state: ConnectionStateDto): String =
-        when (state.status) {
-            ConnectionStatusDto.DISCONNECTED -> KiloBundle.message("toolwindow.status.disconnected")
-            ConnectionStatusDto.CONNECTING -> KiloBundle.message("toolwindow.status.connecting")
-            ConnectionStatusDto.CONNECTED -> KiloBundle.message("toolwindow.status.connected")
-            ConnectionStatusDto.ERROR -> KiloBundle.message(
-                "toolwindow.status.error",
-                state.error ?: KiloBundle.message("toolwindow.error.unknown"),
-            )
-        }
 }

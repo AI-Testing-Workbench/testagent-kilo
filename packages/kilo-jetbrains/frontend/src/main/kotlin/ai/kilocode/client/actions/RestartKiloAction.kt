@@ -8,11 +8,11 @@ import com.intellij.openapi.components.service
 
 class RestartKiloAction : AnAction() {
     override fun actionPerformed(e: AnActionEvent) {
-        e.project?.service<KiloAppService>()?.restartAsync()
+        service<KiloAppService>().restartAsync()
     }
 
     override fun update(e: AnActionEvent) {
-        val state = e.project?.service<KiloAppService>()?.state?.value
-        e.presentation.isEnabled = state?.status != ConnectionStatusDto.CONNECTING
+        val state = service<KiloAppService>().state.value
+        e.presentation.isEnabled = state.status != ConnectionStatusDto.CONNECTING
     }
 }

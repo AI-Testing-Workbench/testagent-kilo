@@ -8,11 +8,11 @@ import com.intellij.openapi.components.service
 
 class ReinstallKiloAction : AnAction() {
     override fun actionPerformed(e: AnActionEvent) {
-        e.project?.service<KiloAppService>()?.reinstallAsync()
+        service<KiloAppService>().reinstallAsync()
     }
 
     override fun update(e: AnActionEvent) {
-        val state = e.project?.service<KiloAppService>()?.state?.value
-        e.presentation.isEnabled = state?.status != ConnectionStatusDto.CONNECTING
+        val state = service<KiloAppService>().state.value
+        e.presentation.isEnabled = state.status != ConnectionStatusDto.CONNECTING
     }
 }

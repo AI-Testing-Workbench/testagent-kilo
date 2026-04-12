@@ -17,7 +17,7 @@ class StatusInfoAction : AnAction() {
     }
 
     override fun update(e: AnActionEvent) {
-        val svc = e.project?.service<KiloAppService>() ?: return
+        val svc = service<KiloAppService>()
         val status = when (svc.state.value.status) {
             ConnectionStatusDto.CONNECTED -> KiloBundle.message("toolwindow.status.connected.short")
             ConnectionStatusDto.CONNECTING -> KiloBundle.message("toolwindow.status.connecting.short")
