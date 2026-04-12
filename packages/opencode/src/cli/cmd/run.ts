@@ -250,10 +250,6 @@ export const RunCommand = cmd({
           describe: "fork the session before continuing (requires --continue or --session)",
           type: "boolean",
         })
-        .option("cloud-fork", {
-          describe: "fetch session from cloud and continue locally (requires --session)",
-          type: "boolean",
-        })
         .option("share", {
           type: "boolean",
           describe: "share the session",
@@ -273,6 +269,13 @@ export const RunCommand = cmd({
           default: "default",
           describe: "format: default (formatted) or json (raw JSON events)",
         })
+        // kilocode_change start - auto approve all permissions
+        .option("auto", {
+          type: "boolean",
+          describe: "auto-approve all permissions (for autonomous/pipeline usage)",
+          default: false,
+        })
+        // kilocode_change end
         .option("file", {
           alias: ["f"],
           type: "string",
@@ -287,13 +290,11 @@ export const RunCommand = cmd({
           type: "string",
           describe: "attach to a running opencode server (e.g., http://localhost:4096)",
         })
-        // kilocode_change start
         .option("password", {
           alias: ["p"],
           type: "string",
           describe: "basic auth password (defaults to KILO_SERVER_PASSWORD)",
         })
-        // kilocode_change end
         .option("dir", {
           type: "string",
           describe: "directory to run in, path on remote server if attaching",
@@ -311,13 +312,6 @@ export const RunCommand = cmd({
           describe: "show thinking blocks",
           default: false,
         })
-        // kilocode_change start - auto approve all permissions
-        .option("auto", {
-          type: "boolean",
-          describe: "auto-approve all permissions (for autonomous/pipeline usage)",
-          default: false,
-        })
-      // kilocode_change end
     )
   },
   handler: async (args) => {

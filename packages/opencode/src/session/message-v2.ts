@@ -38,6 +38,13 @@ interface FetchDecompressionError extends Error {
   path: string
 }
 
+/** Error shape thrown by Bun's fetch() when gzip/br decompression fails mid-stream */
+interface FetchDecompressionError extends Error {
+  code: "ZlibError"
+  errno: number
+  path: string
+}
+
 export namespace MessageV2 {
   export function isMedia(mime: string) {
     return mime.startsWith("image/") || mime === "application/pdf"
@@ -958,7 +965,7 @@ export namespace MessageV2 {
     )
     return rows.map(
       (row) =>
-        // kilcode_change - apply stripping to parts fetched individually as well to cover all read paths
+        // kilocode_change - apply stripping to parts fetched individually as well to cover all read paths
         stripPartMetadata({
           ...row.data,
           id: row.id,

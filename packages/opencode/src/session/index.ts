@@ -34,7 +34,6 @@ import { ModelID, ProviderID } from "@/provider/schema"
 import { Permission } from "@/permission"
 import { Global } from "@/global"
 import type { LanguageModelV2Usage } from "@ai-sdk/provider"
-import { iife } from "@/util/iife"
 import { Effect, Layer, Scope, ServiceMap } from "effect"
 import { makeRuntime } from "@/effect/run-service"
 
@@ -252,12 +251,6 @@ export namespace Session {
     // kilocode_change end
   }
 
-  // kilocode_change
-  export type CloseReason = KiloSession.CloseReason
-
-  // kilocode_change
-  export const getPlatformOverride = KiloSession.getPlatformOverride
-
   export function plan(input: { slug: string; time: { created: number } }) {
     const base = Instance.project.vcs
       ? path.join(Instance.worktree, ".kilo", "plans") // kilocode_change
@@ -289,27 +282,12 @@ export namespace Session {
         0) as number,
     )
 
-    // OpenRouter provides inputTokens as the total count of input tokens (including cached).
-    // AFAIK other providers (OpenRouter/OpenAI/Gemini etc.) do it the same way e.g. vercel/ai#8794 (comment)
-    // Anthropic does it differently though - inputTokens doesn't include cached tokens.
-    // It looks like OpenCode's cost calculation assumes all providers return inputTokens the same way Anthropic does (I'm guessing getUsage logic was originally implemented with anthropic), so it's causing incorrect cost calculation for OpenRouter and others.
-    const excludesCachedTokens = !!(input.metadata?.["anthropic"] || input.metadata?.["bedrock"])
-    const adjustedInputTokens = safe(
-      excludesCachedTokens ? inputTokens : inputTokens - cacheReadInputTokens - cacheWriteInputTokens,
-    )
+    // AI SDK v6 normalized inputTokens to include cached tokens across all providers
+    // (including Anthropic/Bedrock which previously excluded them). Always subtract cache
+    // tokens to get the non-cached input count for separate cost calculation.
+    const adjustedInputTokens = safe(inputTokens - cacheReadInputTokens - cacheWriteInputTokens)
 
-    const total = iife(() => {
-      // Anthropic doesn't provide total_tokens, also ai sdk will vastly undercount if we
-      // don't compute from components
-      if (
-        input.model.api.npm === "@ai-sdk/anthropic" ||
-        input.model.api.npm === "@ai-sdk/amazon-bedrock" ||
-        input.model.api.npm === "@ai-sdk/google-vertex/anthropic"
-      ) {
-        return adjustedInputTokens + outputTokens + cacheReadInputTokens + cacheWriteInputTokens
-      }
-      return input.usage.totalTokens
-    })
+    const total = input.usage.totalTokens
 
     const tokens = {
       total,
@@ -472,13 +450,10 @@ export namespace Session {
 
         const cfg = yield* config.get()
         if (!result.parentID && (Flag.KILO_AUTO_SHARE || cfg.share === "auto")) {
-          // kilocode_change
-          // kilocode_change
           yield* share(result.id).pipe(Effect.ignore, Effect.forkIn(scope))
         }
 
         if (!Flag.KILO_EXPERIMENTAL_WORKSPACES) {
-          // kilocode_change
           // This only exist for backwards compatibility. We should not be
           // manually publishing this event; it is a sync event now
           yield* bus.publish(Event.Updated, {

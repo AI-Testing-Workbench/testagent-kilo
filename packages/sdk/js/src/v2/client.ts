@@ -37,7 +37,7 @@ function rewrite(request: Request, values: { directory?: string; workspace?: str
 
   if (!changed) return request
 
-  const next = new Request(url.href, request) // kilocode_change - Bun Request() only accepts string | Request
+  const next = new Request(url, request)
   next.headers.delete("x-kilo-directory")
   next.headers.delete("x-kilo-workspace")
   return next

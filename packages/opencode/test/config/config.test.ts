@@ -966,7 +966,7 @@ test("serializes config dependency installs across dirs", async () => {
         await gate
       }
     }
-    const mod = path.join(opts?.cwd ?? "", "node_modules", "@kilocode", "plugin")
+    const mod = path.join(opts?.cwd ?? "", "node_modules", "@kilocode", "plugin") // kilocode_change
     await fs.mkdir(mod, { recursive: true })
     await Filesystem.write(
       path.join(mod, "package.json"),
@@ -2031,6 +2031,7 @@ describe("KILO_DISABLE_PROJECT_CONFIG", () => {
   })
 
   test("skips project .kilo/ directories when flag is set", async () => {
+    // kilocode_change
     const originalEnv = process.env["KILO_DISABLE_PROJECT_CONFIG"]
     process.env["KILO_DISABLE_PROJECT_CONFIG"] = "true"
 

@@ -21,7 +21,7 @@ import { importCloudSession, validateCloudFork } from "@/kilocode/cloud-session"
 import { writeHeapSnapshot } from "v8"
 
 declare global {
-  const KILO_WORKER_PATH: string // kilocode_change
+  const KILO_WORKER_PATH: string
 }
 
 type RpcClient = ReturnType<typeof Rpc.client<typeof rpc>>

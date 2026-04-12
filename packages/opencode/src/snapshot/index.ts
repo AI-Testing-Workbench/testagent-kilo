@@ -132,13 +132,13 @@ export namespace Snapshot {
           const remove = (file: string) => fs.remove(file).pipe(Effect.catch(() => Effect.void))
           const locked = <A, E, R>(fx: Effect.Effect<A, E, R>) => lock(state.gitdir).withPermits(1)(fx)
 
-          // kilocode_change start — ACP guard: disable snapshots for ACP clients
           const enabled = Effect.fnUntraced(function* () {
             if (state.vcs !== "git") return false
+            // kilocode_change start - ACP guard: disable snapshots for ACP clients
             if (KiloSnapshot.acpDisabled()) return false
+            // kilocode_change end
             return (yield* config.get()).snapshot !== false
           })
-          // kilocode_change end
 
           const excludes = Effect.fnUntraced(function* () {
             const result = yield* git(["rev-parse", "--path-format=absolute", "--git-path", "info/exclude"], {
@@ -311,98 +311,35 @@ export namespace Snapshot {
             )
           })
 
-          // kilocode_change start — batched revert: group up to 100 files per git checkout
-          const revertSingle = Effect.fnUntraced(function* (op: KiloSnapshot.RevertOp) {
-            log.info("reverting", { file: op.file, hash: op.hash })
-            const result = yield* git([...core, ...args(["checkout", op.hash, "--", op.file])], {
-              cwd: state.worktree,
-            })
-            if (result.code === 0) return
-            const tree = yield* git([...core, ...args(["ls-tree", op.hash, "--", op.rel])], {
-              cwd: state.worktree,
-            })
-            if (tree.code === 0 && tree.text.trim()) {
-              log.info("file existed in snapshot but checkout failed, keeping", { file: op.file, hash: op.hash })
-              return
-            }
-            log.info("file did not exist in snapshot, deleting", { file: op.file, hash: op.hash })
-            yield* remove(op.file)
-          })
-
-          const revertBatch = Effect.fnUntraced(function* (batch: KiloSnapshot.RevertOp[]) {
-            const hash = batch[0]!.hash
-
-            const tree = yield* git(
-              [...quote, ...args(["ls-tree", "--name-only", hash, "--", ...batch.map((op) => op.rel)])],
-              { cwd: state.worktree },
-            )
-
-            if (tree.code !== 0) {
-              log.info("batched ls-tree failed, falling back to single-file revert", { hash, files: batch.length })
-              for (const op of batch) yield* revertSingle(op)
-              return
-            }
-
-            const existing = new Set(
-              tree.text
-                .trim()
-                .split("\n")
-                .map((l) => l.trim())
-                .filter(Boolean),
-            )
-
-            const toCheckout = batch.filter((op) => existing.has(op.rel))
-            if (toCheckout.length) {
-              log.info("reverting", { hash, files: toCheckout.length })
-              const result = yield* git(
-                [...core, ...args(["checkout", hash, "--", ...toCheckout.map((op) => op.file)])],
-                { cwd: state.worktree },
-              )
-              if (result.code !== 0) {
-                log.info("batched checkout failed, falling back to single-file revert", {
-                  hash,
-                  files: toCheckout.length,
-                })
-                for (const op of batch) yield* revertSingle(op)
-                return
-              }
-            }
-
-            for (const op of batch) {
-              if (existing.has(op.rel)) continue
-              log.info("file did not exist in snapshot, deleting", { file: op.file, hash: op.hash })
-              yield* remove(op.file)
-            }
-          })
-
           const revert = Effect.fnUntraced(function* (patches: Snapshot.Patch[]) {
             return yield* locked(
               Effect.gen(function* () {
-                const ops: KiloSnapshot.RevertOp[] = []
                 const seen = new Set<string>()
                 for (const item of patches) {
                   for (const file of item.files) {
                     if (seen.has(file)) continue
                     seen.add(file)
-                    ops.push({
-                      hash: item.hash,
-                      file,
-                      rel: path.relative(state.worktree, file).replaceAll("\\", "/"),
+                    log.info("reverting", { file, hash: item.hash })
+                    const result = yield* git([...core, ...args(["checkout", item.hash, "--", file])], {
+                      cwd: state.worktree,
                     })
-                  }
-                }
-
-                for (const batch of KiloSnapshot.groupIntoBatches(ops)) {
-                  if (batch.length === 1) {
-                    yield* revertSingle(batch[0]!)
-                  } else {
-                    yield* revertBatch(batch)
+                    if (result.code !== 0) {
+                      const rel = path.relative(state.worktree, file)
+                      const tree = yield* git([...core, ...args(["ls-tree", item.hash, "--", rel])], {
+                        cwd: state.worktree,
+                      })
+                      if (tree.code === 0 && tree.text.trim()) {
+                        log.info("file existed in snapshot but checkout failed, keeping", { file })
+                      } else {
+                        log.info("file did not exist in snapshot, deleting", { file })
+                        yield* remove(file)
+                      }
+                    }
                   }
                 }
               }),
             )
           })
-          // kilocode_change end
 
           const diff = Effect.fnUntraced(function* (hash: string) {
             return yield* locked(
@@ -454,24 +391,7 @@ export namespace Snapshot {
                   const [adds, dels, file] = line.split("\t")
                   if (!file) continue
                   const binary = adds === "-" && dels === "-"
-                  // kilocode_change start — skip oversized files
-                  let skip = binary
-                  if (!binary) {
-                    const [fromSize, toSize] = yield* Effect.all(
-                      [
-                        git(["--git-dir", state.gitdir, "cat-file", "-s", `${from}:${file}`]).pipe(
-                          Effect.map((r) => parseInt(r.text) || 0),
-                        ),
-                        git(["--git-dir", state.gitdir, "cat-file", "-s", `${to}:${file}`]).pipe(
-                          Effect.map((r) => parseInt(r.text) || 0),
-                        ),
-                      ],
-                      { concurrency: 2 },
-                    )
-                    skip = KiloSnapshot.oversized(fromSize) || KiloSnapshot.oversized(toSize)
-                  }
-                  // kilocode_change end
-                  const [before, after] = skip
+                  const [before, after] = binary
                     ? ["", ""]
                     : yield* Effect.all(
                         [

@@ -7,7 +7,6 @@ import { Filesystem } from "@/util/filesystem"
 import { Instance } from "@/project/instance"
 import { InstanceBootstrap } from "@/project/bootstrap"
 import { InstanceRoutes } from "./instance"
-import { HEADER_DIRECTORY, HEADER_WORKSPACE } from "../kilocode/server/router" // kilocode_change
 
 type Rule = { method?: string; path: string; exact?: boolean; action: "local" | "forward" }
 
@@ -28,7 +27,7 @@ function local(method: string, path: string) {
 const routes = lazy(() => InstanceRoutes())
 
 export const WorkspaceRouterMiddleware: MiddlewareHandler = async (c) => {
-  const raw = c.req.query("directory") || c.req.header(HEADER_DIRECTORY) || process.cwd() // kilocode_change
+  const raw = c.req.query("directory") || c.req.header("x-kilo-directory") || process.cwd()
   const directory = Filesystem.resolve(
     (() => {
       try {
@@ -40,7 +39,7 @@ export const WorkspaceRouterMiddleware: MiddlewareHandler = async (c) => {
   )
 
   const url = new URL(c.req.url)
-  const workspaceParam = url.searchParams.get("workspace") || c.req.header(HEADER_WORKSPACE) // kilocode_change
+  const workspaceParam = url.searchParams.get("workspace")
 
   // TODO: If session is being routed, force it to lookup the
   // project/workspace
@@ -89,7 +88,7 @@ export const WorkspaceRouterMiddleware: MiddlewareHandler = async (c) => {
 
   const adaptor = await getAdaptor(workspace.type)
   const headers = new Headers(c.req.raw.headers)
-  headers.delete(HEADER_WORKSPACE) // kilocode_change
+  headers.delete("x-kilo-workspace")
 
   return adaptor.fetch(workspace, `${url.pathname}${url.search}`, {
     method: c.req.method,

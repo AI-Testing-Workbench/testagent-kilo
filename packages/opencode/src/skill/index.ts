@@ -27,7 +27,7 @@ export namespace Skill {
   // kilocode_change end
   const EXTERNAL_DIRS = [".claude", ".agents"]
   const EXTERNAL_SKILL_PATTERN = "skills/**/SKILL.md"
-  const KILO_SKILL_PATTERN = "{skill,skills}/**/SKILL.md" // kilocode_change
+  const KILO_SKILL_PATTERN = "{skill,skills}/**/SKILL.md"
   const SKILL_PATTERN = "**/SKILL.md"
 
   export const Info = z.object({

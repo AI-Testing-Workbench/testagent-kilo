@@ -158,7 +158,7 @@ export const Script = {
     return IS_PREVIEW
   },
   get release(): boolean {
-    return !!env.KILO_RELEASE // kilocode_change
+    return !!env.KILO_RELEASE
   },
   get team() {
     return team
