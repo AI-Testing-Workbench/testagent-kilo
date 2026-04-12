@@ -44,11 +44,16 @@ data class SseEvent(val type: String, val data: String)
  * The generated [DefaultApi] is configured with [apiClient] and exposed via [api]
  * for typed access to all CLI server endpoints.
  *
+ * Concurrency is handled by the owning [KiloBackendAppService] — `connect`,
+ * `restart`, and `reinstall` are called under its mutex. Internal reconnect
+ * attempts delegate back to the owner via [onReconnect].
+ *
  * Not a service — owned and instantiated by [KiloBackendAppService].
  */
 class KiloConnectionService(
-  private val cs: CoroutineScope,
-  private val server: KiloBackendCliManager,
+    private val cs: CoroutineScope,
+    private val server: KiloBackendCliManager,
+    private val onReconnect: () -> Unit,
 ) {
 
     companion object {
@@ -81,12 +86,20 @@ class KiloConnectionService(
     private var processJob: Job? = null
     private var reconnectJob: Job? = null
 
+    /**
+     * Open a connection to the CLI server.
+     *
+     * Called under [KiloBackendAppService]'s mutex — no internal guard needed.
+     */
     suspend fun connect() {
-        if (_state.value is ConnectionState.Connected || _state.value is ConnectionState.Connecting) return
         open()
     }
 
-    /** Kill the CLI process and restart it. Tears down all connections first. */
+    /**
+     * Kill the CLI process and restart it. Tears down all connections first.
+     *
+     * Called under [KiloBackendAppService]'s mutex.
+     */
     suspend fun restart() {
         LOG.info("restart: initiated — tearing down current connection")
         teardown()
@@ -95,7 +108,11 @@ class KiloConnectionService(
         LOG.info("restart: open() returned — CLI process started")
     }
 
-    /** Kill the CLI process, re-extract the binary from JAR, and restart. */
+    /**
+     * Kill the CLI process, re-extract the binary from JAR, and restart.
+     *
+     * Called under [KiloBackendAppService]'s mutex.
+     */
     suspend fun reinstall() {
         LOG.info("reinstall: initiated — tearing down current connection")
         teardown()
@@ -112,7 +129,7 @@ class KiloConnectionService(
      * Order matters — reconnect/health/heartbeat jobs are cancelled first so they
      * cannot race with the SSE close or process kill.
      */
-    private suspend fun teardown() {
+    private fun teardown() {
         LOG.info("teardown: cancelling background jobs (reconnect, heartbeat, health, process)")
         reconnectJob?.cancel()
         heartbeatJob?.cancel()
@@ -210,6 +227,11 @@ class KiloConnectionService(
         }
     }
 
+    /**
+     * Schedule a reconnect attempt. If the CLI process is still alive,
+     * just reconnect SSE. Otherwise, delegate to [onReconnect] which
+     * goes through [KiloBackendAppService]'s mutex for a full restart.
+     */
     private fun scheduleReconnect() {
         if (reconnectJob?.isActive == true) return
         reconnectJob = cs.launch {
@@ -219,15 +241,15 @@ class KiloConnectionService(
             val proc = server.process()
 
             if (proc?.isAlive == true) {
-                LOG.info("SSE: reconnecting")
+                LOG.info("SSE: reconnecting (process alive)")
                 source.getAndSet(null)?.cancel()
                 setState(ConnectionState.Connecting)
                 startSse()
                 return@launch
             }
 
-            LOG.warn("CLI process not running — restarting")
-            open()
+            LOG.warn("CLI process not running — delegating full reconnect to AppService")
+            onReconnect()
         }
     }
 

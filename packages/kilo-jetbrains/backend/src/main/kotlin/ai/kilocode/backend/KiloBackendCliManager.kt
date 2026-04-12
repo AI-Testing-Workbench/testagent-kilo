@@ -4,12 +4,7 @@ import com.intellij.openapi.application.PathManager
 import com.intellij.openapi.diagnostic.Logger
 import com.intellij.openapi.util.SystemInfo
 import com.intellij.util.system.CpuArch
-import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.Deferred
 import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.async
-import kotlinx.coroutines.sync.Mutex
-import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withContext
 import kotlinx.coroutines.withTimeout
 import java.io.BufferedReader
@@ -24,12 +19,10 @@ import java.util.concurrent.TimeUnit
  * Extracts the bundled CLI from JAR resources into IntelliJ's system directory,
  * spawns `kilo serve --port 0`, and exposes the result as [ServerState].
  *
- * All concurrent callers of [init] share the same startup flow — only one
- * CLI process is ever spawned.
- *
- * Not a service — owned and instantiated by [KiloBackendAppService].
+ * Concurrency is handled by the owning [KiloBackendAppService] — all public
+ * methods are called under its mutex so no internal synchronization is needed.
  */
-class KiloBackendCliManager(private val cs: CoroutineScope) {
+class KiloBackendCliManager {
 
   sealed class ServerState {
     data class Ready(val port: Int, val password: String) : ServerState()
@@ -44,8 +37,6 @@ class KiloBackendCliManager(private val cs: CoroutineScope) {
     private val PORT_REGEX = Regex("""listening on http://[\w.]+:(\d+)""")
   }
 
-  private val mutex = Mutex()
-  private var pending: Deferred<ServerState>? = null
   private var process: Process? = null
   private var hook: Thread? = null
 
@@ -58,41 +49,13 @@ class KiloBackendCliManager(private val cs: CoroutineScope) {
 
   fun process(): Process? = process
 
+  /**
+   * Extract the CLI binary (if needed) and spawn `kilo serve`.
+   *
+   * Must be called under [KiloBackendAppService]'s mutex — no internal
+   * synchronization is performed.
+   */
   suspend fun init(): ServerState {
-    val wait = mutex.withLock {
-      val curr = pending
-      if (curr != null && (!curr.isCompleted || process?.isAlive == true)) {
-        return@withLock curr
-      }
-
-      cs.async(Dispatchers.IO) { start() }.also {
-        pending = it
-      }
-    }
-    return wait.await()
-  }
-
-  suspend fun exited(proc: Process) {
-    mutex.withLock {
-      if (process != proc) return@withLock
-      process = null
-      pending = null
-      uninstall()
-    }
-  }
-
-  /** Kill the running CLI process and reset state so the next [init] spawns fresh. */
-  suspend fun stop() {
-    mutex.withLock {
-      val proc = process ?: return@withLock
-      process = null
-      pending = null
-      uninstall()
-      kill(proc, "stop()")
-    }
-  }
-
-  private suspend fun start(): ServerState {
     return try {
       val path = extractCli()
       LOG.info("CLI binary path: ${path.absolutePath} (size=${path.length()} bytes)")
@@ -101,11 +64,39 @@ class KiloBackendCliManager(private val cs: CoroutineScope) {
       }
     } catch (e: Exception) {
       LOG.warn("CLI startup failed", e)
+      // If spawn started a process but timed out (or failed after start),
+      // kill the orphaned process so it doesn't leak.
+      process?.let { proc ->
+        LOG.info("Cleaning up orphaned CLI process (pid=${proc.pid()})")
+        process = null
+        uninstall()
+        kill(proc, "startup failure cleanup")
+      }
       ServerState.Error(
         message = e.message ?: "Unknown error",
         details = e.stackTraceToString(),
       )
     }
+  }
+
+  /**
+   * Mark the given process as exited and clear state.
+   * Called from the process monitor when the CLI process dies.
+   */
+  fun exited(proc: Process) {
+    if (process != proc) return
+    process = null
+    uninstall()
+  }
+
+  /**
+   * Kill the running CLI process and reset state so the next [init] spawns fresh.
+   */
+  fun stop() {
+    val proc = process ?: return
+    process = null
+    uninstall()
+    kill(proc, "stop()")
   }
 
   private fun extractCli(): File {
@@ -211,7 +202,6 @@ class KiloBackendCliManager(private val cs: CoroutineScope) {
   fun dispose() {
     val proc = process ?: return
     process = null
-    pending = null
     uninstall()
 
     kill(proc, "Disposing")

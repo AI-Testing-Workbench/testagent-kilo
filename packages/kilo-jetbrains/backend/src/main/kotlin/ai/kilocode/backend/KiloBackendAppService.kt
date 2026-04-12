@@ -14,6 +14,8 @@ import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.flow.SharedFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
 
 /**
  * App-level orchestrator that owns the CLI server lifecycle and
@@ -21,6 +23,11 @@ import kotlinx.coroutines.launch
  *
  * This is the single entry point for the CLI backend. The frontend
  * reaches it via [KiloAppRpcApi][ai.kilocode.rpc.KiloAppRpcApi] RPC.
+ *
+ * All lifecycle operations ([connect], [restart], [reinstall], and
+ * internal reconnect) are serialized by a single [Mutex]. The owned
+ * [KiloBackendCliManager] and [KiloConnectionService] perform no
+ * internal synchronization — they rely on this mutex.
  *
  * Data flows use the generated OpenAPI model types directly —
  * no intermediate DTOs needed at the backend layer.
@@ -32,8 +39,14 @@ class KiloBackendAppService(private val cs: CoroutineScope) : Disposable {
         private val LOG = Logger.getInstance(KiloBackendAppService::class.java)
     }
 
-    private val server = KiloBackendCliManager(cs)
-    private val connection = KiloConnectionService(cs, server)
+    private val mutex = Mutex()
+    private val server = KiloBackendCliManager()
+    private val connection = KiloConnectionService(cs, server) {
+        // onReconnect callback — invoked when the CLI process dies and
+        // a full restart is needed. Launches under the mutex so it's
+        // serialized with user-initiated connect/restart/reinstall.
+        cs.launch { reconnect() }
+    }
 
     private var router: Job? = null
     private var loader: Job? = null
@@ -58,17 +71,24 @@ class KiloBackendAppService(private val cs: CoroutineScope) : Disposable {
     // ── Lifecycle ────────────────────────────────────────────────────
 
     suspend fun connect() {
-        connection.connect()
+        mutex.withLock {
+            if (state.value is ConnectionState.Connected || state.value is ConnectionState.Connecting) return
+            connection.connect()
+        }
     }
 
     suspend fun restart() {
-        clear()
-        connection.restart()
+        mutex.withLock {
+            clear()
+            connection.restart()
+        }
     }
 
     suspend fun reinstall() {
-        clear()
-        connection.reinstall()
+        mutex.withLock {
+            clear()
+            connection.reinstall()
+        }
     }
 
     /** One-shot health check via the generated API client. */
@@ -79,6 +99,22 @@ class KiloBackendAppService(private val cs: CoroutineScope) : Disposable {
     }
 
     // ── Internals ───────────────────────────────────────────────────
+
+    /**
+     * Full reconnect triggered when the CLI process dies.
+     * Serialized by the same mutex as user-initiated operations.
+     */
+    private suspend fun reconnect() {
+        mutex.withLock {
+            val current = state.value
+            if (current is ConnectionState.Connected || current is ConnectionState.Connecting) {
+                LOG.info("reconnect: already ${current::class.simpleName} — skipping")
+                return
+            }
+            LOG.info("reconnect: full restart under mutex")
+            connection.restart()
+        }
+    }
 
     init {
         // Watch connection state — load global data on each (re)connect.
