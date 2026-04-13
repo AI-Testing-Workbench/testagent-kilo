@@ -957,6 +957,7 @@ export const dict = {
   "prompt.placeholder.error": "Підключення не вдалося. Перевірте панель виводу або перезапустіть розширення.",
 
   "context.usage.sessionCost": "Вартість сесії",
+  "context.usage.olderSessions": "{{count}} старіших сесій",
   "context.stats.thisSession": "Ця сесія",
 
   "time.justNow": "щойно",

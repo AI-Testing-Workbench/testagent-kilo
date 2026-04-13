@@ -948,6 +948,7 @@ export const dict = {
   "prompt.placeholder.default": "พิมพ์ข้อความ... (Enter เพื่อส่ง, Shift+Enter เพื่อขึ้นบรรทัดใหม่)",
 
   "context.usage.sessionCost": "ค่าใช้จ่ายเซสชัน",
+  "context.usage.olderSessions": "{{count}} เซสชันก่อนหน้า",
   "context.stats.thisSession": "เซสชันนี้",
 
   "time.justNow": "เมื่อสักครู่",

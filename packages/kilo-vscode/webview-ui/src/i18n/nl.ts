@@ -954,6 +954,7 @@ export const dict = {
   "prompt.placeholder.error": "Verbinding mislukt. Controleer het uitvoerpaneel of herstart de extensie.",
 
   "context.usage.sessionCost": "Sessiekosten",
+  "context.usage.olderSessions": "{{count}} oudere sessies",
   "context.stats.thisSession": "Deze sessie",
 
   "time.justNow": "zojuist",

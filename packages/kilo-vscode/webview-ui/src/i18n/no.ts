@@ -957,6 +957,7 @@ export const dict = {
   "prompt.placeholder.default": "Skriv en melding... (Enter for å sende, Shift+Enter for ny linje)",
 
   "context.usage.sessionCost": "Sesjonskostnad",
+  "context.usage.olderSessions": "{{count}} eldre sesjoner",
   "context.stats.thisSession": "Denne sesjonen",
 
   "time.justNow": "akkurat nå",

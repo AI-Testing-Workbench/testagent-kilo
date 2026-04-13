@@ -82,7 +82,7 @@
   <!-- packages/kilo-vscode/webview-ui/src/components/settings/AboutKiloCodeTab.tsx -->
 - <https://kilo.ai/docs>
   <!-- packages/kilo-vscode/webview-ui/src/hooks/useSlashCommand.ts -->
-  <!-- packages/opencode/src/cli/cmd/tui/app.tsx -->
+  <!-- packages/opencode/src/kilocode/cli/cmd/tui/app.tsx -->
 - <https://kilo.ai/docs/code-with-ai/platforms/vscode/whats-new>
   <!-- packages/kilo-vscode/webview-ui/src/components/migration/MigrationWizard.tsx -->
 - <https://kilo.ai/docs/providers/#custom-provider>
@@ -117,7 +117,7 @@
 - <https://opencode.ai/zen>
   <!-- packages/kilo-vscode/webview-ui/src/i18n/en.ts -->
 - <https://openrouter.ai/docs/use-cases/usage-accounting>
-  <!-- packages/opencode/src/session/index.ts -->
+  <!-- packages/opencode/src/kilocode/session/index.ts -->
 - <https://opncd.ai>
   <!-- packages/opencode/src/share/share-next.ts -->
 - <https://platform.openai.com/docs/api-reference/responses/create>
