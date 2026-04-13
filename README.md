@@ -9,7 +9,11 @@ TestAgent是一个AI辅助测试助手，它可以帮助你分析测试项目，
 ```bash
 git submodule update --init --recursive
 
+
 bun install 
+
+// git submodule依赖安装
+bun install --cwd packages/testagent-opencode
 
 ```
 
@@ -46,6 +50,8 @@ bun bun:windows
 产物会自动复制到 `packages/kilo-vscode/bin/` 目录。
 
 **第二步**：在 `packages/kilo-vscode` 中打包扩展：
+
+📢 如果CLI 二级制无变化 可以不操作第一步，直接第二步构建插件
 
 ```bash
 bun run testagent:vsix

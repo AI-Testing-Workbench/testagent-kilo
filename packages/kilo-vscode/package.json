@@ -2,7 +2,7 @@
   "name": "testagent-vscode",
   "displayName": "TestAgent-Code",
   "description": "TestAgent Code Extension",
-  "version": "7.1.21",
+  "version": "1.0.0",
   "icon": "assets/icons/logo-outline-black.png",
   "galleryBanner": {
     "color": "#FFFFFF",
@@ -55,8 +55,8 @@
         {
           "id": "kilo-code-ActivityBar",
           "title": "TestAgent",
-          "icon": "assets/icons/kilo-light.png",
-          "darkIcon": "assets/icons/kilo-dark.png"
+          "icon": "assets/icons/kilo-light-activebar.png",
+          "darkIcon": "assets/kilo-light-activebar.png"
         }
       ]
     },
@@ -89,11 +89,6 @@
         "command": "kilo-code.new.historyButtonClicked",
         "title": "History",
         "icon": "$(history)"
-      },
-      {
-        "command": "kilo-code.new.profileButtonClicked",
-        "title": "Profile",
-        "icon": "$(account)"
       },
       {
         "command": "kilo-code.new.settingsButtonClicked",
@@ -353,11 +348,6 @@
           "when": "view == kilo-code.SidebarProvider"
         },
         {
-          "command": "kilo-code.new.profileButtonClicked",
-          "group": "navigation@4",
-          "when": "view == kilo-code.SidebarProvider"
-        },
-        {
           "command": "kilo-code.new.settingsButtonClicked",
           "group": "navigation@5",
           "when": "view == kilo-code.SidebarProvider"
@@ -396,11 +386,6 @@
         {
           "command": "kilo-code.new.historyButtonClicked",
           "group": "navigation@1",
-          "when": "activeWebviewPanelId == kilo-code.new.TabPanel"
-        },
-        {
-          "command": "kilo-code.new.profileButtonClicked",
-          "group": "navigation@2",
           "when": "activeWebviewPanelId == kilo-code.new.TabPanel"
         },
         {
@@ -813,7 +798,7 @@
     "snapshot:build": "bun script/dev-snapshot.ts build",
     "snapshot:install": "bun script/dev-snapshot.ts install",
     "extension": "bun script/launch.ts",
-    "testagent:vsix":"bun run rebuild-sdk && bun run typecheck && bun run lint && node esbuild.js --production && vsce package --no-dependencies"
+    "testagent:vsix": "bun run rebuild-sdk && bun run typecheck && bun run lint && node esbuild.js --production && vsce package --no-dependencies"
   },
   "devDependencies": {
     "@playwright/test": "1.57.0",

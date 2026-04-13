@@ -137,19 +137,20 @@ const Settings: Component<SettingsProps> = (props) => {
             <Icon name="server" />
             <span class="label">{language.t("settings.context.title")}</span>
           </Tabs.Trigger>
-
-          <Tabs.Trigger value="experimental">
+          {/* testagent_change 注释实验性功能 */}
+          {/* <Tabs.Trigger value="experimental">
             <Icon name="settings-gear" />
             <span class="label">{language.t("settings.experimental.title")}</span>
-          </Tabs.Trigger>
+          </Tabs.Trigger> */}
           <Tabs.Trigger value="language">
             <Icon name="speech-bubble" />
             <span class="label">{language.t("settings.language.title")}</span>
           </Tabs.Trigger>
-          <Tabs.Trigger value="aboutKiloCode">
+          {/* testagent_change 注释关于内容 */}
+          {/* <Tabs.Trigger value="aboutKiloCode">
             <Icon name="help" />
             <span class="label">{language.t("settings.aboutKiloCode.title")}</span>
-          </Tabs.Trigger>
+          </Tabs.Trigger> */}
         </Tabs.List>
 
         <Tabs.Content value="models">
@@ -201,7 +202,8 @@ const Settings: Component<SettingsProps> = (props) => {
           <h3>{language.t("settings.language.title")}</h3>
           <LanguageTab />
         </Tabs.Content>
-        <Tabs.Content value="aboutKiloCode">
+        {/* testagent_content 注释关于内容 */}
+        {/* <Tabs.Content value="aboutKiloCode">
           <h3>{language.t("settings.aboutKiloCode.title")}</h3>
           <AboutKiloCodeTab
             port={server.serverInfo()?.port ?? null}
@@ -209,7 +211,7 @@ const Settings: Component<SettingsProps> = (props) => {
             extensionVersion={server.extensionVersion()}
             onMigrateClick={props.onMigrateClick}
           />
-        </Tabs.Content>
+        </Tabs.Content> */}
       </Tabs>
 
       {/* Save bar — slides in when there are unsaved config changes */}

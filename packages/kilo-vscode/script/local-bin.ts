@@ -20,9 +20,16 @@ function log(msg: string) {
 }
 
 async function main() {
+  const binDir = join(kiloVscodeDir, "bin")
+  try {
+    await Bun.file(binDir).stat()
+  } catch {
+    log(`Creating bin directory at ${binDir}`)
+    await Bun.write(join(binDir, ".gitkeep"), "")
+  }
   log(`Building CLI binary via '${script}' in packages/testagent-opencode...`)
   await $`bun run ${script}`.cwd(testagentDir)
-  log(`Build complete. Binary copied to ${join(kiloVscodeDir, "bin")}`)
+  log(`Build complete. Binary copied to ${binDir}`)
 }
 
 try {

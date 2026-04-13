@@ -1,6 +1,6 @@
 ### TestAgent
 
-TestAgent 是一个开源 AI 编程代理，将 testagent CLI 直接集成到你的 VS Code 开发工作流中。
+TestAgent 是一个开源 AI 编程代理，将 TestAgent CLI 直接集成到你的 VS Code 开发工作流中。
 
 
 ## 功能特性
@@ -14,7 +14,7 @@ TestAgent 是一个开源 AI 编程代理，将 testagent CLI 直接集成到你
 
 ### 编辑器内终端
 
-- 点击编辑器标题栏按钮，快速打开 testagent 独立终端实例
+- 点击编辑器标题栏按钮，快速打开 TestAgent 独立终端实例
 - 每个终端使用随机端口，互不影响
 - 关闭终端不影响扩展主服务
 

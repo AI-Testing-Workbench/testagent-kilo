@@ -175,7 +175,8 @@ export const SettingsProviders: Component = () => {
         <div class="flex flex-col gap-1">
           <h3 class="text-14-medium text-text-strong pb-2">{language.t("settings.providers.section.popular")}</h3>
           <div class="bg-surface-raised-base px-4 rounded-lg">
-            <For each={popular()}>
+            {/* testagent_change 热门供应商注释 */}
+            {/* <For each={popular()}>
               {(item) => (
                 <div class="flex flex-wrap items-center justify-between gap-4 min-h-16 py-3 border-b border-border-weak-base last:border-none">
                   <div class="flex flex-col min-w-0">
@@ -205,7 +206,7 @@ export const SettingsProviders: Component = () => {
                   </Button>
                 </div>
               )}
-            </For>
+            </For> */}
 
             <div
               class="flex items-center justify-between gap-4 min-h-16 border-b border-border-weak-base last:border-none flex-wrap py-3"
@@ -233,8 +234,8 @@ export const SettingsProviders: Component = () => {
               </Button>
             </div>
           </div>
-
-          <Button
+          {/* testagent_change 去除查看更多供应商 */}
+          {/* <Button
             variant="ghost"
             class="px-0 py-0 mt-5 text-14-medium text-text-interactive-base text-left justify-start hover:bg-transparent active:bg-transparent"
             onClick={() => {
@@ -242,7 +243,7 @@ export const SettingsProviders: Component = () => {
             }}
           >
             {language.t("dialog.provider.viewAll")}
-          </Button>
+          </Button> */}
         </div>
       </div>
     </div>

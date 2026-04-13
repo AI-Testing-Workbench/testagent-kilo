@@ -22,7 +22,7 @@ export const AccountSwitcher: Component<{ class?: string }> = (props) => {
   let ref: HTMLDivElement | undefined
 
   const profile = () => server.profileData()
-  const orgs = () => profile()?.profile.organizations ?? []
+  const orgs = () => profile()?.profile?.organizations ?? []
   const visible = () => !!profile() && orgs().length > 0
   const current = () => profile()?.currentOrgId ?? PERSONAL
 

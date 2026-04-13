@@ -237,7 +237,8 @@ const ProvidersTab: Component = () => {
         {language.t("settings.providers.section.popular")}
       </h4>
       <Card>
-        <For each={popularProviders()}>
+        {/*testagent_change 注释providers */}
+        {/* <For each={popularProviders()}>
           {(item) => {
             const noteKey = providerNoteKey(item.id)
             return (
@@ -280,7 +281,7 @@ const ProvidersTab: Component = () => {
               </div>
             )
           }}
-        </For>
+        </For> */}
 
         {/* Custom provider entry */}
         <div
@@ -324,11 +325,12 @@ const ProvidersTab: Component = () => {
       </Card>
 
       {/* View all providers link */}
-      <div style={{ "margin-top": "16px" }}>
+      {/* testagent_change 注释查看更多 */}
+      {/* <div style={{ "margin-top": "16px" }}>
         <Button variant="ghost" onClick={() => dialog.show(() => <ProviderSelectDialog />)} style={{ padding: "0" }}>
           {language.t("dialog.provider.viewAll")}
         </Button>
-      </div>
+      </div> */}
     </div>
   )
 }

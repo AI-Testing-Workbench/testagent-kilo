@@ -140,10 +140,11 @@ export const MessageList: Component<MessageListProps> = (props) => {
                   </Show>
                 </div>
               </Show>
-              <button class="feedback-button" onClick={() => dialog.show(() => <FeedbackDialog />)}>
+              {/* testagent_change */}
+              {/* <button class="feedback-button" onClick={() => dialog.show(() => <FeedbackDialog />)}>
                 <Icon name="bubble-5" size="small" />
                 {language.t("feedback.button")}
-              </button>
+              </button> */}
             </div>
           </Show>
           <Show when={!session.loading()}>

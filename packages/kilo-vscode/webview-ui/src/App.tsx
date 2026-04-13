@@ -187,6 +187,7 @@ const AppContent: Component = () => {
       const message = event.data
       if (message?.type === "action" && message.action) {
         console.log("[testagent] App: 🎬 action:", message.action)
+        debugger
         handleViewAction(message.action)
       }
       if (message?.type === "navigate" && message.view && VALID_VIEWS.has(message.view)) {
