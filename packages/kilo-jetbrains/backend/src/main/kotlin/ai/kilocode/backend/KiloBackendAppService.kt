@@ -114,7 +114,7 @@ class KiloBackendAppService private constructor(
     suspend fun health(): HealthDto {
         val client = api ?: throw IllegalStateException("Not connected")
         val response = client.globalHealth()
-        return HealthDto(healthy = true, version = response.version)
+        return HealthDto(healthy = response.healthy, version = response.version)
     }
 
     private suspend fun reconnect() {
@@ -164,9 +164,22 @@ class KiloBackendAppService private constructor(
             try {
                 coroutineScope {
                     launch {
-                        val result = fetchProfile()
-                        progress.updateAndGet { it.copy(profile = result) }
-                            .also { _appState.value = KiloAppState.Loading(it) }
+                        try {
+                            val result = fetchProfile()
+                            progress.updateAndGet { it.copy(profile = result) }
+                                .also { _appState.value = KiloAppState.Loading(it) }
+                        } catch (e: CancellationException) {
+                            throw e
+                        } catch (e: Exception) {
+                            val err = LoadError(
+                                resource = "profile",
+                                status = (e as? ClientException)?.statusCode
+                                    ?: (e as? ServerException)?.statusCode,
+                                detail = e.message,
+                            )
+                            synchronized(errors) { errors.add(err) }
+                            throw LoadFailure(err)
+                        }
                     }
                     launch {
                         val result = fetchWithRetry("config") { fetchConfig() }
@@ -222,9 +235,16 @@ class KiloBackendAppService private constructor(
             profile = response
             log.info("Profile: ${response.profile.email}")
             ProfileResult.LOADED
+        } catch (e: ClientException) {
+            if (e.statusCode == 401) {
+                log.info("Profile: not logged in (401)")
+                return ProfileResult.NOT_LOGGED_IN
+            }
+            log.warn("Profile fetch failed: HTTP ${e.statusCode}", e)
+            throw e
         } catch (e: Exception) {
-            log.info("Profile fetch skipped: ${e.message}")
-            ProfileResult.NOT_LOGGED_IN
+            log.warn("Profile fetch failed: ${e.message}", e)
+            throw e
         }
     }
 

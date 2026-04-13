@@ -15,6 +15,7 @@ import kotlinx.coroutines.withTimeout
 import kotlin.test.AfterTest
 import kotlin.test.Test
 import kotlin.test.assertEquals
+import kotlin.test.assertFalse
 import kotlin.test.assertIs
 import kotlin.test.assertNotNull
 import kotlin.test.assertNull
@@ -149,6 +150,36 @@ class KiloBackendAppServiceTest {
         val dto = svc.health()
         assertTrue(dto.healthy)
         assertEquals("1.0.0", dto.version)
+    }
+
+    @Test
+    fun `health forwards healthy false from server`() = runBlocking {
+        mock.health = """{"healthy":false,"version":"1.0.0"}"""
+        val svc = create()
+        svc.connect()
+
+        withTimeout(10_000) {
+            svc.appState.first { it is KiloAppState.Ready }
+        }
+
+        val dto = svc.health()
+        assertFalse(dto.healthy)
+        assertEquals("1.0.0", dto.version)
+    }
+
+    @Test
+    fun `profile 500 transitions to Error`() = runBlocking {
+        mock.profileStatus = 500
+        mock.profile = """{"error":"internal"}"""
+        val svc = create()
+        svc.connect()
+
+        withTimeout(15_000) {
+            svc.appState.first { it is KiloAppState.Error }
+        }
+
+        val err = svc.appState.value as KiloAppState.Error
+        assertTrue(err.errors.any { it.resource == "profile" })
     }
 
     @Test
