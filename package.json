@@ -35,7 +35,6 @@
       "packages/script",
       "packages/sdk/js",
       "packages/storybook",
-      "packages/testagent-opencode",
       "packages/ui",
       "packages/util",
       "packages/sdk/js"
