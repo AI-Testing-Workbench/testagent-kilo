@@ -196,9 +196,9 @@ export function activate(context: vscode.ExtensionContext) {
       provider.postMessage({ type: "action", action: "cyclePreviousAgentMode" })
       agentManagerProvider.postMessage({ type: "action", action: "cyclePreviousAgentMode" })
     }),
-    vscode.commands.registerCommand("kilo-code.new.profileButtonClicked", () => {
-      settingsEditorProvider.openPanel("profile")
-    }),
+    // vscode.commands.registerCommand("kilo-code.new.profileButtonClicked", () => {
+    //   settingsEditorProvider.openPanel("profile")
+    // }), // testagent_change
     vscode.commands.registerCommand("kilo-code.new.settingsButtonClicked", (tab?: string) => {
       settingsEditorProvider.openPanel("settings", tab)
     }),
