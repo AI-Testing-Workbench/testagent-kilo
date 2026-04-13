@@ -1,6 +1,6 @@
 import org.gradle.api.DefaultTask
 import org.gradle.api.file.DirectoryProperty
-import org.gradle.api.tasks.InputDirectory
+import org.gradle.api.tasks.OutputDirectory
 import org.gradle.api.tasks.TaskAction
 import java.io.File
 
@@ -22,7 +22,7 @@ import java.io.File
  *     Replaced with `kotlinx.serialization.json.JsonElement`.
  */
 abstract class FixGeneratedApiTask : DefaultTask() {
-    @get:InputDirectory
+    @get:OutputDirectory
     abstract val generated: DirectoryProperty
 
     @TaskAction
