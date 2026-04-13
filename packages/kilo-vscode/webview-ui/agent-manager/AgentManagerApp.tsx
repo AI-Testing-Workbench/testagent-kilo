@@ -2086,7 +2086,8 @@ const AgentManagerContent: Component = () => {
         </button>
 
         {/* WORKTREES section */}
-        <div class={`am-section ${sessionsCollapsed() ? "am-section-grow" : ""}`}>
+        {/* testagent_chanage  注释worktree */}
+        {/* <div class={`am-section ${sessionsCollapsed() ? "am-section-grow" : ""}`}>
           <div class="am-section-header">
             <span class="am-section-label">{t("agentManager.section.worktrees")}</span>
             <Show when={isGitRepo()}>
@@ -2246,7 +2247,6 @@ const AgentManagerContent: Component = () => {
                     }
                   }
 
-                  /** Lock drag movement to the Y axis (vertical-only worktree dragging). */
                   const ConstrainDragXAxis: Component = () => {
                     const ctx = useDragDropContext()
                     if (!ctx) return null
@@ -2376,7 +2376,7 @@ const AgentManagerContent: Component = () => {
               </Show>
             </Show>
           </div>
-        </div>
+        </div> */}
 
         {/* SESSIONS section (unassigned) — collapsible */}
         <div class={`am-section ${sessionsCollapsed() ? "" : "am-section-grow"}`}>

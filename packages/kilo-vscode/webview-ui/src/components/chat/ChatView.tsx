@@ -163,7 +163,8 @@ export const ChatView: Component<ChatViewProps> = (props) => {
                     {language.t("command.session.new.task")}
                   </Button>
                 </Tooltip>
-                <Show when={canContinueInWorktree()}>
+                {/* testagent_change 注释掉 worktree */}
+                {/* <Show when={canContinueInWorktree()}>
                   <Tooltip value="Continue in isolated worktree" placement="top">
                     <Button
                       variant="ghost"
@@ -211,7 +212,7 @@ export const ChatView: Component<ChatViewProps> = (props) => {
                       </Show>
                     </button>
                   </Tooltip>
-                </Show>
+                </Show> */}
               </div>
             </div>
           </Show>
