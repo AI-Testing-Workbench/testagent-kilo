@@ -104,8 +104,8 @@
         "command": "kilo-code.new.openInTab",
         "title": "TestAgent",
         "icon": {
-          "light": "assets/icons/kilo-light.svg",
-          "dark": "assets/icons/kilo-dark.svg"
+          "light": "assets/icons/kilo-light.png",
+          "dark": "assets/icons/kilo-dark.png"
         }
       },
       {
@@ -246,8 +246,8 @@
         "title": "Generate Commit Message",
         "category": "TestAgent",
         "icon": {
-          "light": "assets/icons/kilo-light.svg",
-          "dark": "assets/icons/kilo-dark.svg"
+          "light": "assets/icons/kilo-light.png",
+          "dark": "assets/icons/kilo-dark.png"
         }
       },
       {

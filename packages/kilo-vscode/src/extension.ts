@@ -110,7 +110,7 @@ export function activate(context: vscode.ExtensionContext) {
         tabPanels.set(panel, tabProvider)
         panel.onDidDispose(
           () => {
-            console.log("[Kilo New] Tab panel restored from restart disposed")
+            console.log("[TestAgent] Tab panel restored from restart disposed")
             tabPanels.delete(panel)
             tabProvider.dispose()
           },
@@ -306,7 +306,7 @@ export function activate(context: vscode.ExtensionContext) {
         const match = uri.path.match(/^\/kilocode\/s\/([a-zA-Z0-9_-]+)$/)
         if (!match) return
         const sessionId = match[1]
-        console.log("[Kilo New] URI handler: opening cloud session:", sessionId)
+        console.log("[TestAgent] URI handler: opening cloud session:", sessionId)
         await vscode.commands.executeCommand(`${KiloProvider.viewType}.focus`)
         provider.openCloudSession(sessionId)
       },
@@ -393,8 +393,8 @@ async function openKiloInNewTab(
   })
 
   panel.iconPath = {
-    light: vscode.Uri.joinPath(context.extensionUri, "assets", "icons", "kilo-light.svg"),
-    dark: vscode.Uri.joinPath(context.extensionUri, "assets", "icons", "kilo-dark.svg"),
+    light: vscode.Uri.joinPath(context.extensionUri, "assets", "icons", "kilo-light.png"),
+    dark: vscode.Uri.joinPath(context.extensionUri, "assets", "icons", "kilo-dark.png"),
   }
 
   const tabProvider = new KiloProvider(context.extensionUri, connectionService, context)
@@ -411,7 +411,7 @@ async function openKiloInNewTab(
 
   panel.onDidDispose(
     () => {
-      console.log("[Kilo New] Tab panel disposed")
+      console.log("[TestAgent] Tab panel disposed")
       tabPanels.delete(panel)
       tabProvider.dispose()
     },

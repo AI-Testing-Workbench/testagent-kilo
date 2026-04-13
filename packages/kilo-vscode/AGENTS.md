@@ -190,7 +190,7 @@ New webview features must use **`@kilocode/kilo-ui`** components instead of raw 
 
 - Extension logs: "Extension Host" output channel (not Debug Console)
 - Webview logs: Command Palette → "Developer: Open Webview Developer Tools"
-- All debug output must be prepended with `[Kilo New]` for easy filtering
+- All debug output must be prepended with `[TestAgent]` for easy filtering
 
 ## Naming Conventions
 

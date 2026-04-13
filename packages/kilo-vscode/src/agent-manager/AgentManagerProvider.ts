@@ -1655,7 +1655,7 @@ export class AgentManagerProvider implements Disposable {
       // Directory-boundary check: append path.sep so "/foo/bar" won't match "/foo/bar2/..."
       if (resolved !== root && !resolved.startsWith(root + path.sep)) return
     } catch (err) {
-      console.error("[Kilo New] AgentManagerProvider: Cannot resolve file path:", err)
+      console.error("[TestAgent] AgentManagerProvider: Cannot resolve file path:", err)
       return
     }
     this.host.openFile(resolved, line, column)

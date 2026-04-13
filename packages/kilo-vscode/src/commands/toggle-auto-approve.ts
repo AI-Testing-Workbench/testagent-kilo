@@ -39,7 +39,7 @@ export function registerToggleAutoApprove(
     if (!client) return
     const dir = resolve(event.properties.sessionID)
     client.permission.reply({ requestID: event.properties.id, directory: dir, reply: "once" }).catch((err) => {
-      console.error("[Kilo New] toggleAutoApprove: failed to auto-reply:", err)
+      console.error("[TestAgent] toggleAutoApprove: failed to auto-reply:", err)
     })
   })
 
@@ -63,11 +63,11 @@ export function registerToggleAutoApprove(
               for (const req of pending) {
                 if (generation !== snapshot) break
                 await client.permission.reply({ requestID: req.id, directory: dir, reply: "once" }).catch((err) => {
-                  console.error("[Kilo New] toggleAutoApprove: failed to drain pending:", err)
+                  console.error("[TestAgent] toggleAutoApprove: failed to drain pending:", err)
                 })
               }
             } catch (err) {
-              console.error("[Kilo New] toggleAutoApprove: failed to list pending permissions:", err)
+              console.error("[TestAgent] toggleAutoApprove: failed to list pending permissions:", err)
             }
           }
         }

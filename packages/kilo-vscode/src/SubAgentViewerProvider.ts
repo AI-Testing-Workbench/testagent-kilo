@@ -37,8 +37,8 @@ export class SubAgentViewerProvider implements vscode.Disposable {
     })
 
     panel.iconPath = {
-      light: vscode.Uri.joinPath(this.extensionUri, "assets", "icons", "kilo-light.svg"),
-      dark: vscode.Uri.joinPath(this.extensionUri, "assets", "icons", "kilo-dark.svg"),
+      light: vscode.Uri.joinPath(this.extensionUri, "assets", "icons", "kilo-light.png"),
+      dark: vscode.Uri.joinPath(this.extensionUri, "assets", "icons", "kilo-dark.png"),
     }
 
     const provider = new KiloProvider(this.extensionUri, this.connectionService, this.context)
@@ -77,7 +77,7 @@ export class SubAgentViewerProvider implements vscode.Disposable {
         // Navigate to the sub-agent viewer
         provider.postMessage({ type: "viewSubAgentSession", sessionID })
       } catch (err) {
-        console.error("[Kilo New] SubAgentViewerProvider: Failed to load session:", err)
+        console.error("[TestAgent] SubAgentViewerProvider: Failed to load session:", err)
       }
     })
 
@@ -92,7 +92,7 @@ export class SubAgentViewerProvider implements vscode.Disposable {
     this.providers.set(sessionID, provider)
 
     panel.onDidDispose(() => {
-      console.log("[Kilo New] Sub-agent viewer panel disposed:", sessionID)
+      console.log("[TestAgent] Sub-agent viewer panel disposed:", sessionID)
       closeDisposable.dispose()
       provider.dispose()
       this.panels.delete(sessionID)

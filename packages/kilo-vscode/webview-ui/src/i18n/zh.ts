@@ -921,7 +921,7 @@ export const dict = {
   "settings.aboutKiloCode.title": "关于 TestAgent",
 
   "session.messages.empty": "在下方输入消息以开始对话。",
-  "session.messages.welcome": "TestAgent Code 是一个 AI 编程助手。让它帮你构建功能、修复 bug 或解释代码库。",
+  "session.messages.welcome": "TestAgent是一个AI辅助测试助手，它可以帮助你分析测试项目，梳理测试点，生成自动化测试脚本，同时支持自定义插件拓展功能。",
   "session.messages.scrollToBottom": "滚动到底部",
   "session.status.writingResponse": "正在撰写回复…",
   "session.status.retry": "正在重试…",

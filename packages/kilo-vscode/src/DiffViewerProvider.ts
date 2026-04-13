@@ -66,8 +66,8 @@ export class DiffViewerProvider implements vscode.Disposable {
     this.panel = panel
 
     panel.iconPath = {
-      light: vscode.Uri.joinPath(this.extensionUri, "assets", "icons", "kilo-light.svg"),
-      dark: vscode.Uri.joinPath(this.extensionUri, "assets", "icons", "kilo-dark.svg"),
+      light: vscode.Uri.joinPath(this.extensionUri, "assets", "icons", "kilo-light.png"),
+      dark: vscode.Uri.joinPath(this.extensionUri, "assets", "icons", "kilo-dark.png"),
     }
 
     panel.webview.onDidReceiveMessage((msg) => this.onMessage(msg), undefined, [])

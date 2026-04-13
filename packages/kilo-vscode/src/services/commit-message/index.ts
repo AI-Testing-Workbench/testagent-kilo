@@ -57,7 +57,7 @@ export function registerCommitMessageService(
       try {
         client = connectionService.getClient()
       } catch (err) {
-        console.error("[Kilo New] Failed to get client:", err)
+        console.error("[TestAgent] Failed to get client:", err)
         vscode.window.showErrorMessage("Kilo backend is not connected. Please wait for the connection to establish.")
         return
       }
@@ -98,7 +98,7 @@ export function registerCommitMessageService(
               repository.inputBox.value = message
               lastGeneratedMessage = message
               lastWorkspacePath = path
-              console.log("[Kilo New] Commit message generated successfully")
+              console.log("[TestAgent] Commit message generated successfully")
             } finally {
               clearTimeout(timer)
             }
@@ -106,11 +106,11 @@ export function registerCommitMessageService(
         )
         .then(undefined, (error: unknown) => {
           if (controller.signal.aborted) {
-            console.log("[Kilo New] Commit message generation was cancelled or timed out")
+            console.log("[TestAgent] Commit message generation was cancelled or timed out")
             return
           }
           const msg = getErrorMessage(error)
-          console.error("[Kilo New] Failed to generate commit message:", msg)
+          console.error("[TestAgent] Failed to generate commit message:", msg)
           vscode.window.showErrorMessage(`Failed to generate commit message: ${msg}`)
         })
     },

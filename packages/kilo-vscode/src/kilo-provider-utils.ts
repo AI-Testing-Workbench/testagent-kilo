@@ -52,7 +52,7 @@ export function getErrorMessage(error: unknown): string {
       const json = JSON.stringify(error)
       if (json !== "{}" && json.length < 500) return json
     } catch (err) {
-      console.warn("[Kilo New] getErrorMessage: JSON.stringify failed", err)
+      console.warn("[TestAgent] getErrorMessage: JSON.stringify failed", err)
     }
   }
   return String(error)

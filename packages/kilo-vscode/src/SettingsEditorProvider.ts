@@ -3,11 +3,11 @@ import { KiloProvider } from "./KiloProvider"
 import { resolvePanelProjectDirectory } from "./project-directory"
 import type { KiloConnectionService } from "./services/cli-backend"
 
-type PanelView = "settings" | "profile" | "marketplace"
+type PanelView = "settings"  | "marketplace"  // testagent_change
 
 const PANEL_TITLES: Record<PanelView, string> = {
   settings: "TestAgent Settings",
-  profile: "TestAgent Profile",
+  // profile: "TestAgent Profile", testagent_change
   marketplace: "TestAgent Marketplace",
 }
 
@@ -92,8 +92,8 @@ export class SettingsEditorProvider implements vscode.Disposable {
 
   private wirePanel(panel: vscode.WebviewPanel, view: PanelView, projectDirectory: string | null): void {
     panel.iconPath = {
-      light: vscode.Uri.joinPath(this.extensionUri, "assets", "icons", "kilo-light.svg"),
-      dark: vscode.Uri.joinPath(this.extensionUri, "assets", "icons", "kilo-dark.svg"),
+      light: vscode.Uri.joinPath(this.extensionUri, "assets", "icons", "kilo-light.png"),
+      dark: vscode.Uri.joinPath(this.extensionUri, "assets", "icons", "kilo-dark.png"),
     }
 
     // Create a dedicated KiloProvider for this panel so it has full
@@ -133,7 +133,7 @@ export class SettingsEditorProvider implements vscode.Disposable {
 
     const title = PANEL_TITLES[view]
     panel.onDidDispose(() => {
-      console.log(`[Kilo New] ${title} panel disposed`)
+      console.log(`[TestAgent] ${title} panel disposed`)
       closePanelDisposable.dispose()
       readyDisposable.dispose()
       tabDisposable.dispose()

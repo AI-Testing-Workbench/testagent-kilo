@@ -49,7 +49,7 @@ export async function handlePermissionResponse(
 
   const target = sessionID || ctx.currentSessionId
   if (!target) {
-    console.error("[Kilo New] KiloProvider: No sessionID for permission response")
+    console.error("[TestAgent] KiloProvider: No sessionID for permission response")
     ctx.postMessage({ type: "permissionError", permissionID: permissionId })
     return
   }
@@ -75,7 +75,7 @@ export async function handlePermissionResponse(
       { throwOnError: true },
     )
   } catch (error) {
-    console.error("[Kilo New] KiloProvider: Failed to respond to permission:", error)
+    console.error("[TestAgent] KiloProvider: Failed to respond to permission:", error)
     ctx.postMessage({ type: "permissionError", permissionID: permissionId })
   }
 }
@@ -112,6 +112,6 @@ export async function fetchAndSendPendingPermissions(ctx: PermissionContext): Pr
       }
     }
   } catch (error) {
-    console.error("[Kilo New] KiloProvider: Failed to fetch pending permissions:", error)
+    console.error("[TestAgent] KiloProvider: Failed to fetch pending permissions:", error)
   }
 }

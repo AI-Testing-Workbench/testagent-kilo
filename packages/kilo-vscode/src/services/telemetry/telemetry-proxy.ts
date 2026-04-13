@@ -58,7 +58,7 @@ export class TelemetryProxy {
         "Content-Type": "application/json",
       },
       body: payload,
-    }).catch((err) => console.error("[Kilo New] Telemetry capture failed:", err))
+    }).catch((err) => console.error("[TestAgent] Telemetry capture failed:", err))
   }
 
   /**

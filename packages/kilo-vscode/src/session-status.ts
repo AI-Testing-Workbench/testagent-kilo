@@ -58,6 +58,6 @@ export async function seedSessionStatuses(
       }
     }
   } catch (error) {
-    console.error("[Kilo New] KiloProvider: Failed to seed session statuses:", error)
+    console.error("[TestAgent] KiloProvider: Failed to seed session statuses:", error)
   }
 }

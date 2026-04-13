@@ -85,7 +85,7 @@ export function openFileInEditor(
 
   vscode.workspace.openTextDocument(uri).then(
     (doc) => vscode.window.showTextDocument(doc, { viewColumn, preview: true, selection }),
-    (err) => console.error(`[Kilo New] ${prefix}: Failed to open file:`, uri.fsPath, err),
+    (err) => console.error(`[TestAgent] ${prefix}: Failed to open file:`, uri.fsPath, err),
   )
 }
 
