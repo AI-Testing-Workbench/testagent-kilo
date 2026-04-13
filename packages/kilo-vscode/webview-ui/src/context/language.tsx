@@ -164,21 +164,8 @@ export const LanguageProvider: ParentComponent<LanguageProviderProps> = (props) 
     }
   })
 
-  // Resolved locale: user override → VS Code language → browser language → "en"
-  const locale = createMemo<Locale>(() => {
-    const override = userOverride()
-    if (override) {
-      return override
-    }
-    const vscodeLang = props.vscodeLanguage?.()
-    if (vscodeLang) {
-      return normalizeLocale(vscodeLang)
-    }
-    if (typeof navigator !== "undefined" && navigator.language) {
-      return normalizeLocale(navigator.language)
-    }
-    return "en"
-  })
+  // testagent_change - 固定语言为简体中文
+  const locale = createMemo<Locale>(() => "zh")
 
   const dict = createMemo(() => dicts[locale()] ?? dicts.en)
 

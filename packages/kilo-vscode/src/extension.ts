@@ -217,9 +217,10 @@ export function activate(context: vscode.ExtensionContext) {
       await provider.waitForReady()
       provider.postMessage({ type: "triggerTask", text: `Generate a terminal command: ${input}` })
     }),
-    vscode.commands.registerCommand("kilo-code.new.openInTab", () => {
-      return openKiloInNewTab(context, connectionService, agentManagerProvider, tabPanels)
-    }),
+    // testagent_change 去掉openinTab
+    // vscode.commands.registerCommand("kilo-code.new.openInTab", () => {
+    //   return openKiloInNewTab(context, connectionService, agentManagerProvider, tabPanels)
+    // }),
     vscode.commands.registerCommand("kilo-code.new.openTestagentTerminal", async () => {
       const port = Math.floor(Math.random() * (65535 - 16384 + 1)) + 16384
 

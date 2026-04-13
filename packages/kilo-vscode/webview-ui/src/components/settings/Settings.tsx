@@ -137,17 +137,16 @@ const Settings: Component<SettingsProps> = (props) => {
             <Icon name="server" />
             <span class="label">{language.t("settings.context.title")}</span>
           </Tabs.Trigger>
-          {/* testagent_change 注释实验性功能 */}
+          {/* testagent_change 注释实验性功能 、语言、关于*/}
           {/* <Tabs.Trigger value="experimental">
             <Icon name="settings-gear" />
             <span class="label">{language.t("settings.experimental.title")}</span>
-          </Tabs.Trigger> */}
+          </Tabs.Trigger> 
           <Tabs.Trigger value="language">
             <Icon name="speech-bubble" />
             <span class="label">{language.t("settings.language.title")}</span>
           </Tabs.Trigger>
-          {/* testagent_change 注释关于内容 */}
-          {/* <Tabs.Trigger value="aboutKiloCode">
+          <Tabs.Trigger value="aboutKiloCode">
             <Icon name="help" />
             <span class="label">{language.t("settings.aboutKiloCode.title")}</span>
           </Tabs.Trigger> */}
@@ -193,16 +192,15 @@ const Settings: Component<SettingsProps> = (props) => {
           <h3>{language.t("settings.context.title")}</h3>
           <ContextTab />
         </Tabs.Content>
-
-        <Tabs.Content value="experimental">
+        {/* testagent_content 注释关于内容 */}
+        {/* <Tabs.Content value="experimental">
           <h3>{language.t("settings.experimental.title")}</h3>
           <ExperimentalTab />
         </Tabs.Content>
-        <Tabs.Content value="language">
+       <Tabs.Content value="language">
           <h3>{language.t("settings.language.title")}</h3>
           <LanguageTab />
-        </Tabs.Content>
-        {/* testagent_content 注释关于内容 */}
+        </Tabs.Content> */}
         {/* <Tabs.Content value="aboutKiloCode">
           <h3>{language.t("settings.aboutKiloCode.title")}</h3>
           <AboutKiloCodeTab

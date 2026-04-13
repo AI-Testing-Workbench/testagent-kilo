@@ -55,8 +55,7 @@
         {
           "id": "kilo-code-ActivityBar",
           "title": "TestAgent",
-          "icon": "assets/icons/kilo-light-activebar.png",
-          "darkIcon": "assets/kilo-light-activebar.png"
+          "icon": "$(hubot)"
         }
       ]
     },
@@ -372,11 +371,6 @@
           "command": "kilo-code.new.openTestagentTerminal",
           "group": "navigation@0",
           "when": "editorIsOpen"
-        },
-        {
-          "command": "kilo-code.new.openInTab",
-          "group": "navigation",
-          "when": "true"
         },
         {
           "command": "kilo-code.new.plusButtonClicked",

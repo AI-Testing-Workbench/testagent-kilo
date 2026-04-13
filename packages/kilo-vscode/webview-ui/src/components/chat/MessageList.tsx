@@ -26,7 +26,7 @@ import { activeUserMessageID as getActiveUserMessageID } from "../../context/ses
 
 const KiloLogo = (): JSX.Element => {
   return (
-    <div class="kilo-logo">
+    <div class="kilo-logo" style={{ width: "auto" }}>
       <svg class="testagent-avatar-home" viewBox="-4 -4 32 32" xmlns="http://www.w3.org/2000/svg">
         <defs>
           <linearGradient id="home-rg" x1="0%" y1="0%" x2="100%" y2="100%">
