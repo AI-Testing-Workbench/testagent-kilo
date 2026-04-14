@@ -508,7 +508,7 @@
     },
     "packages/sdk/js": {
       "name": "@kilocode/sdk",
-      "version": "7.2.4",
+      "version": "7.2.5",
       "dependencies": {
         "cross-spawn": "catalog:",
       },
