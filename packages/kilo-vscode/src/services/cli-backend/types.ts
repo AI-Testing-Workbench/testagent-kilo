@@ -5,7 +5,7 @@
 // equivalents in @kilocode/sdk. All API types (Session, Event, Agent,
 // McpStatus, Config, etc.) should be imported from "@kilocode/sdk/v2/client".
 
-// Server connection config
+/** Connection config used by the extension to reach the local CLI server */
 export interface ServerConfig {
   baseUrl: string
   password: string
