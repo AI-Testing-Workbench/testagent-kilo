@@ -196,7 +196,7 @@ export const VscodeSessionTurn: Component<VscodeSessionTurnProps> = (props) => {
                 <Collapsible.Trigger>
                   <div data-component="session-turn-diffs-trigger">
                     <div data-slot="session-turn-diffs-title">
-                      <span data-slot="session-turn-diffs-label">{i18n.t("ui.sessionReview.change.modified")}</span>
+                      <span data-slot="session-turn-diffs-label">{i18n.t("ui.sessionReview.change.modified")}</span>{" "}
                       <span data-slot="session-turn-diffs-count">
                         {diffs().length} {i18n.t(diffs().length === 1 ? "ui.common.file.one" : "ui.common.file.other")}
                       </span>
