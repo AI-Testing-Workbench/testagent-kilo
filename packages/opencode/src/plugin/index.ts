@@ -10,6 +10,7 @@ import { NamedError } from "@opencode-ai/util/error"
 import { CopilotAuthPlugin } from "./github-copilot/copilot"
 import { gitlabAuthPlugin as GitlabAuthPlugin } from "opencode-gitlab-auth"
 import { PoeAuthPlugin } from "opencode-poe-auth"
+import { CloudflareAIGatewayAuthPlugin, CloudflareWorkersAuthPlugin } from "./cloudflare"
 import { Effect, Layer, ServiceMap, Stream } from "effect"
 import { InstanceState } from "@/effect/instance-state"
 import { KiloAuthPlugin } from "@kilocode/kilo-gateway" // kilocode_change
@@ -54,6 +55,8 @@ export namespace Plugin {
     CopilotAuthPlugin,
     GitlabAuthPlugin as unknown as PluginInstance,
     PoeAuthPlugin as unknown as PluginInstance,
+    CloudflareWorkersAuthPlugin as unknown as PluginInstance,
+    CloudflareAIGatewayAuthPlugin as unknown as PluginInstance,
   ] // kilocode_change end
 
   function isServerPlugin(value: unknown): value is PluginInstance {

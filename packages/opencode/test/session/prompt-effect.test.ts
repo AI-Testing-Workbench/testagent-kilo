@@ -1,3 +1,4 @@
+// kilocode_change - all agent: "build" references renamed to agent: "code"
 import { NodeFileSystem } from "@effect/platform-node"
 import { expect, spyOn } from "bun:test"
 import { Cause, Effect, Exit, Fiber, Layer } from "effect"
@@ -241,7 +242,7 @@ const user = Effect.fn("test.user")(function* (sessionID: SessionID, text: strin
     id: MessageID.ascending(),
     role: "user",
     sessionID,
-    agent: "build",
+    agent: "code",
     model: ref,
     time: { created: Date.now() },
   })
@@ -264,7 +265,7 @@ const seed = Effect.fn("test.seed")(function* (sessionID: SessionID, opts?: { fi
     parentID: msg.id,
     sessionID,
     mode: "build",
-    agent: "build",
+    agent: "code",
     cost: 0,
     path: { cwd: "/tmp", root: "/tmp" },
     tokens: { input: 0, output: 0, reasoning: 0, cache: { read: 0, write: 0 } },
@@ -336,7 +337,7 @@ it.live("loop calls LLM and returns assistant message", () =>
       })
       yield* prompt.prompt({
         sessionID: chat.id,
-        agent: "build",
+        agent: "code",
         noReply: true,
         parts: [{ type: "text", text: "hello" }],
       })
@@ -365,7 +366,7 @@ it.live("static loop returns assistant text through local provider", () =>
       yield* Effect.promise(() =>
         SessionPrompt.prompt({
           sessionID: session.id,
-          agent: "build",
+          agent: "code",
           noReply: true,
           parts: [{ type: "text", text: "hello" }],
         }),
@@ -396,7 +397,7 @@ it.live("static loop consumes queued replies across turns", () =>
       yield* Effect.promise(() =>
         SessionPrompt.prompt({
           sessionID: session.id,
-          agent: "build",
+          agent: "code",
           noReply: true,
           parts: [{ type: "text", text: "hello one" }],
         }),
@@ -411,7 +412,7 @@ it.live("static loop consumes queued replies across turns", () =>
       yield* Effect.promise(() =>
         SessionPrompt.prompt({
           sessionID: session.id,
-          agent: "build",
+          agent: "code",
           noReply: true,
           parts: [{ type: "text", text: "hello two" }],
         }),
@@ -441,7 +442,7 @@ it.live("loop continues when finish is tool-calls", () =>
       })
       yield* prompt.prompt({
         sessionID: session.id,
-        agent: "build",
+        agent: "code",
         noReply: true,
         parts: [{ type: "text", text: "hello" }],
       })
@@ -471,7 +472,7 @@ it.live("loop continues when finish is stop but assistant has tool parts", () =>
       })
       yield* prompt.prompt({
         sessionID: session.id,
-        agent: "build",
+        agent: "code",
         noReply: true,
         parts: [{ type: "text", text: "hello" }],
       })
@@ -775,7 +776,7 @@ it.live(
         const a = yield* prompt
           .prompt({
             sessionID: chat.id,
-            agent: "build",
+            agent: "code",
             model: ref,
             parts: [{ type: "text", text: "first" }],
           })
@@ -788,7 +789,7 @@ it.live(
           .prompt({
             sessionID: chat.id,
             messageID: id,
-            agent: "build",
+            agent: "code",
             model: ref,
             parts: [{ type: "text", text: "second" }],
           })
@@ -888,7 +889,7 @@ it.live(
         const fiber = yield* prompt.loop({ sessionID: chat.id }).pipe(Effect.forkChild)
         yield* llm.wait(1)
 
-        const exit = yield* prompt.shell({ sessionID: chat.id, agent: "build", command: "echo hi" }).pipe(Effect.exit)
+        const exit = yield* prompt.shell({ sessionID: chat.id, agent: "code", command: "echo hi" }).pipe(Effect.exit)
         expect(Exit.isFailure(exit)).toBe(true)
         if (Exit.isFailure(exit)) {
           expect(Cause.squash(exit.cause)).toBeInstanceOf(Session.BusyError)
@@ -909,7 +910,7 @@ unix("shell captures stdout and stderr in completed tool output", () =>
         const { prompt, chat } = yield* boot()
         const result = yield* prompt.shell({
           sessionID: chat.id,
-          agent: "build",
+          agent: "code",
           command: "printf out && printf err >&2",
         })
 
@@ -934,7 +935,7 @@ unix("shell completes a fast command on the preferred shell", () =>
         const { prompt, chat } = yield* boot()
         const result = yield* prompt.shell({
           sessionID: chat.id,
-          agent: "build",
+          agent: "code",
           command: "pwd",
         })
 
@@ -960,7 +961,7 @@ unix("shell lists files from the project directory", () =>
 
         const result = yield* prompt.shell({
           sessionID: chat.id,
-          agent: "build",
+          agent: "code",
           command: "command ls",
         })
 
@@ -984,7 +985,7 @@ unix("shell captures stderr from a failing command", () =>
         const { prompt, chat } = yield* boot()
         const result = yield* prompt.shell({
           sessionID: chat.id,
-          agent: "build",
+          agent: "code",
           command: "command -v __nonexistent_cmd_e2e__ || echo 'not found' >&2; exit 1",
         })
 
@@ -1010,7 +1011,7 @@ unix(
             const { prompt, chat } = yield* boot()
 
             const fiber = yield* prompt
-              .shell({ sessionID: chat.id, agent: "build", command: "printf first && sleep 0.2 && printf second" })
+              .shell({ sessionID: chat.id, agent: "code", command: "printf first && sleep 0.2 && printf second" })
               .pipe(Effect.forkChild)
 
             yield* Effect.promise(async () => {
@@ -1048,7 +1049,7 @@ it.live(
         yield* llm.text("after-shell")
 
         const sh = yield* prompt
-          .shell({ sessionID: chat.id, agent: "build", command: "sleep 0.2" })
+          .shell({ sessionID: chat.id, agent: "code", command: "sleep 0.2" })
           .pipe(Effect.forkChild)
         yield* Effect.sleep(50)
 
@@ -1086,7 +1087,7 @@ it.live(
         yield* llm.text("done")
 
         const sh = yield* prompt
-          .shell({ sessionID: chat.id, agent: "build", command: "sleep 0.2" })
+          .shell({ sessionID: chat.id, agent: "code", command: "sleep 0.2" })
           .pipe(Effect.forkChild)
         yield* Effect.sleep(50)
 
@@ -1122,7 +1123,7 @@ unix(
             const { prompt, chat } = yield* boot()
 
             const sh = yield* prompt
-              .shell({ sessionID: chat.id, agent: "build", command: "sleep 30" })
+              .shell({ sessionID: chat.id, agent: "code", command: "sleep 30" })
               .pipe(Effect.forkChild)
             yield* Effect.sleep(50)
 
@@ -1159,7 +1160,7 @@ unix(
             const { prompt, chat } = yield* boot()
 
             const sh = yield* prompt
-              .shell({ sessionID: chat.id, agent: "build", command: "trap '' TERM; sleep 30" })
+              .shell({ sessionID: chat.id, agent: "code", command: "trap '' TERM; sleep 30" })
               .pipe(Effect.forkChild)
             yield* Effect.sleep(50)
 
@@ -1190,7 +1191,7 @@ unix(
           const { prompt, chat } = yield* boot()
 
           const sh = yield* prompt
-            .shell({ sessionID: chat.id, agent: "build", command: "sleep 30" })
+            .shell({ sessionID: chat.id, agent: "code", command: "sleep 30" })
             .pipe(Effect.forkChild)
           yield* Effect.sleep(50)
 
@@ -1219,12 +1220,12 @@ unix(
             const { prompt, chat } = yield* boot()
 
             const a = yield* prompt
-              .shell({ sessionID: chat.id, agent: "build", command: "sleep 30" })
+              .shell({ sessionID: chat.id, agent: "code", command: "sleep 30" })
               .pipe(Effect.forkChild)
             yield* Effect.sleep(50)
 
             const exit = yield* prompt
-              .shell({ sessionID: chat.id, agent: "build", command: "echo hi" })
+              .shell({ sessionID: chat.id, agent: "code", command: "echo hi" })
               .pipe(Effect.exit)
             expect(Exit.isFailure(exit)).toBe(true)
             if (Exit.isFailure(exit)) {

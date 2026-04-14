@@ -16,9 +16,7 @@
     "random": "echo 'Random script'",
     "hello": "echo 'Hello World!'",
     "test": "echo 'do not run tests from root' && exit 1",
-    "extension": "bun --cwd packages/kilo-vscode script/launch.ts",
-    "changeset": "bunx changeset",
-    "changeset:version": "bunx changeset version && bun install --lockfile-only"
+    "extension": "bun --cwd packages/kilo-vscode script/launch.ts"
   },
   "workspaces": {
     "packages": [
@@ -76,8 +74,6 @@
   },
   "devDependencies": {
     "@actions/artifact": "5.0.1",
-    "@changesets/changelog-github": "^0.5.1",
-    "@changesets/cli": "^2.27.10",
     "@tsconfig/bun": "catalog:",
     "@types/mime-types": "3.0.1",
     "@typescript/native-preview": "catalog:",
@@ -86,7 +82,9 @@
     "prettier": "3.6.2",
     "semver": "^7.6.0",
     "sst": "3.18.10",
-    "turbo": "2.8.13"
+    "turbo": "2.8.13",
+    "@changesets/changelog-github": "^0.5.1",
+    "@changesets/cli": "^2.27.10"
   },
   "dependencies": {
     "@aws-sdk/client-s3": "3.1025.0",
