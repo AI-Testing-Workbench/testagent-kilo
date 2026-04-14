@@ -88,7 +88,7 @@ export interface ModelSelectorBaseProps {
 }
 
 export const ModelSelectorBase: Component<ModelSelectorBaseProps> = (props) => {
-  const { connected, models, findModel } = useProvider()
+  const { connected, models, findModel, providers } = useProvider()
   const language = useLanguage()
   // Session context is optional — ModelSelectorBase is also used in Settings
   // where SessionProvider may not be mounted.
@@ -145,13 +145,25 @@ export const ModelSelectorBase: Component<ModelSelectorBaseProps> = (props) => {
     window.addEventListener("mouseup", onUp)
   }
 
-  // Only show models from Kilo Gateway or connected providers.
+  // Only show models from connected providers or user-configured models in Kilo Gateway
   // kilo-auto/small is excluded unless includeAutoSmall is explicitly true.
   const visibleModels = createMemo(() => {
     const c = connected()
     return models().filter((m) => {
       if (!props.includeAutoSmall && isSmall(m)) return false
-      return m.providerID === KILO_GATEWAY_ID || c.includes(m.providerID)
+      // testagent_change
+      // 显示所有已连接的供应商
+      if (c.includes(m.providerID)) return true
+
+      // 如果是 Kilo Gateway，检查是否是用户配置的模型
+      if (m.providerID === KILO_GATEWAY_ID) {
+        // 获取 provider 信息来检查来源
+        const provider = providers()[m.providerID]
+        // 如果是用户配置的模型，也显示
+        if (provider?.source === "config") return true
+      }
+
+      return false
     })
   })
 

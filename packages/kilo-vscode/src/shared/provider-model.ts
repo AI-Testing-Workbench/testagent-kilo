@@ -1,5 +1,5 @@
 export const KILO_PROVIDER_ID = "kilo"
-export const KILO_AUTO = { providerID: KILO_PROVIDER_ID, modelID: "" } as const
+export const KILO_AUTO = { providerID: "内置model", modelID: "内置model" } as const
 export const CUSTOM_PROVIDER_PACKAGE = "@ai-sdk/openai-compatible"
 export const PROVIDER_ID_PATTERN = /^[a-z0-9][a-z0-9-_]*$/
 

@@ -662,13 +662,13 @@
         },
         "kilo-code.new.model.providerID": {
           "type": "string",
-          "default": "kilo",
-          "description": "Default model provider ID for new sessions"
+          "default": "内置model",
+          "description": "内置model"
         },
         "kilo-code.new.model.modelID": {
           "type": "string",
-          "default": "请自行配置model",
-          "description": "请自行配置model"
+          "default": "内置model",
+          "description": "内置model"
         },
         "kilo-code.new.autocomplete.enableAutoTrigger": {
           "type": "boolean",
