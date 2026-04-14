@@ -85,7 +85,7 @@
 - <https://kilo.ai/docs/providers/#custom-provider>
   <!-- packages/kilo-vscode/webview-ui/src/components/settings/CustomProviderDialog.tsx -->
 - <https://kilo.ai/gateway>
-  <!-- packages/opencode/src/cli/cmd/tui/component/dialog-provider.tsx -->
+  <!-- packages/opencode/src/kilocode/cli/cmd/tui/component/dialog-provider.tsx -->
 - <https://kilo.ai/install>
   <!-- packages/opencode/src/installation/index.ts -->
 - <https://kilo.ai/kiloclaw>
