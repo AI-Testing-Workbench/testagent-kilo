@@ -1,6 +1,6 @@
 {
   "name": "testagent-vscode",
-  "displayName": "TestAgent-Code",
+  "displayName": "TestAgent for TScode",
   "description": "TestAgent Code Extension",
   "version": "1.0.0",
   "icon": "assets/icons/logo-outline-black.png",
@@ -55,7 +55,7 @@
         {
           "id": "kilo-code-ActivityBar",
           "title": "TestAgent",
-          "icon": "$(hubot)"
+          "icon": "assets/icons/ghost-svgrepo-com.svg"
         }
       ]
     },
@@ -667,8 +667,8 @@
         },
         "kilo-code.new.model.modelID": {
           "type": "string",
-          "default": "kilo-auto/free",
-          "description": "Default model ID for new sessions"
+          "default": "请自行配置model",
+          "description": "请自行配置model"
         },
         "kilo-code.new.autocomplete.enableAutoTrigger": {
           "type": "boolean",
