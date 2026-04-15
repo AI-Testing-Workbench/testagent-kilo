@@ -376,13 +376,18 @@ export namespace Review {
     const untracked = await $`git ls-files --others --exclude-standard -z`.cwd(Instance.directory).quiet().nothrow()
     if (untracked.exitCode === 0) {
       const paths = untracked.stdout.toString().split("\0").filter(Boolean)
-      for (const p of paths) {
-        // --no-index exits 1 when files differ, which is expected
-        const fd = await $`git -c core.quotepath=false diff --no-index -- /dev/null ${p}`
-          .cwd(Instance.directory)
-          .quiet()
-          .nothrow()
-        const out = fd.stdout.toString()
+      // Run diffs in parallel — sequential spawns are slow with many untracked files
+      const diffs = await Promise.all(
+        paths.map((p) =>
+          // --no-index exits 1 when files differ, which is expected
+          $`git -c core.quotepath=false diff --no-index -- /dev/null ${p}`
+            .cwd(Instance.directory)
+            .quiet()
+            .nothrow()
+            .then((fd) => fd.stdout.toString()),
+        ),
+      )
+      for (const out of diffs) {
         if (out) raw += out
       }
     }
