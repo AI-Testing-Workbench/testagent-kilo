@@ -51,7 +51,7 @@
   "main": "./dist/extension.js",
   "contributes": {
     "viewsContainers": {
-      "activitybar": [
+      "secondarySidebar": [
         {
           "id": "kilo-code-ActivityBar",
           "title": "TestAgent",
