@@ -17,13 +17,11 @@
   },
   "workspaces": {
     "packages": [
-      "packages/app",
       "packages/kilo-gateway",
       "packages/kilo-i18n",
       "packages/kilo-telemetry",
       "packages/kilo-ui",
       "packages/kilo-vscode",
-      "packages/opencode",
       "packages/plugin",
       "packages/script",
       "packages/sdk/js",

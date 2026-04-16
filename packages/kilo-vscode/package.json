@@ -306,7 +306,7 @@
       },
       {
         "command": "kilo-code.new.openTestagentTerminal",
-        "title": "Open testagent Terminal",
+        "title": "Open TestAgent Terminal",
         "category": "TestAgent",
         "icon": {
           "light": "assets/icons/testagent_chat.png",
