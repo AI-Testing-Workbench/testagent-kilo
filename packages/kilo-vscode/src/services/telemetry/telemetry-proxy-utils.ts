@@ -17,5 +17,5 @@ export function buildTelemetryPayload(
  * Build the Authorization header value for the telemetry endpoint.
  */
 export function buildTelemetryAuthHeader(password: string): string {
-  return `Basic ${Buffer.from(`kilo:${password}`).toString("base64")}`
+  return `Basic ${Buffer.from(`opencode:${password}`).toString("base64")}`
 }

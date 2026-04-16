@@ -727,7 +727,7 @@ async function migrateAutoApproval(
 
 async function migrateAutocomplete(settings: LegacyAutocompleteSettings): Promise<MigrationResultItem> {
   try {
-    const config = vscode.workspace.getConfiguration("kilo-code.new.autocomplete")
+    const config = vscode.workspace.getConfiguration("testagent.new.autocomplete")
     if (settings.enableAutoTrigger !== undefined) {
       await config.update("enableAutoTrigger", settings.enableAutoTrigger, vscode.ConfigurationTarget.Global)
     }
@@ -787,7 +787,7 @@ async function migrateLanguage(language: string): Promise<MigrationResultItem> {
     }
   }
   try {
-    const config = vscode.workspace.getConfiguration("kilo-code.new")
+    const config = vscode.workspace.getConfiguration("testagent.new")
     await config.update("language", mapped, vscode.ConfigurationTarget.Global)
     return { item: "Language preference", category: "settings", status: "success" }
   } catch (err) {

@@ -16,7 +16,7 @@ import {
  * It shows the local workspace diff and forwards review comments back to the sidebar chat.
  */
 export class DiffViewerProvider implements vscode.Disposable {
-  public static readonly viewType = "kilo-code.new.DiffViewerPanel"
+  public static readonly viewType = "testagent.new.DiffViewerPanel"
 
   private panel: vscode.WebviewPanel | undefined
   private diffInterval: ReturnType<typeof setInterval> | undefined
@@ -31,7 +31,7 @@ export class DiffViewerProvider implements vscode.Disposable {
     private readonly connectionService: KiloConnectionService,
   ) {
     this.gitOps = new GitOps({ log: (...args) => this.log(...args) })
-    this.outputChannel = vscode.window.createOutputChannel("Kilo Diff Viewer")
+    this.outputChannel = vscode.window.createOutputChannel("TestAgent Diff Viewer")
   }
 
   private log(...args: unknown[]) {
@@ -87,7 +87,7 @@ export class DiffViewerProvider implements vscode.Disposable {
       this.post({
         type: "ready",
         vscodeLanguage: vscode.env.language,
-        languageOverride: vscode.workspace.getConfiguration("kilo-code.new").get<string>("language"),
+        languageOverride: vscode.workspace.getConfiguration("testagent.new").get<string>("language"),
         workspaceDirectory: getWorkspaceRoot(),
       })
       this.startDiffPolling()

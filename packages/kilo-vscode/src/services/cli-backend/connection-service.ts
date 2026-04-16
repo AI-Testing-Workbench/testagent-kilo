@@ -412,7 +412,7 @@ export class KiloConnectionService {
       const controller = new AbortController()
       const timer = setTimeout(() => controller.abort(), 3000)
       const res = await fetch(`${baseUrl}/global/health`, {
-        headers: { Authorization: `Basic ${Buffer.from(`kilo:${password}`).toString("base64")}` },
+        headers: { Authorization: `Basic ${Buffer.from(`opencode:${password}`).toString("base64")}` },
         signal: controller.signal,
       })
       clearTimeout(timer)
@@ -438,7 +438,7 @@ export class KiloConnectionService {
     this.config = config
 
     // Create SDK client with Basic Auth header
-    const authHeader = `Basic ${Buffer.from(`kilo:${server.password}`).toString("base64")}`
+    const authHeader = `Basic ${Buffer.from(`opencode:${server.password}`).toString("base64")}`
     this.client = createKiloClient({
       baseUrl: config.baseUrl,
       headers: {

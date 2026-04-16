@@ -1,5 +1,5 @@
 {
-  "name": "testagent-vscode",
+  "name": "testagent-tscode",
   "displayName": "TestAgent for TScode",
   "description": "TestAgent Code Extension",
   "version": "1.0.0",
@@ -53,49 +53,49 @@
     "viewsContainers": {
       "secondarySidebar": [
         {
-          "id": "kilo-code-ActivityBar",
+          "id": "testagent-ActivityBar",
           "title": "TestAgent",
           "icon": "assets/icons/ghost-svgrepo-com.svg"
         }
       ]
     },
     "views": {
-      "kilo-code-ActivityBar": [
+      "testagent-ActivityBar": [
         {
           "type": "webview",
-          "id": "kilo-code.SidebarProvider",
+          "id": "testagent.SidebarProvider",
           "name": "TestAgent"
         }
       ]
     },
     "commands": [
       {
-        "command": "kilo-code.new.plusButtonClicked",
+        "command": "testagent.new.plusButtonClicked",
         "title": "New Task",
         "icon": "$(add)"
       },
       {
-        "command": "kilo-code.new.agentManagerOpen",
+        "command": "testagent.new.agentManagerOpen",
         "title": "Agent Manager",
         "icon": "$(circuit-board)"
       },
       {
-        "command": "kilo-code.new.marketplaceButtonClicked",
+        "command": "testagent.new.marketplaceButtonClicked",
         "title": "Marketplace",
         "icon": "$(extensions)"
       },
       {
-        "command": "kilo-code.new.historyButtonClicked",
+        "command": "testagent.new.historyButtonClicked",
         "title": "History",
         "icon": "$(history)"
       },
       {
-        "command": "kilo-code.new.settingsButtonClicked",
+        "command": "testagent.new.settingsButtonClicked",
         "title": "Settings",
         "icon": "$(settings-gear)"
       },
       {
-        "command": "kilo-code.new.openInTab",
+        "command": "testagent.new.openInTab",
         "title": "TestAgent",
         "icon": {
           "light": "assets/icons/kilo-light.png",
@@ -103,140 +103,140 @@
         }
       },
       {
-        "command": "kilo-code.new.showChanges",
+        "command": "testagent.new.showChanges",
         "title": "Show Changes",
         "category": "TestAgent"
       },
       {
-        "command": "kilo-code.new.openMigrationWizard",
+        "command": "testagent.new.openMigrationWizard",
         "title": "Migrate Settings from Legacy Version",
         "category": "TestAgent"
       },
       {
-        "command": "kilo-code.new.autocomplete.generateSuggestions",
+        "command": "testagent.new.autocomplete.generateSuggestions",
         "title": "Generate Suggested Edits",
         "category": "TestAgent"
       },
       {
-        "command": "kilo-code.new.autocomplete.cancelSuggestions",
+        "command": "testagent.new.autocomplete.cancelSuggestions",
         "title": "Cancel Suggested Edits",
         "category": "TestAgent"
       },
       {
-        "command": "kilo-code.new.agentManager.previousSession",
+        "command": "testagent.new.agentManager.previousSession",
         "title": "Agent Manager: Previous Session",
         "category": "TestAgent"
       },
       {
-        "command": "kilo-code.new.agentManager.nextSession",
+        "command": "testagent.new.agentManager.nextSession",
         "title": "Agent Manager: Next Session",
         "category": "TestAgent"
       },
       {
-        "command": "kilo-code.new.agentManager.previousTab",
+        "command": "testagent.new.agentManager.previousTab",
         "title": "Agent Manager: Previous Tab",
         "category": "TestAgent"
       },
       {
-        "command": "kilo-code.new.agentManager.nextTab",
+        "command": "testagent.new.agentManager.nextTab",
         "title": "Agent Manager: Next Tab",
         "category": "TestAgent"
       },
       {
-        "command": "kilo-code.new.agentManager.showTerminal",
+        "command": "testagent.new.agentManager.showTerminal",
         "title": "Agent Manager: Focus Terminal",
         "category": "TestAgent",
         "icon": "$(terminal)"
       },
       {
-        "command": "kilo-code.new.agentManager.toggleDiff",
+        "command": "testagent.new.agentManager.toggleDiff",
         "title": "Agent Manager: Toggle Diff Panel",
         "category": "TestAgent",
         "icon": "$(diff)"
       },
       {
-        "command": "kilo-code.new.agentManager.showShortcuts",
+        "command": "testagent.new.agentManager.showShortcuts",
         "title": "Agent Manager: Show Keyboard Shortcuts",
         "category": "TestAgent",
         "icon": "$(keyboard)"
       },
       {
-        "command": "kilo-code.new.agentManager.newTab",
+        "command": "testagent.new.agentManager.newTab",
         "title": "Agent Manager: New Tab",
         "category": "TestAgent"
       },
       {
-        "command": "kilo-code.new.agentManager.closeTab",
+        "command": "testagent.new.agentManager.closeTab",
         "title": "Agent Manager: Close Tab",
         "category": "TestAgent"
       },
       {
-        "command": "kilo-code.new.agentManager.newWorktree",
+        "command": "testagent.new.agentManager.newWorktree",
         "title": "Agent Manager: New Worktree",
         "category": "TestAgent"
       },
       {
-        "command": "kilo-code.new.agentManager.openWorktree",
+        "command": "testagent.new.agentManager.openWorktree",
         "title": "Agent Manager: Open Worktree",
         "category": "TestAgent"
       },
       {
-        "command": "kilo-code.new.agentManager.closeWorktree",
+        "command": "testagent.new.agentManager.closeWorktree",
         "title": "Agent Manager: Close Worktree",
         "category": "TestAgent"
       },
       {
-        "command": "kilo-code.new.agentManager.advancedWorktree",
+        "command": "testagent.new.agentManager.advancedWorktree",
         "title": "Agent Manager: Advanced New Worktree",
         "category": "TestAgent"
       },
       {
-        "command": "kilo-code.new.agentManager.jumpTo1",
+        "command": "testagent.new.agentManager.jumpTo1",
         "title": "Agent Manager: Jump to Item 1",
         "category": "TestAgent"
       },
       {
-        "command": "kilo-code.new.agentManager.jumpTo2",
+        "command": "testagent.new.agentManager.jumpTo2",
         "title": "Agent Manager: Jump to Item 2",
         "category": "TestAgent"
       },
       {
-        "command": "kilo-code.new.agentManager.jumpTo3",
+        "command": "testagent.new.agentManager.jumpTo3",
         "title": "Agent Manager: Jump to Item 3",
         "category": "TestAgent"
       },
       {
-        "command": "kilo-code.new.agentManager.jumpTo4",
+        "command": "testagent.new.agentManager.jumpTo4",
         "title": "Agent Manager: Jump to Item 4",
         "category": "TestAgent"
       },
       {
-        "command": "kilo-code.new.agentManager.jumpTo5",
+        "command": "testagent.new.agentManager.jumpTo5",
         "title": "Agent Manager: Jump to Item 5",
         "category": "TestAgent"
       },
       {
-        "command": "kilo-code.new.agentManager.jumpTo6",
+        "command": "testagent.new.agentManager.jumpTo6",
         "title": "Agent Manager: Jump to Item 6",
         "category": "TestAgent"
       },
       {
-        "command": "kilo-code.new.agentManager.jumpTo7",
+        "command": "testagent.new.agentManager.jumpTo7",
         "title": "Agent Manager: Jump to Item 7",
         "category": "TestAgent"
       },
       {
-        "command": "kilo-code.new.agentManager.jumpTo8",
+        "command": "testagent.new.agentManager.jumpTo8",
         "title": "Agent Manager: Jump to Item 8",
         "category": "TestAgent"
       },
       {
-        "command": "kilo-code.new.agentManager.jumpTo9",
+        "command": "testagent.new.agentManager.jumpTo9",
         "title": "Agent Manager: Jump to Item 9",
         "category": "TestAgent"
       },
       {
-        "command": "kilo-code.new.generateCommitMessage",
+        "command": "testagent.new.generateCommitMessage",
         "title": "Generate Commit Message",
         "category": "TestAgent",
         "icon": {
@@ -245,67 +245,67 @@
         }
       },
       {
-        "command": "kilo-code.new.explainCode",
+        "command": "testagent.new.explainCode",
         "title": "Explain Code",
         "category": "TestAgent"
       },
       {
-        "command": "kilo-code.new.fixCode",
+        "command": "testagent.new.fixCode",
         "title": "Fix Code",
         "category": "TestAgent"
       },
       {
-        "command": "kilo-code.new.improveCode",
+        "command": "testagent.new.improveCode",
         "title": "Improve Code",
         "category": "TestAgent"
       },
       {
-        "command": "kilo-code.new.addToContext",
+        "command": "testagent.new.addToContext",
         "title": "Add to Context",
         "category": "TestAgent"
       },
       {
-        "command": "kilo-code.new.terminalAddToContext",
+        "command": "testagent.new.terminalAddToContext",
         "title": "Add Terminal Content to Context",
         "category": "TestAgent"
       },
       {
-        "command": "kilo-code.new.terminalFixCommand",
+        "command": "testagent.new.terminalFixCommand",
         "title": "Fix This Command",
         "category": "TestAgent"
       },
       {
-        "command": "kilo-code.new.terminalExplainCommand",
+        "command": "testagent.new.terminalExplainCommand",
         "title": "Explain This Command",
         "category": "TestAgent"
       },
       {
-        "command": "kilo-code.new.focusChatInput",
+        "command": "testagent.new.focusChatInput",
         "title": "Focus Chat Input",
         "category": "TestAgent"
       },
       {
-        "command": "kilo-code.new.cycleAgentMode",
+        "command": "testagent.new.cycleAgentMode",
         "title": "Cycle Agent Mode",
         "category": "TestAgent"
       },
       {
-        "command": "kilo-code.new.cyclePreviousAgentMode",
+        "command": "testagent.new.cyclePreviousAgentMode",
         "title": "Cycle Previous Agent Mode",
         "category": "TestAgent"
       },
       {
-        "command": "kilo-code.new.toggleAutoApprove",
+        "command": "testagent.new.toggleAutoApprove",
         "title": "Toggle Auto-Approve",
         "category": "TestAgent"
       },
       {
-        "command": "kilo-code.new.generateTerminalCommand",
+        "command": "testagent.new.generateTerminalCommand",
         "title": "Generate Terminal Command",
         "category": "TestAgent"
       },
       {
-        "command": "kilo-code.new.openTestagentTerminal",
+        "command": "testagent.new.openTestagentTerminal",
         "title": "Open TestAgent Terminal",
         "category": "TestAgent",
         "icon": {
@@ -316,302 +316,302 @@
     ],
     "submenus": [
       {
-        "id": "kilo-code.new.editorContextMenu",
+        "id": "testagent.new.editorContextMenu",
         "label": "TestAgent"
       },
       {
-        "id": "kilo-code.new.terminalContextMenu",
+        "id": "testagent.new.terminalContextMenu",
         "label": "TestAgent"
       }
     ],
     "menus": {
       "view/title": [
         {
-          "command": "kilo-code.new.plusButtonClicked",
+          "command": "testagent.new.plusButtonClicked",
           "group": "navigation@0",
-          "when": "view == kilo-code.SidebarProvider"
+          "when": "view == testagent.SidebarProvider"
         },
         {
-          "command": "kilo-code.new.historyButtonClicked",
+          "command": "testagent.new.historyButtonClicked",
           "group": "navigation@1",
-          "when": "view == kilo-code.SidebarProvider"
+          "when": "view == testagent.SidebarProvider"
         },
         {
-          "command": "kilo-code.new.agentManagerOpen",
+          "command": "testagent.new.agentManagerOpen",
           "group": "navigation@2",
-          "when": "view == kilo-code.SidebarProvider"
+          "when": "view == testagent.SidebarProvider"
         },
         {
-          "command": "kilo-code.new.marketplaceButtonClicked",
+          "command": "testagent.new.marketplaceButtonClicked",
           "group": "navigation@3",
-          "when": "view == kilo-code.SidebarProvider"
+          "when": "view == testagent.SidebarProvider"
         },
         {
-          "command": "kilo-code.new.settingsButtonClicked",
+          "command": "testagent.new.settingsButtonClicked",
           "group": "navigation@5",
-          "when": "view == kilo-code.SidebarProvider"
+          "when": "view == testagent.SidebarProvider"
         }
       ],
       "scm/title": [
         {
-          "command": "kilo-code.new.generateCommitMessage",
+          "command": "testagent.new.generateCommitMessage",
           "group": "navigation",
           "when": "scmProvider == git"
         }
       ],
       "scm/input": [
         {
-          "command": "kilo-code.new.generateCommitMessage",
+          "command": "testagent.new.generateCommitMessage",
           "group": "navigation",
           "when": "scmProvider == git"
         }
       ],
       "editor/title": [
         {
-          "command": "kilo-code.new.openTestagentTerminal",
+          "command": "testagent.new.openTestagentTerminal",
           "group": "navigation@0",
           "when": "editorIsOpen"
         },
         {
-          "command": "kilo-code.new.plusButtonClicked",
+          "command": "testagent.new.plusButtonClicked",
           "group": "navigation@0",
-          "when": "activeWebviewPanelId == kilo-code.new.TabPanel"
+          "when": "activeWebviewPanelId == testagent.new.TabPanel"
         },
         {
-          "command": "kilo-code.new.historyButtonClicked",
+          "command": "testagent.new.historyButtonClicked",
           "group": "navigation@1",
-          "when": "activeWebviewPanelId == kilo-code.new.TabPanel"
+          "when": "activeWebviewPanelId == testagent.new.TabPanel"
         },
         {
-          "command": "kilo-code.new.settingsButtonClicked",
+          "command": "testagent.new.settingsButtonClicked",
           "group": "navigation@3",
-          "when": "activeWebviewPanelId == kilo-code.new.TabPanel"
+          "when": "activeWebviewPanelId == testagent.new.TabPanel"
         }
       ],
       "editor/context": [
         {
-          "submenu": "kilo-code.new.editorContextMenu",
-          "group": "1_kilocode"
+          "submenu": "testagent.new.editorContextMenu",
+          "group": "1_testagent"
         }
       ],
-      "kilo-code.new.editorContextMenu": [
+      "testagent.new.editorContextMenu": [
         {
-          "command": "kilo-code.new.explainCode",
+          "command": "testagent.new.explainCode",
           "group": "1_actions@1"
         },
         {
-          "command": "kilo-code.new.fixCode",
+          "command": "testagent.new.fixCode",
           "group": "1_actions@2"
         },
         {
-          "command": "kilo-code.new.improveCode",
+          "command": "testagent.new.improveCode",
           "group": "1_actions@3"
         },
         {
-          "command": "kilo-code.new.addToContext",
+          "command": "testagent.new.addToContext",
           "group": "1_actions@4"
         }
       ],
       "terminal/context": [
         {
-          "submenu": "kilo-code.new.terminalContextMenu",
-          "group": "2_kilocode"
+          "submenu": "testagent.new.terminalContextMenu",
+          "group": "2_testagent"
         }
       ],
-      "kilo-code.new.terminalContextMenu": [
+      "testagent.new.terminalContextMenu": [
         {
-          "command": "kilo-code.new.terminalAddToContext",
+          "command": "testagent.new.terminalAddToContext",
           "group": "1_actions@1"
         },
         {
-          "command": "kilo-code.new.terminalFixCommand",
+          "command": "testagent.new.terminalFixCommand",
           "group": "1_actions@2"
         },
         {
-          "command": "kilo-code.new.terminalExplainCommand",
+          "command": "testagent.new.terminalExplainCommand",
           "group": "1_actions@3"
         }
       ]
     },
     "keybindings": [
       {
-        "command": "kilo-code.new.focusChatInput",
+        "command": "testagent.new.focusChatInput",
         "key": "ctrl+shift+a",
         "mac": "cmd+shift+a"
       },
       {
-        "command": "kilo-code.new.toggleAutoApprove",
+        "command": "testagent.new.toggleAutoApprove",
         "key": "ctrl+alt+a",
         "mac": "cmd+alt+a"
       },
       {
-        "command": "kilo-code.new.generateTerminalCommand",
+        "command": "testagent.new.generateTerminalCommand",
         "key": "ctrl+shift+g",
         "mac": "cmd+shift+g"
       },
       {
-        "command": "kilo-code.new.agentManagerOpen",
+        "command": "testagent.new.agentManagerOpen",
         "key": "ctrl+shift+m",
         "mac": "cmd+shift+m"
       },
       {
-        "command": "kilo-code.new.addToContext",
+        "command": "testagent.new.addToContext",
         "key": "ctrl+k ctrl+a",
         "mac": "cmd+k cmd+a",
         "when": "editorTextFocus && editorHasSelection"
       },
       {
-        "command": "kilo-code.new.agentManager.previousSession",
+        "command": "testagent.new.agentManager.previousSession",
         "key": "ctrl+alt+up",
         "mac": "cmd+alt+up",
-        "when": "activeWebviewPanelId == 'kilo-code.new.AgentManagerPanel'"
+        "when": "activeWebviewPanelId == 'testagent.new.AgentManagerPanel'"
       },
       {
-        "command": "kilo-code.new.agentManager.nextSession",
+        "command": "testagent.new.agentManager.nextSession",
         "key": "ctrl+alt+down",
         "mac": "cmd+alt+down",
-        "when": "activeWebviewPanelId == 'kilo-code.new.AgentManagerPanel'"
+        "when": "activeWebviewPanelId == 'testagent.new.AgentManagerPanel'"
       },
       {
-        "command": "kilo-code.new.agentManager.previousTab",
+        "command": "testagent.new.agentManager.previousTab",
         "key": "ctrl+alt+left",
         "mac": "cmd+alt+left",
-        "when": "activeWebviewPanelId == 'kilo-code.new.AgentManagerPanel'"
+        "when": "activeWebviewPanelId == 'testagent.new.AgentManagerPanel'"
       },
       {
-        "command": "kilo-code.new.agentManager.nextTab",
+        "command": "testagent.new.agentManager.nextTab",
         "key": "ctrl+alt+right",
         "mac": "cmd+alt+right",
-        "when": "activeWebviewPanelId == 'kilo-code.new.AgentManagerPanel'"
+        "when": "activeWebviewPanelId == 'testagent.new.AgentManagerPanel'"
       },
       {
-        "command": "kilo-code.new.agentManager.showTerminal",
+        "command": "testagent.new.agentManager.showTerminal",
         "key": "ctrl+/",
         "mac": "cmd+/",
-        "when": "activeWebviewPanelId == 'kilo-code.new.AgentManagerPanel'"
+        "when": "activeWebviewPanelId == 'testagent.new.AgentManagerPanel'"
       },
       {
-        "command": "kilo-code.new.agentManager.showShortcuts",
+        "command": "testagent.new.agentManager.showShortcuts",
         "key": "ctrl+shift+/",
         "mac": "cmd+shift+/",
-        "when": "activeWebviewPanelId == 'kilo-code.new.AgentManagerPanel'"
+        "when": "activeWebviewPanelId == 'testagent.new.AgentManagerPanel'"
       },
       {
-        "command": "kilo-code.new.agentManager.newTab",
+        "command": "testagent.new.agentManager.newTab",
         "key": "ctrl+t",
         "mac": "cmd+t",
-        "when": "activeWebviewPanelId == 'kilo-code.new.AgentManagerPanel'"
+        "when": "activeWebviewPanelId == 'testagent.new.AgentManagerPanel'"
       },
       {
-        "command": "kilo-code.new.agentManager.closeTab",
+        "command": "testagent.new.agentManager.closeTab",
         "key": "ctrl+w",
         "mac": "cmd+w",
-        "when": "activeWebviewPanelId == 'kilo-code.new.AgentManagerPanel'"
+        "when": "activeWebviewPanelId == 'testagent.new.AgentManagerPanel'"
       },
       {
-        "command": "kilo-code.new.agentManager.openWorktree",
+        "command": "testagent.new.agentManager.openWorktree",
         "key": "ctrl+shift+o",
         "mac": "cmd+shift+o",
-        "when": "activeWebviewPanelId == 'kilo-code.new.AgentManagerPanel'"
+        "when": "activeWebviewPanelId == 'testagent.new.AgentManagerPanel'"
       },
       {
-        "command": "kilo-code.new.agentManager.closeWorktree",
+        "command": "testagent.new.agentManager.closeWorktree",
         "key": "ctrl+shift+w",
         "mac": "cmd+shift+w",
-        "when": "activeWebviewPanelId == 'kilo-code.new.AgentManagerPanel'"
+        "when": "activeWebviewPanelId == 'testagent.new.AgentManagerPanel'"
       },
       {
-        "command": "kilo-code.new.agentManager.advancedWorktree",
+        "command": "testagent.new.agentManager.advancedWorktree",
         "key": "ctrl+shift+n",
         "mac": "cmd+shift+n",
-        "when": "activeWebviewPanelId == 'kilo-code.new.AgentManagerPanel'"
+        "when": "activeWebviewPanelId == 'testagent.new.AgentManagerPanel'"
       },
       {
-        "command": "kilo-code.new.agentManager.jumpTo1",
+        "command": "testagent.new.agentManager.jumpTo1",
         "key": "ctrl+1",
         "mac": "cmd+1",
-        "when": "activeWebviewPanelId == 'kilo-code.new.AgentManagerPanel'"
+        "when": "activeWebviewPanelId == 'testagent.new.AgentManagerPanel'"
       },
       {
-        "command": "kilo-code.new.agentManager.jumpTo2",
+        "command": "testagent.new.agentManager.jumpTo2",
         "key": "ctrl+2",
         "mac": "cmd+2",
-        "when": "activeWebviewPanelId == 'kilo-code.new.AgentManagerPanel'"
+        "when": "activeWebviewPanelId == 'testagent.new.AgentManagerPanel'"
       },
       {
-        "command": "kilo-code.new.agentManager.jumpTo3",
+        "command": "testagent.new.agentManager.jumpTo3",
         "key": "ctrl+3",
         "mac": "cmd+3",
-        "when": "activeWebviewPanelId == 'kilo-code.new.AgentManagerPanel'"
+        "when": "activeWebviewPanelId == 'testagent.new.AgentManagerPanel'"
       },
       {
-        "command": "kilo-code.new.agentManager.jumpTo4",
+        "command": "testagent.new.agentManager.jumpTo4",
         "key": "ctrl+4",
         "mac": "cmd+4",
-        "when": "activeWebviewPanelId == 'kilo-code.new.AgentManagerPanel'"
+        "when": "activeWebviewPanelId == 'testagent.new.AgentManagerPanel'"
       },
       {
-        "command": "kilo-code.new.agentManager.jumpTo5",
+        "command": "testagent.new.agentManager.jumpTo5",
         "key": "ctrl+5",
         "mac": "cmd+5",
-        "when": "activeWebviewPanelId == 'kilo-code.new.AgentManagerPanel'"
+        "when": "activeWebviewPanelId == 'testagent.new.AgentManagerPanel'"
       },
       {
-        "command": "kilo-code.new.agentManager.jumpTo6",
+        "command": "testagent.new.agentManager.jumpTo6",
         "key": "ctrl+6",
         "mac": "cmd+6",
-        "when": "activeWebviewPanelId == 'kilo-code.new.AgentManagerPanel'"
+        "when": "activeWebviewPanelId == 'testagent.new.AgentManagerPanel'"
       },
       {
-        "command": "kilo-code.new.agentManager.jumpTo7",
+        "command": "testagent.new.agentManager.jumpTo7",
         "key": "ctrl+7",
         "mac": "cmd+7",
-        "when": "activeWebviewPanelId == 'kilo-code.new.AgentManagerPanel'"
+        "when": "activeWebviewPanelId == 'testagent.new.AgentManagerPanel'"
       },
       {
-        "command": "kilo-code.new.agentManager.jumpTo8",
+        "command": "testagent.new.agentManager.jumpTo8",
         "key": "ctrl+8",
         "mac": "cmd+8",
-        "when": "activeWebviewPanelId == 'kilo-code.new.AgentManagerPanel'"
+        "when": "activeWebviewPanelId == 'testagent.new.AgentManagerPanel'"
       },
       {
-        "command": "kilo-code.new.agentManager.jumpTo9",
+        "command": "testagent.new.agentManager.jumpTo9",
         "key": "ctrl+9",
         "mac": "cmd+9",
-        "when": "activeWebviewPanelId == 'kilo-code.new.AgentManagerPanel'"
+        "when": "activeWebviewPanelId == 'testagent.new.AgentManagerPanel'"
       },
       {
-        "command": "kilo-code.new.cycleAgentMode",
+        "command": "testagent.new.cycleAgentMode",
         "key": "ctrl+.",
         "mac": "cmd+."
       },
       {
-        "command": "kilo-code.new.cyclePreviousAgentMode",
+        "command": "testagent.new.cyclePreviousAgentMode",
         "key": "ctrl+shift+.",
         "mac": "cmd+shift+."
       },
       {
-        "command": "kilo-code.new.autocomplete.cancelSuggestions",
+        "command": "testagent.new.autocomplete.cancelSuggestions",
         "key": "escape",
-        "when": "editorTextFocus && !editorTabMovesFocus && !inSnippetMode && kilo-code.new.autocomplete.hasSuggestions"
+        "when": "editorTextFocus && !editorTabMovesFocus && !inSnippetMode && testagent.new.autocomplete.hasSuggestions"
       },
       {
-        "command": "kilo-code.new.autocomplete.generateSuggestions",
+        "command": "testagent.new.autocomplete.generateSuggestions",
         "key": "ctrl+l",
         "mac": "cmd+l",
-        "when": "editorTextFocus && !editorTabMovesFocus && !inSnippetMode && kilocode.autocomplete.enableSmartInlineTaskKeybinding && !github.copilot.completions.enabled"
+        "when": "editorTextFocus && !editorTabMovesFocus && !inSnippetMode && testagent.autocomplete.enableSmartInlineTaskKeybinding && !github.copilot.completions.enabled"
       },
       {
-        "command": "kilo-code.new.autocomplete.showIncompatibilityExtensionPopup",
+        "command": "testagent.new.autocomplete.showIncompatibilityExtensionPopup",
         "key": "ctrl+l",
         "mac": "cmd+l",
-        "when": "editorTextFocus && !editorTabMovesFocus && !inSnippetMode && kilocode.autocomplete.enableSmartInlineTaskKeybinding && github.copilot.completions.enabled"
+        "when": "editorTextFocus && !editorTabMovesFocus && !inSnippetMode && testagent.autocomplete.enableSmartInlineTaskKeybinding && github.copilot.completions.enabled"
       }
     ],
     "configuration": {
       "title": "TestAgent",
       "properties": {
-        "kilo-code.new.language": {
+        "testagent.new.language": {
           "type": "string",
           "default": "",
           "description": "Override the UI language for TestAgent (e.g. en, de, ja). Empty means use VS Code's display language.",
@@ -660,67 +660,67 @@
             "Українська"
           ]
         },
-        "kilo-code.new.model.providerID": {
+        "testagent.new.model.providerID": {
           "type": "string",
           "default": "内置model",
           "description": "内置model"
         },
-        "kilo-code.new.model.modelID": {
+        "testagent.new.model.modelID": {
           "type": "string",
           "default": "内置model",
           "description": "内置model"
         },
-        "kilo-code.new.autocomplete.enableAutoTrigger": {
+        "testagent.new.autocomplete.enableAutoTrigger": {
           "type": "boolean",
           "default": true,
           "description": "Enable automatic inline completion suggestions"
         },
-        "kilo-code.new.autocomplete.enableSmartInlineTaskKeybinding": {
+        "testagent.new.autocomplete.enableSmartInlineTaskKeybinding": {
           "type": "boolean",
           "default": false,
           "description": "Enable smart inline task keybinding"
         },
-        "kilo-code.new.autocomplete.enableChatAutocomplete": {
+        "testagent.new.autocomplete.enableChatAutocomplete": {
           "type": "boolean",
           "default": false,
           "description": "Enable chat textarea autocomplete"
         },
-        "kilo-code.new.claudeCodeCompat": {
+        "testagent.new.claudeCodeCompat": {
           "type": "boolean",
           "default": false,
-          "description": "Load CLAUDE.md instructions and skills from your Claude Code configuration directory into Kilo sessions. Enable this if you want Kilo to use your Claude Code instructions and skills."
+          "description": "Load CLAUDE.md instructions and skills from your Claude Code configuration directory into TestAgent sessions. Enable this if you want TestAgent to use your Claude Code instructions and skills."
         },
-        "kilo-code.new.browserAutomation.enabled": {
+        "testagent.new.browserAutomation.enabled": {
           "type": "boolean",
           "default": false,
           "description": "Enable browser automation powered by Playwright. When enabled, the AI agent can interact with web pages in a visible Chrome window."
         },
-        "kilo-code.new.browserAutomation.useSystemChrome": {
+        "testagent.new.browserAutomation.useSystemChrome": {
           "type": "boolean",
           "default": true,
           "description": "Use your system's installed Chrome browser instead of downloading a separate Chromium instance."
         },
-        "kilo-code.new.browserAutomation.headless": {
+        "testagent.new.browserAutomation.headless": {
           "type": "boolean",
           "default": false,
           "description": "Run browser automation in headless mode (no visible window). When disabled, you can watch the agent interact with the browser."
         },
-        "kilo-code.new.notifications.agent": {
+        "testagent.new.notifications.agent": {
           "type": "boolean",
           "default": true,
           "description": "Show notification when agent completes a task"
         },
-        "kilo-code.new.notifications.permissions": {
+        "testagent.new.notifications.permissions": {
           "type": "boolean",
           "default": true,
           "description": "Show notification on permission requests"
         },
-        "kilo-code.new.notifications.errors": {
+        "testagent.new.notifications.errors": {
           "type": "boolean",
           "default": true,
           "description": "Show notification on errors"
         },
-        "kilo-code.new.sounds.agent": {
+        "testagent.new.sounds.agent": {
           "type": "string",
           "default": "default",
           "enum": [
@@ -729,7 +729,7 @@
           ],
           "description": "Sound to play when agent completes"
         },
-        "kilo-code.new.sounds.permissions": {
+        "testagent.new.sounds.permissions": {
           "type": "string",
           "default": "default",
           "enum": [
@@ -738,7 +738,7 @@
           ],
           "description": "Sound to play on permission requests"
         },
-        "kilo-code.new.sounds.errors": {
+        "testagent.new.sounds.errors": {
           "type": "string",
           "default": "default",
           "enum": [

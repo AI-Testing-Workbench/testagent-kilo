@@ -15,23 +15,23 @@ The fork chain is: `opencode` → `kilo` → `testagent`
 
 ## Build and Dev
 
-- **Dev**: `bun run dev` (runs from root) or `bun run --cwd packages/opencode --conditions=browser src/index.ts`
+- **Dev**: `bun run dev` (runs from root) or `bun run --cwd packages/testagent-opencode --conditions=browser src/index.ts`
 - **Extension**: `bun run extension` (build + launch VS Code with the extension in dev mode). Pass `--no-build` to skip the build.
 - **Typecheck**: `bun turbo typecheck` (uses `tsgo`, not `tsc`)
-- **Test**: `bun test` from `packages/opencode/` (NOT from root -- root blocks tests)
-- **Single test**: `bun test test/tool/tool.test.ts` from `packages/opencode/`
-- **SDK regen**: After changing server endpoints in `packages/opencode/src/server/`, run `./script/generate.ts` from root to regenerate `packages/sdk/js/`
+- **Test**: `bun test` from `packages/testagent-opencode/` (NOT from root -- root blocks tests)
+- **Single test**: `bun test test/tool/tool.test.ts` from `packages/testagent-opencode/`
+- **SDK regen**: After changing server endpoints in `packages/testagent-opencode/src/server/`, run `./script/generate.ts` from root to regenerate `packages/sdk/js/`
 - **Knip** (unused exports): `bun run knip` from `packages/kilo-vscode/`. CI runs this — all exported types/functions must be imported somewhere. Remove or unexport unused exports before pushing.
-- **Source links**: After adding or changing URLs in `packages/kilo-vscode/`, `packages/kilo-vscode/webview-ui/`, or `packages/opencode/src/`, run `bun run script/extract-source-links.ts` from the repo root and commit the updated `packages/kilo-docs/source-links.md`. CI runs this check — the build fails if the file is stale.
+- **Source links**: After adding or changing URLs in `packages/kilo-vscode/`, `packages/kilo-vscode/webview-ui/`, or `packages/testagent-opencode/src/`, run `bun run script/extract-source-links.ts` from the repo root and commit the updated `packages/kilo-docs/source-links.md`. CI runs this check — the build fails if the file is stale.
 - **kilocode_change check**: `bun run check-kilocode-change` from `packages/kilo-vscode/`. CI runs this — `kilocode_change` is a marker for upstream merge conflicts and must not appear in `packages/kilo-vscode/` or `packages/kilo-ui/` (these are entirely Kilo Code additions). Remove the markers before pushing.
 
 ## Products
 
-All products are clients of the **CLI** (`packages/opencode/`), which contains the AI agent runtime, HTTP server, and session management. Each client spawns or connects to a `kilo serve` process and communicates via HTTP + SSE using `@kilocode/sdk`.
+All products are clients of the **CLI** (`packages/testagent-opencode/`), which contains the AI agent runtime, HTTP server, and session management. Each client spawns or connects to a `kilo serve` process and communicates via HTTP + SSE using `@kilocode/sdk`.
 
-| Product                | Package                 | Description                                                                                                                                                                          |
-| ---------------------- | ----------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| Kilo CLI               | `packages/opencode/`    | Core engine. TUI, `kilo run`, `kilo serve`, `kilo web`. Fork of upstream OpenCode.                                                                                                   |
+| Product                | Package                       | Description                                                                                                                                                                          |
+| ---------------------- | ----------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| Kilo CLI               | `packages/testagent-opencode/` | Core engine. TUI, `kilo run`, `kilo serve`, `kilo web`. Fork of upstream OpenCode.                                                                                                   |
 | Kilo VS Code Extension | `packages/kilo-vscode/` | VS Code extension. Bundles the CLI binary, spawns `kilo serve` as a child process. Includes the **Agent Manager** — a multi-session orchestration panel with git worktree isolation. |
 | OpenCode Desktop       | `packages/desktop/`     | Standalone Tauri native app. Bundles CLI as sidecar. Single-session UI. Unrelated to the VS Code extension. Not actively maintained — synced from upstream fork.                     |
 | OpenCode Web           | `packages/app/`         | Shared SolidJS frontend used by both the desktop app and `kilo web` CLI command. Not actively maintained — synced from upstream fork.                                                |
@@ -42,9 +42,9 @@ All products are clients of the **CLI** (`packages/opencode/`), which contains t
 
 Turborepo + Bun workspaces. The packages you'll work with most:
 
-| Package                    | Name                       | Purpose                                                                                    |
-| -------------------------- | -------------------------- | ------------------------------------------------------------------------------------------ |
-| `packages/opencode/`       | `@kilocode/cli`            | Core CLI -- agents, tools, sessions, server, TUI. This is where most work happens.         |
+| Package                       | Name                       | Purpose                                                                                    |
+| ----------------------------- | -------------------------- | ------------------------------------------------------------------------------------------ |
+| `packages/testagent-opencode/` | `@kilocode/cli`            | Core CLI -- agents, tools, sessions, server, TUI. This is where most work happens.         |
 | `packages/sdk/js/`         | `@kilocode/sdk`            | Auto-generated TypeScript SDK (client for the server API). Do not edit `src/gen/` by hand. |
 | `packages/kilo-vscode/`    | `kilo-code`                | VS Code extension with sidebar chat + Agent Manager. See its own `AGENTS.md` for details.  |
 | `packages/kilo-gateway/`   | `@kilocode/kilo-gateway`   | Kilo auth, provider routing, API integration                                               |
@@ -184,8 +184,8 @@ Kilo CLI is a fork of [opencode](https://github.com/anomalyco/opencode).
 We regularly merge upstream changes from opencode. To minimize merge conflicts and keep the sync process smooth:
 
 1. **Prefer `kilocode` directories** - Place Kilo-specific code in dedicated directories whenever possible:
-   - `packages/opencode/src/kilocode/` - Kilo-specific source code
-   - `packages/opencode/test/kilocode/` - Kilo-specific tests
+   - `packages/testagent-opencode/src/kilocode/` - Kilo-specific source code
+   - `packages/testagent-opencode/test/kilocode/` - Kilo-specific tests
    - `packages/kilo-gateway/` - The Kilo Gateway package
 
 2. **Minimize changes to shared files** - When you must modify files that exist in upstream opencode, keep changes as small and isolated as possible.
@@ -226,8 +226,8 @@ const bar = 2
 
 Code in these paths is Kilo Code-specific and does NOT need `kilocode_change` markers:
 
-- `packages/opencode/src/kilocode/` - All files in this directory
-- `packages/opencode/test/kilocode/` - All test files for kilocode
+- `packages/testagent-opencode/src/kilocode/` - All files in this directory
+- `packages/testagent-opencode/test/kilocode/` - All test files for kilocode
 - Any other path containing `kilocode` in filename or directory name
 
 These paths are entirely Kilo Code additions and won't conflict with upstream.
@@ -239,8 +239,8 @@ testagent is a fork of [Kilo Code](https://github.com/Kilo-Org/kilocode). We reg
 ### Minimizing Merge Conflicts
 
 1. **Prefer `testagent` directories** - Place testagent-specific code in dedicated directories:
-   - `packages/opencode/src/testagent/` - testagent-specific source code
-   - `packages/opencode/test/testagent/` - testagent-specific tests
+   - `packages/testagent-opencode/src/testagent/` - testagent-specific source code
+   - `packages/testagent-opencode/test/testagent/` - testagent-specific tests
 
 2. **Minimize changes to shared files** - Keep modifications to upstream Kilo files as small and isolated as possible.
 
@@ -278,8 +278,8 @@ const bar = 2
 
 Code in these paths is testagent-specific and does NOT need `testagent_change` markers:
 
-- `packages/opencode/src/testagent/` - All files in this directory
-- `packages/opencode/test/testagent/` - All test files for testagent
+- `packages/testagent-opencode/src/testagent/` - All files in this directory
+- `packages/testagent-opencode/test/testagent/` - All test files for testagent
 - Any other path containing `testagent` in filename or directory name
 
 These paths are entirely testagent additions and won't conflict with upstream Kilo.

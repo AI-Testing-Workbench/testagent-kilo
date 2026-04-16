@@ -24,7 +24,7 @@ export class VscodeHost implements Host {
     onBeforeMessage: (msg: Record<string, unknown>) => Promise<Record<string, unknown> | null>
   }): PanelContext {
     const panel = vscode.window.createWebviewPanel(
-      "kilo-code.new.AgentManagerPanel",
+      "testagent.new.AgentManagerPanel",
       "Agent Manager",
       vscode.ViewColumn.One,
       {
@@ -144,7 +144,7 @@ export class VscodeHost implements Host {
   }
 
   extensionKeybindings(): Array<{ command: string; key?: string; mac?: string }> {
-    const ext = vscode.extensions.getExtension("testagent.testagent-vscode")
+    const ext = vscode.extensions.getExtension("testagent.testagent-tscode")
     return ext?.packageJSON?.contributes?.keybindings ?? []
   }
 

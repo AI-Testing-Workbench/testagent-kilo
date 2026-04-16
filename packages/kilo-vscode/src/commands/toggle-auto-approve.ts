@@ -46,7 +46,7 @@ export function registerToggleAutoApprove(
   context.subscriptions.push({ dispose: unsubscribe })
 
   context.subscriptions.push(
-    vscode.commands.registerCommand("kilo-code.new.toggleAutoApprove", async () => {
+    vscode.commands.registerCommand("testagent.new.toggleAutoApprove", async () => {
       active = !active
       generation++
       const snapshot = generation

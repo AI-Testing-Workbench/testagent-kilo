@@ -39,7 +39,7 @@ import type { Host, PanelContext, OutputHandle, SessionProvider, Disposable } fr
 const LOCAL_DIFF_ID = "local" as const
 
 export class AgentManagerProvider implements Disposable {
-  public static readonly viewType = "kilo-code.new.AgentManagerPanel"
+  public static readonly viewType = "testagent.new.AgentManagerPanel"
 
   private panel: PanelContext | undefined
   private outputChannel: OutputHandle
@@ -68,7 +68,7 @@ export class AgentManagerProvider implements Disposable {
     private readonly host: Host,
     private readonly connectionService: KiloConnectionService,
   ) {
-    this.outputChannel = host.createOutput("Kilo Agent Manager")
+    this.outputChannel = host.createOutput("TestAgent Manager")
     this.terminalManager = new SessionTerminalManager(
       (msg) => this.outputChannel.appendLine(`[SessionTerminal] ${msg}`),
       createTerminalHost(),

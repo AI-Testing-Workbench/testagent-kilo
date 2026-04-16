@@ -29,14 +29,14 @@ describe("KiloCodeActionProvider", () => {
       it("returns Add, Explain, Improve actions", () => {
         const result = provider.provideCodeActions({} as never, makeRange(false) as never, makeContext(0) as never)
         const titles = result.map((a) => a.title)
-        expect(titles).toContain("Add to Kilo Code")
-        expect(titles).toContain("Explain with Kilo Code")
-        expect(titles).toContain("Improve with Kilo Code")
+        expect(titles).toContain("Add to TestAgent")
+        expect(titles).toContain("Explain with TestAgent")
+        expect(titles).toContain("Improve with TestAgent")
       })
 
       it("does not include Fix action", () => {
         const result = provider.provideCodeActions({} as never, makeRange(false) as never, makeContext(0) as never)
-        expect(result.map((a) => a.title)).not.toContain("Fix with Kilo Code")
+        expect(result.map((a) => a.title)).not.toContain("Fix with TestAgent")
       })
 
       it("returns exactly 3 actions", () => {
@@ -47,9 +47,9 @@ describe("KiloCodeActionProvider", () => {
       it("uses correct command IDs", () => {
         const result = provider.provideCodeActions({} as never, makeRange(false) as never, makeContext(0) as never)
         const commands = result.map((a) => a.command?.command)
-        expect(commands).toContain("kilo-code.new.addToContext")
-        expect(commands).toContain("kilo-code.new.explainCode")
-        expect(commands).toContain("kilo-code.new.improveCode")
+        expect(commands).toContain("testagent.new.addToContext")
+        expect(commands).toContain("testagent.new.explainCode")
+        expect(commands).toContain("testagent.new.improveCode")
       })
 
       it("no action is preferred", () => {
@@ -62,15 +62,15 @@ describe("KiloCodeActionProvider", () => {
       it("returns Add and Fix actions", () => {
         const result = provider.provideCodeActions({} as never, makeRange(false) as never, makeContext(2) as never)
         const titles = result.map((a) => a.title)
-        expect(titles).toContain("Add to Kilo Code")
-        expect(titles).toContain("Fix with Kilo Code")
+        expect(titles).toContain("Add to TestAgent")
+        expect(titles).toContain("Fix with TestAgent")
       })
 
       it("does not include Explain or Improve actions", () => {
         const result = provider.provideCodeActions({} as never, makeRange(false) as never, makeContext(1) as never)
         const titles = result.map((a) => a.title)
-        expect(titles).not.toContain("Explain with Kilo Code")
-        expect(titles).not.toContain("Improve with Kilo Code")
+        expect(titles).not.toContain("Explain with TestAgent")
+        expect(titles).not.toContain("Improve with TestAgent")
       })
 
       it("returns exactly 2 actions", () => {
@@ -80,20 +80,20 @@ describe("KiloCodeActionProvider", () => {
 
       it("Fix action is preferred", () => {
         const result = provider.provideCodeActions({} as never, makeRange(false) as never, makeContext(1) as never)
-        const fix = result.find((a) => a.title === "Fix with Kilo Code")
+        const fix = result.find((a) => a.title === "Fix with TestAgent")
         expect(fix?.isPreferred).toBe(true)
       })
 
       it("Fix action uses QuickFix kind", () => {
         const result = provider.provideCodeActions({} as never, makeRange(false) as never, makeContext(1) as never)
-        const fix = result.find((a) => a.title === "Fix with Kilo Code")
+        const fix = result.find((a) => a.title === "Fix with TestAgent")
         expect(fix?.kind.value).toBe("quickfix")
       })
 
       it("uses correct Fix command ID", () => {
         const result = provider.provideCodeActions({} as never, makeRange(false) as never, makeContext(1) as never)
-        const fix = result.find((a) => a.title === "Fix with Kilo Code")
-        expect(fix?.command?.command).toBe("kilo-code.new.fixCode")
+        const fix = result.find((a) => a.title === "Fix with TestAgent")
+        expect(fix?.command?.command).toBe("testagent.new.fixCode")
       })
     })
   })

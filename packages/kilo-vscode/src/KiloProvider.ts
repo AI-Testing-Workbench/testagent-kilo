@@ -91,7 +91,7 @@ type KiloProviderOptions = {
 }
 
 export class KiloProvider implements vscode.WebviewViewProvider, TelemetryPropertiesProvider {
-  public static readonly viewType = "kilo-code.SidebarProvider"
+  public static readonly viewType = "testagent.SidebarProvider"
 
   private webview: vscode.Webview | null = null
   private currentSession: Session | null = null
@@ -101,7 +101,7 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
   private loginAttempt = 0
   private isWebviewReady = false
   private readonly extensionVersion =
-    vscode.extensions.getExtension("testagent.testagent-vscode")?.packageJSON?.version ?? "unknown"
+    vscode.extensions.getExtension("testagent.testagent-tscode")?.packageJSON?.version ?? "unknown"
   /** Cached providersLoaded payload so requestProviders can be served before client is ready */
   private cachedProvidersMessage: unknown = null
   /** Coalesce provider refreshes — at most one follow-up rerun when a request lands mid-flight. */
@@ -261,7 +261,7 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
 
     // Re-send ready so the webview can recover after refresh.
     if (serverInfo) {
-      const langConfig = vscode.workspace.getConfiguration("kilo-code.new")
+      const langConfig = vscode.workspace.getConfiguration("testagent.new")
       this.postMessage({
         type: "ready",
         serverInfo,
@@ -591,16 +591,16 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
           }
           break
         case "openSettingsPanel":
-          vscode.commands.executeCommand("kilo-code.new.settingsButtonClicked", message.tab)
+          vscode.commands.executeCommand("testagent.new.settingsButtonClicked", message.tab)
           break
         case "openVSCodeSettings":
           vscode.commands.executeCommand("workbench.action.openSettings", message.query)
           break
         case "openMarketplacePanel":
-          vscode.commands.executeCommand("kilo-code.new.marketplaceButtonClicked", this.projectDirectory)
+          vscode.commands.executeCommand("testagent.new.marketplaceButtonClicked", this.projectDirectory)
           break
         case "openChanges":
-          vscode.commands.executeCommand("kilo-code.new.showChanges")
+          vscode.commands.executeCommand("testagent.new.showChanges")
           break
         case "continueInWorktree":
           if (message.sessionId && this.continueInWorktreeHandler) {
@@ -630,7 +630,7 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
           )
           break
         case "openSubAgentViewer":
-          vscode.commands.executeCommand("kilo-code.new.openSubAgentViewer", message.sessionID, message.title)
+          vscode.commands.executeCommand("testagent.new.openSubAgentViewer", message.sessionID, message.title)
           break
         case "previewImage":
           this.handlePreviewImage(message.dataUrl, message.filename)
@@ -711,7 +711,7 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
           break
         case "setLanguage":
           await vscode.workspace
-            .getConfiguration("kilo-code.new")
+            .getConfiguration("testagent.new")
             .update("language", message.locale || undefined, vscode.ConfigurationTarget.Global)
           this.connectionService.notifyLanguageChanged(message.locale as string)
           break
@@ -726,7 +726,7 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
           ])
           if (allowedKeys.has(message.key)) {
             await vscode.workspace
-              .getConfiguration("kilo-code.new.autocomplete")
+              .getConfiguration("testagent.new.autocomplete")
               .update(message.key, message.value, vscode.ConfigurationTarget.Global)
             this.sendAutocompleteSettings()
           }
@@ -1105,7 +1105,7 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
       this.connectionState = this.connectionService.getConnectionState()
 
       if (serverInfo) {
-        const langConfig = vscode.workspace.getConfiguration("kilo-code.new")
+        const langConfig = vscode.workspace.getConfiguration("testagent.new")
         this.postMessage({
           type: "ready",
           serverInfo,
@@ -1476,7 +1476,7 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
             generation = this.providersGeneration
             continue
           }
-          const settings = vscode.workspace.getConfiguration("kilo-code.new.model")
+          const settings = vscode.workspace.getConfiguration("testagent.new.model")
           const message = {
             type: "providersLoaded",
             providers: indexProvidersById(response.all),
@@ -2015,8 +2015,8 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
    * Read notification/sound settings from VS Code config and push to webview.
    */
   private sendNotificationSettings(): void {
-    const notifications = vscode.workspace.getConfiguration("kilo-code.new.notifications")
-    const sounds = vscode.workspace.getConfiguration("kilo-code.new.sounds")
+    const notifications = vscode.workspace.getConfiguration("testagent.new.notifications")
+    const sounds = vscode.workspace.getConfiguration("testagent.new.sounds")
     this.postMessage({
       type: "notificationSettingsLoaded",
       settings: {
@@ -2486,18 +2486,18 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
 
   /**
    * Handle a generic setting update from the webview.
-   * The key uses dot notation relative to `kilo-code.new` (e.g. "browserAutomation.enabled").
+   * The key uses dot notation relative to `testagent.new` (e.g. "browserAutomation.enabled").
    */
   private async handleUpdateSetting(key: string, value: unknown): Promise<void> {
     const { section, leaf } = buildSettingPath(key)
-    const config = vscode.workspace.getConfiguration(`kilo-code.new${section ? `.${section}` : ""}`)
+    const config = vscode.workspace.getConfiguration(`testagent.new${section ? `.${section}` : ""}`)
     await config.update(leaf, value, vscode.ConfigurationTarget.Global)
   }
 
   /**
-   * Reset all "kilo-code.new.*" extension settings to their defaults by reading
+   * Reset all "testagent.new.*" extension settings to their defaults by reading
    * contributes.configuration from the extension's package.json at runtime.
-   * Only resets settings under the "kilo-code.new." namespace to avoid touching
+   * Only resets settings under the "testagent.new." namespace to avoid touching
    * settings from the previous version of the extension which shares the same
    * extension ID and "kilo-code.*" namespace.
    */
@@ -2509,7 +2509,7 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
     )
     if (confirmed !== "Reset") return
 
-    const prefix = "kilo-code.new."
+    const prefix = "testagent.new."
     const ext = vscode.extensions.getExtension("testagent.testagent-vscode")
     const properties = ext?.packageJSON?.contributes?.configuration?.properties as Record<string, unknown> | undefined
     if (!properties) return
@@ -2547,7 +2547,7 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
    * Read the current browser automation settings and push them to the webview.
    */
   private sendBrowserSettings(): void {
-    const config = vscode.workspace.getConfiguration("kilo-code.new.browserAutomation")
+    const config = vscode.workspace.getConfiguration("testagent.new.browserAutomation")
     this.postMessage({
       type: "browserSettingsLoaded",
       settings: {
@@ -2562,7 +2562,7 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
    * Read the current Claude Code compatibility setting and push it to the webview.
    */
   private sendClaudeCompatSetting(): void {
-    const enabled = vscode.workspace.getConfiguration("kilo-code.new").get<boolean>("claudeCodeCompat", false)
+    const enabled = vscode.workspace.getConfiguration("testagent.new").get<boolean>("claudeCodeCompat", false)
     this.postMessage({
       type: "claudeCompatSettingLoaded",
       enabled: enabled ?? false,
@@ -2671,7 +2671,7 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
    * Read autocomplete settings from VS Code configuration and push to the webview.
    */
   private sendAutocompleteSettings(): void {
-    const config = vscode.workspace.getConfiguration("kilo-code.new.autocomplete")
+    const config = vscode.workspace.getConfiguration("testagent.new.autocomplete")
     this.postMessage({
       type: "autocompleteSettingsLoaded",
       settings: {
