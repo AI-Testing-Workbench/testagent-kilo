@@ -1,4 +1,13 @@
-package ai.kilocode.client.session.model.message
+package ai.kilocode.client.session.model.content
+
+import ai.kilocode.rpc.dto.MessageDto
+
+/** A single message with its typed contents. */
+class Message(
+    val info: MessageDto,
+) {
+    val parts = LinkedHashMap<String, Content>()
+}
 
 /** Typed content within a message. */
 sealed class Content(val id: String)
@@ -23,3 +32,8 @@ class Tool(id: String, val name: String) : Content(id) {
 class Compaction(id: String) : Content(id)
 
 enum class ToolExecState { PENDING, RUNNING, COMPLETED, ERROR }
+
+data class ToolCallRef(
+    val messageId: String,
+    val callId: String,
+)

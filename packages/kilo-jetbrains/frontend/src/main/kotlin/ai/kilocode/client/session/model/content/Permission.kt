@@ -1,6 +1,4 @@
-package ai.kilocode.client.session.model.permission
-
-import ai.kilocode.client.session.model.ToolCallRef
+package ai.kilocode.client.session.model.content
 
 enum class PermissionRequestState { PENDING, RESPONDING, RESOLVED, ERROR }
 

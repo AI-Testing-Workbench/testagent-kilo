@@ -4,11 +4,12 @@ import ai.kilocode.client.app.KiloAppService
 import ai.kilocode.client.app.KiloSessionService
 import ai.kilocode.client.app.Workspace
 import ai.kilocode.client.plugin.KiloBundle
-import ai.kilocode.client.session.model.permission.Permission
-import ai.kilocode.client.session.model.permission.PermissionMeta
-import ai.kilocode.client.session.model.question.Question
-import ai.kilocode.client.session.model.question.QuestionItem
-import ai.kilocode.client.session.model.question.QuestionOption
+import ai.kilocode.client.session.model.content.Permission
+import ai.kilocode.client.session.model.content.PermissionMeta
+import ai.kilocode.client.session.model.content.Question
+import ai.kilocode.client.session.model.content.QuestionItem
+import ai.kilocode.client.session.model.content.QuestionOption
+import ai.kilocode.client.session.model.content.ToolCallRef
 import ai.kilocode.rpc.dto.ChatEventDto
 import ai.kilocode.rpc.dto.ConfigUpdateDto
 import ai.kilocode.rpc.dto.KiloAppStatusDto

@@ -1,7 +1,7 @@
 package ai.kilocode.client.session.model
 
-import ai.kilocode.client.session.model.message.Content
-import ai.kilocode.client.session.model.message.Message
+import ai.kilocode.client.session.model.content.Content
+import ai.kilocode.client.session.model.content.Message
 
 /**
  * Change events fired by [SessionModel].

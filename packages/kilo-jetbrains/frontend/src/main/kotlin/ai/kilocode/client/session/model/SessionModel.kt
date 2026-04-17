@@ -1,13 +1,12 @@
 package ai.kilocode.client.session.model
 
-import ai.kilocode.client.session.model.message.Compaction
-import ai.kilocode.client.session.model.message.Content
-import ai.kilocode.client.session.model.message.Message
-import ai.kilocode.client.session.model.message.Reasoning
-import ai.kilocode.client.session.model.message.Text
-import ai.kilocode.client.session.model.message.Tool
-import ai.kilocode.client.session.model.message.ToolExecState
-import ai.kilocode.client.session.model.message.toInfo
+import ai.kilocode.client.session.model.content.Compaction
+import ai.kilocode.client.session.model.content.Content
+import ai.kilocode.client.session.model.content.Message
+import ai.kilocode.client.session.model.content.Reasoning
+import ai.kilocode.client.session.model.content.Text
+import ai.kilocode.client.session.model.content.Tool
+import ai.kilocode.client.session.model.content.ToolExecState
 import ai.kilocode.rpc.dto.KiloAppStateDto
 import ai.kilocode.rpc.dto.KiloAppStatusDto
 import ai.kilocode.rpc.dto.KiloWorkspaceStateDto
@@ -57,10 +56,10 @@ class SessionModel {
 
     fun isEmpty(): Boolean = entries.isEmpty()
 
-    fun addMessage(info: MessageDto): Message? {
-        if (entries.containsKey(info.id)) return null
-        val msg = Message(info.toInfo())
-        entries[info.id] = msg
+    fun addMessage(dto: MessageDto): Message? {
+        if (entries.containsKey(dto.id)) return null
+        val msg = Message(dto)
+        entries[dto.id] = msg
         fire(SessionModelEvent.MessageAdded(msg))
         return msg
     }
@@ -110,7 +109,7 @@ class SessionModel {
         entries.clear()
         phase = SessionPhase.Idle
         for (msg in history) {
-            val item = Message(msg.info.toInfo())
+            val item = Message(msg.info)
             for (part in msg.parts) {
                 val content = fromDto(part, part.text)
                 if (content != null) item.parts[content.id] = content

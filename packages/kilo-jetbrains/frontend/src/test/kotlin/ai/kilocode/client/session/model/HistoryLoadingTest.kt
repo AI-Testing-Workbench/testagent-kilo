@@ -1,6 +1,6 @@
 package ai.kilocode.client.session.model
 
-import ai.kilocode.client.session.model.message.Text
+import ai.kilocode.client.session.model.content.Text
 import ai.kilocode.rpc.dto.MessageWithPartsDto
 
 class HistoryLoadingTest : SessionManagerTestBase() {

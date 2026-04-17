@@ -1,6 +1,4 @@
-package ai.kilocode.client.session.model.question
-
-import ai.kilocode.client.session.model.ToolCallRef
+package ai.kilocode.client.session.model.content
 
 enum class QuestionRequestState { PENDING, RESPONDING, ERROR }
 

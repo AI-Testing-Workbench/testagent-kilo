@@ -1,7 +1,7 @@
 package ai.kilocode.client.session.model
 
-import ai.kilocode.client.session.model.permission.Permission
-import ai.kilocode.client.session.model.question.Question
+import ai.kilocode.client.session.model.content.Permission
+import ai.kilocode.client.session.model.content.Question
 
 sealed class PromptState {
     abstract val id: String
