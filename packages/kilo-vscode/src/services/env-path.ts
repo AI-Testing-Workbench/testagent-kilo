@@ -29,8 +29,10 @@ export async function ensureCliInPath(context: vscode.ExtensionContext): Promise
   try {
     // Create a temporary PowerShell script file
     const tempFile = path.join(os.tmpdir(), `testagent-path-${Date.now()}.ps1`)
+    // Escape backslashes and single quotes for PowerShell
+    const escapedBinDir = binDir.replace(/\\/g, "\\\\").replace(/'/g, "''")
     const script = `
-$binDir = "${binDir.replace(/\\/g, "\\\\")}"
+$binDir = '${escapedBinDir}'
 $currentPath = [Environment]::GetEnvironmentVariable("PATH", "User")
 if ($currentPath -notlike "*$binDir*") {
   $newPath = $currentPath + ";" + $binDir
