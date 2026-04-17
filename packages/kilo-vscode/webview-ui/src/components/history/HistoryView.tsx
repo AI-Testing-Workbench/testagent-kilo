@@ -53,17 +53,17 @@ const HistoryView: Component<HistoryViewProps> = (props) => {
           >
             {language.t("session.tab.local")}
           </button>
-          <button
+          {/* <button
             class="history-tab-btn"
             classList={{ "history-tab-btn--active": tab() === "cloud" }}
             onClick={() => setTab("cloud")}
           >
             {language.t("session.tab.cloud")}
-          </button>
+          </button> */}
         </div>
-        <Button variant="secondary" size="small" onClick={openImport} class="history-import-btn">
+        {/* <Button variant="secondary" size="small" onClick={openImport} class="history-import-btn">
           {language.t("session.cloud.import")}
-        </Button>
+        </Button> */}
       </div>
 
       <div class="history-view-content">

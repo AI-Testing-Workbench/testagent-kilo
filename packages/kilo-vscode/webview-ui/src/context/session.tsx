@@ -1080,22 +1080,41 @@ export const SessionProvider: ParentComponent = (props) => {
   }
 
   function handleSessionsLoaded(loaded: SessionInfo[]) {
+    // testagent_change - debug logging
+    console.log("[testagent] handleSessionsLoaded called", {
+      loadedCount: loaded.length,
+      loadedIds: loaded.map((s) => s.id),
+      loadedProjects: loaded.map((s:any) => ({ id: s.id, projectID: s.projectID, directory: s.directory })),
+      currentStoreKeys: Object.keys(store.sessions),
+    })
     batch(() => {
       // Reconcile: remove sessions not in the loaded list to prevent stale
       // entries from other projects accumulating in the store.
       const ids = new Set(loaded.map((s) => s.id))
+      const toDelete: string[] = []
       setStore(
         "sessions",
         produce((sessions) => {
           for (const id of Object.keys(sessions)) {
             if (id.startsWith("cloud:")) continue
-            if (!ids.has(id)) delete sessions[id]
+            if (!ids.has(id)) {
+              console.log("[testagent] handleSessionsLoaded: deleting session", { id })
+              toDelete.push(id)
+              delete sessions[id]
+            }
           }
         }),
       )
+      if (toDelete.length > 0) {
+        console.log("[testagent] handleSessionsLoaded: deleted sessions", { count: toDelete.length, ids: toDelete })
+      }
       for (const s of loaded) {
         setStore("sessions", s.id, s)
       }
+      console.log("[testagent] handleSessionsLoaded: done", {
+        finalStoreKeys: Object.keys(store.sessions),
+        finalCount: Object.keys(store.sessions).length,
+      })
     })
   }
 
@@ -1550,6 +1569,8 @@ export const SessionProvider: ParentComponent = (props) => {
       console.warn("[testagent] Cannot load sessions: not connected")
       return
     }
+    // testagent_change - debug logging
+    console.log("[testagent] loadSessions called from", new Error().stack?.split("\n").slice(1, 4).join("\n"))
     vscode.postMessage({ type: "loadSessions" })
   }
 

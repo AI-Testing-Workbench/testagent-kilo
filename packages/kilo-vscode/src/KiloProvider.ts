@@ -1382,9 +1382,18 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
    */
   private async handleLoadSessions(): Promise<void> {
     const ctx = this.sessionRefreshContext
+    // testagent_change - debug logging
+    console.log("[testagent] KiloProvider.handleLoadSessions called", {
+      workspaceDirectory: ctx.workspaceDirectory,
+      sessionDirectories: Object.fromEntries(ctx.sessionDirectories),
+      hasClient: !!ctx.listSessions,
+      connectionState: ctx.connectionState,
+    })
     try {
       const resolved = await loadSessionsUtil(ctx)
       if (resolved) this.projectID = resolved
+      // testagent_change - debug logging
+      console.log("[testagent] KiloProvider.handleLoadSessions done", { resolved })
     } catch (error) {
       console.error("[TestAgent] KiloProvider: Failed to load sessions:", error)
       this.postMessage({

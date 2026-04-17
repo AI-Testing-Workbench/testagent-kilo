@@ -112,12 +112,27 @@ export async function loadSessions(ctx: SessionRefreshContext): Promise<string |
     if (ctx.connectionState !== "connecting") {
       ctx.postMessage({ type: "error", message: "Not connected to CLI backend" })
     }
+    // testagent_change - debug logging
+    console.log("[testagent] loadSessions: no listSessions, pending refresh")
     return
   }
 
   ctx.pendingSessionRefresh = false
 
+  // testagent_change - debug logging
+  console.log("[testagent] loadSessions: calling list with workspaceDirectory", {
+    workspaceDirectory: ctx.workspaceDirectory,
+    sessionDirectories: Object.fromEntries(ctx.sessionDirectories),
+  })
+
   const sessions = await list(ctx.workspaceDirectory)
+  // testagent_change - debug logging
+  console.log("[testagent] loadSessions: got sessions from workspaceDirectory", {
+    count: sessions.length,
+    projectID: sessions[0]?.projectID,
+    ids: sessions.map((s) => s.id),
+  })
+
   const projectID = sessions[0]?.projectID
   const worktreeDirs = new Set(ctx.sessionDirectories.values())
   const extra = await Promise.all(
@@ -137,6 +152,12 @@ export async function loadSessions(ctx: SessionRefreshContext): Promise<string |
       }
     }
   }
+
+  // testagent_change - debug logging
+  console.log("[testagent] loadSessions: sending sessionsLoaded", {
+    totalSessions: sessions.length,
+    ids: sessions.map((s) => s.id),
+  })
 
   ctx.postMessage({
     type: "sessionsLoaded",
