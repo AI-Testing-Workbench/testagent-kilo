@@ -15,7 +15,7 @@ import { Storage } from "@/storage/storage"
 import { Log } from "../util/log"
 import { updateSchema } from "../util/update-schema"
 import { MessageV2 } from "./message-v2"
-import { Instance } from "../project/instance"
+import { Instance, type InstanceContext } from "../project/instance"
 import { InstanceState } from "@/effect/instance-state"
 import { Snapshot } from "@/snapshot"
 import { ProjectID } from "../project/schema"
@@ -470,16 +470,15 @@ export namespace Session {
         return fromRow(row)
       })
 
+      // kilocode_change start - scope by project_id when instance context is available
       const children = Effect.fn("Session.children")(function* (parentID: SessionID) {
-        const rows = yield* db((d) =>
-          d
-            .select()
-            .from(SessionTable)
-            .where(and(eq(SessionTable.parent_id, parentID)))
-            .all(),
-        )
+        const ctx = yield* Effect.try({ try: () => Instance.current, catch: () => undefined }).pipe(Effect.option)
+        const conditions = [eq(SessionTable.parent_id, parentID)]
+        if (Option.isSome(ctx)) conditions.push(eq(SessionTable.project_id, ctx.value.project.id))
+        const rows = yield* db((d) => d.select().from(SessionTable).where(and(...conditions)).all())
         return rows.map(fromRow)
       })
+      // kilocode_change end
 
       const remove: Interface["remove"] = Effect.fnUntraced(function* (sessionID: SessionID) {
         try {
