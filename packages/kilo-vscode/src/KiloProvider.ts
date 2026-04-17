@@ -1,4 +1,3 @@
-import * as fs from "fs"
 import * as path from "path"
 import * as vscode from "vscode"
 import { buildPreviewPath, getPreviewCommand, getPreviewDir, parseImage, trimEntries } from "./image-preview"
@@ -56,6 +55,7 @@ import { fetchMessagePage, MESSAGE_PAGE_LIMIT } from "./kilo-provider/message-pa
 import { childID } from "./kilo-provider/task-session"
 import { handleNetworkEvent, clearNetworkWaits } from "./kilo-provider/network"
 import { abortSession, parseQueued } from "./kilo-provider/abort"
+import * as ModelState from "./kilo-provider/model-state"
 import { retryable, backoff, MAX_RETRIES } from "./util/retry"
 import { hasGit } from "./kilo-provider/git-status"
 // legacy-migration start
@@ -100,7 +100,6 @@ import {
   fetchProviderData,
   validateRecents,
   validateFavorites,
-  validateModelSelections,
   connectProvider as connectProviderAction,
   authorizeProviderOAuth as authorizeOAuthAction,
   completeProviderOAuth as completeOAuthAction,
@@ -219,10 +218,6 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
   private statsGitOps: GitOps | null = null
   private cachedStats: unknown = null
   private cachedGitRepo = false
-  /** Lazily resolved path to model.json for per-mode model persistence */
-  private modelJsonPath: string | undefined
-  /** Serializes model.json writes to prevent concurrent read-modify-write races. */
-  private modelJsonQueue: Promise<void> = Promise.resolve()
 
   /** Optional interceptor called before the standard message handler.
    *  Return null to consume the message, or return a (possibly transformed) message. */
@@ -295,48 +290,6 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
     } catch {
       return null
     }
-  }
-
-  /** Resolve the path to model.json, lazily cached via sdk.path.get(). */
-  private async getModelJsonPath(): Promise<string | undefined> {
-    if (this.modelJsonPath) return this.modelJsonPath
-    try {
-      const resp = await this.client?.path.get()
-      if (!resp?.data?.state) return undefined
-      this.modelJsonPath = path.join(resp.data.state, "model.json")
-      return this.modelJsonPath
-    } catch {
-      return undefined
-    }
-  }
-
-  /** Read model.json as a plain object, returning {} on any error. */
-  private async readModelJson(): Promise<Record<string, unknown>> {
-    const p = await this.getModelJsonPath()
-    if (!p) return {}
-    try {
-      const raw = await fs.promises.readFile(p, "utf-8")
-      const parsed = JSON.parse(raw)
-      return typeof parsed === "object" && parsed !== null && !Array.isArray(parsed)
-        ? (parsed as Record<string, unknown>)
-        : {}
-    } catch {
-      return {}
-    }
-  }
-
-  /** Write a single top-level field in model.json (read-modify-write, preserves other fields).
-   *  Serialized through modelJsonQueue to prevent concurrent writes from losing data. */
-  private writeModelJsonField(key: string, value: unknown): Promise<void> {
-    const op = this.modelJsonQueue.then(async () => {
-      const p = await this.getModelJsonPath()
-      if (!p) return
-      const existing = await this.readModelJson()
-      existing[key] = value
-      await fs.promises.writeFile(p, JSON.stringify(existing, null, 2))
-    })
-    this.modelJsonQueue = op.catch(() => {})
-    return op
   }
 
   // Strip edit-tool metadata.filediff.before/after (multi-MB for edit-heavy
@@ -623,6 +576,7 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
       }
 
       await routeSuggestionWebviewMessage(this.questionCtx, message)
+      if (await ModelState.handleMessage(message.type, message, this.client, (msg) => this.postMessage(msg))) return
       switch (message.type) {
         case "webviewReady":
           console.log("[Kilo New] KiloProvider: ✅ webviewReady received")
@@ -1005,26 +959,6 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
         case "requestFavorites": {
           const favorites = validateFavorites(this.extensionContext?.globalState.get("favoriteModels"))
           this.postMessage({ type: "favoritesLoaded", favorites })
-          break
-        }
-        case "persistModelSelection": {
-          const data = await this.readModelJson()
-          const model = validateModelSelections(data.model)
-          model[message.agent] = { providerID: message.providerID, modelID: message.modelID }
-          await this.writeModelJsonField("model", model)
-          break
-        }
-        case "clearModelSelection": {
-          const data = await this.readModelJson()
-          const model = validateModelSelections(data.model)
-          delete model[message.agent]
-          await this.writeModelJsonField("model", model)
-          break
-        }
-        case "requestModelSelections": {
-          const data = await this.readModelJson()
-          const selections = validateModelSelections(data.model)
-          this.postMessage({ type: "modelSelectionsLoaded", selections })
           break
         }
         // legacy-migration start
@@ -2907,14 +2841,11 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
     this.sendBrowserSettings()
     this.sendNotificationSettings()
     this.sendTimelineSetting()
-
-    // Clear per-mode model selections from model.json
-    await this.writeModelJsonField("model", {})
+    await ModelState.reset(this.client, (msg) => this.postMessage(msg))
 
     // Re-send globalState items to the webview
     this.postMessage({ type: "variantsLoaded", variants: {} })
     this.postMessage({ type: "recentsLoaded", recents: [] })
-    this.postMessage({ type: "modelSelectionsLoaded", selections: {} })
 
     // Re-fetch notifications to reflect cleared dismissed IDs
     await this.fetchAndSendNotifications()
