@@ -56,7 +56,7 @@ describe("worktree-diff buffer caps", () => {
 
   test("git() helper consumes stderr to prevent pipe blocking", () => {
     const fnStart = src.indexOf("async function git(")
-    const fnBody = src.slice(fnStart, fnStart + 800)
+    const fnBody = src.slice(fnStart, fnStart + 1000)
     expect(fnBody).toContain("proc.stderr")
   })
 

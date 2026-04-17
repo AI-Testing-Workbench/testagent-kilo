@@ -18,7 +18,7 @@ async function git(
   args: string[],
   cwd: string,
   limit = MAX_STDOUT,
-): Promise<{ ok: boolean; stdout: string; stderr: string }> {
+): Promise<{ ok: boolean; stdout: string; stderr: string; truncated: boolean }> {
   const proc = Bun.spawn(["git", ...args], {
     cwd,
     stdout: "pipe",
@@ -44,9 +44,10 @@ async function git(
   // Consume stderr to prevent blocking the child process pipe
   const stderr = await new Response(proc.stderr).text()
   return {
-    ok: code === 0,
+    ok: code === 0 && !truncated,
     stdout: Buffer.concat(chunks).toString(),
     stderr,
+    truncated,
   }
 }
 
@@ -110,9 +111,10 @@ export namespace WorktreeDiff {
     return hash
   }
 
-  async function stats(dir: string, ancestor: string) {
+  async function stats(dir: string, ancestor: string, log: Log.Logger) {
     const result = await git(["-c", "core.quotepath=false", "diff", "--numstat", "--no-renames", ancestor], dir)
     const map = new Map<string, { additions: number; deletions: number }>()
+    if (result.truncated) log.warn("git diff --numstat output truncated, counts unavailable", { dir })
     if (!result.ok) return map
 
     for (const line of result.stdout.trim().split("\n")) {
@@ -133,11 +135,14 @@ export namespace WorktreeDiff {
 
   async function list(dir: string, ancestor: string, log: Log.Logger): Promise<Meta[]> {
     const nameStatus = await git(["-c", "core.quotepath=false", "diff", "--name-status", "--no-renames", ancestor], dir)
+    if (nameStatus.truncated) {
+      log.warn("git diff --name-status output truncated, diff omitted", { dir })
+    }
     if (!nameStatus.ok) return []
 
     const result: Meta[] = []
     const seen = new Set<string>()
-    const stat = await stats(dir, ancestor)
+    const stat = await stats(dir, ancestor, log)
 
     for (const line of nameStatus.stdout.trim().split("\n")) {
       if (!line) continue
@@ -161,6 +166,9 @@ export namespace WorktreeDiff {
     }
 
     const untracked = await git(["ls-files", "--others", "--exclude-standard"], dir)
+    if (untracked.truncated) {
+      log.warn("git ls-files output truncated, untracked list incomplete", { dir })
+    }
     if (!untracked.ok) {
       log.warn("git ls-files failed", { stderr: untracked.stderr.trim() })
       return result
@@ -277,9 +285,10 @@ export namespace WorktreeDiff {
     return `${stat.size}:${stat.mtimeMs}`
   }
 
-  async function readBefore(dir: string, ancestor: string, file: string, status: Status) {
+  async function readBefore(dir: string, ancestor: string, file: string, status: Status, log: Log.Logger) {
     if (status === "added") return ""
     const result = await git(["show", `${ancestor}:${file}`], dir, MAX_FILE_STDOUT)
+    if (result.truncated) log.warn("git show output truncated, before content omitted", { file })
     return result.ok ? result.stdout : ""
   }
 
@@ -289,8 +298,8 @@ export namespace WorktreeDiff {
     return (await result.exists()) ? await result.text() : ""
   }
 
-  async function load(dir: string, ancestor: string, meta: Meta): Promise<Item> {
-    const before = await readBefore(dir, ancestor, meta.file, meta.status)
+  async function load(dir: string, ancestor: string, meta: Meta, log: Log.Logger): Promise<Item> {
+    const before = await readBefore(dir, ancestor, meta.file, meta.status, log)
     const after = await readAfter(dir, meta.file, meta.status)
     const additions = meta.status === "added" && meta.additions === 0 && !meta.tracked ? lines(after) : meta.additions
     return {
@@ -341,7 +350,7 @@ export namespace WorktreeDiff {
     if (!ancestorHash) return undefined
     const item = await detailMeta(input.dir, ancestorHash, input.file)
     if (!item) return undefined
-    return await load(input.dir, ancestorHash, item)
+    return await load(input.dir, ancestorHash, item, log)
   }
 
   export async function full(input: { dir: string; base: string; log?: Log.Logger }) {
@@ -351,7 +360,7 @@ export namespace WorktreeDiff {
     if (!ancestorHash) return []
     log.info("merge-base resolved", { ancestor: ancestorHash.slice(0, 12) })
     const items = await list(input.dir, ancestorHash, log)
-    const result = await Promise.all(items.map((item) => load(input.dir, ancestorHash, item)))
+    const result = await Promise.all(items.map((item) => load(input.dir, ancestorHash, item, log)))
     log.info("diff complete", { totalFiles: result.length })
     return result
   }
