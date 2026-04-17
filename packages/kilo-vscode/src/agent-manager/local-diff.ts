@@ -21,6 +21,14 @@ type Log = (...args: unknown[]) => void
  *  not stall the poll. Matches `GitOps.workingTreeStats()`. */
 const MAX_UNTRACKED_BYTES = 1_000_000
 
+/** Cap per-side reads in the detail view. Opening a 50 MB tracked file used
+ *  to spike `kilo serve`; now that the detail path runs in the extension
+ *  host, the same file would spike VS Code's RSS. Over this threshold we
+ *  return a summarized entry (empty `before`/`after`/`patch`, metadata
+ *  preserved) so the webview can render counts without materializing the
+ *  content. */
+export const MAX_DETAIL_BYTES = 2_000_000
+
 /**
  * Local, Node.js-side replacement for the server's `WorktreeDiff.summary()` and
  * `WorktreeDiff.detail()` routes. Keeps Agent Manager polling out of the Bun
@@ -268,6 +276,17 @@ async function detailMeta(git: GitOps, dir: string, anc: string, file: string): 
   }
 }
 
+async function blobSize(git: GitOps, dir: string, anc: string, file: string): Promise<number> {
+  const result = await git.execGit(["cat-file", "-s", `${anc}:${file}`], dir)
+  if (result.code !== 0) return 0
+  return parseInt(result.stdout.trim(), 10) || 0
+}
+
+async function fileSize(dir: string, file: string): Promise<number> {
+  const stat = await fs.stat(path.join(dir, file)).catch(() => undefined)
+  return stat?.size ?? 0
+}
+
 async function readBefore(git: GitOps, dir: string, anc: string, file: string, status: Status): Promise<string> {
   if (status === "added") return ""
   const result = await git.execGit(["show", `${anc}:${file}`], dir)
@@ -311,6 +330,21 @@ export async function diffFile(
   if (!anc) return null
   const meta = await detailMeta(git, dir, anc, file)
   if (!meta) return null
+
+  // Cheap size probe before materializing content — protects the extension
+  // host from OOM on huge tracked files. `git cat-file -s` returns the blob
+  // size without streaming its contents, and `fs.stat` is a plain syscall.
+  const beforeBytes = meta.status === "added" ? 0 : await blobSize(git, dir, anc, meta.file)
+  const afterBytes = meta.status === "deleted" ? 0 : await fileSize(dir, meta.file)
+  if (beforeBytes > MAX_DETAIL_BYTES || afterBytes > MAX_DETAIL_BYTES) {
+    log?.("diffFile: file too large for detail view, returning summarized entry", {
+      file: meta.file,
+      beforeBytes,
+      afterBytes,
+      cap: MAX_DETAIL_BYTES,
+    })
+    return summarize(meta)
+  }
 
   const before = await readBefore(git, dir, anc, meta.file, meta.status)
   const after = await readAfter(dir, meta.file, meta.status)

@@ -2,7 +2,7 @@ import { describe, it, expect } from "bun:test"
 import * as fs from "fs/promises"
 import * as os from "os"
 import * as path from "path"
-import { diffSummary, diffFile, generatedLike } from "../../src/agent-manager/local-diff"
+import { diffSummary, diffFile, generatedLike, MAX_DETAIL_BYTES } from "../../src/agent-manager/local-diff"
 import { GitOps } from "../../src/agent-manager/GitOps"
 
 function git(): GitOps {
@@ -206,6 +206,69 @@ describe("diffFile", () => {
       expect(result?.patch).toContain("new file mode")
       expect(result?.patch).toContain("+one")
       expect(result?.patch).toContain("+two")
+    })
+  })
+
+  it("falls back to summarized entry when the working-copy file exceeds the detail cap", async () => {
+    await withRepo(async (dir, base) => {
+      // Write a tracked file that's ~2.5x the cap on the working-copy side.
+      const big = "a".repeat(MAX_DETAIL_BYTES + 500_000) + "\n"
+      await fs.writeFile(path.join(dir, "seed.txt"), big)
+      runSync(dir, ["add", "seed.txt"])
+      runSync(dir, ["commit", "-m", "grow seed"])
+
+      const result = await diffFile(git(), dir, base, "seed.txt")
+      expect(result).toBeTruthy()
+      // Metadata (status, counts, stamp) is preserved so the UI can still
+      // show the file and its add/delete totals.
+      expect(result?.status).toBe("modified")
+      expect(result?.tracked).toBe(true)
+      expect(result?.additions).toBeGreaterThan(0)
+      // Content is intentionally blank — the cap prevents materialization.
+      expect(result?.before).toBe("")
+      expect(result?.after).toBe("")
+      expect(result?.patch).toBe("")
+      expect(result?.summarized).toBe(true)
+    })
+  })
+
+  it("falls back to summarized entry when the ancestor blob exceeds the detail cap", async () => {
+    await withRepo(async (dir, base) => {
+      // Put the large content in the base commit, then delete the file on HEAD.
+      // `before` is read from the base blob (over cap); `after` is empty.
+      const big = "b".repeat(MAX_DETAIL_BYTES + 500_000) + "\n"
+      await fs.writeFile(path.join(dir, "big.txt"), big)
+      runSync(dir, ["add", "big.txt"])
+      runSync(dir, ["commit", "-m", "add big"])
+      // Re-create the base-branch pointer so it includes the big blob.
+      runSync(dir, ["branch", "-f", base])
+      // Shrink on HEAD.
+      await fs.writeFile(path.join(dir, "big.txt"), "small\n")
+      runSync(dir, ["add", "big.txt"])
+      runSync(dir, ["commit", "-m", "shrink"])
+
+      const result = await diffFile(git(), dir, base, "big.txt")
+      expect(result).toBeTruthy()
+      expect(result?.tracked).toBe(true)
+      expect(result?.before).toBe("")
+      expect(result?.after).toBe("")
+      expect(result?.patch).toBe("")
+      expect(result?.summarized).toBe(true)
+    })
+  })
+
+  it("still returns full detail when both sides are under the cap", async () => {
+    await withRepo(async (dir, base) => {
+      // Modest file, well under cap — behaves as before.
+      const content = "a".repeat(50_000) + "\n"
+      await fs.writeFile(path.join(dir, "seed.txt"), content)
+      runSync(dir, ["add", "seed.txt"])
+      runSync(dir, ["commit", "-m", "modest change"])
+
+      const result = await diffFile(git(), dir, base, "seed.txt")
+      expect(result?.summarized).toBe(false)
+      expect((result?.after ?? "").length).toBeGreaterThan(0)
+      expect((result?.patch ?? "").length).toBeGreaterThan(0)
     })
   })
 })
