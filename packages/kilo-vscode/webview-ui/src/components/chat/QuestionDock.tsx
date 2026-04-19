@@ -8,6 +8,7 @@ import { Component, For, Show, createMemo, createEffect } from "solid-js"
 import { createStore } from "solid-js/store"
 import { Button } from "@kilocode/kilo-ui/button"
 import { Icon } from "@kilocode/kilo-ui/icon"
+import { Markdown } from "@kilocode/kilo-ui/markdown" // testagent_change
 import { useSession } from "../../context/session"
 import { useLanguage } from "../../context/language"
 import type { QuestionRequest } from "../../types/messages"
@@ -265,7 +266,11 @@ export const QuestionDock: Component<{ request: QuestionRequest }> = (props) => 
       <div data-slot="question-dock-body" inert={store.collapsed || undefined}>
         <div data-slot="question-dock-body-inner">
           <Show when={!confirm()}>
-            <div data-slot="question-text">{question()?.question}</div>
+            {/* testagent_change start */}
+            <div data-slot="question-text">
+              <Markdown text={question()?.question ?? ""} />
+            </div>
+            {/* testagent_change end */}
             <Show when={multi()} fallback={<div data-slot="question-hint">{language.t("ui.question.singleHint")}</div>}>
               <div data-slot="question-hint">{language.t("ui.question.multiHint")}</div>
             </Show>
