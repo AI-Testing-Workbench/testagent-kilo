@@ -53,6 +53,15 @@ export class KiloConnectionService {
 
   constructor(context: vscode.ExtensionContext) {
     this.serverManager = new ServerManager(context)
+    // testagent_change start - sync user ID to CLI whenever auth session changes
+    context.subscriptions.push(
+      vscode.authentication.onDidChangeSessions(async (e) => {
+        if (e.provider.id === "tscode-oauth") {
+          await this.syncUserId()
+        }
+      }),
+    )
+    // testagent_change end
   }
 
   /**
@@ -497,5 +506,27 @@ export class KiloConnectionService {
 
     // Start the independent health poll once we are confirmed connected.
     this.startHealthPoll(config.baseUrl, config.password)
+
+    // testagent_change start - push current user ID to CLI after connection
+    await this.syncUserId()
+    // testagent_change end
   }
+
+  // testagent_change start - sync VS Code auth session user ID to CLI server
+  private async syncUserId(): Promise<void> {
+    if (!this.config) return
+    try {
+      const session = await vscode.authentication.getSession("tscode-oauth", [], { createIfNone: false })
+      const id = session?.account.id
+      const auth = `Basic ${Buffer.from(`kilo:${this.config.password}`).toString("base64")}`
+      await fetch(`${this.config.baseUrl}/kilocode/testagent/user`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json", Authorization: auth },
+        body: JSON.stringify({ id }),
+      })
+    } catch {
+      // non-critical, ignore
+    }
+  }
+  // testagent_change end
 }
