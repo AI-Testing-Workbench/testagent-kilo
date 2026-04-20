@@ -2864,11 +2864,12 @@ body.vscode-light
 
   /* Inner wrapper: overflow hidden is required for grid-template-rows animation */
   [data-slot="question-dock-body-inner"] {
-    overflow: hidden;
+    overflow-y: auto;
     display: flex;
     flex-direction: column;
     gap: 4px;
     padding-bottom: 2px;
+    max-height: 200px;
   }
 
   /* ── Body content ── */

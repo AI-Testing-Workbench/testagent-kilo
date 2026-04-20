@@ -297,7 +297,8 @@ export const VscodeSessionTurn: Component<VscodeSessionTurnProps> = (props) => {
                     | { type: "text"; text: string }
                     | undefined
                   if (textPart?.text) {
-                    session.sendMessage(textPart.text)
+                    const sel = session.selected()
+                    session.sendMessage(textPart.text, sel?.providerID, sel?.modelID)
                   }
                 }}
                 style={{ width: "16px", display: "inline-block" }}
