@@ -2,8 +2,9 @@ import { describe, it, expect } from "bun:test"
 import * as fs from "fs/promises"
 import * as os from "os"
 import * as path from "path"
-import { diffSummary, diffFile, generatedLike, MAX_DETAIL_BYTES } from "../../src/agent-manager/local-diff"
+import { diffSummary, diffFile, generatedLike, resolveBase, MAX_DETAIL_BYTES } from "../../src/agent-manager/local-diff"
 import { GitOps } from "../../src/agent-manager/GitOps"
+import { resolveLocalDiffTarget } from "../../src/review-utils"
 
 function git(): GitOps {
   return new GitOps({ log: () => undefined })
@@ -99,6 +100,10 @@ describe("diffSummary", () => {
       const result = await diffSummary(git(), dir, "")
       const entry = result.find((e) => e.file === "seed.txt")
       expect(entry?.status).toBe("modified")
+      // Pin the export contract: resolveBase("HEAD") must resolve to a real
+      // candidate branch when one exists locally. If this regresses, the
+      // revert-file fix below also silently regresses.
+      expect(await resolveBase(git(), dir, "HEAD")).toBe("main")
     })
   })
 
@@ -303,6 +308,28 @@ describe("diffFile", () => {
       expect(result?.summarized).toBe(false)
       expect((result?.after ?? "").length).toBeGreaterThan(0)
       expect((result?.patch ?? "").length).toBeGreaterThan(0)
+    })
+  })
+})
+
+describe("resolveLocalDiffTarget + revertFile", () => {
+  it("resolves a real candidate branch so revertFile actually restores the file when there is no remote", async () => {
+    await withRepo(async (dir) => {
+      // No remote; `main` exists locally with the seed commit.
+      runSync(dir, ["checkout", "-b", "feature"])
+      await fs.writeFile(path.join(dir, "seed.txt"), "seed\nfeature\n")
+      runSync(dir, ["commit", "-am", "feature commit"])
+
+      const target = await resolveLocalDiffTarget(git(), () => undefined, dir)
+      expect(target).toBeDefined()
+      // Before the fix this was "HEAD", which made revertFile a no-op.
+      expect(target?.baseBranch).toBe("main")
+
+      const revert = await git().revertFile(dir, target!.baseBranch, "seed.txt", "modified")
+      expect(revert.ok).toBe(true)
+
+      const restored = await fs.readFile(path.join(dir, "seed.txt"), "utf-8")
+      expect(restored).toBe("seed\n")
     })
   })
 })

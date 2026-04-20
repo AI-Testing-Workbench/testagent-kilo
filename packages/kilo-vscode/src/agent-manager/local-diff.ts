@@ -92,7 +92,7 @@ export function generatedLike(file: string): boolean {
 
 const BASE_CANDIDATES = ["main", "master", "dev", "develop"]
 
-async function resolveBase(git: GitOps, dir: string, base: string): Promise<string> {
+export async function resolveBase(git: GitOps, dir: string, base: string): Promise<string> {
   // If the caller gave an explicit base, honor it. Return it as-is so merge-base
   // fails loudly on a stale/misspelled ref instead of silently diffing against
   // an unrelated candidate branch.
