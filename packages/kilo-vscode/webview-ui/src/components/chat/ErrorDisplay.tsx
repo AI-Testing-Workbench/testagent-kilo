@@ -1,4 +1,4 @@
-import { Component, createMemo, Switch, Match } from "solid-js"
+import { Component, createMemo, Switch, Match, Show } from "solid-js"
 import { Card } from "@kilocode/kilo-ui/card"
 import { Collapsible } from "@kilocode/kilo-ui/collapsible"
 import { ErrorDetails } from "@kilocode/kilo-ui/error-details"
@@ -15,6 +15,7 @@ import {
 interface ErrorDisplayProps {
   error: NonNullable<AssistantMessage["error"]>
   onLogin?: () => void
+  onRetry?: () => void
 }
 
 export const ErrorDisplay: Component<ErrorDisplayProps> = (props) => {

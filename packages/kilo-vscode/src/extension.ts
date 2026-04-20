@@ -230,14 +230,10 @@ export function activate(context: vscode.ExtensionContext) {
 
       const binName = process.platform === "win32" ? "testagent.exe" : "testagent"
       const cliPath = path.join(context.extensionPath, "bin", binName)
-      // On Windows, PowerShell needs & operator to execute quoted paths with spaces
-      const execPath = process.platform === "win32" ? `& "${cliPath}"` : `"${cliPath}"`
 
       const existingTerminal = vscode.window.terminals.find((t) => t.name === "testagent")
       if (existingTerminal) {
-        existingTerminal.show()
-        existingTerminal.sendText(`${execPath} --port ${port}`)
-        return
+        existingTerminal.dispose()
       }
 
       const terminal = vscode.window.createTerminal({
@@ -248,10 +244,15 @@ export function activate(context: vscode.ExtensionContext) {
         },
         location: { viewColumn: vscode.ViewColumn.Beside },
         env: { TESTAGENT_CALLER: "vscode" },
+        // On Windows, use PowerShell so quoted paths with spaces work correctly
+        ...(process.platform === "win32" && {
+          shellPath: "powershell.exe",
+          shellArgs: ["-NoLogo"],
+        }),
       })
 
       terminal.show()
-      terminal.sendText(`${execPath} --port ${port}`)
+      terminal.sendText(`& "${cliPath}" --port ${port}`)
     }),
     vscode.commands.registerCommand("testagent.new.showChanges", () => {
       diffViewerProvider.openPanel()

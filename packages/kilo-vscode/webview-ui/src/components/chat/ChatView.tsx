@@ -186,6 +186,7 @@ export const ChatView: Component<ChatViewProps> = (props) => {
                     </Button>
                   </Tooltip>
                 </Show>
+                */}
                 <Show when={isSidebar()}>
                   <Tooltip
                     value={
@@ -212,7 +213,7 @@ export const ChatView: Component<ChatViewProps> = (props) => {
                       </Show>
                     </button>
                   </Tooltip>
-                </Show> */}
+                </Show> 
               </div>
             </div>
           </Show>

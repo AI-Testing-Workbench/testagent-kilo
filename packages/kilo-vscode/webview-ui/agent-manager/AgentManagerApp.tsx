@@ -2086,7 +2086,7 @@ const AgentManagerContent: Component = () => {
         </button>
 
         {/* WORKTREES section */}
-        {/* testagent_chanage  注释worktree */}
+        {/* testagent_change  注释worktree */}
         {/* <div class={`am-section ${sessionsCollapsed() ? "am-section-grow" : ""}`}>
           <div class="am-section-header">
             <span class="am-section-label">{t("agentManager.section.worktrees")}</span>
