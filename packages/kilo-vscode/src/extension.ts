@@ -73,6 +73,12 @@ export function activate(context: vscode.ExtensionContext) {
     }),
   )
 
+  // Focus the view on startup so resolveWebviewView is triggered immediately,
+  // preventing a blank panel that requires a manual click to initialize.
+  vscode.commands.executeCommand(`${KiloProvider.viewType}.focus`).then(undefined, () => {
+    // Ignore errors if the view container isn't visible yet
+  })
+  
   // Ensure Agent Manager keybindings work when a VS Code terminal has focus.
   // The terminal intercepts all keystrokes unless the command is listed in
   // terminal.integrated.commandsToSkipShell, which only contains built-in
