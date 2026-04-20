@@ -138,7 +138,7 @@ export function registerKiloCommands(useSDK: () => UseSDK) {
             dialog.replace(() => (
               <DialogAlert
                 title="Error"
-                message="Failed to fetch profile. Please ensure you're authenticated with Kilo Gateway."
+                message="Failed to fetch profile. Please ensure you're authenticated with TestAgent Gateway."
               />
             ))
             return
@@ -172,7 +172,7 @@ export function registerKiloCommands(useSDK: () => UseSDK) {
             dialog.replace(() => (
               <DialogAlert
                 title="Error"
-                message="Failed to fetch teams. Please ensure you're authenticated with Kilo Gateway."
+                message="Failed to fetch teams. Please ensure you're authenticated with TestAgent Gateway."
               />
             ))
             return
