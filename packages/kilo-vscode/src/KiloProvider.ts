@@ -2171,6 +2171,7 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
       parts.push({ type: "text", text })
 
       const editorContext = await this.gatherEditorContext()
+      console.log("[TestAgent] 🔍 EditorContext collected:", JSON.stringify(editorContext, null, 2))
 
       if (messageID) {
         this.connectionService.recordMessageSessionId(messageID, resolved!.sid)
@@ -2797,7 +2798,9 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
   }
 
   private async gatherEditorContext(): Promise<EditorContext> {
+    console.log("[TestAgent] 🎯 gatherEditorContext called")
     const workspaceDir = this.getWorkspaceDirectory()
+    console.log("[TestAgent] 📁 Workspace directory:", workspaceDir)
     const controller = await this.getIgnoreController(workspaceDir)
 
     const toRelative = (fsPath: string): string | undefined => {
@@ -2818,25 +2821,33 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
       .map((uri) => toRelative(uri.fsPath))
       .filter((p): p is string => p !== undefined && controller.validateAccess(path.resolve(workspaceDir, p)))
       .slice(0, 200)
+    console.log("[TestAgent] 👀 Visible files:", visibleFiles)
 
     // Open tabs — use instanceof TabInputText to exclude notebooks, diffs, custom editors
     const openTabs = [...(await this.getOpenTabPaths(workspaceDir))].slice(0, 20)
+    console.log("[TestAgent] 📑 Open tabs:", openTabs)
 
     // Active file (also filtered through .kilocodeignore)
     const activeEditor = vscode.window.activeTextEditor
     const activeRel =
       activeEditor?.document.uri.scheme === "file" ? toRelative(activeEditor.document.uri.fsPath) : undefined
     const activeFile = activeRel && controller.validateAccess(activeEditor!.document.uri.fsPath) ? activeRel : undefined
+    console.log("[TestAgent] ✏️ Active file:", activeFile)
 
     // Shell
     const shell = vscode.env.shell || undefined
+    console.log("[TestAgent] 🐚 Shell:", shell)
 
-    return {
+    const result = {
       ...(visibleFiles.length > 0 ? { visibleFiles } : {}),
       ...(openTabs.length > 0 ? { openTabs } : {}),
       ...(activeFile ? { activeFile } : {}),
       ...(shell ? { shell } : {}),
     }
+    
+    console.log("[TestAgent] 📦 Final EditorContext:", JSON.stringify(result, null, 2))
+    
+    return result
   }
 
   /**

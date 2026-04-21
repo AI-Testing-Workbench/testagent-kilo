@@ -2869,7 +2869,7 @@ body.vscode-light
     flex-direction: column;
     gap: 4px;
     padding-bottom: 2px;
-    max-height: 200px;
+    max-height: 400px;
   }
 
   /* ── Body content ── */
