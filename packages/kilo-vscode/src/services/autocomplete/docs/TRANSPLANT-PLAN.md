@@ -12,7 +12,7 @@ To transplant this module into a new VS Code extension, you can copy most of the
 - A VS Code extension activation/registration layer (commands, providers, status bar, context keys).
 - A **settings/state store** that persists the autocomplete settings object.
 - An **LLM provider abstraction** that supports streaming **FIM** (fill-in-the-middle) and streaming **chat completions**, plus model metadata and usage/cost reporting.
-- A **file ignore / access control abstraction** (to replicate `.kilocodeignore` behavior and prevent sensitive files from being used).
+- A **file ignore / access control abstraction** (to replicate `.testagentignore` behavior and prevent sensitive files from being used). // testagent_change
 - A **telemetry abstraction** for the events the module emits.
 - (Optional) A webview messaging bridge if you want a UI for settings or chat textarea autocomplete.
 

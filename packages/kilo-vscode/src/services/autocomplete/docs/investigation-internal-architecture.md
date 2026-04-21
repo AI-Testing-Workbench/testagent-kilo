@@ -360,7 +360,7 @@ Captures what code is **actually visible** in the user's VS Code editor viewport
 - Iterates `vscode.window.visibleTextEditors`
 - For each editor: captures file path, language ID, visible line ranges, cursor position, selections
 - Extracts diff information from git-scheme URIs
-- Filters out files matching security patterns (`isSecurityConcern`) and `.kilocodeignore` rules
+- Filters out files matching security patterns (`isSecurityConcern`) and `.testagentignore` rules // testagent_change
 
 ### External Dependencies
 
@@ -446,7 +446,7 @@ Captures what code is **actually visible** in the user's VS Code editor viewport
 | `ProviderSettingsManager`   | `src/core/config/`   | Profile management, provider config                                               |
 | `ContextProxy`              | `src/core/config/`   | Persistent global state                                                           |
 | `ClineProvider`             | `src/core/webview/`  | Webview messaging + task state                                                    |
-| `RooIgnoreController`       | `src/core/ignore/`   | `.kilocodeignore` pattern matching                                                |
+| `RooIgnoreController`       | `src/core/ignore/`   | `.testagentignore` pattern matching                                                | // testagent_change
 | `vscode` API                | VS Code              | All editor integration (inline completions, status bar, commands, text documents) |
 | `@roo-code/types`           | `packages/types`     | Shared type definitions, provider constants                                       |
 | `@roo-code/telemetry`       | `packages/telemetry` | Telemetry event capture                                                           |

@@ -153,7 +153,7 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
   private initConnectionPromise: Promise<void> | null = null
   private webviewMessageDisposable: vscode.Disposable | null = null
 
-  /** Lazily initialized ignore controller for .kilocodeignore filtering */
+  /** Lazily initialized ignore controller for .testagentignore filtering */ // testagent_change
   private ignoreController: FileIgnoreController | null = null
   private ignoreControllerDir: string | null = null
   private marketplace: MarketplaceService | null = null
@@ -2216,6 +2216,13 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
     variant?: string,
     files?: Array<{ mime: string; url: string }>,
   ): Promise<void> {
+    // testagent_change start - Check CLI connection status
+    console.log("[TestAgent] 🔍 handleSendCommand called:", {
+      command,
+      hasClient: !!this.client,
+    })
+    // testagent_change end
+    
     if (!this.client) {
       this.postMessage({
         type: "sendMessageFailed",
@@ -2230,6 +2237,7 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
     }
 
     let resolved: { sid: string; dir: string } | undefined
+    const startTime = Date.now() // testagent_change - move outside try block
     try {
       resolved = await this.resolveSession(sessionID, draftID)
 
@@ -2238,6 +2246,14 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
       }
 
       const parts = files?.map((f) => ({ type: "file" as const, mime: f.mime, url: f.url }))
+
+      console.log("[TestAgent] 📤 Sending command to CLI:", {
+        command,
+        args,
+        sessionID: resolved!.sid,
+        directory: resolved!.dir,
+        timestamp: new Date().toISOString(), // testagent_change
+      })
 
       await this.client.session.command(
         {
@@ -2253,8 +2269,20 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
         },
         { throwOnError: true },
       )
-    } catch (error) {
+      
+      const duration = Date.now() - startTime // testagent_change
+      console.log("[TestAgent] ✅ Command sent successfully", { duration: `${duration}ms` }) // testagent_change
+    } catch (error:any) {
+      const duration = Date.now() - startTime // testagent_change
       console.error("[TestAgent] KiloProvider: Failed to send command:", error)
+      console.error("[TestAgent] Error details:", {
+        name: error?.name,
+        message: error?.message,
+        cause: error?.cause,
+        code: error?.code, // testagent_change - capture error code
+        duration: `${duration}ms`, // testagent_change
+        stack: error?.stack,
+      })
       this.postMessage({
         type: "sendMessageFailed",
         error: getErrorMessage(error) || "Failed to send command",
@@ -2761,7 +2789,7 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
    */
   /**
    * Return the set of relative paths for all open text-editor tabs within the
-   * given directory, filtered through .kilocodeignore.
+   * given directory, filtered through .testagentignore. // testagent_change
    */
   private async getOpenTabPaths(dir: string): Promise<Set<string>> {
     const controller = await this.getIgnoreController(dir)
@@ -2814,7 +2842,7 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
       return relative
     }
 
-    // Visible files (capped to avoid bloating context, filtered through .kilocodeignore)
+    // Visible files (capped to avoid bloating context, filtered through .testagentignore) // testagent_change
     const visibleFiles = vscode.window.visibleTextEditors
       .map((e) => e.document.uri)
       .filter((uri) => uri.scheme === "file")
@@ -2827,7 +2855,7 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
     const openTabs = [...(await this.getOpenTabPaths(workspaceDir))].slice(0, 20)
     console.log("[TestAgent] 📑 Open tabs:", openTabs)
 
-    // Active file (also filtered through .kilocodeignore)
+    // Active file (also filtered through .testagentignore) // testagent_change
     const activeEditor = vscode.window.activeTextEditor
     const activeRel =
       activeEditor?.document.uri.scheme === "file" ? toRelative(activeEditor.document.uri.fsPath) : undefined
