@@ -518,7 +518,7 @@ export class KiloConnectionService {
     try {
       const session = await vscode.authentication.getSession("tscode-oauth", [], { createIfNone: false })
       const id = session?.account.id
-      const auth = `Basic ${Buffer.from(`kilo:${this.config.password}`).toString("base64")}`
+      const auth = `Basic ${Buffer.from(`opencode:${this.config.password}`).toString("base64")}`
       await fetch(`${this.config.baseUrl}/kilocode/testagent/user`, {
         method: "PUT",
         headers: { "Content-Type": "application/json", Authorization: auth },

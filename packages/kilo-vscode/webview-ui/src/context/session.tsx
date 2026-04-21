@@ -356,6 +356,7 @@ export const SessionProvider: ParentComponent = (props) => {
     return resolveModelSelection({
       providers: provider.providers(),
       connected: provider.connected(),
+      defaults: provider.defaults(),
       override,
       mode: getModeModel(agentName),
       global: getGlobalModel(),
