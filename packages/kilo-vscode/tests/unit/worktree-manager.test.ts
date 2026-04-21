@@ -450,13 +450,13 @@ describe("WorktreeManager.removeWorktree", () => {
       const deadline = Date.now() + 5000
       while (Date.now() < deadline) {
         const entries = await fs.readdir(worktreesDir)
-        if (!entries.some((e) => e.startsWith(".kilo-delete-"))) break
+        if (!entries.some((e) => e.startsWith(".testagent-delete-"))) break
         await new Promise((r) => setTimeout(r, 100))
       }
 
-      // No .kilo-delete-* temp dirs should remain
+      // No .testagent-delete-* temp dirs should remain
       const entries = await fs.readdir(worktreesDir)
-      const orphans = entries.filter((e) => e.startsWith(".kilo-delete-"))
+      const orphans = entries.filter((e) => e.startsWith(".testagent-delete-"))
       expect(orphans).toHaveLength(0)
     },
     { timeout: 10000 },
@@ -468,7 +468,7 @@ describe("WorktreeManager.removeWorktree", () => {
 // ---------------------------------------------------------------------------
 
 describe("WorktreeManager.discoverWorktrees orphan cleanup", () => {
-  it("cleans up .kilo-delete-* dirs left by interrupted deletions", async () => {
+  it("cleans up .testagent-delete-* dirs left by interrupted deletions", async () => {
     const root = await createTempRepo()
     const mgr = createManager(root)
 
@@ -476,7 +476,7 @@ describe("WorktreeManager.discoverWorktrees orphan cleanup", () => {
     const wt = await mgr.createWorktree({ prompt: "real-wt" })
 
     // Simulate an orphaned temp dir from an interrupted deletion
-    const orphan = path.join(root, ".kilo", "worktrees", ".kilo-delete-fake-uuid")
+    const orphan = path.join(root, ".testagent", "worktrees", ".testagent-delete-fake-uuid")
     await fs.mkdir(orphan, { recursive: true })
     await fs.writeFile(path.join(orphan, "leftover.txt"), "stale")
 

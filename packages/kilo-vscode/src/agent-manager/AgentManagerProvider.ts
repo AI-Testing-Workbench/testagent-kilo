@@ -32,7 +32,7 @@ import type { Host, PanelContext, OutputHandle, SessionProvider, Disposable } fr
  * AgentManagerProvider opens the Agent Manager panel.
  *
  * Uses WorktreeStateManager for centralized state persistence. Worktrees and
- * sessions are stored in `.kilo/agent-manager.json`. The UI shows two
+ * sessions are stored in `.testagent/agent-manager.json`. The UI shows two
  * sections: WORKTREES (top) with managed worktrees + their sessions, and
  * SESSIONS (bottom) with unassociated local sessions.
  */
@@ -176,7 +176,7 @@ export class AgentManagerProvider implements Disposable {
     const migration = await state.load()
     manager.cleanupOrphanedTempDirs()
 
-    // When the .kilocode → .kilo migration rewrote git worktree refs, nudge
+    // When the .kilocode → .testagent migration rewrote git worktree refs, nudge
     // VS Code's git extension to re-discover them. Without this, worktrees
     // won't appear in Source Control until the next VS Code restart.
     if (migration.refsFixed > 0) {

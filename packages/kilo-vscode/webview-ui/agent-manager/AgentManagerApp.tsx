@@ -2796,7 +2796,8 @@ const AgentManagerContent: Component = () => {
                   >
                     {t("agentManager.session.openLocally")}
                   </Button>
-                  <Button
+                  {/* testagent_change 注释 */}
+                  {/* <Button
                     variant="primary"
                     size="small"
                     onClick={() => {
@@ -2806,7 +2807,7 @@ const AgentManagerContent: Component = () => {
                     }}
                   >
                     {t("agentManager.session.openInWorktree")}
-                  </Button>
+                  </Button> */}
                 </div>
               </Show>
             </div>

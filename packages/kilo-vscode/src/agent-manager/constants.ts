@@ -1,7 +1,7 @@
 import * as fs from "node:fs"
 import * as path from "node:path"
 
-// TODO: Remove the legacy .kilocode -> .kilo migration helpers below after the
+// TODO: Remove the legacy .kilocode -> .testagent migration helpers below after the
 // GA release cleanup tracked in https://github.com/Kilo-Org/kilocode/issues/6986.
 
 /**
@@ -14,12 +14,13 @@ export const MAX_MULTI_VERSIONS = 4
 export const PLATFORM = "agent-manager" as const
 
 /** Kilo config directory name (project-level and inside worktrees). */
-export const KILO_DIR = ".kilo"
+// testagent_change 修改目录为.testagent
+export const KILO_DIR = ".testagent"
 
 /** Legacy config directory name for backward compatibility reads. */
 export const LEGACY_DIR = ".kilocode"
 
-/** Agent Manager files that should be migrated from .kilocode/ to .kilo/. */
+/** Agent Manager files that should be migrated from .kilocode/ to .testagent/. */
 const AGENT_MANAGER_ITEMS = [
   "agent-manager.json",
   "worktrees",
@@ -32,20 +33,20 @@ const AGENT_MANAGER_ITEMS = [
 
 /** Result of the migration so callers can react (e.g. refresh VS Code git). */
 export interface MigrationResult {
-  /** Number of git worktree refs that were rewritten from .kilocode → .kilo. */
+  /** Number of git worktree refs that were rewritten from .kilocode → .testagent. */
   refsFixed: number
 }
 
 /**
- * Migrate Agent Manager data from .kilocode/ to .kilo/.
+ * Migrate Agent Manager data from .kilocode/ to .testagent/.
  *
  * Moves individual Agent Manager files/directories (worktrees, state,
- * setup scripts) from the legacy .kilocode/ into .kilo/. Skips items
- * that already exist in .kilo/ (the new location wins). This is safe
+ * setup scripts) from the legacy .kilocode/ into .testagent/. Skips items
+ * that already exist in .testagent/ (the new location wins). This is safe
  * because Agent Manager exclusively owns these files.
  *
  * Fixes git worktree internal references (.git/worktrees/{name}/gitdir)
- * whenever .kilo/worktrees/ exists so partially migrated repos recover too.
+ * whenever .testagent/worktrees/ exists so partially migrated repos recover too.
  *
  * Idempotent: safe to call on every startup.
  */
@@ -54,7 +55,7 @@ export async function migrateAgentManagerData(root: string, log: (msg: string) =
   const target = path.join(root, KILO_DIR)
 
   if (await isDirectory(legacy)) {
-    // Ensure .kilo/ exists
+    // Ensure .testagent/ exists
     try {
       await fs.promises.mkdir(target, { recursive: true })
     } catch {
@@ -132,7 +133,7 @@ async function resolveGitDir(root: string): Promise<string | undefined> {
 }
 
 /**
- * After moving worktrees from .kilocode/ to .kilo/, fix git internal refs.
+ * After moving worktrees from .kilocode/ to .testagent/, fix git internal refs.
  *
  * Git stores absolute paths in .git/worktrees/{name}/gitdir. When the
  * worktree directory moves, those paths become stale. This rewrites any

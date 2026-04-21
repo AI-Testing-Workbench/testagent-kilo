@@ -3,7 +3,7 @@
  *
  * Ported from kilocode/src/core/kilocode/agent-manager/WorktreeManager.ts.
  * Handles creation, discovery, and cleanup of worktrees stored in
- * {projectRoot}/.kilo/worktrees/
+ * {projectRoot}/.testagent/worktrees/
  */
 
 import * as path from "path"
@@ -27,7 +27,7 @@ import {
   type BranchListItem,
 } from "./git-import"
 
-const TEMP_PREFIX = ".kilo-delete-"
+const TEMP_PREFIX = ".testagent-delete-"
 const RM_OPTS: fs.RmOptions = { recursive: true, force: true, maxRetries: 3, retryDelay: 200 }
 
 interface WorktreeInfo {
@@ -102,7 +102,7 @@ export class WorktreeManager {
     this.log = log
   }
 
-  /** Run once before first read/write to migrate Agent Manager data from .kilocode → .kilo. */
+  /** Run once before first read/write to migrate Agent Manager data from .kilocode → .testagent. */
   private async ensureMigrated(): Promise<void> {
     if (this.migrated) return
     this.migrated = true
@@ -370,7 +370,7 @@ export class WorktreeManager {
 
     // 1. Atomic rename — makes the worktree instantly invisible to git and pollers.
     //    rename() is near-instant on the same filesystem (same parent dir guarantees this).
-    const temp = path.join(path.dirname(worktreePath), `.kilo-delete-${randomUUID()}`)
+    const temp = path.join(path.dirname(worktreePath), `.testagent-delete-${randomUUID()}`)
     try {
       await fs.promises.rename(worktreePath, temp)
     } catch {
@@ -403,7 +403,7 @@ export class WorktreeManager {
     }
   }
 
-  /** Remove orphaned .kilo-delete-* temp dirs left by interrupted deletions. */
+  /** Remove orphaned .testagent-delete-* temp dirs left by interrupted deletions. */
   cleanupOrphanedTempDirs(): void {
     if (!fs.existsSync(this.dir)) return
     fs.promises
@@ -454,7 +454,7 @@ export class WorktreeManager {
   async readMetadata(
     worktreePath: string,
   ): Promise<{ sessionId: string; parentBranch?: string; remote?: string } | undefined> {
-    // Check .kilo/ first, then legacy .kilocode/
+    // Check .testagent/ first, then legacy .kilocode/
     for (const dirName of [KILO_DIR, LEGACY_DIR]) {
       const result = await this.readMetadataFrom(worktreePath, dirName)
       if (result) return result
@@ -503,13 +503,13 @@ export class WorktreeManager {
     const gitDir = await this.resolveGitDir()
     const excludePath = path.join(gitDir, "info", "exclude")
     const items = [
-      [".kilo/worktrees/", "Kilo Code agent worktrees"],
-      [".kilo/agent-manager.json", "Kilo Agent Manager state"],
-      [".kilo/setup-script", "Kilo Code worktree setup script"],
-      [".kilo/setup-script.sh", "Kilo Code worktree setup script"],
-      [".kilo/setup-script.ps1", "Kilo Code worktree setup script"],
-      [".kilo/setup-script.cmd", "Kilo Code worktree setup script"],
-      [".kilo/setup-script.bat", "Kilo Code worktree setup script"],
+      [".testagent/worktrees/", "TestAgent agent worktrees"],
+      [".testagent/agent-manager.json", "TestAgent Agent Manager state"],
+      [".testagent/setup-script", "TestAgent worktree setup script"],
+      [".testagent/setup-script.sh", "TestAgent worktree setup script"],
+      [".testagent/setup-script.ps1", "TestAgent worktree setup script"],
+      [".testagent/setup-script.cmd", "TestAgent worktree setup script"],
+      [".testagent/setup-script.bat", "TestAgent worktree setup script"],
       [".kilocode/worktrees/", "Kilo Code legacy agent worktrees"],
       [".kilocode/agent-manager.json", "Kilo Agent Manager legacy state"],
       [".kilocode/setup-script", "Kilo Code legacy worktree setup script"],

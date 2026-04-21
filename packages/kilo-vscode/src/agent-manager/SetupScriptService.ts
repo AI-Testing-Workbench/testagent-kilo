@@ -1,7 +1,7 @@
 /**
  * SetupScriptService - Manages worktree setup scripts
  *
- * Handles reading, creating, and checking for setup scripts stored in .kilo/.
+ * Handles reading, creating, and checking for setup scripts stored in .testagent/.
  * Setup scripts run before an agent starts in a worktree (new sessions only).
  */
 
