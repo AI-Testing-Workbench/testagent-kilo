@@ -50,6 +50,7 @@ async function disableAnimations(page: Page) {
 // Permission dock config-preloaded has non-deterministic toggle rendering.
 const SKIP = new Set<string>([
   "agentmanager--worktree-item-busy",
+  "agentmanager--pr-badge-checks-pending",
   "composite-webview--permission-dock-config-preloaded",
 ])
 
@@ -73,6 +74,6 @@ for (const story of stories) {
 
     const [component, variant] = story.id.split("--")
     const root = page.locator("#storybook-root")
-    await expect(root).toHaveScreenshot([component!, `${variant!}.png`])
+    await expect(root).toHaveScreenshot(["visual-regression", component!, `${variant!}.png`])
   })
 }

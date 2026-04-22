@@ -50,6 +50,17 @@
   ],
   "main": "./dist/extension.js",
   "contributes": {
+    "taskDefinitions": [
+      {
+        "type": "kilo-worktree-setup",
+        "properties": {
+          "script": {
+            "type": "string",
+            "description": "The setup script command to execute"
+          }
+        }
+      }
+    ],
     "viewsContainers": {
       "secondarySidebar": [
         {
@@ -147,6 +158,12 @@
         "title": "Agent Manager: Focus Terminal",
         "category": "TestAgent",
         "icon": "$(terminal)"
+      },
+      {
+        "command": "testagent.new.agentManager.runScript",
+        "title": "Agent Manager: Run Script",
+        "category": "Kilo Code",
+        "icon": "$(play)"
       },
       {
         "command": "testagent.new.agentManager.toggleDiff",
@@ -343,12 +360,12 @@
         },
         {
           "command": "testagent.new.marketplaceButtonClicked",
-          "group": "navigation@3",
+          "group": "navigation@4",
           "when": "view == testagent.SidebarProvider"
         },
         {
           "command": "testagent.new.settingsButtonClicked",
-          "group": "navigation@5",
+          "group": "navigation@6",
           "when": "view == testagent.SidebarProvider"
         }
       ],
@@ -491,6 +508,18 @@
         "when": "activeWebviewPanelId == 'testagent.new.AgentManagerPanel'"
       },
       {
+        "command": "testagent.new.agentManager.runScript",
+        "key": "ctrl+e",
+        "mac": "cmd+e",
+        "when": "activeWebviewPanelId == 'testagent.new.AgentManagerPanel' && (isMac || !terminalFocus)"
+      },
+      {
+        "command": "testagent.new.agentManager.toggleDiff",
+        "key": "ctrl+d",
+        "mac": "cmd+d",
+        "when": "activeWebviewPanelId == 'testagent.new.AgentManagerPanel'"
+      },
+      {
         "command": "testagent.new.agentManager.showShortcuts",
         "key": "ctrl+shift+/",
         "mac": "cmd+shift+/",
@@ -583,12 +612,14 @@
       {
         "command": "testagent.new.cycleAgentMode",
         "key": "ctrl+.",
-        "mac": "cmd+."
+        "mac": "cmd+.",
+        "when": "sideBarFocus && testagent.new.sidebarVisible || activeWebviewPanelId == 'testagent.new.AgentManagerPanel' || activeWebviewPanelId == 'testagent.new.TabPanel'"
       },
       {
         "command": "testagent.new.cyclePreviousAgentMode",
         "key": "ctrl+shift+.",
-        "mac": "cmd+shift+."
+        "mac": "cmd+shift+.",
+        "when": "sideBarFocus && testagent.new.sidebarVisible || activeWebviewPanelId == 'testagent.new.AgentManagerPanel' || activeWebviewPanelId == 'testagent.new.TabPanel'"
       },
       {
         "command": "testagent.new.autocomplete.cancelSuggestions",
@@ -746,6 +777,11 @@
             "none"
           ],
           "description": "Sound to play on errors"
+        },
+        "testagent.new.showTaskTimeline": {
+          "type": "boolean",
+          "default": true,
+          "description": "Show the task timeline graph in the chat header"
         }
       }
     }
@@ -798,14 +834,14 @@
     "eslint": "^9.39.2",
     "eslint-config-prettier": "^10.1.8",
     "knip": "5.85.0",
-    "prettier": "^3.8.1",
+    "prettier": "3.6.2",
     "qrcode": "^1.5.4",
     "storybook": "10.2.10",
     "storybook-solidjs-vite": "10.0.9",
     "ts-morph": "27.0.2",
     "typescript": "^5.9.3",
     "typescript-eslint": "^8.54.0",
-    "vite": "7.3.1",
+    "vite": "7.3.2",
     "vite-plugin-solid": "2.11.10"
   },
   "dependencies": {
@@ -815,7 +851,7 @@
     "@kilocode/sdk": "workspace:*",
     "@opencode-ai/ui": "workspace:*",
     "@thisbeyond/solid-dnd": "0.7.5",
-    "diff": "^7.0.0",
+    "diff": "8.0.4",
     "dotenv": "^16.4.7",
     "fastest-levenshtein": "^1.0.16",
     "friendly-words": "1.3.1",
@@ -824,11 +860,13 @@
     "lru-cache": "^11.0.2",
     "openai": "^4.85.4",
     "quick-lru": "^7.0.0",
-    "simple-git": "3.31.1",
+    "simple-git": "3.35.2",
     "solid-js": "^1.9.11",
+    "stream-chat": "9.38.0",
     "uri-js": "^4.4.1",
+    "virtua": "catalog:",
     "web-tree-sitter": "^0.24.7",
-    "yaml": "2.8.2",
+    "yaml": "2.8.3",
     "zod": "^3.24.2"
   }
 }

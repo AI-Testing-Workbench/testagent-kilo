@@ -74,6 +74,6 @@ for (const story of stories) {
 
     const [component, variant] = story.id.split("--")
     const root = page.locator("#storybook-root")
-    await expect(root).toHaveScreenshot([component!, `${variant}.png`])
+    await expect(root).toHaveScreenshot(["visual-regression", component!, `${variant}.png`])
   })
 }
