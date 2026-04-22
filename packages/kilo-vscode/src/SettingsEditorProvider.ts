@@ -4,7 +4,7 @@ import { resolvePanelProjectDirectory } from "./project-directory"
 import type { KiloConnectionService } from "./services/cli-backend"
 import type { RemoteStatusService } from "./services/RemoteStatusService"
 
-type PanelView = "settings"  | "marketplace"  // testagent_change
+type PanelView = "settings" | "marketplace" // testagent_change
 
 const PANEL_TITLES: Record<PanelView, string> = {
   settings: "TestAgent Settings",

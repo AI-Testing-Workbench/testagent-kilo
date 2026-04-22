@@ -43,9 +43,11 @@ export class FileIgnoreController {
     // Use existsSync to distinguish "missing" from "unreadable" — permission
     // errors on readFileSync will propagate instead of being silently swallowed.
     const testagentignorePath = path.join(this.workspacePath, TESTAGENTIGNORE) // testagent_change
-    if (fs.existsSync(testagentignorePath)) { // testagent_change
+    if (fs.existsSync(testagentignorePath)) {
+      // testagent_change
       const testagentignoreContent = fs.readFileSync(testagentignorePath, "utf-8") // testagent_change
-      if (testagentignoreContent.trim()) { // testagent_change
+      if (testagentignoreContent.trim()) {
+        // testagent_change
         this.ignoreInstance.add(testagentignoreContent) // testagent_change
         this.ignoreInstance.add(TESTAGENTIGNORE) // testagent_change
         this.loadedContents.push({ file: TESTAGENTIGNORE, content: testagentignoreContent }) // testagent_change

@@ -222,7 +222,7 @@ export const ChatView: Component<ChatViewProps> = (props) => {
                       </Show>
                     </button>
                   </Tooltip>
-                </Show> 
+                </Show>
               </div>
             </div>
           </Show>

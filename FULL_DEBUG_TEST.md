@@ -3,12 +3,14 @@
 ## 准备工作
 
 ### 1. 重新编译 CLI
+
 ```bash
 cd packages/testagent-opencode/packages/opencode
 bun run build
 ```
 
 ### 2. 复制二进制文件到扩展
+
 ```bash
 # macOS/Linux
 cp packages/testagent-opencode/packages/opencode/dist/testagent packages/kilo-vscode/bin/testagent
@@ -18,6 +20,7 @@ cp packages/testagent-opencode/packages/opencode/dist/testagent packages/kilo-vs
 ```
 
 ### 3. 启动扩展开发模式
+
 ```bash
 cd packages/kilo-vscode
 bun run extension
@@ -45,6 +48,7 @@ bun run extension
 ### 步骤 3: 打开测试文件
 
 在扩展开发窗口中打开几个文件：
+
 - README.md
 - package.json
 - 任何 .ts 或 .js 文件
@@ -54,6 +58,7 @@ bun run extension
 ### 步骤 4: 发送测试消息
 
 在 Kilo 聊天面板中输入：
+
 ```
 你好
 ```
@@ -156,11 +161,13 @@ Open tabs:
 **症状**: 开发者工具 Console 中看不到任何 `[TestAgent]` 日志
 
 **可能原因**:
+
 1. 在错误的窗口查看（应该在扩展开发窗口）
 2. 扩展未正确加载
 3. 代码未重新编译
 
 **解决方案**:
+
 ```bash
 # 停止扩展开发窗口
 # 重新编译和启动
@@ -171,16 +178,19 @@ bun run extension
 
 ### 问题 2: 客户端有日志但服务端没有
 
-**症状**: 
+**症状**:
+
 - ✅ 看到客户端日志（gatherEditorContext）
 - ❌ 看不到服务端日志（CLI）
 
 **可能原因**:
+
 1. CLI 未重新编译
 2. 使用了旧的二进制文件
 3. CLI 日志级别设置过滤了 console.log
 
 **解决方案**:
+
 ```bash
 # 1. 重新编译 CLI
 cd packages/testagent-opencode/packages/opencode
@@ -200,28 +210,33 @@ cp packages/testagent-opencode/packages/opencode/dist/testagent packages/kilo-vs
 **症状**: 日志显示 `editorContext: {}`
 
 **可能原因**:
+
 1. 没有打开任何文件
 2. 打开的文件被 .kilocodeignore 过滤
 3. workspaceDir 为空
 
 **解决方案**:
+
 1. 确保打开至少一个普通文件（.md, .ts, .js 等）
 2. 检查 .kilocodeignore 文件
 3. 确认在一个有效的工作区中
 
 ### 问题 4: 有日志但 AI 不识别
 
-**症状**: 
+**症状**:
+
 - ✅ 客户端和服务端都有完整日志
 - ✅ editorContext 数据正确
 - ❌ AI 回答时不知道当前文件
 
 **可能原因**:
+
 1. 环境详情未正确注入到提示词
 2. LLM 忽略了环境详情
 3. 提示词格式问题
 
 **调试步骤**:
+
 1. 检查是否看到 "✅ Injecting environment block" 日志
 2. 检查 "environmentDetails result" 的内容
 3. 测试更明确的问题，例如："我现在打开了哪些文件？"
@@ -233,6 +248,7 @@ cp packages/testagent-opencode/packages/opencode/dist/testagent packages/kilo-vs
 使用这个清单确认每个步骤都正常：
 
 ### 客户端（VS Code 扩展）
+
 - [ ] 看到 "🎯 gatherEditorContext called"
 - [ ] 看到 "📁 Workspace directory"
 - [ ] 看到 "👀 Visible files" 有内容
@@ -242,6 +258,7 @@ cp packages/testagent-opencode/packages/opencode/dist/testagent packages/kilo-vs
 - [ ] 看到 "📦 Final EditorContext" 完整对象
 
 ### 服务端（CLI）
+
 - [ ] 看到 "📥 Received PromptInput"
 - [ ] 看到 "📦 editorContext" 完整对象
 - [ ] 看到 "💾 Created UserMessage with editorContext"
@@ -254,6 +271,7 @@ cp packages/testagent-opencode/packages/opencode/dist/testagent packages/kilo-vs
 - [ ] 看到 "📋 staticEnvLines result" 包含 shell
 
 ### AI 行为
+
 - [ ] AI 能识别当前激活的文件
 - [ ] AI 能列出可见的文件
 - [ ] AI 能列出打开的标签页
@@ -276,6 +294,7 @@ cp packages/testagent-opencode/packages/opencode/dist/testagent packages/kilo-vs
 **用户**: "我现在打开了哪些文件？"
 
 **AI（成功）**: "根据你的编辑器状态，你当前打开了以下文件：
+
 - README.md（当前激活）
 - package.json
 - src/index.ts"

@@ -356,7 +356,7 @@ export const QuestionDock: Component<{ request: QuestionRequest }> = (props) => 
           <Show when={!confirm()}>
             {/* testagent_change start */}
             <div data-slot="question-text">
-              <Markdown text={question()?.question ?? ""} style={{"max-height":'200px','overflow-y':"scroll"}}/>
+              <Markdown text={question()?.question ?? ""} style={{ "max-height": "200px", "overflow-y": "scroll" }} />
             </div>
             {/* testagent_change end */}
             <Show when={multi()} fallback={<div data-slot="question-hint">{language.t("ui.question.singleHint")}</div>}>

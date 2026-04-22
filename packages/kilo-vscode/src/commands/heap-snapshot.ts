@@ -3,7 +3,7 @@ import type { KiloConnectionService } from "../services/cli-backend/connection-s
 
 export function registerHeapSnapshot(context: vscode.ExtensionContext, connectionService: KiloConnectionService): void {
   context.subscriptions.push(
-    vscode.commands.registerCommand("kilo-code.new.takeHeapSnapshot", async () => {
+    vscode.commands.registerCommand("testagent.new.takeHeapSnapshot", async () => {
       try {
         const file = await snapshot(connectionService)
         vscode.window.showInformationMessage(`Heap snapshot written to ${file}`)

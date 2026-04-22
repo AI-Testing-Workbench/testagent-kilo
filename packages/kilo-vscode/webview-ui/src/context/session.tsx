@@ -841,7 +841,7 @@ export const SessionProvider: ParentComponent = (props) => {
           title: language.t("session.cloud.import.failed") ?? "Failed to import cloud session",
           description: message.error,
         })
-        console.error("[Kilo New] Cloud session import failed:", message.error)
+        console.error("[TestAgent New] Cloud session import failed:", message.error)
         break
 
       case "worktreeStatsLoaded":

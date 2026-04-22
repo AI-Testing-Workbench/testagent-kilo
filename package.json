@@ -27,7 +27,6 @@
       "packages/kilo-ui",
       "packages/kilo-vscode",
       "packages/opencode",
-
       "packages/plugin",
       "packages/script",
       "packages/sdk/js",

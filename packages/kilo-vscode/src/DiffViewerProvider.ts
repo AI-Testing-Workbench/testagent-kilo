@@ -176,7 +176,10 @@ export class DiffViewerProvider implements vscode.Disposable {
       const serverInfo = this.connectionService.getServerInfo() // testagent_change
       console.log("[TestAgent] DiffViewer: 🌐 Server info:", serverInfo) // testagent_change
       console.log("[TestAgent] DiffViewer: 📡 Calling worktree.diff API...") // testagent_change
-      console.log("[TestAgent] DiffViewer: 📡 Request params:", { directory: target.directory, base: target.baseBranch }) // testagent_change
+      console.log("[TestAgent] DiffViewer: 📡 Request params:", {
+        directory: target.directory,
+        base: target.baseBranch,
+      }) // testagent_change
       const response = await client.worktree.diff(
         { directory: target.directory, base: target.baseBranch },
         { throwOnError: true },
@@ -184,8 +187,13 @@ export class DiffViewerProvider implements vscode.Disposable {
 
       console.log("[TestAgent] DiffViewer: 📦 Full API response:", JSON.stringify(response, null, 2)) // testagent_change
       console.log("[TestAgent] DiffViewer: 📦 response.data:", response.data) // testagent_change
-      console.log("[TestAgent] DiffViewer: 📦 response.data type:", typeof response.data, "isArray:", Array.isArray(response.data)) // testagent_change
-      
+      console.log(
+        "[TestAgent] DiffViewer: 📦 response.data type:",
+        typeof response.data,
+        "isArray:",
+        Array.isArray(response.data),
+      ) // testagent_change
+
       // testagent_change start - handle non-array response
       const diffs = Array.isArray(response.data) ? response.data : []
       if (!Array.isArray(response.data)) {

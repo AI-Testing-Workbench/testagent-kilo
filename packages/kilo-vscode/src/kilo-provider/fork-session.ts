@@ -20,7 +20,7 @@ export async function handleForkSession(ctx: ForkContext, sessionId: string, mes
       )
       .then((result) => result.data?.[sessionId]?.type ?? "idle")
       .catch((e) => {
-        console.error("[Kilo New] refreshForkStatus failed:", e)
+        console.error("[TestAgent New] refreshForkStatus failed:", e)
         return "busy" as SessionStatus["type"]
       }))
   if (status !== "idle") {
@@ -40,7 +40,7 @@ export async function handleForkSession(ctx: ForkContext, sessionId: string, mes
         ctx.forked(session)
       },
       registerSession: () => {},
-      log: (...args) => console.log("[Kilo New] KiloProvider:", ...args),
+      log: (...args) => console.log("[TestAgent New] KiloProvider:", ...args),
     },
     sessionId,
     undefined,

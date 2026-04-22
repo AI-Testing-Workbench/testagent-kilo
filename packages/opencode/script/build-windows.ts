@@ -59,10 +59,7 @@ const y18nSrc = await Bun.file(y18nPath).text()
 if (y18nSrc.includes("err.code === 'EPERM'")) {
   console.log("y18n patch: already applied")
 } else {
-  const patched = y18nSrc.replace(
-    /if \(err\.code === 'ENOENT'\)/,
-    `if (err.code === 'ENOENT' || err.code === 'EPERM')`,
-  )
+  const patched = y18nSrc.replace(/if \(err\.code === 'ENOENT'\)/, `if (err.code === 'ENOENT' || err.code === 'EPERM')`)
   if (patched === y18nSrc) console.warn("y18n patch: pattern not found")
   else {
     await Bun.write(y18nPath, patched)
@@ -81,9 +78,7 @@ const y18nPlugin: import("bun").BunPlugin = {
   },
 }
 
-const targets = [
-  { os: "win32", arch: "x64" as const },
-]
+const targets = [{ os: "win32", arch: "x64" as const }]
 
 await $`rm -rf dist`
 

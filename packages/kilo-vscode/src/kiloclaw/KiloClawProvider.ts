@@ -180,7 +180,7 @@ export class KiloClawProvider implements vscode.Disposable {
       } catch (err: unknown) {
         if (this.stale(gen)) return
         const msg = err instanceof Error ? err.message : String(err)
-        console.error("[Kilo New] KiloClaw chat connect failed:", msg)
+        console.error("[TestAgent New] KiloClaw chat connect failed:", msg)
         this.post({
           type: "kiloclaw.state",
           state: {
@@ -275,14 +275,14 @@ export class KiloClawProvider implements vscode.Disposable {
         const dir = vscode.workspace.workspaceFolders?.[0]?.uri.fsPath ?? homedir()
         await this.connection.connect(dir)
       } catch (err) {
-        console.debug("[Kilo New] KiloClaw connect deferred:", (err as Error)?.message ?? err)
+        console.debug("[TestAgent New] KiloClaw connect deferred:", (err as Error)?.message ?? err)
         return null
       }
     }
     try {
       return this.connection.getClient()
     } catch (err) {
-      console.debug("[Kilo New] KiloClaw getClient deferred:", (err as Error)?.message ?? err)
+      console.debug("[TestAgent New] KiloClaw getClient deferred:", (err as Error)?.message ?? err)
       return null
     }
   }
@@ -297,7 +297,7 @@ export class KiloClawProvider implements vscode.Disposable {
     // tear down the freshly-created client immediately to avoid leaked websockets.
     if (this.stale(gen)) {
       client.disconnect().catch((err) => {
-        console.error("[Kilo New] KiloClaw stale disconnect failed:", err?.message ?? err)
+        console.error("[TestAgent New] KiloClaw stale disconnect failed:", err?.message ?? err)
       })
       return
     }
@@ -354,7 +354,7 @@ export class KiloClawProvider implements vscode.Disposable {
 
     if (this.chat) {
       this.chat.disconnect().catch((err) => {
-        console.error("[Kilo New] KiloClaw disconnect failed:", err?.message ?? err)
+        console.error("[TestAgent New] KiloClaw disconnect failed:", err?.message ?? err)
       })
       this.chat = null
     }
@@ -371,7 +371,7 @@ export class KiloClawProvider implements vscode.Disposable {
     try {
       await this.chat.send(text)
     } catch (err) {
-      console.error("[Kilo New] KiloClaw send failed:", err instanceof Error ? err.message : err)
+      console.error("[TestAgent New] KiloClaw send failed:", err instanceof Error ? err.message : err)
       this.post({ type: "kiloclaw.error", error: "Failed to send message" })
     }
   }
@@ -396,7 +396,7 @@ export class KiloClawProvider implements vscode.Disposable {
         this.post({ type: "kiloclaw.status", data: this.status })
       }
     } catch (err) {
-      console.debug("[Kilo New] KiloClaw poll failed:", (err as Error)?.message ?? err)
+      console.debug("[TestAgent New] KiloClaw poll failed:", (err as Error)?.message ?? err)
     }
   }
 

@@ -48,7 +48,7 @@ export async function fetchAndSendPendingQuestions(ctx: QuestionContext): Promis
       }
     }
   } catch (error) {
-    console.error("[Kilo New] KiloProvider: Failed to fetch pending questions:", error)
+    console.error("[TestAgent New] KiloProvider: Failed to fetch pending questions:", error)
   }
 }
 

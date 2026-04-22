@@ -45,7 +45,7 @@ function safeStringify(value: unknown): string | undefined {
     const json = JSON.stringify(value)
     if (json !== "{}" && json.length < 500) return json
   } catch (err) {
-    console.warn("[Kilo New] getErrorMessage: JSON.stringify failed", err)
+    console.warn("[TestAgent New] getErrorMessage: JSON.stringify failed", err)
   }
   return undefined
 }
@@ -172,7 +172,7 @@ export async function runWithMessageConfirmation<T>(
     return await run()
   } catch (error) {
     if (await state.wait(id)) {
-      console.warn(`[Kilo New] ${label} ended after server accepted it; ignoring transport error`, {
+      console.warn(`[TestAgent New] ${label} ended after server accepted it; ignoring transport error`, {
         error: getErrorMessage(error),
       })
       return undefined

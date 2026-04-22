@@ -49,6 +49,6 @@ export async function handleFileSearch(input: Input): Promise<void> {
 
 function settled(result: PromiseSettledResult<{ data: string[] }>, kind: "file" | "folder"): string[] {
   if (result.status === "fulfilled") return result.value.data
-  console.error(`[Kilo New] File search (${kind}) failed:`, result.reason)
+  console.error(`[TestAgent New] File search (${kind}) failed:`, result.reason)
   return []
 }

@@ -7,6 +7,7 @@
 ## 已完成的修改
 
 ### 1. 创建核心模块
+
 **文件**: `packages/testagent-opencode/packages/opencode/src/testagent/editor-context.ts`
 
 - ✅ 定义 `EditorContext` 接口
@@ -15,21 +16,25 @@
 - ✅ 实现 `timestamp()` - 生成带时区的 ISO 8601 时间戳
 
 ### 2. 修改消息数据结构
+
 **文件**: `packages/testagent-opencode/packages/opencode/src/session/message-v2.ts`
 
 ```typescript
 export const User = Base.extend({
   // ... 其他字段
-  editorContext: z.object({
-    visibleFiles: z.array(z.string()).optional(),
-    openTabs: z.array(z.string()).optional(),
-    activeFile: z.string().optional(),
-    shell: z.string().optional(),
-  }).optional(),
+  editorContext: z
+    .object({
+      visibleFiles: z.array(z.string()).optional(),
+      openTabs: z.array(z.string()).optional(),
+      activeFile: z.string().optional(),
+      shell: z.string().optional(),
+    })
+    .optional(),
 })
 ```
 
 ### 3. 修改系统提示词
+
 **文件**: `packages/testagent-opencode/packages/opencode/src/session/system.ts`
 
 - ✅ 导入 `staticEnvLines` 和 `EditorContext`
@@ -37,6 +42,7 @@ export const User = Base.extend({
 - ✅ 在系统提示词中注入静态环境信息（shell）
 
 ### 4. 修改提示词处理
+
 **文件**: `packages/testagent-opencode/packages/opencode/src/session/prompt.ts`
 
 - ✅ 导入 `environmentDetails` 和 `Identifier`
@@ -98,6 +104,7 @@ bun run script/build.ts
 ```
 
 这将：
+
 - 从 CLI 后端生成 OpenAPI schema
 - 生成包含 `editorContext` 的 TypeScript 类型
 - 更新 `SessionPromptData` 和 `SessionPromptAsyncData` 类型
@@ -113,19 +120,21 @@ const editorContext = await this.gatherEditorContext()
 await client.session.promptAsync({
   sessionID,
   parts: [{ type: "text", text: userInput }],
-  editorContext,  // 👈 确保这行存在
+  editorContext, // 👈 确保这行存在
 })
 ```
 
 #### 3. 测试功能
 
 1. 启动 CLI 后端：
+
    ```bash
    cd packages/testagent-opencode/packages/opencode
    bun run dev
    ```
 
 2. 启动 VS Code 扩展（开发模式）：
+
    ```bash
    cd packages/kilo-vscode
    bun run extension
@@ -190,6 +199,7 @@ bun run dev db:query "SELECT * FROM message WHERE role='user' ORDER BY id DESC L
 **症状**: AI 不知道当前文件
 
 **检查**:
+
 1. VS Code 扩展是否调用 `gatherEditorContext()`
 2. HTTP 请求是否包含 `editorContext`
 3. 数据库中用户消息是否有 `editorContext` 字段
@@ -203,14 +213,17 @@ bun run dev db:query "SELECT * FROM message WHERE role='user' ORDER BY id DESC L
 ## 文件清单
 
 ### 新增文件
+
 - `packages/testagent-opencode/packages/opencode/src/testagent/editor-context.ts`
 
 ### 修改文件
+
 - `packages/testagent-opencode/packages/opencode/src/session/message-v2.ts`
 - `packages/testagent-opencode/packages/opencode/src/session/system.ts`
 - `packages/testagent-opencode/packages/opencode/src/session/prompt.ts`
 
 ### 需要重新生成
+
 - `packages/testagent-opencode/packages/sdk/js/src/v2/gen/types.gen.ts`
 - `packages/testagent-opencode/packages/sdk/js/src/v2/gen/sdk.gen.ts`
 

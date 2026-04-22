@@ -16,6 +16,6 @@ export async function abortSession(input: {
   for (const mid of new Set(input.queuedMessageIDs)) {
     await input.client.session
       .deleteMessage({ sessionID: input.sessionID, messageID: mid, directory: input.dir }, { throwOnError: true })
-      .catch((err) => console.error("[Kilo New] KiloProvider: Failed to remove queued message:", err))
+      .catch((err) => console.error("[TestAgent New] KiloProvider: Failed to remove queued message:", err))
   }
 }

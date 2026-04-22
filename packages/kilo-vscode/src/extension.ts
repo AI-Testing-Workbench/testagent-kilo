@@ -58,8 +58,8 @@ export function activate(context: vscode.ExtensionContext) {
       }
       try {
         remoteService.setClient(connectionService.getClient())
-        console.log("[Kilo New] CLI connected, calling remoteService.refresh()")
-        remoteService.refresh().catch((err) => console.warn("[Kilo New] initial remote refresh failed:", err))
+        console.log("[TestAgent New] CLI connected, calling remoteService.refresh()")
+        remoteService.refresh().catch((err) => console.warn("[TestAgent New] initial remote refresh failed:", err))
       } catch {
         remoteService.setClient(null)
       }
@@ -377,7 +377,7 @@ export function activate(context: vscode.ExtensionContext) {
         if (!match) return
         const sessionId = match[1]
         if (!sessionId) return
-        console.log("[Kilo New] URI handler: opening cloud session:", sessionId)
+        console.log("[TestAgent New] URI handler: opening cloud session:", sessionId)
         await vscode.commands.executeCommand(`${KiloProvider.viewType}.focus`)
         provider.openCloudSession(sessionId)
       },

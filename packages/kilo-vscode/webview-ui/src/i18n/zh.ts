@@ -155,7 +155,8 @@ export const dict = {
   "provider.connect.oauth.code.invalid": "授权码无效",
   "provider.connect.oauth.auto.visit.prefix": "访问 ",
   "provider.connect.oauth.auto.visit.link": "此链接",
-  "provider.connect.oauth.auto.visit.suffix": " 并输入以下代码，以连接你的帐户并在 TestAgent 中使用 {{provider}} 模型。",
+  "provider.connect.oauth.auto.visit.suffix":
+    " 并输入以下代码，以连接你的帐户并在 TestAgent 中使用 {{provider}} 模型。",
   "provider.connect.oauth.auto.confirmationCode": "确认码",
   "provider.connect.toast.connected.title": "{{provider}} 已连接",
   "provider.connect.toast.connected.description": "现在可以使用 {{provider}} 模型了。",
@@ -948,7 +949,8 @@ export const dict = {
   "settings.aboutKiloCode.title": "关于 TestAgent",
 
   "session.messages.empty": "在下方输入消息以开始对话。",
-  "session.messages.welcome": "TestAgent是一个AI辅助测试助手，它可以帮助你分析测试项目，梳理测试点，生成自动化测试脚本，同时支持自定义插件拓展功能。",
+  "session.messages.welcome":
+    "TestAgent是一个AI辅助测试助手，它可以帮助你分析测试项目，梳理测试点，生成自动化测试脚本，同时支持自定义插件拓展功能。",
   "session.messages.scrollToBottom": "滚动到底部",
   "session.messages.initializing": "初始化中...",
   "session.messages.taskStarting": "启动中...",

@@ -477,7 +477,7 @@ export class KiloConnectionService {
       }
       this.client?.session
         .viewed({ focused: [...focus], open: [...open] })
-        .catch((err) => console.warn("[Kilo New] ConnectionService: viewed flush failed:", err))
+        .catch((err) => console.warn("[TestAgent New] ConnectionService: viewed flush failed:", err))
     }, 150)
   }
 

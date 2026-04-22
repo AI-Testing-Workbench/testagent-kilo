@@ -21,8 +21,8 @@ export const InstanceBootstrap = Effect.gen(function* () {
   yield* Effect.all(
     [LSP.Service, Format.Service, File.Service, FileWatcher.Service, Vcs.Service, Snapshot.Service].map((s) =>
       Effect.forkDetach(s.use((i) => i.init())),
-  ),
-  // kilocode_change end
+    ),
+    // kilocode_change end
   )
 
   yield* Bus.Service.use((svc) =>

@@ -29,8 +29,10 @@ async function createTempWorkspace(): Promise<string> {
 }
 
 describe("FileIgnoreController", () => {
-  describe("when .testagentignore exists", () => { // testagent_change
-    it("applies only .testagentignore patterns", async () => { // testagent_change
+  describe("when .testagentignore exists", () => {
+    // testagent_change
+    it("applies only .testagentignore patterns", async () => {
+      // testagent_change
       const workspace = await createTempWorkspace()
       await fs.writeFile(path.join(workspace, ".testagentignore"), "secret/**\n*.snap\n") // testagent_change
 
@@ -70,7 +72,8 @@ describe("FileIgnoreController", () => {
     })
   })
 
-  describe("when no .testagentignore exists (fallback)", () => { // testagent_change
+  describe("when no .testagentignore exists (fallback)", () => {
+    // testagent_change
     it("applies .gitignore patterns", async () => {
       const workspace = await createTempWorkspace()
       await fs.writeFile(path.join(workspace, ".gitignore"), "node_modules/\nbuild/\n")

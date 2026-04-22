@@ -410,10 +410,10 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
     webviewView.webview.html = this._getHtmlForWebview(webviewView.webview)
     this.setupWebviewMessageHandler(webviewView.webview)
 
-    vscode.commands.executeCommand("setContext", "kilo-code.new.sidebarVisible", webviewView.visible)
+    vscode.commands.executeCommand("setContext", "testagent.new.sidebarVisible", webviewView.visible)
     this.visibilityDisposable?.dispose()
     this.visibilityDisposable = webviewView.onDidChangeVisibility(() => {
-      vscode.commands.executeCommand("setContext", "kilo-code.new.sidebarVisible", webviewView.visible)
+      vscode.commands.executeCommand("setContext", "testagent.new.sidebarVisible", webviewView.visible)
       if (this.statsPoller) {
         this.statsPoller.setEnabled(webviewView.visible)
         this.statsPoller.setVisible(webviewView.visible)
@@ -2516,7 +2516,7 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
       hasClient: !!this.client,
     })
     // testagent_change end
-    
+
     if (!this.client) {
       this.postMessage({
         type: "sendMessageFailed",
@@ -2568,10 +2568,10 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
         ),
       )
       // testagent_change end
-      
+
       const duration = Date.now() - startTime // testagent_change
       console.log("[TestAgent] ✅ Command sent successfully", { duration: `${duration}ms` }) // testagent_change
-    } catch (error:any) {
+    } catch (error: any) {
       const duration = Date.now() - startTime // testagent_change
       console.error("[TestAgent] KiloProvider: Failed to send command:", error)
       console.error("[TestAgent] Error details:", {
@@ -3207,9 +3207,9 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
       ...(activeFile ? { activeFile } : {}),
       ...(shell ? { shell } : {}),
     }
-    
+
     console.log("[TestAgent] 📦 Final EditorContext:", JSON.stringify(result, null, 2))
-    
+
     return result
   }
 
