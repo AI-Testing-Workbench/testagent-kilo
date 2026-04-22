@@ -4,17 +4,16 @@
  * Matches the v1.0.25 working indicator UX.
  */
 
-import { Component, Show, createSignal, createEffect, onCleanup } from "solid-js"
+import { type Component, Show, createSignal, createEffect, onCleanup } from "solid-js"
+import { Spinner } from "@kilocode/kilo-ui/spinner"
+import { Button } from "@kilocode/kilo-ui/button"
 import { useSession } from "../../context/session"
 import { useLanguage } from "../../context/language"
+import { useVSCode } from "../../context/vscode"
 
 function ThinkingAvatar() {
   return (
-    <svg
-      class="thinking-avatar"
-      viewBox="-4 -4 32 32"
-      xmlns="http://www.w3.org/2000/svg"
-    >
+    <svg class="thinking-avatar" viewBox="-4 -4 32 32" xmlns="http://www.w3.org/2000/svg">
       <defs>
         <linearGradient id="ta-rg" x1="0%" y1="0%" x2="100%" y2="100%">
           <stop offset="0%" stop-color="#4fc3f7" />
@@ -30,8 +29,26 @@ function ThinkingAvatar() {
         </filter>
       </defs>
       <circle cx="12" cy="12" r="12" fill="#e8f4ff" />
-      <circle class="ta-ring-bg" cx="12" cy="12" r="12.75" fill="none" stroke="url(#ta-rg)" stroke-width="3" style="filter:url(#ta-glow)" />
-      <circle class="ta-ring" cx="12" cy="12" r="12.75" fill="none" stroke="url(#ta-rg)" stroke-width="1.5" style="filter:url(#ta-glow)" />
+      <circle
+        class="ta-ring-bg"
+        cx="12"
+        cy="12"
+        r="12.75"
+        fill="none"
+        stroke="url(#ta-rg)"
+        stroke-width="3"
+        style="filter:url(#ta-glow)"
+      />
+      <circle
+        class="ta-ring"
+        cx="12"
+        cy="12"
+        r="12.75"
+        fill="none"
+        stroke="url(#ta-rg)"
+        stroke-width="1.5"
+        style="filter:url(#ta-glow)"
+      />
       <g class="ta-eyes">
         <ellipse cx="9" cy="9.33" rx="1.63" ry="2.62" fill="#2979ff" />
         <ellipse cx="15" cy="9.33" rx="1.63" ry="2.62" fill="#2979ff" />
@@ -43,6 +60,7 @@ function ThinkingAvatar() {
 export const WorkingIndicator: Component = () => {
   const session = useSession()
   const language = useLanguage()
+  const vscode = useVSCode()
 
   const [elapsed, setElapsed] = createSignal(0)
   const [retryCountdown, setRetryCountdown] = createSignal(0)
@@ -91,6 +109,9 @@ export const WorkingIndicator: Component = () => {
       const retryMsg = info.message || language.t("session.status.retry")
       return countdown > 0 ? `${retryMsg} (${countdown}s)` : retryMsg
     }
+    if (info.type === "offline") {
+      return info.message || language.t("session.status.offline")
+    }
     return session.statusText() ?? language.t("ui.sessionTurn.status.thinking")
   }
 
@@ -108,7 +129,17 @@ export const WorkingIndicator: Component = () => {
       .permissions()
       .filter((p) => p.sessionID === id && !(p.tool && ["todowrite", "todoread"].includes(p.toolName)))
     const questions = session.questions().filter((q) => q.sessionID === id)
-    return perms.length > 0 || questions.length > 0
+    const suggestions = session.suggestions().filter((s) => s.sessionID === id)
+    return perms.length > 0 || questions.length > 0 || suggestions.length > 0
+  }
+
+  const isRetrying = () => session.statusInfo().type === "retry"
+
+  const handleCancelRetry = () => {
+    const sid = session.currentSessionID()
+    if (sid) {
+      vscode.postMessage({ type: "abort", sessionID: sid })
+    }
   }
 
   return (
@@ -118,6 +149,17 @@ export const WorkingIndicator: Component = () => {
         <span class="working-text">{statusText()}</span>
         <Show when={elapsed() > 0}>
           <span class="working-elapsed">{formatElapsed()}</span>
+        </Show>
+        <Show when={isRetrying()}>
+          <Button
+            variant="secondary"
+            size="small"
+            onClick={handleCancelRetry}
+            class="working-cancel"
+            style={{ "font-weight": "600", color: "var(--vscode-errorForeground, #f85149)" }}
+          >
+            {language.t("ui.sessionTurn.cancel") || "Cancel"}
+          </Button>
         </Show>
       </div>
     </Show>

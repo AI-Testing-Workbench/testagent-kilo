@@ -43,6 +43,7 @@ bun run script/bump-version.ts patch
 ```
 
 这会为以下平台构建 CLI:
+
 - linux-x64, linux-arm64
 - linux-x64-musl, linux-arm64-musl (Alpine)
 - darwin-x64, darwin-arm64 (macOS)
@@ -66,6 +67,7 @@ bun run script/build.ts
 输出目录: `packages/kilo-vscode/out/`
 
 生成的文件:
+
 - `kilo-vscode-linux-x64.vsix`
 - `kilo-vscode-linux-arm64.vsix`
 - `kilo-vscode-alpine-x64.vsix`
@@ -164,9 +166,9 @@ curl -X PATCH \
 
 ## 相关文件
 
-| 文件 | 作用 |
-|------|------|
-| `script/version.ts` | 版本计算、创建 tag 和 draft release |
-| `script/publish.ts` | 主发布脚本 |
-| `packages/kilo-vscode/script/build.ts` | 构建 VSIX 包 |
-| `packages/opencode/script/build.ts` | 构建 CLI 二进制 |
+| 文件                                   | 作用                                |
+| -------------------------------------- | ----------------------------------- |
+| `script/version.ts`                    | 版本计算、创建 tag 和 draft release |
+| `script/publish.ts`                    | 主发布脚本                          |
+| `packages/kilo-vscode/script/build.ts` | 构建 VSIX 包                        |
+| `packages/opencode/script/build.ts`    | 构建 CLI 二进制                     |

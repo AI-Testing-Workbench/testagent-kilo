@@ -1,8 +1,8 @@
 import * as vscode from "vscode"
-import type { FileDiff } from "@kilocode/sdk/v2/client"
 import type { KiloConnectionService } from "./services/cli-backend"
 import { buildWebviewHtml } from "./utils"
 import { GitOps } from "./agent-manager/GitOps"
+import { WorktreeDiffClient, type DiffTarget } from "./worktree-diff-client"
 import {
   appendOutput,
   getWorkspaceRoot,
@@ -21,7 +21,7 @@ export class DiffViewerProvider implements vscode.Disposable {
   private panel: vscode.WebviewPanel | undefined
   private diffInterval: ReturnType<typeof setInterval> | undefined
   private lastDiffHash: string | undefined
-  private cachedDiffTarget: { directory: string; baseBranch: string } | undefined
+  private cachedDiffTarget: DiffTarget | undefined
   private gitOps: GitOps
   private outputChannel: vscode.OutputChannel
   private onSendComments: ((comments: unknown[], autoSend: boolean) => void) | undefined
@@ -86,6 +86,7 @@ export class DiffViewerProvider implements vscode.Disposable {
     if (type === "webviewReady") {
       this.post({
         type: "ready",
+        serverInfo: this.connectionService.getServerInfo(), // testagent_change - add serverInfo
         vscodeLanguage: vscode.env.language,
         languageOverride: vscode.workspace.getConfiguration("testagent.new").get<string>("language"),
         workspaceDirectory: getWorkspaceRoot(),
@@ -108,20 +109,59 @@ export class DiffViewerProvider implements vscode.Disposable {
       return
     }
 
+    if (type === "diffViewer.revertFile" && typeof msg.file === "string") {
+      void this.revertFile(msg.file)
+      return
+    }
+
     if (type === "openFile" && typeof msg.filePath === "string") {
       openWorkspaceRelativeFile(msg.filePath, typeof msg.line === "number" ? msg.line : undefined)
     }
   }
 
-  private async resolveLocalDiffTarget(): Promise<{ directory: string; baseBranch: string } | undefined> {
+  private async revertFile(file: string): Promise<void> {
+    const target = this.cachedDiffTarget ?? (await this.resolveLocalDiffTarget())
+    if (!target) {
+      this.post({
+        type: "diffViewer.revertFileResult",
+        file,
+        status: "error",
+        message: "Could not resolve diff target",
+      })
+      return
+    }
+
+    try {
+      const diff = new WorktreeDiffClient(this.connectionService.getClient(), this.gitOps, (...args) =>
+        this.log(...args),
+      )
+      const result = await diff.revertFile(target, file)
+      this.post({
+        type: "diffViewer.revertFileResult",
+        file,
+        status: result.ok ? "success" : "error",
+        message: result.message,
+      })
+      if (result.ok) void this.pollDiff()
+    } catch (err) {
+      const message = err instanceof Error ? err.message : String(err)
+      this.log("Failed to revert file:", message)
+      this.post({ type: "diffViewer.revertFileResult", file, status: "error", message })
+    }
+  }
+
+  private async resolveLocalDiffTarget(): Promise<DiffTarget | undefined> {
     return await resolveLocalDiffTarget(this.gitOps, (...args) => this.log(...args), getWorkspaceRoot())
   }
 
   private async initialFetch(): Promise<void> {
+    console.log("[TestAgent] DiffViewer: 🔍 initialFetch started") // testagent_change
     this.post({ type: "diffViewer.loading", loading: true })
 
     const target = await this.resolveLocalDiffTarget()
+    console.log("[TestAgent] DiffViewer: 🎯 Resolved target:", target) // testagent_change
     if (!target) {
+      console.log("[TestAgent] DiffViewer: ⚠️ No target resolved, sending empty diffs") // testagent_change
       this.post({ type: "diffViewer.diffs", diffs: [] })
       this.post({ type: "diffViewer.loading", loading: false })
       return
@@ -130,19 +170,46 @@ export class DiffViewerProvider implements vscode.Disposable {
     this.cachedDiffTarget = target
 
     try {
+      console.log("[TestAgent] DiffViewer: 🔌 Connecting to CLI...") // testagent_change
       await this.connectionService.connect(target.directory)
       const client = this.connectionService.getClient()
-      const { data: diffs } = await client.worktree.diff(
+      const serverInfo = this.connectionService.getServerInfo() // testagent_change
+      console.log("[TestAgent] DiffViewer: 🌐 Server info:", serverInfo) // testagent_change
+      console.log("[TestAgent] DiffViewer: 📡 Calling worktree.diff API...") // testagent_change
+      console.log("[TestAgent] DiffViewer: 📡 Request params:", {
+        directory: target.directory,
+        base: target.baseBranch,
+      }) // testagent_change
+      const response = await client.worktree.diff(
         { directory: target.directory, base: target.baseBranch },
         { throwOnError: true },
       )
 
+      console.log("[TestAgent] DiffViewer: 📦 Full API response:", JSON.stringify(response, null, 2)) // testagent_change
+      console.log("[TestAgent] DiffViewer: 📦 response.data:", response.data) // testagent_change
+      console.log(
+        "[TestAgent] DiffViewer: 📦 response.data type:",
+        typeof response.data,
+        "isArray:",
+        Array.isArray(response.data),
+      ) // testagent_change
+
+      // testagent_change start - handle non-array response
+      const diffs = Array.isArray(response.data) ? response.data : []
+      if (!Array.isArray(response.data)) {
+        console.warn("[TestAgent] DiffViewer: ⚠️ API returned non-array data, using empty array") // testagent_change
+      }
+      // testagent_change end
+
       this.lastDiffHash = hashFileDiffs(diffs)
 
+      console.log("[TestAgent] DiffViewer: ✅ Initial diff complete:", diffs.length, "file(s)") // testagent_change
       this.log(`Initial diff: ${diffs.length} file(s)`)
       this.post({ type: "diffViewer.diffs", diffs })
     } catch (err) {
+      console.error("[TestAgent] DiffViewer: ❌ Failed to fetch initial diff:", err) // testagent_change
       this.log("Failed to fetch initial diff:", err)
+      this.post({ type: "diffViewer.diffs", diffs: [] }) // testagent_change - send empty array on error
     } finally {
       this.post({ type: "diffViewer.loading", loading: false })
     }
@@ -212,6 +279,7 @@ export class DiffViewerProvider implements vscode.Disposable {
 
   public dispose(): void {
     this.stopDiffPolling()
+    this.gitOps.dispose()
     this.panel?.dispose()
     this.outputChannel.dispose()
   }

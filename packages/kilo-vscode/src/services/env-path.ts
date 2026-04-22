@@ -62,7 +62,7 @@ if ($currentPath -notlike "*$binDir*") {
         if (result === "added") {
           console.log("[TestAgent] Added CLI to user PATH:", binDir)
           vscode.window.showInformationMessage(
-            "TestAgent CLI has been added to your PATH. Restart your terminal to use 'testagent' command."
+            "TestAgent CLI has been added to your PATH. Restart your terminal to use 'testagent' command.",
           )
         } else if (result === "exists") {
           console.log("[TestAgent] CLI already in PATH:", binDir)

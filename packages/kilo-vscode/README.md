@@ -2,7 +2,6 @@
 
 TestAgent for TScode是一个开源 AI 编程代理，将 TestAgent CLI 直接集成到你的 TS Code 开发工作流中。
 
-
 ## 功能特性
 
 ### 侧边栏聊天界面

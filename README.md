@@ -10,7 +10,7 @@ TestAgent是一个AI辅助测试助手，它可以帮助你分析测试项目，
 git submodule update --init --recursive
 
 
-bun install 
+bun install
 
 // git submodule依赖安装
 bun install --cwd packages/testagent-opencode
@@ -78,4 +78,3 @@ const bar = 2
 
 - `packages/opencode/src/testagent/`
 - `packages/opencode/test/testagent/`
-
