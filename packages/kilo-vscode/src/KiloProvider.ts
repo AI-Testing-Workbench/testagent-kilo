@@ -2255,20 +2255,27 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
         timestamp: new Date().toISOString(), // testagent_change
       })
 
-      await this.client.session.command(
+      // testagent_change start - Use promptAsync to avoid 5-minute timeout
+      // promptAsync returns immediately, allowing long-running commands like /testspec
+      const commandParts: Array<TextPartInput | FilePartInput> = []
+      if (parts) {
+        commandParts.push(...parts)
+      }
+      commandParts.push({ type: "text", text: `/${command} ${args}`.trim() })
+
+      await this.client.session.promptAsync(
         {
           sessionID: resolved!.sid,
           directory: resolved!.dir,
-          command,
-          arguments: args,
           messageID,
-          model: providerID && modelID ? `${providerID}/${modelID}` : undefined,
+          parts: commandParts,
+          model: providerID && modelID ? { providerID, modelID } : undefined,
           agent,
           variant,
-          parts,
         },
         { throwOnError: true },
       )
+      // testagent_change end
       
       const duration = Date.now() - startTime // testagent_change
       console.log("[TestAgent] ✅ Command sent successfully", { duration: `${duration}ms` }) // testagent_change
