@@ -64,6 +64,16 @@ export class ServerManager {
     console.log("[TestAgent] ServerManager: 📄 CLI isFile:", stat.isFile())
     console.log("[TestAgent] ServerManager: 📄 CLI mode (octal):", (stat.mode & 0o777).toString(8))
 
+    // testagent_change start - fetch user ID before spawning so it's available immediately
+    let userId: string | undefined
+    try {
+      const session = await vscode.authentication.getSession("tscode-oauth", [], { createIfNone: false })
+      userId = session?.account.id
+    } catch {
+      // non-critical, ignore
+    }
+    // testagent_change end
+
     return new Promise((resolve, reject) => {
       console.log("[TestAgent] ServerManager: 🎬 Spawning CLI process:", cliPath, ["serve", "--port", "0"])
       const claudeCompat = vscode.workspace.getConfiguration("testagent.new").get<boolean>("claudeCodeCompat", false)
@@ -82,6 +92,7 @@ export class ServerManager {
           KILO_APP_VERSION: this.context.extension.packageJSON.version,
           KILO_VSCODE_VERSION: vscode.version,
           ...(!claudeCompat && { KILO_DISABLE_CLAUDE_CODE: "true" }),
+          ...(userId && { TESTAGENT_USER_ID: userId }), // testagent_change
         },
         stdio: ["ignore", "pipe", "pipe"],
         detached: true,
