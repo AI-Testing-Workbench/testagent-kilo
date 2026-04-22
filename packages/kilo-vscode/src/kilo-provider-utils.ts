@@ -414,11 +414,13 @@ export function mapSSEEventToWebviewMessage(event: Event, sessionID: string | un
     case "message.part.delta": {
       const props = event.properties
       if (!sessionID) return null
+      // Use partType from the event if available, default to "text" for backward compatibility
+      const partType = props.partType || "text"
       return {
         type: "partUpdated",
         sessionID: props.sessionID,
         messageID: props.messageID,
-        part: { id: props.partID, type: "text", messageID: props.messageID, text: props.delta },
+        part: { id: props.partID, type: partType, messageID: props.messageID, text: props.delta },
         delta: { type: "text-delta", textDelta: props.delta },
       }
     }

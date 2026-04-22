@@ -221,6 +221,7 @@ export type EventMessagePartDelta = {
     partID: string
     field: string
     delta: string
+    partType?: "text" | "reasoning" | "tool-call" | "tool-result" | "source-url" | "file"
   }
 }
 

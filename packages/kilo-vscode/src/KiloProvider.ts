@@ -1,3 +1,4 @@
+/* eslint-disable max-lines */
 import * as path from "path"
 import * as vscode from "vscode"
 import { buildPreviewPath, getPreviewCommand, getPreviewDir, parseImage, trimEntries } from "./image-preview"
@@ -1132,7 +1133,7 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
         if (state === "connected") {
           // Fire config warnings independently so a failure in the
           // sequential await chain doesn't prevent warnings from being shown
-          void this.checkConfigWarnings("state")
+          // void this.checkConfigWarnings("state")
           try {
             // Profile fetch is best-effort — returns 401 when user isn't logged into gateway.
             const sdkClient = this.client
@@ -1212,7 +1213,7 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
       // provider subscribes to onStateChange(). In that case the initial
       // connected callback is missed, so run the warning check here too.
       if (this.connectionState === "connected") {
-        void this.checkConfigWarnings("init")
+        // void this.checkConfigWarnings("init")
       }
 
       await this.syncWebviewState("initializeConnection")
@@ -2128,25 +2129,87 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
       const dir = this.getWorkspaceDirectory()
       console.log("[TestAgent] KiloProvider: checking config warnings", { from, dir })
       const result = await this.client.config.warnings({ directory: dir })
-      const list = result?.data ?? []
+      console.log("[TestAgent] KiloProvider: raw result:", JSON.stringify(result).substring(0, 500)) // testagent_change - debug raw result (truncated)
+      console.log(
+        "[TestAgent] KiloProvider: result.data type:",
+        typeof result?.data,
+        "isArray:",
+        Array.isArray(result?.data),
+      ) // testagent_change - debug type
+
+      // testagent_change start - ensure list is always an array
+      let list = result?.data ?? []
+      if (!Array.isArray(list)) {
+        console.warn("[TestAgent] KiloProvider: result.data is not an array, converting:", typeof list)
+        list = []
+      }
+      // testagent_change end
+
       console.log("[TestAgent] KiloProvider: config warnings fetched", { from, count: list.length })
       if (list.length === 0) return
       this.configWarningsShown = true
+
+      // testagent_change start - limit warnings to prevent overwhelming the output
+      const MAX_WARNINGS = 100
+      const displayList = list.length > MAX_WARNINGS ? list.slice(0, MAX_WARNINGS) : list
+      const truncated = list.length > MAX_WARNINGS
+      // testagent_change end
 
       const first = list[0]!
       const summary = list.length === 1 ? first.message : `${first.message} (and ${list.length - 1} more)`
       console.warn("[TestAgent] KiloProvider: showing config warnings", { from, count: list.length, path: first.path })
 
       const action = await vscode.window.showWarningMessage(`Config: ${summary}`, "Show Details")
+      console.log("[TestAgent] KiloProvider: user action:", JSON.stringify(action)) // testagent_change - debug exact value
       if (action === "Show Details") {
-        const lines = list.map((w) => {
-          const base = `${w.path}\n  ${w.message}`
-          return w.detail ? `${base}\n  ${w.detail}` : base
-        })
-        const channel = vscode.window.createOutputChannel("Kilo Config Warnings")
-        channel.clear()
-        channel.appendLine(lines.join("\n\n"))
-        channel.show()
+        console.log(
+          "[TestAgent] KiloProvider: creating output channel with",
+          displayList.length,
+          "warnings (total:",
+          list.length,
+          ")",
+        ) // testagent_change - debug
+        console.log(
+          "[TestAgent] KiloProvider: displayList is array?",
+          Array.isArray(displayList),
+          "sample:",
+          displayList[0],
+        ) // testagent_change - debug
+        try {
+          // testagent_change start - safe array handling
+          if (!Array.isArray(displayList)) {
+            console.error(
+              "[TestAgent] KiloProvider: displayList is not an array at show time:",
+              typeof displayList,
+              displayList,
+            )
+            vscode.window.showErrorMessage("Failed to display config warnings: invalid data format")
+            return
+          }
+          // testagent_change end
+
+          const lines = displayList.map((w) => {
+            const base = `${w.path}\n  ${w.message}`
+            return w.detail ? `${base}\n  ${w.detail}` : base
+          })
+
+          // testagent_change start - add truncation notice
+          if (truncated) {
+            lines.push(`\n... and ${list.length - MAX_WARNINGS} more warnings (showing first ${MAX_WARNINGS})`)
+          }
+          // testagent_change end
+
+          const channel = vscode.window.createOutputChannel("Kilo Config Warnings")
+          channel.clear()
+          channel.appendLine(lines.join("\n\n"))
+          console.log("[TestAgent] KiloProvider: showing output channel") // testagent_change - debug
+          channel.show(true) // testagent_change - preserveFocus=true to ensure visibility
+          console.log("[TestAgent] KiloProvider: output channel shown") // testagent_change - debug
+        } catch (channelErr) {
+          console.error("[TestAgent] KiloProvider: failed to show output channel:", channelErr) // testagent_change
+        }
+      } else {
+        console.log("[TestAgent] KiloProvider: user dismissed warning or action was:", action) // testagent_change
       }
     } catch (err) {
       console.warn("[TestAgent] KiloProvider: checkConfigWarnings failed:", { from, err })

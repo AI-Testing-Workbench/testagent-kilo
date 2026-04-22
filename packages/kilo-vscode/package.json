@@ -2,7 +2,7 @@
   "name": "testagent-tscode",
   "displayName": "TestAgent for TScode",
   "description": "TestAgent Code Extension",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "icon": "assets/icons/logo-outline-black.png",
   "galleryBanner": {
     "color": "#FFFFFF",
