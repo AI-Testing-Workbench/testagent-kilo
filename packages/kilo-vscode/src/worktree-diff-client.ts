@@ -1,5 +1,6 @@
 import type { KiloClient } from "@kilocode/sdk/v2/client"
 import type { GitOps } from "./agent-manager/GitOps"
+import { diffFile as localDiffFile } from "./agent-manager/local-diff" // testagent_change
 
 /**
  * A worktree diff target: the working directory and the base branch we diff
@@ -29,19 +30,19 @@ export class WorktreeDiffClient {
    * the right git strategy (added → delete, modified/deleted → checkout).
    * Returns `undefined` on error so callers can still attempt a best-effort
    * revert — `GitOps.revertFile` defaults to a modified-file strategy.
+   * 
+   * testagent_change start - use local-diff instead of HTTP to avoid timeout
    */
   async fileStatus(target: DiffTarget, file: string): Promise<Status | undefined> {
     try {
-      const { data } = await this.client.worktree.diffFile(
-        { directory: target.directory, base: target.baseBranch, file },
-        { throwOnError: true },
-      )
-      return data?.status
+      const result = await localDiffFile(this.git, target.directory, target.baseBranch, file, (...args) => this.log(...args))
+      return result?.status
     } catch (err) {
       this.log("Failed to look up file status for revert:", err)
       return undefined
     }
   }
+  // testagent_change end
 
   /**
    * Revert a single file in the worktree. Composes `fileStatus` + `GitOps.revertFile`.
