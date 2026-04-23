@@ -50,7 +50,7 @@ export async function handleRequestCloudSessions(
       nextCursor: result.data?.nextCursor ?? null,
     })
   } catch (error) {
-    console.error("[TestAgent] KiloProvider: Failed to fetch cloud sessions:", error)
+    console.error("[TestAgent]  Failed to fetch cloud sessions:", error)
     ctx.postMessage({
       type: "error",
       message: error instanceof Error ? error.message : "Failed to fetch cloud sessions",
@@ -141,7 +141,7 @@ export async function handleImportAndSend(
     })
     session = result.data as Session | undefined
   } catch (error) {
-    console.error("[TestAgent] KiloProvider: ❌ Cloud session import failed:", error)
+    console.error("[TestAgent]  ❌ Cloud session import failed:", error)
     ctx.postMessage({
       type: "cloudSessionImportFailed",
       cloudSessionId,

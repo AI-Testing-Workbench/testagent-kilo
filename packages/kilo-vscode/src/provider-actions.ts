@@ -62,7 +62,7 @@ export function buildActionContext(
       // Shared State.dispose() now has a hard per-disposer timeout, so this
       // wait is bounded without needing a client-side timeout here.
       await client.global.dispose().catch((error: unknown) => {
-        console.warn(`[TestAgent] KiloProvider: global.dispose() after ${reason} failed:`, error)
+        console.warn(`[TestAgent]  global.dispose() after ${reason} failed:`, error)
       })
     },
     fetchAndSendProviders: refresh,

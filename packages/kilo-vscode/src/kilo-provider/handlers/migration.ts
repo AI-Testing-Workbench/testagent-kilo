@@ -78,7 +78,7 @@ export async function checkAndShowMigrationWizard(ctx: MigrationContext): Promis
   // Cache so migrate() doesn't re-read from SecretStorage/disk
   ctx.cachedLegacyData = data
 
-  console.log("[TestAgent] KiloProvider: 🔄 Legacy data detected, showing migration wizard")
+  console.log("[TestAgent]  🔄 Legacy data detected, showing migration wizard")
   ctx.postMessage({
     type: "migrationState",
     needed: true,
@@ -138,7 +138,7 @@ export async function handleStartLegacyMigration(
     ctx.postMessage({ type: "legacyMigrationComplete", results })
   } catch (error) {
     ctx.lastMigrationHadErrors = true
-    console.error("[TestAgent] KiloProvider: ❌ Migration failed", error)
+    console.error("[TestAgent]  ❌ Migration failed", error)
     ctx.postMessage({
       type: "legacyMigrationComplete",
       results: [

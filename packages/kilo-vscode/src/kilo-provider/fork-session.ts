@@ -40,7 +40,7 @@ export async function handleForkSession(ctx: ForkContext, sessionId: string, mes
         ctx.forked(session)
       },
       registerSession: () => {},
-      log: (...args) => console.log("[TestAgent New] KiloProvider:", ...args),
+      log: (...args) => console.log("[TestAgent New] ", ...args),
     },
     sessionId,
     undefined,

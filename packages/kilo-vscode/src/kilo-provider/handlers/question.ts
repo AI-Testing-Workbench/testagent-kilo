@@ -48,7 +48,7 @@ export async function fetchAndSendPendingQuestions(ctx: QuestionContext): Promis
       }
     }
   } catch (error) {
-    console.error("[TestAgent New] KiloProvider: Failed to fetch pending questions:", error)
+    console.error("[TestAgent New]  Failed to fetch pending questions:", error)
   }
 }
 
@@ -73,7 +73,7 @@ export async function handleQuestionReply(
     )
     return true
   } catch (error) {
-    console.error("[TestAgent] KiloProvider: Failed to reply to question:", error)
+    console.error("[TestAgent]  Failed to reply to question:", error)
     ctx.postMessage({ type: "questionError", requestID })
     return false
   }
@@ -96,7 +96,7 @@ export async function handleQuestionReject(
     await ctx.client.question.reject({ requestID, directory: ctx.getWorkspaceDirectory(sid) }, { throwOnError: true })
     return true
   } catch (error) {
-    console.error("[TestAgent] KiloProvider: Failed to reject question:", error)
+    console.error("[TestAgent]  Failed to reject question:", error)
     ctx.postMessage({ type: "questionError", requestID })
     return false
   }
