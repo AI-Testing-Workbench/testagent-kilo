@@ -361,6 +361,14 @@ export type EventSessionError = {
   }
 }
 
+export type EventSessionInfo = {
+  type: "session.info"
+  properties: {
+    sessionID?: string
+    message: string
+  }
+}
+
 export type QuestionOption = {
   /**
    * Display text (1-5 words, concise)
@@ -1297,6 +1305,7 @@ export type GlobalEvent = {
     | EventPermissionReplied
     | EventSessionDiff
     | EventSessionError
+    | EventSessionInfo
     | EventQuestionAsked
     | EventQuestionReplied
     | EventQuestionRejected
@@ -2266,6 +2275,7 @@ export type Event =
   | EventPermissionReplied
   | EventSessionDiff
   | EventSessionError
+  | EventSessionInfo
   | EventQuestionAsked
   | EventQuestionReplied
   | EventQuestionRejected

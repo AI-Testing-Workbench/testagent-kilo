@@ -264,6 +264,13 @@ export namespace Session {
       }),
     ),
     // kilocode_change start
+    Info: BusEvent.define(
+      "session.info",
+      z.object({
+        sessionID: SessionID.zod.optional(),
+        message: z.string(),
+      }),
+    ),
     TurnOpen: KiloSession.Event.TurnOpen,
     TurnClose: KiloSession.Event.TurnClose,
     // kilocode_change end

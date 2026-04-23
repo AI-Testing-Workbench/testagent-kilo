@@ -30,12 +30,14 @@ export class WorktreeDiffClient {
    * the right git strategy (added → delete, modified/deleted → checkout).
    * Returns `undefined` on error so callers can still attempt a best-effort
    * revert — `GitOps.revertFile` defaults to a modified-file strategy.
-   * 
+   *
    * testagent_change start - use local-diff instead of HTTP to avoid timeout
    */
   async fileStatus(target: DiffTarget, file: string): Promise<Status | undefined> {
     try {
-      const result = await localDiffFile(this.git, target.directory, target.baseBranch, file, (...args) => this.log(...args))
+      const result = await localDiffFile(this.git, target.directory, target.baseBranch, file, (...args) =>
+        this.log(...args),
+      )
       return result?.status
     } catch (err) {
       this.log("Failed to look up file status for revert:", err)

@@ -397,6 +397,7 @@ export type WebviewMessage =
   | { type: "sessionUpdated"; session: ReturnType<typeof sessionToWebview> }
   | { type: "messageRemoved"; sessionID: string; messageID: string }
   | { type: "sessionError"; sessionID?: string; error?: unknown }
+  | { type: "sessionInfo"; sessionID?: string; message: string } // testagent_change
   | null
 
 export function mapSSEEventToWebviewMessage(event: Event, sessionID: string | undefined): WebviewMessage {
@@ -531,6 +532,15 @@ export function mapSSEEventToWebviewMessage(event: Event, sessionID: string | un
         error: event.properties.error,
       }
     }
+    // testagent_change start - handle session.info events
+    case "session.info": {
+      return {
+        type: "sessionInfo",
+        sessionID: event.properties.sessionID,
+        message: event.properties.message,
+      }
+    }
+    // testagent_change end
     case "session.created":
       return {
         type: "sessionCreated",

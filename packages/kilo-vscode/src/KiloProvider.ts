@@ -1118,6 +1118,10 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
           // for the busy-session warning on Save.
           if (event.type === "session.status") return true
 
+          // testagent_change start - session.info events should pass through (global notifications)
+          if (event.type === "session.info") return true
+          // testagent_change end
+
           return this.trackedSessionIds.has(sessionId)
         },
         (event) => {
@@ -3021,6 +3025,25 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
       }
       return
     }
+
+    // testagent_change start - handle session.info events to show VS Code notifications
+    if (event.type === "session.info") {
+      const message = event.properties.message as string
+      // Show info notification for plugin loading messages
+      if (message.includes("plugin") || message.includes("Plugin")) {
+        if (message.includes("✓") || message.includes("Successfully")) {
+          vscode.window.showInformationMessage(`TestAgent: ${message}`)
+        } else if (message.includes("Installing") || message.includes("Loading")) {
+          // Show as status bar message for less intrusive notifications
+          vscode.window.setStatusBarMessage(`TestAgent: ${message}`, 3000)
+        }
+      }
+      // Forward to webview as well
+      const msg = mapSSEEventToWebviewMessage(event, event.properties.sessionID as string | undefined)
+      if (msg) this.postMessage(msg)
+      return
+    }
+    // testagent_change end
 
     // Extract sessionID from the event
     if (event.type === "session.created" && this.adoptPendingFollowup(event.properties.info)) {
