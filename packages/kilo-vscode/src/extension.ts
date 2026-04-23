@@ -297,9 +297,11 @@ export function activate(context: vscode.ExtensionContext) {
 
       // testagent_change start - inject user ID into terminal env
       let userId: string | undefined
+      let userName: string | undefined
       try {
         const session = await vscode.authentication.getSession("tscode-oauth", [], { createIfNone: false })
         userId = session?.account.id
+        userName = session?.account.label
       } catch {
         // non-critical, ignore
       }
@@ -312,7 +314,7 @@ export function activate(context: vscode.ExtensionContext) {
           dark: vscode.Uri.file(context.asAbsolutePath("assets/icons/testagent_chat.png")),
         },
         location: { viewColumn: vscode.ViewColumn.Beside },
-        env: { TESTAGENT_CALLER: "vscode", ...(userId && { TESTAGENT_USER_ID: userId }) }, // testagent_change
+        env: { TESTAGENT_CALLER: "vscode", ...(userId && { TESTAGENT_USER_ID: userId }), ...(userName && { TESTAGENT_USER_NAME: userName }) }, // testagent_change
         // On Windows, use PowerShell so quoted paths with spaces work correctly
         ...(process.platform === "win32" && {
           shellPath: "powershell.exe",

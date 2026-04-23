@@ -66,9 +66,11 @@ export class ServerManager {
 
     // testagent_change start - fetch user ID before spawning so it's available immediately
     let userId: string | undefined
+    let userName: string | undefined
     try {
       const session = await vscode.authentication.getSession("tscode-oauth", [], { createIfNone: false })
       userId = session?.account.id
+      userName = session?.account.label
     } catch {
       // non-critical, ignore
     }
@@ -105,6 +107,7 @@ export class ServerManager {
           KILOCODE_EDITOR_NAME: `${vscode.env.appName} ${vscode.version}`,
           ...(!claudeCompat && { KILO_DISABLE_CLAUDE_CODE: "true" }),
           ...(userId && { TESTAGENT_USER_ID: userId }), // testagent_change
+          ...(userName && { TESTAGENT_USER_NAME: userName }), // testagent_change
         },
         stdio: ["ignore", "pipe", "pipe"],
         detached: true,
