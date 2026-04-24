@@ -133,6 +133,24 @@ export class ServerManager {
         const errorOutput = data.toString()
         console.error("[TestAgent] ServerManager: ⚠️ CLI Server stderr:", errorOutput)
         stderrLines.push(errorOutput)
+
+        // testagent_change start - parse plugin notifications from stderr
+        const notificationMatch = errorOutput.match(/\[TESTAGENT_NOTIFICATION\] (.+)/)
+        if (notificationMatch) {
+          try {
+            const notification = JSON.parse(notificationMatch[1])
+            if (notification.type === "plugin-notification") {
+              if (notification.level === "info") {
+                vscode.window.showInformationMessage(`TestAgent: ${notification.message}`)
+              } else if (notification.level === "error") {
+                vscode.window.showErrorMessage(`TestAgent: ${notification.message}`)
+              }
+            }
+          } catch (err) {
+            console.error("[TestAgent] ServerManager: Failed to parse notification:", err)
+          }
+        }
+        // testagent_change end
       })
 
       serverProcess.on("error", (error) => {
