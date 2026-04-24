@@ -252,15 +252,7 @@
         "title": "Agent Manager: Jump to Item 9",
         "category": "TestAgent"
       },
-      {
-        "command": "testagent.new.generateCommitMessage",
-        "title": "Generate Commit Message",
-        "category": "TestAgent",
-        "icon": {
-          "light": "assets/icons/kilo-light.png",
-          "dark": "assets/icons/kilo-dark.png"
-        }
-      },
+
       {
         "command": "testagent.new.explainCode",
         "title": "Explain Code",
@@ -325,10 +317,7 @@
         "command": "testagent.new.openTestagentTerminal",
         "title": "打开TestAgent终端",
         "category": "TestAgent",
-        "icon": {
-          "light": "assets/icons/testagent_chat.png",
-          "dark": "assets/icons/testagent_chat.png"
-        }
+        "icon": "${terminal}"
       }
     ],
     "submenus": [
@@ -374,20 +363,7 @@
           "when": "view == testagent.SidebarProvider"
         }
       ],
-      "scm/title": [
-        {
-          "command": "testagent.new.generateCommitMessage",
-          "group": "navigation",
-          "when": "scmProvider == git"
-        }
-      ],
-      "scm/input": [
-        {
-          "command": "testagent.new.generateCommitMessage",
-          "group": "navigation",
-          "when": "scmProvider == git"
-        }
-      ],
+
       "editor/title": [
         {
           "command": "testagent.new.plusButtonClicked",

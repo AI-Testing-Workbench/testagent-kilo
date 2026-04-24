@@ -1,5 +1,6 @@
 import * as vscode from "vscode"
 import * as path from "path"
+import * as net from "net" // testagent_change - import net at top level
 import { KiloProvider } from "./KiloProvider"
 import { AgentManagerProvider } from "./agent-manager/AgentManagerProvider"
 import { VscodeHost } from "./agent-manager/vscode-host"
@@ -291,28 +292,51 @@ export function activate(context: vscode.ExtensionContext) {
     //   return openKiloInNewTab(context, connectionService, agentManagerProvider, tabPanels)
     // }),
     vscode.commands.registerCommand("testagent.new.openTestagentTerminal", async () => {
-      const port = Math.floor(Math.random() * (65535 - 16384 + 1)) + 16384
+      const port = 16384 // testagent_change - fixed port
 
-      const binName = process.platform === "win32" ? "testagent.exe" : "testagent"
-      const cliPath = path.join(context.extensionPath, "bin", binName)
-
-      const existingTerminal = vscode.window.terminals.find((t) => t.name === "testagent")
-      if (existingTerminal) {
-        existingTerminal.dispose()
+      // testagent_change start - check if CLI is already running on this port
+      console.log("[TestAgent] Checking if port", port, "is in use...")
+      const isPortInUse = await checkPortInUse(port)
+      console.log("[TestAgent] Port", port, "in use:", isPortInUse)
+      
+      if (isPortInUse) {
+        // Port is in use, show error and don't create/show terminal
+        console.log("[TestAgent] Showing error message: CLI already running")
+        vscode.window.showErrorMessage("TestAgent CLI 已启动")
+        return
       }
-
-      // testagent_change start - inject user ID into terminal env
-      let userId: string | undefined
-      let userName: string | undefined
-      try {
-        const session = await vscode.authentication.getSession("tscode-oauth", [], { createIfNone: false })
-        userId = session?.account.id
-        userName = session?.account.label
-      } catch {
-        // non-critical, ignore
+      
+      // Check if terminal already exists
+      const existingTerminal = vscode.window.terminals.find((t) => t.name === "testagent")
+      console.log("[TestAgent] Existing terminal found:", !!existingTerminal)
+      if (existingTerminal) {
+        // Terminal exists, just show it (don't create a new one)
+        console.log("[TestAgent] Showing existing terminal")
+        existingTerminal.show()
+        return
       }
       // testagent_change end
 
+      console.log("[TestAgent] Creating new terminal...")
+      const binName = process.platform === "win32" ? "testagent.exe" : "testagent"
+      const cliPath = path.join(context.extensionPath, "bin", binName)
+
+      // testagent_change start - inject user ID into terminal env (non-blocking)
+      let userId: string | undefined
+      let userName: string | undefined
+      
+      // Don't wait for auth - get it in background and create terminal immediately
+      const authPromise = (async () => {
+        try {
+          const session = await vscode.authentication.getSession("tscode-oauth", [], { createIfNone: false })
+          userId = session?.account.id
+          userName = session?.account.label
+        } catch {
+          // non-critical, ignore
+        }
+      })()
+      
+      // Create terminal immediately without waiting for auth
       const terminal = vscode.window.createTerminal({
         name: "testagent",
         iconPath: {
@@ -320,7 +344,7 @@ export function activate(context: vscode.ExtensionContext) {
           dark: vscode.Uri.file(context.asAbsolutePath("assets/icons/testagent_chat.png")),
         },
         location: { viewColumn: vscode.ViewColumn.Beside },
-        env: { TESTAGENT_CALLER: "vscode", ...(userId && { TESTAGENT_USER_ID: userId }), ...(userName && { TESTAGENT_USER_NAME: userName }) }, // testagent_change
+        env: { TESTAGENT_CALLER: "vscode" }, // testagent_change - start with basic env
         // On Windows, use PowerShell so quoted paths with spaces work correctly
         ...(process.platform === "win32" && {
           shellPath: "powershell.exe",
@@ -329,7 +353,23 @@ export function activate(context: vscode.ExtensionContext) {
       })
 
       terminal.show()
-      terminal.sendText(`& "${cliPath}" --port ${port}`)
+      
+      // Wait for auth to complete, then send command with env vars if available
+      await authPromise
+      
+      let command = `& "${cliPath}" --port ${port}`
+      if (userId) {
+        // On Windows PowerShell, use $env: syntax; on Unix shells, use export
+        if (process.platform === "win32") {
+          command = `$env:TESTAGENT_USER_ID="${userId}"; ${userName ? `$env:TESTAGENT_USER_NAME="${userName}"; ` : ""}${command}`
+        } else {
+          command = `TESTAGENT_USER_ID="${userId}" ${userName ? `TESTAGENT_USER_NAME="${userName}" ` : ""}${command}`
+        }
+      }
+      
+      terminal.sendText(command)
+      console.log("[TestAgent] Terminal created and command sent")
+      // testagent_change end
     }),
     vscode.commands.registerCommand("testagent.new.showChanges", () => {
       diffViewerProvider.openPanel()
@@ -547,3 +587,46 @@ function waitForWebviewPanelToBeActive(panel: vscode.WebviewPanel): Promise<void
     })
   })
 }
+
+// testagent_change start - check if port is in use
+async function checkPortInUse(port: number): Promise<boolean> {
+  return new Promise((resolve) => {
+    const server = net.createServer()
+    
+    server.once("error", (err: NodeJS.ErrnoException) => {
+      if (err.code === "EADDRINUSE") {
+        resolve(true)
+      } else {
+        resolve(false)
+      }
+    })
+    
+    server.once("listening", () => {
+      server.close(() => {
+        resolve(false)
+      })
+    })
+    
+    // Set a timeout to prevent hanging
+    const timeout = setTimeout(() => {
+      try {
+        server.close()
+      } catch {
+        // ignore
+      }
+      resolve(false)
+    }, 500)
+    
+    server.on("close", () => {
+      clearTimeout(timeout)
+    })
+    
+    try {
+      server.listen(port, "127.0.0.1")
+    } catch {
+      clearTimeout(timeout)
+      resolve(false)
+    }
+  })
+}
+// testagent_change end
