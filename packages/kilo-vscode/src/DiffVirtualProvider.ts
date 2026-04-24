@@ -24,7 +24,7 @@ export class DiffVirtualProvider implements vscode.Disposable {
     private readonly extensionUri: vscode.Uri,
     private readonly connectionService: import("./services/cli-backend").KiloConnectionService, // testagent_change
   ) {
-    this.outputChannel = vscode.window.createOutputChannel("TestAgent Diff Virtual")
+    this.outputChannel = vscode.window.createOutputChannel("Kilo Diff Virtual")
   }
 
   private log(...args: unknown[]) {

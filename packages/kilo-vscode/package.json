@@ -82,27 +82,27 @@
     "commands": [
       {
         "command": "testagent.new.plusButtonClicked",
-        "title": "新建任务",
+        "title": "New Task",
         "icon": "$(add)"
       },
       {
         "command": "testagent.new.agentManagerOpen",
-        "title": "Agent管理",
+        "title": "Agent Manager",
         "icon": "$(circuit-board)"
       },
       {
         "command": "testagent.new.marketplaceButtonClicked",
-        "title": "工具仓库",
+        "title": "Marketplace",
         "icon": "$(extensions)"
       },
       {
         "command": "testagent.new.historyButtonClicked",
-        "title": "历史会话",
+        "title": "History",
         "icon": "$(history)"
       },
       {
         "command": "testagent.new.settingsButtonClicked",
-        "title": "设置",
+        "title": "Settings",
         "icon": "$(settings-gear)"
       },
       {
@@ -323,7 +323,7 @@
       },
       {
         "command": "testagent.new.openTestagentTerminal",
-        "title": "打开TestAgent终端",
+        "title": "Open TestAgent Terminal",
         "category": "TestAgent",
         "icon": {
           "light": "assets/icons/testagent_chat.png",
@@ -344,23 +344,18 @@
     "menus": {
       "view/title": [
         {
-          "command": "testagent.new.openTestagentTerminal",
+          "command": "testagent.new.plusButtonClicked",
           "group": "navigation@0",
           "when": "view == testagent.SidebarProvider"
         },
         {
-          "command": "testagent.new.plusButtonClicked",
+          "command": "testagent.new.historyButtonClicked",
           "group": "navigation@1",
           "when": "view == testagent.SidebarProvider"
         },
         {
-          "command": "testagent.new.historyButtonClicked",
-          "group": "navigation@2",
-          "when": "view == testagent.SidebarProvider"
-        },
-        {
           "command": "testagent.new.agentManagerOpen",
-          "group": "navigation@3",
+          "group": "navigation@2",
           "when": "view == testagent.SidebarProvider"
         },
         {
@@ -370,7 +365,7 @@
         },
         {
           "command": "testagent.new.settingsButtonClicked",
-          "group": "navigation@5",
+          "group": "navigation@6",
           "when": "view == testagent.SidebarProvider"
         }
       ],
@@ -389,6 +384,11 @@
         }
       ],
       "editor/title": [
+        {
+          "command": "testagent.new.openTestagentTerminal",
+          "group": "navigation@0",
+          "when": "editorIsOpen"
+        },
         {
           "command": "testagent.new.plusButtonClicked",
           "group": "navigation@0",
