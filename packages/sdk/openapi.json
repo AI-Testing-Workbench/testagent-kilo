@@ -11024,6 +11024,10 @@
               },
               "delta": {
                 "type": "string"
+              },
+              "partType": {
+                "type": "string",
+                "enum": ["text", "reasoning", "tool-call", "tool-result", "source-url", "file"]
               }
             },
             "required": ["sessionID", "messageID", "partID", "field", "delta"]
