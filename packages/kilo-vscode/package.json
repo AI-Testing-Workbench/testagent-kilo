@@ -317,7 +317,7 @@
         "command": "testagent.new.openTestagentTerminal",
         "title": "打开TestAgent终端",
         "category": "TestAgent",
-        "icon": "${terminal}"
+        "icon": "$(terminal)"
       }
     ],
     "submenus": [
