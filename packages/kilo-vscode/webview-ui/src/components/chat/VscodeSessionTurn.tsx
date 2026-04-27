@@ -301,7 +301,8 @@ export const VscodeSessionTurn: Component<VscodeSessionTurnProps> = (props) => {
                   </svg>
                 </Tooltip>
               </span>
-               <span
+              {/* testagent_change 注释继续 */}
+               {/* <span
                 onClick={() => {
                   const sel = session.selected()
                   session.sendMessage("继续", sel?.providerID, sel?.modelID)
@@ -311,7 +312,7 @@ export const VscodeSessionTurn: Component<VscodeSessionTurnProps> = (props) => {
                 <Tooltip value={"继续"} placement="top">
                   <svg viewBox="0 0 48 48" fill="none" xmlns="http://www.w3.org/2000/svg" stroke="currentColor" stroke-width="4" width="16" height="16"><path d="M14 24L7 19V7L41 24L7 41V29L14 24ZM14 24H39" stroke-miterlimit="3.8637" stroke-linecap="butt"></path></svg>
                 </Tooltip>
-              </span>
+              </span> */}
             </div>
           </Show>
         </div>
