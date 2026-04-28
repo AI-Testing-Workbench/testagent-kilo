@@ -44,7 +44,7 @@ export function useSlashCommand(vscode: VSCodeContext, exclude?: Set<string>): S
   const all: SlashCommandEntry[] = [
     {
       name: "new",
-      description: "Start a new session",
+      description: "开始新会话",
       hints: ["clear"],
       action: () => {
         window.dispatchEvent(new CustomEvent("newTaskRequest"))
@@ -53,7 +53,7 @@ export function useSlashCommand(vscode: VSCodeContext, exclude?: Set<string>): S
     },
     {
       name: "sessions",
-      description: "Switch to another session",
+      description: "切换到其他会话",
       hints: ["resume", "continue", "history"],
       action: () => {
         window.postMessage({ type: "navigate", view: "history" }, "*")
@@ -61,7 +61,7 @@ export function useSlashCommand(vscode: VSCodeContext, exclude?: Set<string>): S
     },
     {
       name: "models",
-      description: "Switch the AI model",
+      description: "切换 AI 模型",
       hints: [],
       action: () => {
         window.dispatchEvent(new CustomEvent("openModelPicker"))
@@ -69,7 +69,7 @@ export function useSlashCommand(vscode: VSCodeContext, exclude?: Set<string>): S
     },
     {
       name: "agents",
-      description: "Switch the agent mode",
+      description: "切换 Agent 模式",
       hints: ["modes"],
       action: () => {
         window.dispatchEvent(new CustomEvent("openModePicker"))
@@ -77,7 +77,7 @@ export function useSlashCommand(vscode: VSCodeContext, exclude?: Set<string>): S
     },
     {
       name: "help",
-      description: "Open help documentation",
+      description: "打开帮助文档",
       hints: [],
       // action: () => {
       //   vscode.postMessage({ type: "openExternal", url: "https://kilo.ai/docs" })
@@ -85,7 +85,7 @@ export function useSlashCommand(vscode: VSCodeContext, exclude?: Set<string>): S
     },
     {
       name: "compact",
-      description: "Summarize and compact the session",
+      description: "总结并压缩当前会话",
       hints: ["smol", "condense"],
       action: () => {
         window.dispatchEvent(new CustomEvent("compactSession"))
@@ -93,7 +93,7 @@ export function useSlashCommand(vscode: VSCodeContext, exclude?: Set<string>): S
     },
     {
       name: "settings",
-      description: "Open settings",
+      description: "打开设置",
       hints: [],
       action: () => {
         vscode.postMessage({ type: "openSettingsPanel" })
@@ -101,10 +101,18 @@ export function useSlashCommand(vscode: VSCodeContext, exclude?: Set<string>): S
     },
     {
       name: "remote",
-      description: "Toggle remote control",
+      description: "切换远程控制",
       hints: [],
       action: () => {
         vscode.postMessage({ type: "toggleRemote" })
+      },
+    },
+    {
+      name: "restart",
+      description: "重启 CLI 后端（重新加载 skills 和 plugins）",
+      hints: [],
+      action: () => {
+        vscode.postMessage({ type: "restartServer" })
       },
     },
   ]

@@ -854,12 +854,10 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
         case "toggleRemote":
         case "setRemoteEnabled":
         case "requestRemoteStatus":
-          this.remoteService
-            ?.handleMessage(message.type, message.enabled)
-            .then((s) => {
-              if (s) this.sendRemoteStatus()
-            })
-            .catch((err) => console.error("[TestAgent] remote message failed:", err))
+          this.handleRemoteMessage(message.type, message.enabled)
+          break
+        case "restartServer":
+          void this.handleRestartServer()
           break
         case "deleteSession":
           await this.handleDeleteSession(message.sessionID)
@@ -2977,6 +2975,25 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
       type: "claudeCompatSettingLoaded",
       enabled: enabled ?? false,
     })
+  }
+
+  /** Restart the CLI backend process and reconnect. */
+  private async handleRestartServer(): Promise<void> {
+    this.postMessage({ type: "connectionState", state: "connecting" })
+    try {
+      await this.connectionService.restart(this.getWorkspaceDirectory())
+    } catch (e) {
+      console.error("[TestAgent] restartServer failed:", e)
+    }
+  }
+
+  private handleRemoteMessage(type: string, enabled?: boolean): void {
+    this.remoteService
+      ?.handleMessage(type, enabled)
+      .then((s) => {
+        if (s) this.sendRemoteStatus()
+      })
+      .catch((err) => console.error("[TestAgent] remote message failed:", err))
   }
 
   /** Re-fetch all server-side state after an auth change. */

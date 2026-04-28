@@ -2338,6 +2338,10 @@ export interface RetryConnectionRequest {
   type: "retryConnection"
 }
 
+export interface RestartServerRequest {
+  type: "restartServer"
+}
+
 // Open a sub-agent session in a read-only editor panel
 export interface OpenSubAgentViewerRequest {
   type: "openSubAgentViewer"
@@ -2683,6 +2687,7 @@ export type WebviewMessage =
   | ToggleSectionCollapsedRequest
   | MoveToSectionRequest
   | MoveSectionRequest
+  | RestartServerRequest
 
 // ============================================
 // VS Code API type

@@ -484,6 +484,19 @@ export class KiloConnectionService {
   /**
    * Clean up everything: kill server, close SSE, clear listeners.
    */
+  async restart(workspaceDir: string): Promise<void> {
+    this.stopHealthPoll()
+    this.sseClient?.dispose()
+    this.serverManager.dispose()
+    this.sseClient = null
+    this.client = null
+    this.config = null
+    this.info = null
+    this.connectPromise = null
+    this.setState("connecting")
+    await this.connect(workspaceDir)
+  }
+
   dispose(): void {
     this.stopHealthPoll()
     this.sseClient?.dispose()
