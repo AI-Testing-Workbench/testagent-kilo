@@ -2,7 +2,7 @@
   "name": "testagent-tscode",
   "displayName": "TestAgent for TScode",
   "description": "TestAgent Code Extension",
-  "version": "1.0.2",
+  "version": "1.0.3",
   "icon": "assets/icons/logo-outline-black.png",
   "galleryBanner": {
     "color": "#FFFFFF",
@@ -302,8 +302,7 @@
         "command": "testagent.new.generateTerminalCommand",
         "title": "Generate Terminal Command",
         "category": "TestAgent"
-      },
-      
+      }
     ],
     "submenus": [
       {

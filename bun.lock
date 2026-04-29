@@ -131,7 +131,7 @@
     },
     "packages/kilo-vscode": {
       "name": "testagent-tscode",
-      "version": "1.0.0",
+      "version": "1.0.2",
       "dependencies": {
         "@anthropic-ai/sdk": "^0.39.0",
         "@kilocode/kilo-i18n": "workspace:*",

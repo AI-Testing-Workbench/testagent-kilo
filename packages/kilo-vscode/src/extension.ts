@@ -32,7 +32,7 @@ export function activate(context: vscode.ExtensionContext) {
   console.log("TestAgent extension is now active")
 
   // Add CLI to PATH on first activation (Windows only)
-  void ensureCliInPath(context)
+  // void ensureCliInPath(context)
 
   const telemetry = TelemetryProxy.getInstance()
 
