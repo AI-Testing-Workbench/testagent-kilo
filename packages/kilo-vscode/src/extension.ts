@@ -242,9 +242,10 @@ export function activate(context: vscode.ExtensionContext) {
     vscode.commands.registerCommand("testagent.new.agentManagerOpen", () => {
       agentManagerProvider.openPanel()
     }),
-    vscode.commands.registerCommand("testagent.new.marketplaceButtonClicked", (directory?: string) => {
-      settingsEditorProvider.openPanel("marketplace", undefined, directory)
-    }),
+    //testagent_change 注释
+    // vscode.commands.registerCommand("testagent.new.marketplaceButtonClicked", (directory?: string) => {
+    //   settingsEditorProvider.openPanel("marketplace", undefined, directory)
+    // }),
     // testagent_change - KiloClaw disabled
     // vscode.commands.registerCommand("testagent.new.kiloClawOpen", () => {
     //   kiloClawProvider.openPanel()

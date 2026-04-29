@@ -950,7 +950,7 @@ export const dict = {
 
   "session.messages.empty": "在下方输入消息以开始对话。",
   "session.messages.welcome":
-    "TestAgent是一个AI辅助测试助手，它可以帮助你分析测试项目，梳理测试点，生成自动化测试脚本，同时支持自定义插件拓展功能。",
+    "测小智TestAgent",
   "session.messages.scrollToBottom": "滚动到底部",
   "session.messages.initializing": "初始化中...",
   "session.messages.taskStarting": "启动中...",

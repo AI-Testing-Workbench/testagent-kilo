@@ -91,11 +91,6 @@
         "icon": "$(circuit-board)"
       },
       {
-        "command": "testagent.new.marketplaceButtonClicked",
-        "title": "工具仓库",
-        "icon": "$(extensions)"
-      },
-      {
         "command": "testagent.new.historyButtonClicked",
         "title": "历史会话",
         "icon": "$(history)"
