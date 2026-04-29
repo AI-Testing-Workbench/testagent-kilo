@@ -86,11 +86,6 @@
         "icon": "$(add)"
       },
       {
-        "command": "testagent.new.agentManagerOpen",
-        "title": "Agent管理",
-        "icon": "$(circuit-board)"
-      },
-      {
         "command": "testagent.new.historyButtonClicked",
         "title": "历史会话",
         "icon": "$(history)"
@@ -333,23 +328,11 @@
           "when": "view == testagent.SidebarProvider"
         },
         {
-          "command": "testagent.new.agentManagerOpen",
-          "group": "navigation@2",
-          "when": "view == testagent.SidebarProvider"
-        },
-        {
-          "command": "testagent.new.marketplaceButtonClicked",
-          "group": "navigation@3",
-          "when": "view == testagent.SidebarProvider"
-        },
-         
-        {
           "command": "testagent.new.settingsButtonClicked",
           "group": "navigation@5",
           "when": "view == testagent.SidebarProvider"
         }
       ],
-
       "editor/title": [
         {
           "command": "testagent.new.plusButtonClicked",
@@ -428,148 +411,12 @@
         "key": "ctrl+shift+g",
         "mac": "cmd+shift+g"
       },
-      {
-        "command": "testagent.new.agentManagerOpen",
-        "key": "ctrl+shift+m",
-        "mac": "cmd+shift+m"
-      },
+      
       {
         "command": "testagent.new.addToContext",
         "key": "ctrl+k ctrl+a",
         "mac": "cmd+k cmd+a",
         "when": "editorTextFocus && editorHasSelection"
-      },
-      {
-        "command": "testagent.new.agentManager.previousSession",
-        "key": "ctrl+alt+up",
-        "mac": "cmd+alt+up",
-        "when": "activeWebviewPanelId == 'testagent.new.AgentManagerPanel'"
-      },
-      {
-        "command": "testagent.new.agentManager.nextSession",
-        "key": "ctrl+alt+down",
-        "mac": "cmd+alt+down",
-        "when": "activeWebviewPanelId == 'testagent.new.AgentManagerPanel'"
-      },
-      {
-        "command": "testagent.new.agentManager.previousTab",
-        "key": "ctrl+alt+left",
-        "mac": "cmd+alt+left",
-        "when": "activeWebviewPanelId == 'testagent.new.AgentManagerPanel'"
-      },
-      {
-        "command": "testagent.new.agentManager.nextTab",
-        "key": "ctrl+alt+right",
-        "mac": "cmd+alt+right",
-        "when": "activeWebviewPanelId == 'testagent.new.AgentManagerPanel'"
-      },
-      {
-        "command": "testagent.new.agentManager.showTerminal",
-        "key": "ctrl+/",
-        "mac": "cmd+/",
-        "when": "activeWebviewPanelId == 'testagent.new.AgentManagerPanel'"
-      },
-      {
-        "command": "testagent.new.agentManager.runScript",
-        "key": "ctrl+e",
-        "mac": "cmd+e",
-        "when": "activeWebviewPanelId == 'testagent.new.AgentManagerPanel' && (isMac || !terminalFocus)"
-      },
-      {
-        "command": "testagent.new.agentManager.toggleDiff",
-        "key": "ctrl+d",
-        "mac": "cmd+d",
-        "when": "activeWebviewPanelId == 'testagent.new.AgentManagerPanel'"
-      },
-      {
-        "command": "testagent.new.agentManager.showShortcuts",
-        "key": "ctrl+shift+/",
-        "mac": "cmd+shift+/",
-        "when": "activeWebviewPanelId == 'testagent.new.AgentManagerPanel'"
-      },
-      {
-        "command": "testagent.new.agentManager.newTab",
-        "key": "ctrl+t",
-        "mac": "cmd+t",
-        "when": "activeWebviewPanelId == 'testagent.new.AgentManagerPanel'"
-      },
-      {
-        "command": "testagent.new.agentManager.closeTab",
-        "key": "ctrl+w",
-        "mac": "cmd+w",
-        "when": "activeWebviewPanelId == 'testagent.new.AgentManagerPanel'"
-      },
-      {
-        "command": "testagent.new.agentManager.openWorktree",
-        "key": "ctrl+shift+o",
-        "mac": "cmd+shift+o",
-        "when": "activeWebviewPanelId == 'testagent.new.AgentManagerPanel'"
-      },
-      {
-        "command": "testagent.new.agentManager.closeWorktree",
-        "key": "ctrl+shift+w",
-        "mac": "cmd+shift+w",
-        "when": "activeWebviewPanelId == 'testagent.new.AgentManagerPanel'"
-      },
-      {
-        "command": "testagent.new.agentManager.advancedWorktree",
-        "key": "ctrl+shift+n",
-        "mac": "cmd+shift+n",
-        "when": "activeWebviewPanelId == 'testagent.new.AgentManagerPanel'"
-      },
-      {
-        "command": "testagent.new.agentManager.jumpTo1",
-        "key": "ctrl+1",
-        "mac": "cmd+1",
-        "when": "activeWebviewPanelId == 'testagent.new.AgentManagerPanel'"
-      },
-      {
-        "command": "testagent.new.agentManager.jumpTo2",
-        "key": "ctrl+2",
-        "mac": "cmd+2",
-        "when": "activeWebviewPanelId == 'testagent.new.AgentManagerPanel'"
-      },
-      {
-        "command": "testagent.new.agentManager.jumpTo3",
-        "key": "ctrl+3",
-        "mac": "cmd+3",
-        "when": "activeWebviewPanelId == 'testagent.new.AgentManagerPanel'"
-      },
-      {
-        "command": "testagent.new.agentManager.jumpTo4",
-        "key": "ctrl+4",
-        "mac": "cmd+4",
-        "when": "activeWebviewPanelId == 'testagent.new.AgentManagerPanel'"
-      },
-      {
-        "command": "testagent.new.agentManager.jumpTo5",
-        "key": "ctrl+5",
-        "mac": "cmd+5",
-        "when": "activeWebviewPanelId == 'testagent.new.AgentManagerPanel'"
-      },
-      {
-        "command": "testagent.new.agentManager.jumpTo6",
-        "key": "ctrl+6",
-        "mac": "cmd+6",
-        "when": "activeWebviewPanelId == 'testagent.new.AgentManagerPanel'"
-      },
-      {
-        "command": "testagent.new.agentManager.jumpTo7",
-        "key": "ctrl+7",
-        "mac": "cmd+7",
-        "when": "activeWebviewPanelId == 'testagent.new.AgentManagerPanel'"
-      },
-      {
-        "command": "testagent.new.agentManager.jumpTo8",
-        "key": "ctrl+8",
-        "mac": "cmd+8",
-        "when": "activeWebviewPanelId == 'testagent.new.AgentManagerPanel'"
-      },
-      {
-        "command": "testagent.new.agentManager.jumpTo9",
-        "key": "ctrl+9",
-        "mac": "cmd+9",
-        "when": "activeWebviewPanelId == 'testagent.new.AgentManagerPanel'"
       },
       {
         "command": "testagent.new.cycleAgentMode",
