@@ -328,27 +328,27 @@
     "menus": {
       "view/title": [
         {
-          "command": "testagent.new.openTestagentTerminal",
+          "command": "testagent.new.plusButtonClicked",
           "group": "navigation@0",
           "when": "view == testagent.SidebarProvider"
         },
         {
-          "command": "testagent.new.plusButtonClicked",
+          "command": "testagent.new.historyButtonClicked",
           "group": "navigation@1",
           "when": "view == testagent.SidebarProvider"
         },
         {
-          "command": "testagent.new.historyButtonClicked",
+          "command": "testagent.new.agentManagerOpen",
           "group": "navigation@2",
           "when": "view == testagent.SidebarProvider"
         },
         {
-          "command": "testagent.new.agentManagerOpen",
+          "command": "testagent.new.marketplaceButtonClicked",
           "group": "navigation@3",
           "when": "view == testagent.SidebarProvider"
         },
-        {
-          "command": "testagent.new.marketplaceButtonClicked",
+         {
+          "command": "testagent.new.openTestagentTerminal",
           "group": "navigation@4",
           "when": "view == testagent.SidebarProvider"
         },

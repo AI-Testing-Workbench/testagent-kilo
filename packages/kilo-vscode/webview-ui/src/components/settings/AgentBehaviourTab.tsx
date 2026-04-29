@@ -577,9 +577,9 @@ const AgentBehaviourTab: Component = () => {
             "margin-bottom": "8px",
           }}
         >
-          <Button variant="secondary" size="small" onClick={browse}>
+          {/* <Button variant="secondary" size="small" onClick={browse}>
             {language.t("settings.agentBehaviour.mcpBrowseMarketplace")}
-          </Button>
+          </Button> */}
         </div>
         <Show
           when={mcpEntries().length > 0}
@@ -792,9 +792,9 @@ const AgentBehaviourTab: Component = () => {
           "margin-bottom": "8px",
         }}
       >
-        <Button variant="secondary" size="small" onClick={browse}>
+        {/* <Button variant="secondary" size="small" onClick={browse}>
           {language.t("settings.agentBehaviour.mcpBrowseMarketplace")}
-        </Button>
+        </Button> */}
       </div>
       {/* Discovered skills */}
       <h4 style={{ "margin-top": "0", "margin-bottom": "8px" }}>
