@@ -308,12 +308,7 @@
         "title": "Generate Terminal Command",
         "category": "TestAgent"
       },
-      {
-        "command": "testagent.new.openTestagentTerminal",
-        "title": "打开TestAgent终端",
-        "category": "TestAgent",
-        "icon": "$(terminal)"
-      }
+      
     ],
     "submenus": [
       {
@@ -347,11 +342,7 @@
           "group": "navigation@3",
           "when": "view == testagent.SidebarProvider"
         },
-         {
-          "command": "testagent.new.openTestagentTerminal",
-          "group": "navigation@4",
-          "when": "view == testagent.SidebarProvider"
-        },
+         
         {
           "command": "testagent.new.settingsButtonClicked",
           "group": "navigation@5",

@@ -7,14 +7,15 @@ TestAgent是一个AI辅助测试助手，它可以帮助你分析测试项目，
 拉取子目录依赖 && 安装依赖
 
 ```bash
+# 初始化并更新所有 submodule
 git submodule update --init --recursive
 
-
+# 安装根目录依赖
 bun install
 
-// git submodule依赖安装
+# 安装 submodule 依赖
 bun install --cwd packages/testagent-opencode
-
+bun install --cwd packages/testagent-core
 ```
 
 在项目根目录执行：
