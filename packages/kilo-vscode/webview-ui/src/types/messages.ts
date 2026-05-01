@@ -490,6 +490,7 @@ export interface ReadyMessage {
   vscodeLanguage?: string
   languageOverride?: string
   workspaceDirectory?: string
+  userId?: string // testagent_change
 }
 
 export interface GitStatusMessage {

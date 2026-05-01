@@ -1199,6 +1199,15 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
 
       if (serverInfo) {
         const langConfig = vscode.workspace.getConfiguration("testagent.new")
+        // testagent_change start - include userId in ready message
+        let userId: string | undefined
+        try {
+          const session = await vscode.authentication.getSession("tscode-oauth", [], { createIfNone: false })
+          userId = session?.account.id
+        } catch {
+          // non-critical
+        }
+        // testagent_change end
         this.postMessage({
           type: "ready",
           serverInfo,
@@ -1206,6 +1215,7 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
           vscodeLanguage: vscode.env.language,
           languageOverride: langConfig.get<string>("language"),
           workspaceDirectory: this.getProjectDirectory(this.currentSession?.id),
+          userId, // testagent_change
         })
       }
 

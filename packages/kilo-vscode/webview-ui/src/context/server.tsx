@@ -21,6 +21,7 @@ interface ServerContextValue {
   languageOverride: Accessor<string | undefined>
   workspaceDirectory: Accessor<string>
   gitInstalled: Accessor<boolean>
+  userId: Accessor<string | undefined> // testagent_change
 }
 
 export const ServerContext = createContext<ServerContextValue>()
@@ -41,30 +42,32 @@ export const ServerProvider: ParentComponent = (props) => {
   const [languageOverride, setLanguageOverride] = createSignal<string | undefined>()
   const [workspaceDirectory, setWorkspaceDirectory] = createSignal<string>("")
   const [gitInstalled, setGitInstalled] = createSignal<boolean>(false)
+  const [userId, setUserId] = createSignal<string | undefined>() // testagent_change
 
   const gitSub = vscode.onMessage((m: ExtensionMessage) => {
     if (m.type === "gitStatus") setGitInstalled(m.repo)
   })
 
+  // testagent_change start - extracted to reduce arrow function complexity
+  function handleReady(message: Extract<ExtensionMessage, { type: "ready" }>) {
+    console.log("[testagent] Server ready:", message.serverInfo)
+    setServerInfo(message.serverInfo)
+    if (message.extensionVersion) setExtensionVersion(message.extensionVersion)
+    setConnectionState("connected")
+    setErrorMessage(undefined)
+    setErrorDetails(undefined)
+    if (message.vscodeLanguage) setVscodeLanguage(message.vscodeLanguage)
+    if (message.languageOverride) setLanguageOverride(message.languageOverride)
+    if (message.workspaceDirectory) setWorkspaceDirectory(message.workspaceDirectory)
+    if (message.userId) setUserId(message.userId)
+  }
+  // testagent_change end
+
   onMount(() => {
     const unsubscribe = vscode.onMessage((message: ExtensionMessage) => {
       switch (message.type) {
         case "ready":
-          console.log("[testagent] Server ready:", message.serverInfo)
-          setServerInfo(message.serverInfo)
-          if (message.extensionVersion) setExtensionVersion(message.extensionVersion)
-          setConnectionState("connected")
-          setErrorMessage(undefined)
-          setErrorDetails(undefined)
-          if (message.vscodeLanguage) {
-            setVscodeLanguage(message.vscodeLanguage)
-          }
-          if (message.languageOverride) {
-            setLanguageOverride(message.languageOverride)
-          }
-          if (message.workspaceDirectory) {
-            setWorkspaceDirectory(message.workspaceDirectory)
-          }
+          handleReady(message) // testagent_change
           break
 
         case "workspaceDirectoryChanged":
@@ -161,6 +164,7 @@ export const ServerProvider: ParentComponent = (props) => {
     languageOverride,
     workspaceDirectory,
     gitInstalled,
+    userId, // testagent_change
   }
 
   return <ServerContext.Provider value={value}>{props.children}</ServerContext.Provider>

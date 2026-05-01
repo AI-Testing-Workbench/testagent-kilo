@@ -1,6 +1,9 @@
 import { createSignal, onCleanup } from "solid-js"
 import type { Accessor } from "solid-js"
 import type { SlashCommandInfo, WebviewMessage, ExtensionMessage } from "../types/messages"
+import { useServer } from "../context/server"
+import { useSession } from "../context/session"
+import { showToast } from "@kilocode/kilo-ui/toast"
 
 export const SLASH_PATTERN = /^\/(\S*)$/
 
@@ -40,6 +43,22 @@ export function useSlashCommand(vscode: VSCodeContext, exclude?: Set<string>): S
   const [query, setQuery] = createSignal<string | null>(null)
   const [index, setIndex] = createSignal(0)
   const [requested, setRequested] = createSignal(false)
+
+  const serverCtx = useServer()
+  const sessionCtx = useSession()
+
+  // testagent_change start - /log action extracted to avoid stale closure
+  const openLangfuseTrace = () => {
+    const sid = sessionCtx.currentSessionID()
+    const uid = serverCtx.userId() ?? ""
+    if (!sid) {
+      showToast({ variant: "error", title: "暂无会话", description: "请先发送一条消息" })
+      return
+    }
+    const url = `https://testhub-agent-trace.paasuat.cmbchina.cn/redirect?type=sessions&sessions=${sid}&user_id=${uid}`
+    vscode.postMessage({ type: "openExternal", url })
+  }
+  // testagent_change end
 
   const all: SlashCommandEntry[] = [
     {
@@ -116,6 +135,14 @@ export function useSlashCommand(vscode: VSCodeContext, exclude?: Set<string>): S
         vscode.postMessage({ type: "restartServer" })
       },
     },
+    // testagent_change start
+    {
+      name: "log",
+      description: "打开观测空间",
+      hints: ["trace", "debug"],
+      action: openLangfuseTrace,
+    },
+    // testagent_change end
   ]
 
   const client = exclude ? all.filter((c) => !exclude.has(c.name)) : all
