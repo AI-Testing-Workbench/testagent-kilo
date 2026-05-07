@@ -308,7 +308,7 @@ export async function saveCustomProvider(
     const { data: updated } = await ctx.client.global.config.update(
       {
         config: {
-          provider: { [id]: patch },
+          provider: { [id]: patch as Record<string, unknown> }, // testagent_change: cast to avoid type mismatch
           disabled_providers: nextDisabled,
         },
       },

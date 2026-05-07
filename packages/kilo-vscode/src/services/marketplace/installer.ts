@@ -2,6 +2,7 @@ import * as fs from "fs/promises"
 import * as path from "path"
 import * as os from "os"
 import * as yaml from "yaml"
+import { parse as parseJsonc, type ParseError } from "jsonc-parser" // testagent_change: import jsonc parser and ParseError type
 import { exec } from "../../util/process"
 import type {
   MarketplaceItem,
@@ -275,6 +276,7 @@ export class MarketplaceInstaller {
   }
 
   // testagent_change start: Helper methods to read/write config by filename
+  // testagent_change start: use jsonc parser to support comments and trailing commas
   private async readConfigByFilename(
     scope: "project" | "global",
     workspace: string | undefined,
@@ -287,12 +289,18 @@ export class MarketplaceInstaller {
     const filepath = path.join(base, filename)
     try {
       const content = await fs.readFile(filepath, "utf-8")
-      return JSON.parse(content)
+      const errors: ParseError[] = []
+      const parsed = parseJsonc(content, errors, { allowTrailingComma: true })
+      if (errors.length > 0) {
+        throw new Error(`Failed to parse JSONC: ${JSON.stringify(errors)}`)
+      }
+      return parsed as Record<string, Record<string, unknown>>
     } catch (err) {
       if ((err as NodeJS.ErrnoException).code === "ENOENT") return {}
       throw err
     }
   }
+  // testagent_change end
 
   private async writeConfigByFilename(
     scope: "project" | "global",

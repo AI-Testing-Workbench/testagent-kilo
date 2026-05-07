@@ -116,6 +116,24 @@ function serializeModel(m: ModelEntry): [string, Record<string, unknown>] {
   const entry: Record<string, unknown> = { name: m.name.trim() }
   if (m.reasoning) entry.reasoning = true
   if (ventries.length > 0) entry.variants = Object.fromEntries(ventries)
+  // testagent_change start: Include limit in serialized model only if at least one field has a value
+  if (m.limit) {
+    const limit: Record<string, number> = {}
+    if (m.limit.context !== undefined && m.limit.context !== null && !Number.isNaN(m.limit.context)) {
+      limit.context = m.limit.context
+    }
+    if (m.limit.input !== undefined && m.limit.input !== null && !Number.isNaN(m.limit.input)) {
+      limit.input = m.limit.input
+    }
+    if (m.limit.output !== undefined && m.limit.output !== null && !Number.isNaN(m.limit.output)) {
+      limit.output = m.limit.output
+    }
+    // Only include limit if at least one field was added
+    if (Object.keys(limit).length > 0) {
+      entry.limit = limit
+    }
+  }
+  // testagent_change end
   return [m.id.trim(), entry]
 }
 

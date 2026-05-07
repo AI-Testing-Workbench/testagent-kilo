@@ -177,7 +177,7 @@ async function main() {
     sourcesContent: false,
     platform: "node",
     outfile: "dist/extension.js",
-    external: ["vscode"],
+    external: ["vscode", "jsonc-parser"], // testagent_change: mark jsonc-parser as external
     logLevel: "silent",
     plugins: [esbuildProblemMatcherPlugin],
   })

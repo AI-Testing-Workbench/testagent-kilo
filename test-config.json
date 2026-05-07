@@ -1,0 +1,17 @@
+{
+  "provider": {
+    "test-provider": {
+      "npm": "@ai-sdk/openai-compatible",
+      "name": "Test Provider",
+      "models": {
+        "test-model": {
+          "name": "Test Model",
+          "limit": {
+            "context": 128000,
+            "output": 4096
+          }
+        }
+      }
+    }
+  }
+}

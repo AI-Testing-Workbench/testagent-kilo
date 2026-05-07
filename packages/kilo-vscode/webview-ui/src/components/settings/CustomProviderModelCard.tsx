@@ -26,6 +26,13 @@ export type ModelEntry = {
   name: string
   reasoning: boolean
   variants: VariantEntry[]
+  // testagent_change start: Add limit configuration
+  limit?: {
+    context?: number
+    input?: number
+    output?: number
+  }
+  // testagent_change end
 }
 
 type SelectOption<T> = { value: T; labelKey: string }
@@ -224,6 +231,11 @@ type ModelCardProps = {
   onChangeVariantThinking: (vi: number, val: ThinkingTypeValue) => void
   onChangeVariantReasoningEffort: (vi: number, val: ReasoningEffortValue) => void
   onChangeVariantChatTemplateArgs: (vi: number, val: ChatTemplateArgsValue) => void
+  // testagent_change start: Add limit change handlers
+  onChangeLimitContext: (val: string) => void
+  onChangeLimitInput: (val: string) => void
+  onChangeLimitOutput: (val: string) => void
+  // testagent_change end
 }
 
 export function ModelCard(props: ModelCardProps) {
@@ -270,6 +282,38 @@ export function ModelCard(props: ModelCardProps) {
           style={{ "margin-bottom": "4px" }}
         />
       </div>
+
+      {/* testagent_change start: Add limit configuration fields */}
+      <div style={{ display: "flex", gap: "8px", "align-items": "flex-end" }}>
+        <div style={{ flex: 1 }}>
+          <TextField
+            type="number"
+            label="Context Limit"
+            placeholder="请输入"
+            value={props.m.limit?.context?.toString() ?? ""}
+            onChange={props.onChangeLimitContext}
+          />
+        </div>
+        <div style={{ flex: 1 }}>
+          <TextField
+            type="number"
+            label="Input Limit (Optional)"
+            placeholder="请输入"
+            value={props.m.limit?.input?.toString() ?? ""}
+            onChange={props.onChangeLimitInput}
+          />
+        </div>
+        <div style={{ flex: 1 }}>
+          <TextField
+            type="number"
+            label="Output Limit"
+            placeholder="请输入"
+            value={props.m.limit?.output?.toString() ?? ""}
+            onChange={props.onChangeLimitOutput}
+          />
+        </div>
+      </div>
+      {/* testagent_change end */}
 
       {/* Reasoning toggle */}
       <label

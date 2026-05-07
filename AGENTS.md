@@ -52,7 +52,7 @@ Turborepo + Bun workspaces. The packages you'll work with most:
 | Package                        | Name                       | Purpose                                                                                                                             |
 | ------------------------------ | -------------------------- | ----------------------------------------------------------------------------------------------------------------------------------- |
 | `packages/testagent-opencode/` | `@kilocode/cli`            | Core CLI -- agents, tools, sessions, server, TUI. This is where most testagent-specific work happens.                               |
-| `packages/opencode/`           | `@opencode-ai/opencode`    | Shared opencode layer (inside testagent-opencode). SDK is built from here. Contains both upstream code and Kilo-specific additions. |
+| `packages/opencode/`           | `@opencode-ai/opencode`    | SDK is built from here. Contains both upstream code and Kilo-specific additions. |
 | `packages/sdk/js/`             | `@kilocode/sdk`            | Auto-generated TypeScript SDK (client for the server API). Built from `packages/opencode/`. Do not edit `src/gen/` by hand.         |
 | `packages/kilo-vscode/`        | `kilo-code`                | VS Code extension with sidebar chat + Agent Manager. Unchanged from Kilo. See its own `AGENTS.md` for details.                      |
 | `packages/kilo-gateway/`       | `@kilocode/kilo-gateway`   | Kilo auth, provider routing, API integration                                                                                        |

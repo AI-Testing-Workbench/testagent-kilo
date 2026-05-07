@@ -45,6 +45,15 @@ export const CustomProviderConfigSchema = z
             name: z.string().trim().min(1).max(200),
             reasoning: z.boolean().optional(),
             variants: z.record(z.string().trim().min(1), VariantConfigSchema).optional(),
+            // testagent_change start: add limit field
+            limit: z
+              .object({
+                context: z.number().int().positive().optional(),
+                input: z.number().int().positive().optional(),
+                output: z.number().int().positive().optional(),
+              })
+              .optional(),
+            // testagent_change end
           })
           .strict(),
       )
@@ -60,7 +69,17 @@ export type SanitizedProviderConfig = {
     baseURL: string
     headers?: Record<string, string>
   }
-  models: Record<string, { name: string; reasoning?: true; variants?: Record<string, VariantConfig> }>
+  models: Record<
+    string,
+    {
+      name: string
+      reasoning?: true
+      variants?: Record<string, VariantConfig>
+      // testagent_change start: add limit field
+      limit?: { context?: number; input?: number; output?: number }
+      // testagent_change end
+    }
+  >
 }
 
 export type CustomProviderAuthChange = { mode: "preserve" } | { mode: "clear" } | { mode: "set"; key: string }
@@ -126,14 +145,26 @@ export function normalizeCustomProviderConfig(
       ...(headers && Object.keys(headers).length > 0 ? { headers } : {}),
     },
     models: Object.fromEntries(
-      Object.entries(config.models).map(([id, model]) => [
-        id.trim(),
-        {
-          name: model.name.trim(),
-          ...(model.reasoning ? { reasoning: true as const } : {}),
-          ...(model.variants && Object.keys(model.variants).length > 0 ? { variants: model.variants } : {}),
-        },
-      ]),
+      Object.entries(config.models).map(([id, model]) => {
+        // testagent_change start: only include limit if it has at least context or output
+        const limit =
+          model.limit && (model.limit.context !== undefined || model.limit.output !== undefined)
+            ? model.limit
+            : undefined
+        // testagent_change end
+
+        return [
+          id.trim(),
+          {
+            name: model.name.trim(),
+            ...(model.reasoning ? { reasoning: true as const } : {}),
+            ...(model.variants && Object.keys(model.variants).length > 0 ? { variants: model.variants } : {}),
+            // testagent_change start: preserve limit field if valid
+            ...(limit ? { limit } : {}),
+            // testagent_change end
+          },
+        ]
+      }),
     ),
   }
 }
