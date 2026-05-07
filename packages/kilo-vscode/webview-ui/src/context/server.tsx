@@ -65,6 +65,7 @@ export const ServerProvider: ParentComponent = (props) => {
 
   onMount(() => {
     const unsubscribe = vscode.onMessage((message: ExtensionMessage) => {
+      console.log("[testagent] Webview received message:", message.type, message) // testagent_change - debug all messages
       switch (message.type) {
         case "ready":
           handleReady(message) // testagent_change
@@ -81,6 +82,7 @@ export const ServerProvider: ParentComponent = (props) => {
         case "connectionState":
           console.log("[testagent] Connection state changed:", message.state)
           setConnectionState(message.state)
+          console.log("[testagent] connectionState signal updated to:", message.state) // testagent_change - confirm signal update
           if (message.error) {
             setErrorMessage(message.userMessage ?? message.error)
             setErrorDetails(message.userDetails ?? message.error)

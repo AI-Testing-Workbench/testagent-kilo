@@ -333,6 +333,7 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
     }
 
     // Always push connection state first so the UI can render appropriately.
+    console.log(`[TestAgent]  📤 Posting connectionState: ${this.connectionState}`)
     this.postMessage({
       type: "connectionState",
       state: this.connectionState,
@@ -341,6 +342,7 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
     // Re-send ready so the webview can recover after refresh.
     if (serverInfo) {
       const langConfig = vscode.workspace.getConfiguration("testagent.new")
+      console.log("[TestAgent]  📤 Posting ready message with serverInfo")
       this.postMessage({
         type: "ready",
         serverInfo,
@@ -349,6 +351,8 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
         languageOverride: langConfig.get<string>("language"),
         workspaceDirectory: this.getProjectDirectory(this.currentSession?.id),
       })
+    } else {
+      console.log("[TestAgent]  ⚠️ Skipping ready message (no serverInfo)")
     }
 
     // Always attempt to fetch+push profile when connected.
@@ -1846,24 +1850,41 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
    * On failure, re-fetches agents so the webview reverts to the authoritative state.
    */
   private async handleRemoveMode(name: string): Promise<void> {
-    if (!this.client) return
+    console.log("[TestAgent]  handleRemoveMode called for:", name) // testagent_change
+    if (!this.client) {
+      console.log("[TestAgent]  handleRemoveMode: no client") // testagent_change
+      return
+    }
 
     // 1. Try CLI removal (handles .md files and legacy .kilocodemodes)
     try {
       const dir = this.getWorkspaceDirectory()
+      console.log("[TestAgent]  handleRemoveMode: trying CLI removal, dir:", dir) // testagent_change
       const result = await this.client.kilocode.removeAgent({ name, directory: dir })
-      if (!result.error) {
+      console.log("[TestAgent]  handleRemoveMode: CLI result:", result) // testagent_change
+      // testagent_change start: Check if API returned HTML (404 fallback) instead of valid response
+      if (!result.error && typeof result.data === "boolean" && result.data === true) {
+        // testagent_change end
         this.cachedAgentsMessage = null
         await this.fetchAndSendAgents()
+        console.log("[TestAgent]  handleRemoveMode: CLI removal successful") // testagent_change
         return
       }
-    } catch {
+      // testagent_change start: If data is HTML string, API doesn't exist
+      if (typeof result.data === "string") {
+        console.log("[TestAgent]  handleRemoveMode: CLI API returned HTML, falling back to config file") // testagent_change
+      }
+      // testagent_change end
+    } catch (err) {
       // CLI removal failed — agent may be in kilo.json instead
+      console.log("[TestAgent]  handleRemoveMode: CLI removal failed:", err) // testagent_change
     }
 
     // 2. Try removing from kilo.json (handles marketplace-installed modes)
+    console.log("[TestAgent]  handleRemoveMode: trying config file removal") // testagent_change
     const stub = { id: name, type: "mode" as const, name, description: "", content: "" }
     const removed = await this.removeMarketplaceItemFromAllScopes(stub)
+    console.log("[TestAgent]  handleRemoveMode: config file removal result:", removed) // testagent_change
     if (!removed) {
       console.error("[TestAgent]  Failed to remove mode:", name)
     }
@@ -1992,16 +2013,25 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
    * Returns true if at least one scope removal succeeded.
    */
   private async removeMarketplaceItemFromAllScopes(item: MarketplaceItem): Promise<boolean> {
+    console.log("[TestAgent]  removeMarketplaceItemFromAllScopes: starting for", item.id) // testagent_change
     const workspace = this.getProjectDirectory(this.currentSession?.id)
+    console.log("[TestAgent]  removeMarketplaceItemFromAllScopes: workspace =", workspace) // testagent_change
     const mp = this.getMarketplace()
+    console.log("[TestAgent]  removeMarketplaceItemFromAllScopes: calling mp.remove for project scope") // testagent_change
     const project = await mp.remove(item, "project", workspace)
+    console.log("[TestAgent]  removeMarketplaceItemFromAllScopes: project result =", project) // testagent_change
+    console.log("[TestAgent]  removeMarketplaceItemFromAllScopes: calling mp.remove for global scope") // testagent_change
     const global = await mp.remove(item, "global", workspace)
+    console.log("[TestAgent]  removeMarketplaceItemFromAllScopes: global result =", global) // testagent_change
 
     if (project.success || global.success) {
       const scope = global.success ? "global" : "project"
+      console.log("[TestAgent]  removeMarketplaceItemFromAllScopes: invalidating scope =", scope) // testagent_change
       await this.invalidateAfterMarketplaceChange(scope)
+      console.log("[TestAgent]  removeMarketplaceItemFromAllScopes: done, returning true") // testagent_change
       return true
     }
+    console.log("[TestAgent]  removeMarketplaceItemFromAllScopes: done, returning false") // testagent_change
     return false
   }
 
@@ -2254,6 +2284,12 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
 
     try {
       const { data: all } = await retry(() => this.client!.kilo.notifications(undefined, { throwOnError: true }))
+      // testagent_change start: Guard against non-array response (e.g. HTML from 404 fallback)
+      if (!Array.isArray(all)) {
+        console.warn("[TestAgent]  notifications API returned non-array, skipping:", typeof all)
+        return
+      }
+      // testagent_change end
       const notifications = all.filter((n) => !n.showIn || n.showIn.includes("extension"))
       const existing = this.extensionContext?.globalState.get<string[]>("kilo.dismissedNotificationIds", []) ?? []
       const active = new Set(notifications.map((n) => n.id))
@@ -2356,7 +2392,8 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
 
     // Phase 1: write. Errors here = real save failures the user can fix + retry.
     try {
-      await this.connectionService.drainPendingPrompts()
+      // testagent_change: Skip drainPendingPrompts to speed up config save
+      // await this.connectionService.drainPendingPrompts()
       await this.client.global.config.update({ config: partial }, { throwOnError: true })
     } catch (error) {
       console.error("[TestAgent]  Failed to update config:", error)
@@ -2378,6 +2415,15 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
       this.cachedConfigMessage = { type: "configLoaded", config: merged }
       this.postMessage({ type: "configUpdated", config: merged })
       if (refreshProviders) await this.fetchAndSendProviders()
+      
+      // testagent_change: Prompt user to reload window after config save
+      vscode.window
+        .showInformationMessage("配置已保存。是否重新加载窗口以应用更改？", "重新加载", "稍后")
+        .then((choice) => {
+          if (choice === "重新加载") {
+            vscode.commands.executeCommand("workbench.action.reloadWindow")
+          }
+        })
     } catch (error) {
       console.error("[TestAgent]  Config write succeeded but post-write refresh failed:", error)
       const cached = (this.cachedConfigMessage as { config?: unknown } | null)?.config

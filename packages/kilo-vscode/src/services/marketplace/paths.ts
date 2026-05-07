@@ -11,10 +11,11 @@ function globalConfigDir(): string {
 }
 
 export class MarketplacePaths {
-  /** Project-scope config file: <workspace>/.testagent/kilo.json */
+  /** Project-scope config file: <workspace>/.testagent/testagent.json */
   configPath(scope: "project" | "global", workspace?: string): string {
-    if (scope === "project") return path.join(workspace!, ".testagent", "kilo.json")
-    return path.join(globalConfigDir(), "kilo.json")
+    // testagent_change: Use testagent.json instead of kilo.json
+    if (scope === "project") return path.join(workspace!, ".testagent", "testagent.json")
+    return path.join(globalConfigDir(), "testagent.json")
   }
 
   /** Skill install directory (where the marketplace installer writes to). */

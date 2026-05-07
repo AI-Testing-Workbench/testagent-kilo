@@ -96,7 +96,9 @@ export async function fetchAndSendPendingSuggestions(ctx: SuggestionContext): Pr
     const seen = new Set<string>()
     for (const dir of dirs) {
       const { data } = await ctx.client.suggestion.list({ directory: dir })
-      if (!data) continue
+      // testagent_change start: Guard against non-array response
+      if (!data || !Array.isArray(data)) continue
+      // testagent_change end
       for (const suggestion of recoverableSuggestions(data, ctx.trackedSessionIds, seen)) {
         ctx.postMessage({
           type: "suggestionRequest",

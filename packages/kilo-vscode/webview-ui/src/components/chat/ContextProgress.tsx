@@ -59,7 +59,7 @@ export const ContextProgress: Component = () => {
     <Show when={data()}>
       {(d) => (
         <div class="context-progress">
-          <span class="context-progress-count">{fmt(d().used)}</span>
+          <span class="context-progress-count">已使用token：{fmt(d().used)}</span>
           <Tooltip value={tip()} placement="top">
             <div class="context-progress-bar">
               <div
@@ -73,7 +73,7 @@ export const ContextProgress: Component = () => {
               </Show>
             </div>
           </Tooltip>
-          <span class="context-progress-count">{fmt(d().limit)}</span>
+          <span class="context-progress-count">上下文context限制：{fmt(d().limit)}</span>
         </div>
       )}
     </Show>

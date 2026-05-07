@@ -192,25 +192,25 @@ export const TaskHeader: Component<TaskHeaderProps> = (props) => {
                 <Show when={tk().input > 0}>
                   <span class="task-header-tokens-value">
                     <Icon name="arrow-up" size="small" />
-                    {fmtNum(tk().input)}
+                    输入：{fmtNum(tk().input)}
                   </span>
                 </Show>
                 <Show when={tk().output > 0}>
                   <span class="task-header-tokens-value">
                     <Icon name="arrow-down-to-line" size="small" />
-                    {fmtNum(tk().output)}
+                    输出：{fmtNum(tk().output)}
                   </span>
                 </Show>
                 <Show when={tk().cache?.write && tk().cache!.write > 0}>
                   <span class="task-header-tokens-value">
                     <Icon name="arrow-up" size="small" />
-                    cache {fmtNum(tk().cache!.write)}
+                    写入缓存： {fmtNum(tk().cache!.write)}
                   </span>
                 </Show>
                 <Show when={tk().cache?.read && tk().cache!.read > 0}>
                   <span class="task-header-tokens-value">
                     <Icon name="arrow-down-to-line" size="small" />
-                    cache {fmtNum(tk().cache!.read)}
+                    读取缓存： {fmtNum(tk().cache!.read)}
                   </span>
                 </Show>
               </div>

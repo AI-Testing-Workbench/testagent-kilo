@@ -236,15 +236,7 @@ const AppContent: Component = () => {
       <Show
         when={migrationNeeded()}
         fallback={
-          <Switch
-            fallback={
-              <ChatView
-                continueInWorktree
-                onForkMessage={session.status() === "idle" ? handleForkMessage : undefined}
-                promptBoxId="sidebar:fallback"
-              />
-            }
-          >
+          <Switch>
             <Match when={currentView() === "newTask"}>
               <ChatView
                 onSelectSession={handleSelectSession}
@@ -279,6 +271,13 @@ const AppContent: Component = () => {
             </Match>
             <Match when={currentView() === "subAgentViewer"}>
               <ChatView readonly />
+            </Match>
+            <Match when={true}>
+              <ChatView
+                continueInWorktree
+                onForkMessage={session.status() === "idle" ? handleForkMessage : undefined}
+                promptBoxId="sidebar:fallback"
+              />
             </Match>
           </Switch>
         }

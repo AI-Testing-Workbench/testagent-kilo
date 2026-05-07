@@ -94,7 +94,9 @@ export async function fetchAndSendPendingPermissions(ctx: PermissionContext): Pr
     const seen = new Set<string>()
     for (const dir of dirs) {
       const { data } = await ctx.client.permission.list({ directory: dir })
-      if (!data) continue
+      // testagent_change start: Guard against non-array response
+      if (!data || !Array.isArray(data)) continue
+      // testagent_change end
       for (const perm of recoverablePermissions(data, ctx.trackedSessionIds, seen)) {
         ctx.postMessage({
           type: "permissionRequest",
