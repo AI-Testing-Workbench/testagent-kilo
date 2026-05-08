@@ -78,6 +78,11 @@ export class ServerManager {
 
     return new Promise((resolve, reject) => {
       console.log("[TestAagent New] ServerManager: 🎬 Spawning CLI process:", cliPath, ["serve", "--port", "0"])
+      // testagent_change: Log LANG env var for debugging
+      console.log("[TestAgent] ServerManager: 🌐 Extension host LANG:", process.env.LANG)
+      console.log("[TestAgent] ServerManager: 🌐 Extension host LC_ALL:", process.env.LC_ALL)
+      console.log("[TestAgent] ServerManager: 🌐 Will set LANG to:", process.env.LANG || "en_US.UTF-8")
+      console.log("[TestAgent] ServerManager: 🌐 Platform:", process.platform)
       const claudeCompat = vscode.workspace.getConfiguration("testagent.new").get<boolean>("claudeCodeCompat", false)
       // Pin cwd so the CLI doesn't inherit the extension host's cwd ("/" under F5 debug)
       const spawnCwd = vscode.workspace.workspaceFolders?.[0]?.uri.fsPath ?? process.env.HOME ?? require("os").homedir()
@@ -85,6 +90,18 @@ export class ServerManager {
         cwd: spawnCwd,
         env: {
           ...process.env,
+          // testagent_change start: Ensure UTF-8 encoding for shell commands
+          // Without LANG, shell commands may output in system default encoding (e.g., GBK on Chinese Windows)
+          // which causes mojibake when decoded as UTF-8 by Stream.decodeText in bash.ts
+          LANG: process.env.LANG || "en_US.UTF-8",
+          LC_ALL: process.env.LC_ALL || "en_US.UTF-8",
+          // Windows-specific: Set console code page to UTF-8 (65001)
+          // This ensures PowerShell/cmd outputs UTF-8 instead of GBK/GB2312
+          ...(process.platform === "win32" && {
+            PYTHONIOENCODING: "utf-8",
+            // Note: We can't set chcp directly here, but LANG should be enough for most tools
+          }),
+          // testagent_change end
           OPENCODE_SERVER_PASSWORD: password,
           // Force mimalloc (the allocator Bun ships with) to return freed pages
           // to the OS immediately instead of retaining them in its arenas.

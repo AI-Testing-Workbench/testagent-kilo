@@ -1528,7 +1528,8 @@ export interface CustomProviderModelsFetchedMessage {
   models?: Array<{ id: string; name: string }>
   error?: string
   /** True when error was HTTP 401/403 — hints the user to check their API key */
-  auth?: boolean
+  auth?: boolean,
+  url?:string
 }
 
 export type ExtensionMessage =

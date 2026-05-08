@@ -1713,11 +1713,11 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
     const headers = msg.headers && typeof msg.headers === "object" ? (msg.headers as Record<string, string>) : undefined
     try {
       const models = await fetchOpenAIModels({ baseURL: url, apiKey: key, headers })
-      this.postMessage({ type: "customProviderModelsFetched", requestId: rid, models })
+      // this.postMessage({ type: "customProviderModelsFetched", requestId: rid, models })
     } catch (err: unknown) {
       const message = err instanceof Error ? err.message : "Failed to fetch models"
       const auth = err instanceof FetchModelsError && err.auth
-      this.postMessage({ type: "customProviderModelsFetched", requestId: rid, error: message, auth })
+      // this.postMessage({ type: "customProviderModelsFetched", requestId: rid, error: message, auth,url})
     }
   }
 
