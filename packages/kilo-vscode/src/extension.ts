@@ -103,7 +103,7 @@ export function activate(context: vscode.ExtensionContext) {
   vscode.commands.executeCommand(`${KiloProvider.viewType}.focus`).then(undefined, () => {
     // Ignore errors if the view container isn't visible yet
   })
-  
+
   // Ensure Agent Manager navigation keybindings work when a VS Code terminal has focus.
   // The terminal intercepts all keystrokes unless the command is listed in
   // terminal.integrated.commandsToSkipShell, which only contains built-in
@@ -239,6 +239,20 @@ export function activate(context: vscode.ExtensionContext) {
       if (tab) tab.postMessage({ type: "action", action: "plusButtonClicked" })
       else provider.postMessage({ type: "action", action: "plusButtonClicked" })
     }),
+    // testagent_change 增加reloadSkills
+    vscode.commands.registerCommand("testagent.new.reloadSkills", async () => {
+      try {
+        console.log("[TestAgent] Reload skills command triggered")
+        await provider.reloadSkills()
+        return { success: true }
+      } catch (error) {
+        console.error("[TestAgent] Failed to reload skills:", error)
+        return {
+          success: false,
+          error: error instanceof Error ? error.message : String(error),
+        }
+      }
+    }),
     vscode.commands.registerCommand("testagent.new.agentManagerOpen", () => {
       agentManagerProvider.openPanel()
     }),
@@ -299,14 +313,14 @@ export function activate(context: vscode.ExtensionContext) {
       console.log("[TestAgent] Checking if port", port, "is in use...")
       const isPortInUse = await checkPortInUse(port)
       console.log("[TestAgent] Port", port, "in use:", isPortInUse)
-      
+
       if (isPortInUse) {
         // Port is in use, show error and don't create/show terminal
         console.log("[TestAgent] Showing error message: CLI already running")
         vscode.window.showErrorMessage("TestAgent CLI 已启动")
         return
       }
-      
+
       // Check if terminal already exists
       const existingTerminal = vscode.window.terminals.find((t) => t.name === "testagent")
       console.log("[TestAgent] Existing terminal found:", !!existingTerminal)
@@ -323,7 +337,7 @@ export function activate(context: vscode.ExtensionContext) {
       // testagent_change start - inject user ID into terminal env (non-blocking)
       let userId: string | undefined
       let userName: string | undefined
-      
+
       // Don't wait for auth - get it in background and create terminal immediately
       const authPromise = (async () => {
         try {
@@ -334,7 +348,7 @@ export function activate(context: vscode.ExtensionContext) {
           // non-critical, ignore
         }
       })()
-      
+
       // Create terminal immediately without waiting for auth
       const terminal = vscode.window.createTerminal({
         name: "testagent",
@@ -352,10 +366,10 @@ export function activate(context: vscode.ExtensionContext) {
       })
 
       terminal.show()
-      
+
       // Wait for auth to complete, then send command with env vars if available
       await authPromise
-      
+
       let command = `testagent --port ${port}`
       if (userId) {
         // On Windows PowerShell, use $env: syntax; on Unix shells, use export
@@ -365,7 +379,7 @@ export function activate(context: vscode.ExtensionContext) {
           command = `TESTAGENT_USER_ID="${userId}" ${userName ? `TESTAGENT_USER_NAME="${userName}" ` : ""}${command}`
         }
       }
-      
+
       terminal.sendText(command)
       console.log("[TestAgent] Terminal created and command sent")
       // testagent_change end
@@ -591,7 +605,7 @@ function waitForWebviewPanelToBeActive(panel: vscode.WebviewPanel): Promise<void
 async function checkPortInUse(port: number): Promise<boolean> {
   return new Promise((resolve) => {
     const server = net.createServer()
-    
+
     server.once("error", (err: NodeJS.ErrnoException) => {
       if (err.code === "EADDRINUSE") {
         resolve(true)
@@ -599,13 +613,13 @@ async function checkPortInUse(port: number): Promise<boolean> {
         resolve(false)
       }
     })
-    
+
     server.once("listening", () => {
       server.close(() => {
         resolve(false)
       })
     })
-    
+
     // Set a timeout to prevent hanging
     const timeout = setTimeout(() => {
       try {
@@ -615,11 +629,11 @@ async function checkPortInUse(port: number): Promise<boolean> {
       }
       resolve(false)
     }, 500)
-    
+
     server.on("close", () => {
       clearTimeout(timeout)
     })
-    
+
     try {
       server.listen(port, "127.0.0.1")
     } catch {

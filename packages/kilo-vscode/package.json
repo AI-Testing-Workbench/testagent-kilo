@@ -96,6 +96,11 @@
         "icon": "$(settings-gear)"
       },
       {
+        "command": "testagent.new.reloadSkills",
+        "title": "Reload Skills",
+        "category": "TestAgent"
+      },
+      {
         "command": "testagent.new.openInTab",
         "title": "TestAgent",
         "icon": {
@@ -242,7 +247,6 @@
         "title": "Agent Manager: Jump to Item 9",
         "category": "TestAgent"
       },
-
       {
         "command": "testagent.new.explainCode",
         "title": "Explain Code",
@@ -410,7 +414,6 @@
         "key": "ctrl+shift+g",
         "mac": "cmd+shift+g"
       },
-      
       {
         "command": "testagent.new.addToContext",
         "key": "ctrl+k ctrl+a",

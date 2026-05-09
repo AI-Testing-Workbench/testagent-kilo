@@ -718,9 +718,7 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
 
         case "retryConnection":
           console.log("[TestAgent]  🔄 Retrying connection...")
-          this.initializeConnection().catch((e) =>
-            console.error("[TestAgent]  ❌ Retry connection failed:", e),
-          )
+          this.initializeConnection().catch((e) => console.error("[TestAgent]  ❌ Retry connection failed:", e))
           break
         case "openSubAgentViewer":
           vscode.commands.executeCommand("testagent.new.openSubAgentViewer", message.sessionID, message.title)
@@ -1753,6 +1751,42 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
     }
   }
 
+  /**
+   * Reload skills from disk (for external plugins that install skills)
+   * Public API that can be called via VS Code commands
+   */
+  public async reloadSkills(): Promise<void> {
+    console.log("[TestAgent] Reloading skills...")
+
+    // Clear frontend cache first
+    this.cachedSkillsMessage = null
+    this.clearCommandsCache() // testagent_change - also clear commands cache
+
+    // testagent_change start - dispose instance to clear all caches including skills
+    if (this.client) {
+      try {
+        const dir = this.getWorkspaceDirectory()
+        // 使用已有的 instance.dispose API 来清除所有缓存（包括 skills）
+        await this.client.instance.dispose({ directory: dir })
+        console.log("[TestAgent] Backend instance cache cleared")
+        
+        // 等待足够长的时间确保后端完全重建状态
+        // 这个延迟很重要，因为 InstanceState 需要时间重新初始化
+        await new Promise(resolve => setTimeout(resolve, 500))
+      } catch (error) {
+        console.warn("[TestAgent] Backend cache clear failed (non-critical):", error)
+      }
+    }
+    // testagent_change end
+
+    // testagent_change start - fetch skills first, then commands (commands depend on skills)
+    await this.fetchAndSendSkills()
+    await this.fetchAndSendCommands()
+    // testagent_change end
+
+    console.log("[TestAgent] Skills and commands reloaded successfully")
+  }
+
   private async fetchAndSendSkills(): Promise<void> {
     if (!this.client) {
       if (this.cachedSkillsMessage) {
@@ -2172,12 +2206,7 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
       console.log("[TestAgent]  checking config warnings", { from, dir })
       const result = await this.client.config.warnings({ directory: dir })
       console.log("[TestAgent]  raw result:", JSON.stringify(result).substring(0, 500)) // testagent_change - debug raw result (truncated)
-      console.log(
-        "[TestAgent]  result.data type:",
-        typeof result?.data,
-        "isArray:",
-        Array.isArray(result?.data),
-      ) // testagent_change - debug type
+      console.log("[TestAgent]  result.data type:", typeof result?.data, "isArray:", Array.isArray(result?.data)) // testagent_change - debug type
 
       // testagent_change start - ensure list is always an array
       let list = result?.data ?? []
@@ -2211,20 +2240,11 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
           list.length,
           ")",
         ) // testagent_change - debug
-        console.log(
-          "[TestAgent]  displayList is array?",
-          Array.isArray(displayList),
-          "sample:",
-          displayList[0],
-        ) // testagent_change - debug
+        console.log("[TestAgent]  displayList is array?", Array.isArray(displayList), "sample:", displayList[0]) // testagent_change - debug
         try {
           // testagent_change start - safe array handling
           if (!Array.isArray(displayList)) {
-            console.error(
-              "[TestAgent]  displayList is not an array at show time:",
-              typeof displayList,
-              displayList,
-            )
+            console.error("[TestAgent]  displayList is not an array at show time:", typeof displayList, displayList)
             vscode.window.showErrorMessage("Failed to display config warnings: invalid data format")
             return
           }
@@ -2415,7 +2435,7 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
       this.cachedConfigMessage = { type: "configLoaded", config: merged }
       this.postMessage({ type: "configUpdated", config: merged })
       if (refreshProviders) await this.fetchAndSendProviders()
-      
+
       // testagent_change: Prompt user to reload window after config save
       vscode.window
         .showInformationMessage("配置已保存。是否重新加载窗口以应用更改？", "重新加载", "稍后")

@@ -283,9 +283,7 @@ export class MarketplaceInstaller {
     filename: string,
   ): Promise<Record<string, Record<string, unknown>>> {
     const base =
-      scope === "project"
-        ? path.join(workspace!, ".testagent")
-        : path.join(os.homedir(), ".config", "testagent")
+      scope === "project" ? path.join(workspace!, ".testagent") : path.join(os.homedir(), ".config", "testagent")
     const filepath = path.join(base, filename)
     try {
       const content = await fs.readFile(filepath, "utf-8")
@@ -309,9 +307,7 @@ export class MarketplaceInstaller {
     filename: string,
   ): Promise<void> {
     const base =
-      scope === "project"
-        ? path.join(workspace!, ".testagent")
-        : path.join(os.homedir(), ".config", "testagent")
+      scope === "project" ? path.join(workspace!, ".testagent") : path.join(os.homedir(), ".config", "testagent")
     const filepath = path.join(base, filename)
     await fs.mkdir(path.dirname(filepath), { recursive: true })
     await fs.writeFile(filepath, JSON.stringify(config, null, 2) + "\n", "utf-8")
