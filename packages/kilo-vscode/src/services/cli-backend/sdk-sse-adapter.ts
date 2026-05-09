@@ -38,7 +38,7 @@ export class SdkSSEAdapter {
   // Reduced from 90s: with 90s a dead connection could linger for ~1.5 minutes.
   private static readonly HEARTBEAT_TIMEOUT_MS = 15_000
   private static readonly RECONNECT_DELAY_MS = 250
-  private static readonly MAX_RECONNECT_DELAY_MS = 30_000  // Cap at 30 seconds
+  private static readonly MAX_RECONNECT_DELAY_MS = 30_000 // Cap at 30 seconds
   private reconnectAttempts = 0
 
   constructor(private readonly client: KiloClient) {}
@@ -57,7 +57,7 @@ export class SdkSSEAdapter {
 
     console.log("[TestAgent] SSE: 🔌 connect() called")
     this.abortController = new AbortController()
-    this.reconnectAttempts = 0  // Reset reconnect attempts
+    this.reconnectAttempts = 0 // Reset reconnect attempts
     console.log('[TestAgent] SSE: 🔄 Setting state to "connecting"')
     this.notifyState("connecting")
     void this.consumeLoop(this.abortController.signal).catch((err) => {
@@ -158,7 +158,7 @@ export class SdkSSEAdapter {
             if (error instanceof DOMException && error.name === "AbortError") {
               return
             }
-            
+
             // Enhanced error logging to diagnose "fetch failed"
             console.error("[TestAgent] SSE: ❌ SDK SSE error callback:", error)
             console.error("[TestAgent] SSE: Error details:", {
@@ -170,14 +170,14 @@ export class SdkSSEAdapter {
               cause: error instanceof Error ? error.cause : undefined,
               stack: error instanceof Error ? error.stack : undefined,
             })
-            
+
             this.notifyError(error instanceof Error ? error : new Error(String(error)))
           },
         })
 
         console.log("[TestAgent] SSE: ✅ Stream opened successfully")
         this.notifyState("connected")
-        this.reconnectAttempts = 0  // Reset on successful connection
+        this.reconnectAttempts = 0 // Reset on successful connection
         this.resetHeartbeat(attempt)
 
         for await (const event of events.stream) {
@@ -220,9 +220,9 @@ export class SdkSSEAdapter {
       this.reconnectAttempts++
       const backoffDelay = Math.min(
         SdkSSEAdapter.RECONNECT_DELAY_MS * Math.pow(2, Math.min(this.reconnectAttempts - 1, 7)),
-        SdkSSEAdapter.MAX_RECONNECT_DELAY_MS
+        SdkSSEAdapter.MAX_RECONNECT_DELAY_MS,
       )
-      
+
       console.log(`[TestAgent] SSE: 🔄 Reconnecting in ${backoffDelay}ms (attempt ${this.reconnectAttempts})...`)
       this.notifyState("connecting")
       await new Promise((resolve) => setTimeout(resolve, backoffDelay))

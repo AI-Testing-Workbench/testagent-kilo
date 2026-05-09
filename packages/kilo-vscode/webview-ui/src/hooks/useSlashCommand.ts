@@ -98,9 +98,9 @@ export function useSlashCommand(vscode: VSCodeContext, exclude?: Set<string>): S
       name: "help",
       description: "打开帮助文档",
       hints: [],
-      // action: () => {
-      //   vscode.postMessage({ type: "openExternal", url: "https://kilo.ai/docs" })
-      // },
+      action: () => {
+        vscode.postMessage({ type: "openExternal", url: "https://doc.cmbchina.com/f/v?id=zf0suh" })
+      },
     },
     {
       name: "compact",
@@ -129,7 +129,7 @@ export function useSlashCommand(vscode: VSCodeContext, exclude?: Set<string>): S
     // },
     {
       name: "restart",
-      description: "重启 CLI 后端（重新加载 skills 和 plugins）",
+      description: "重启Server",
       hints: [],
       action: () => {
         vscode.postMessage({ type: "restartServer" })
