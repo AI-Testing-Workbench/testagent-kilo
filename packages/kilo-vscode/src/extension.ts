@@ -1,7 +1,7 @@
 import * as vscode from "vscode"
 import * as path from "path"
 import * as net from "net" // testagent_change - import net at top level
-import { isTestagent } from "./services/cli-backend/runtime"
+import { isTestagentBun } from "./services/cli-backend/runtime"
 import { KiloProvider } from "./KiloProvider"
 import { AgentManagerProvider } from "./agent-manager/AgentManagerProvider"
 import { VscodeHost } from "./agent-manager/vscode-host"
@@ -35,7 +35,7 @@ export function activate(context: vscode.ExtensionContext) {
   // Add CLI to PATH on first activation (Windows only)
   // void ensureCliInPath(context)
 
-  const telemetry = isTestagent() ? TelemetryProxy.getInstance() : null
+  const telemetry = isTestagentBun() ? TelemetryProxy.getInstance() : null
 
   // Create shared connection service (one server for all webviews)
   const connectionService = new KiloConnectionService(context)
@@ -46,7 +46,7 @@ export function activate(context: vscode.ExtensionContext) {
 
   // Create remote status service (one status bar item for all webviews)
   // Only available with testagent backend (depends on kilo-specific remote.* API)
-  const remoteService = isTestagent() ? new RemoteStatusService() : null
+  const remoteService = isTestagentBun() ? new RemoteStatusService() : null
   if (remoteService) {
     context.subscriptions.push(remoteService)
     connectionService.setRemoteService(remoteService)

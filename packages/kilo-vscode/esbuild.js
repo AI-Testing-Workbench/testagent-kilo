@@ -5,9 +5,9 @@ const { solidPlugin } = require("esbuild-plugin-solid")
 const production = process.argv.includes("--production")
 const watch = process.argv.includes("--watch")
 
-// Backend runtime selection: "testagent" (Bun binary) or "opencode" (Node.js)
-// Set via BACKEND_RUNTIME env var at build time. Defaults to "testagent".
-const backendRuntime = process.env.BACKEND_RUNTIME || "testagent"
+// Backend runtime selection: "testagent-bun" (Bun binary) or "testagent-nodejs" (Node.js)
+// Set via BACKEND_RUNTIME env var at build time. Defaults to "testagent-bun".
+const backendRuntime = process.env.BACKEND_RUNTIME || "testagent-bun"
 console.log(`[build] Backend runtime: ${backendRuntime}`)
 
 /**

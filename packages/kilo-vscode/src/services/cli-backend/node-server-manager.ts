@@ -166,70 +166,14 @@ export class NodeServerManager {
    * Validates version >= 22.5.0 for node:sqlite support.
    */
   private async resolveNodePath(): Promise<string> {
-    // Try VS Code's built-in Node.js first
-    const vscodeNode = process.execPath
-    console.log("[OpenCode] NodeServerManager: Checking VS Code built-in Node.js:", vscodeNode)
-    
-    try {
-      const { execSync } = require("child_process")
-      const version = execSync(`"${vscodeNode}" --version`, { encoding: "utf8", timeout: 5000 }).trim()
-      console.log("[OpenCode] NodeServerManager: VS Code Node.js version:", version)
-      
-      const match = version.match(/^v(\d+)\.(\d+)/)
-      if (match) {
-        const major = parseInt(match[1])
-        const minor = parseInt(match[2])
-        if (major > 22 || (major === 22 && minor >= 5)) {
-          console.log("[OpenCode] NodeServerManager: ✅ Using VS Code built-in Node.js")
-          return vscodeNode
-        }
-        console.warn(`[OpenCode] NodeServerManager: VS Code Node.js ${version} too old, need >= 22.5.0`)
-      }
-    } catch (err) {
-      console.warn("[OpenCode] NodeServerManager: Failed to check VS Code Node.js:", err)
-    }
+    const vscodeNode = this.tryVSCodeNode()
+    if (vscodeNode) return vscodeNode
 
-    // Fallback to system PATH
-    const cmd = process.platform === "win32" ? "where" : "which"
-    try {
-      const { execSync } = require("child_process")
-      const found = execSync(`${cmd} node`, { encoding: "utf8", timeout: 5000 }).trim().split("\n")[0]
-      if (found) {
-        const version = execSync(`"${found}" --version`, { encoding: "utf8", timeout: 5000 }).trim()
-        console.log("[OpenCode] NodeServerManager: Found node:", found, version)
-        const match = version.match(/^v(\d+)\.(\d+)/)
-        if (match) {
-          const major = parseInt(match[1])
-          const minor = parseInt(match[2])
-          if (major > 22 || (major === 22 && minor >= 5)) {
-            return found
-          }
-          console.warn(`[OpenCode] NodeServerManager: Node.js ${version} too old, need >= 22.5.0`)
-        }
-      }
-    } catch {
-      // which/where failed
-    }
+    const systemNode = this.trySystemNode()
+    if (systemNode) return systemNode
 
-    // Check common paths as fallback
-    const candidates = process.platform === "win32"
-      ? ["C:\\Program Files\\nodejs\\node.exe"]
-      : ["/usr/local/bin/node", "/opt/homebrew/bin/node", "/usr/bin/node"]
-
-    for (const candidate of candidates) {
-      if (fs.existsSync(candidate)) {
-        try {
-          const { execSync } = require("child_process")
-          const version = execSync(`"${candidate}" --version`, { encoding: "utf8", timeout: 5000 }).trim()
-          const match = version.match(/^v(\d+)\.(\d+)/)
-          if (match && (parseInt(match[1]) > 22 || (parseInt(match[1]) === 22 && parseInt(match[2]) >= 5))) {
-            return candidate
-          }
-        } catch {
-          // skip
-        }
-      }
-    }
+    const commonNode = this.tryCommonPaths()
+    if (commonNode) return commonNode
 
     throw new Error(
       "Node.js >= 22.5.0 not found.\n\n" +
@@ -240,6 +184,76 @@ export class NodeServerManager {
       `Current VS Code Node.js: ${process.version}\n` +
       "Required: >= v22.5.0",
     )
+  }
+
+  private tryVSCodeNode(): string | null {
+    const vscodeNode = process.execPath
+    console.log("[OpenCode] NodeServerManager: Checking VS Code built-in Node.js:", vscodeNode)
+    
+    try {
+      const { execSync } = require("child_process")
+      const version = execSync(`"${vscodeNode}" --version`, { encoding: "utf8", timeout: 5000 }).trim()
+      console.log("[OpenCode] NodeServerManager: VS Code Node.js version:", version)
+      
+      if (this.isVersionValid(version)) {
+        console.log("[OpenCode] NodeServerManager: ✅ Using VS Code built-in Node.js")
+        return vscodeNode
+      }
+      console.warn(`[OpenCode] NodeServerManager: VS Code Node.js ${version} too old, need >= 22.5.0`)
+    } catch (err) {
+      console.warn("[OpenCode] NodeServerManager: Failed to check VS Code Node.js:", err)
+    }
+    return null
+  }
+
+  private trySystemNode(): string | null {
+    const cmd = process.platform === "win32" ? "where" : "which"
+    try {
+      const { execSync } = require("child_process")
+      const found = execSync(`${cmd} node`, { encoding: "utf8", timeout: 5000 }).trim().split("\n")[0]
+      if (!found) return null
+
+      const version = execSync(`"${found}" --version`, { encoding: "utf8", timeout: 5000 }).trim()
+      console.log("[OpenCode] NodeServerManager: Found node:", found, version)
+      
+      if (this.isVersionValid(version)) {
+        return found
+      }
+      console.warn(`[OpenCode] NodeServerManager: Node.js ${version} too old, need >= 22.5.0`)
+    } catch {
+      // which/where failed
+    }
+    return null
+  }
+
+  private tryCommonPaths(): string | null {
+    const candidates = process.platform === "win32"
+      ? ["C:\\Program Files\\nodejs\\node.exe"]
+      : ["/usr/local/bin/node", "/opt/homebrew/bin/node", "/usr/bin/node"]
+
+    for (const candidate of candidates) {
+      if (!fs.existsSync(candidate)) continue
+
+      try {
+        const { execSync } = require("child_process")
+        const version = execSync(`"${candidate}" --version`, { encoding: "utf8", timeout: 5000 }).trim()
+        if (this.isVersionValid(version)) {
+          return candidate
+        }
+      } catch {
+        // skip
+      }
+    }
+    return null
+  }
+
+  private isVersionValid(version: string): boolean {
+    const match = version.match(/^v(\d+)\.(\d+)/)
+    if (!match) return false
+    
+    const major = parseInt(match[1])
+    const minor = parseInt(match[2])
+    return major > 22 || (major === 22 && minor >= 5)
   }
 
   private getServerDir(): string {

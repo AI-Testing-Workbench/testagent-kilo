@@ -1,7 +1,7 @@
 import * as vscode from "vscode"
 import { ServerManager } from "./server-manager"
 import { NodeServerManager } from "./node-server-manager"
-import { isTestagent } from "./runtime"
+import { isTestagentBun } from "./runtime"
 import { createKiloClient, type KiloClient, type Event } from "@kilocode/sdk/v2/client"
 import { SdkSSEAdapter } from "./sdk-sse-adapter"
 import type { ServerConfig } from "./types"
@@ -84,9 +84,9 @@ export class KiloConnectionService {
   private unsubRemote: (() => void) | null = null
 
   constructor(context: vscode.ExtensionContext) {
-    this.serverManager = isTestagent() ? new ServerManager(context) : new NodeServerManager(context)
+    this.serverManager = isTestagentBun() ? new ServerManager(context) : new NodeServerManager(context)
     // testagent_change start - sync user ID to CLI whenever auth session changes
-    if (isTestagent()) {
+    if (isTestagentBun()) {
       context.subscriptions.push(
         vscode.authentication.onDidChangeSessions(async (e) => {
           if (e.provider.id === "tscode-oauth") {
@@ -419,7 +419,7 @@ export class KiloConnectionService {
         }
       }
       // testagent_change - these APIs only exist on the Kilo/testagent backend
-      if (isTestagent()) {
+      if (isTestagentBun()) {
         await drainSuggestions(this.client, dir)
         await drainNetworkWaits(this.client, dir)
       }
@@ -663,7 +663,7 @@ export class KiloConnectionService {
     this.startHealthPoll(config.baseUrl, config.password)
 
     // testagent_change start - push current user ID to CLI after connection
-    if (isTestagent()) {
+    if (isTestagentBun()) {
       await this.syncUserId()
     }
     // testagent_change end

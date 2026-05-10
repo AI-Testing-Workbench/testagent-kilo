@@ -6,7 +6,7 @@
  * 1. Builds the nodejs-server dist from testagent-core
  * 2. Copies the dist into kilo-vscode/nodejs-server/
  * 3. Installs node_modules for the nodejs-server (node-pty native bindings)
- * 4. Runs the extension build with BACKEND_RUNTIME=opencode
+ * 4. Runs the extension build with BACKEND_RUNTIME=testagent-nodejs
  * 5. Packages the VSIX
  *
  * Usage:
@@ -92,10 +92,10 @@ if (missing.length > 0) {
   process.exit(1)
 }
 
-// Step 4: Build extension with opencode backend
+// Step 4: Build extension with testagent-nodejs backend
 if (!skipVsix) {
-  console.log("Step 4: Building extension with BACKEND_RUNTIME=opencode...")
-  await $`cd ${ROOT} && BACKEND_RUNTIME=opencode node esbuild.js --production`
+  console.log("Step 4: Building extension with BACKEND_RUNTIME=testagent-nodejs...")
+  await $`cd ${ROOT} && BACKEND_RUNTIME=testagent-nodejs node esbuild.js --production`
 
   // Step 5: Package VSIX
   console.log("Step 5: Packaging VSIX...")

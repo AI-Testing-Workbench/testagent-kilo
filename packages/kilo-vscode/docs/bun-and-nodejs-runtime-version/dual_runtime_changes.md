@@ -6,7 +6,7 @@
 
 | 文件 | 用途 |
 |------|------|
-| [runtime.ts](file:///Users/lujs/testagent-kilo/packages/kilo-vscode/src/services/cli-backend/runtime.ts) | 编译时常量声明 + `isTestagent()` / `isOpencode()` 工具函数 |
+| [runtime.ts](file:///Users/lujs/testagent-kilo/packages/kilo-vscode/src/services/cli-backend/runtime.ts) | 编译时常量声明 + `isTestagentBun()` / `isTestagentNodejs()` 工具函数 |
 | [node-server-manager.ts](file:///Users/lujs/testagent-kilo/packages/kilo-vscode/src/services/cli-backend/node-server-manager.ts) | Node.js 进程管理器，spawn `node --experimental-sqlite cli.mjs` |
 | [package-nodejs-server.ts](file:///Users/lujs/testagent-kilo/packages/kilo-vscode/script/package-nodejs-server.ts) | Node.js 服务器版本打包脚本 |
 
@@ -538,7 +538,7 @@ main().catch((e) => {
 })
 ```
 
-- 读取 `BACKEND_RUNTIME` 环境变量（默认 `"testagent"`）
+- 读取 `BACKEND_RUNTIME` 环境变量（默认 `"testagent-bun"`）
 - 通过 `define: { BACKEND_RUNTIME: ... }` 注入编译时常量
 - esbuild 会在 minify 时自动消除死代码
 
@@ -1241,7 +1241,7 @@ async function drainSuggestions(client: KiloClient, directory: string): Promise<
 import * as vscode from "vscode"
 import { ServerManager } from "./server-manager"
 import { NodeServerManager } from "./node-server-manager"
-import { isTestagent } from "./runtime"
+import { isTestagentBun } from "./runtime"
 import { createKiloClient, type KiloClient, type Event } from "@kilocode/sdk/v2/client"
 import { SdkSSEAdapter } from "./sdk-sse-adapter"
 import type { ServerConfig } from "./types"
@@ -1324,9 +1324,9 @@ export class KiloConnectionService {
   private unsubRemote: (() => void) | null = null
 
   constructor(context: vscode.ExtensionContext) {
-    this.serverManager = isTestagent() ? new ServerManager(context) : new NodeServerManager(context)
+    this.serverManager = isTestagentBun() ? new ServerManager(context) : new NodeServerManager(context)
     // testagent_change start - sync user ID to CLI whenever auth session changes
-    if (isTestagent()) {
+    if (isTestagentBun()) {
       context.subscriptions.push(
         vscode.authentication.onDidChangeSessions(async (e) => {
           if (e.provider.id === "tscode-oauth") {
@@ -1659,7 +1659,7 @@ export class KiloConnectionService {
         }
       }
       // testagent_change - these APIs only exist on the Kilo/testagent backend
-      if (isTestagent()) {
+      if (isTestagentBun()) {
         await drainSuggestions(this.client, dir)
         await drainNetworkWaits(this.client, dir)
       }
@@ -1903,7 +1903,7 @@ export class KiloConnectionService {
     this.startHealthPoll(config.baseUrl, config.password)
 
     // testagent_change start - push current user ID to CLI after connection
-    if (isTestagent()) {
+    if (isTestagentBun()) {
       await this.syncUserId()
     }
     // testagent_change end
@@ -1943,9 +1943,9 @@ async function drainSuggestions(client: KiloClient, directory: string): Promise<
 ```
 
 - 类型改为 `ServerManager | NodeServerManager`
-- 构造时根据 `isTestagent()` 选择
-- `syncUserId()` 仅 testagent 调用
-- `drainSuggestions()` / `drainNetworkWaits()` 仅 testagent 调用
+- 构造时根据 `isTestagentBun()` 选择
+- `syncUserId()` 仅 testagent-bun 调用
+- `drainSuggestions()` / `drainNetworkWaits()` 仅 testagent-bun 调用
 
 #### 3. [extension.ts](file:///Users/lujs/testagent-kilo/packages/kilo-vscode/src/extension.ts)
 ```diff:extension.ts
@@ -2584,7 +2584,7 @@ async function checkPortInUse(port: number): Promise<boolean> {
 import * as vscode from "vscode"
 import * as path from "path"
 import * as net from "net" // testagent_change - import net at top level
-import { isTestagent } from "./services/cli-backend/runtime"
+import { isTestagentBun } from "./services/cli-backend/runtime"
 import { KiloProvider } from "./KiloProvider"
 import { AgentManagerProvider } from "./agent-manager/AgentManagerProvider"
 import { VscodeHost } from "./agent-manager/vscode-host"
@@ -2618,7 +2618,7 @@ export function activate(context: vscode.ExtensionContext) {
   // Add CLI to PATH on first activation (Windows only)
   // void ensureCliInPath(context)
 
-  const telemetry = isTestagent() ? TelemetryProxy.getInstance() : null
+  const telemetry = isTestagentBun() ? TelemetryProxy.getInstance() : null
 
   // Create shared connection service (one server for all webviews)
   const connectionService = new KiloConnectionService(context)
@@ -2629,7 +2629,7 @@ export function activate(context: vscode.ExtensionContext) {
 
   // Create remote status service (one status bar item for all webviews)
   // Only available with testagent backend (depends on kilo-specific remote.* API)
-  const remoteService = isTestagent() ? new RemoteStatusService() : null
+  const remoteService = isTestagentBun() ? new RemoteStatusService() : null
   if (remoteService) {
     context.subscriptions.push(remoteService)
     connectionService.setRemoteService(remoteService)
@@ -4603,7 +4603,7 @@ AGENTS.md
     "snapshot:install": "bun script/dev-snapshot.ts install",
     "extension": "bun script/launch.ts",
     "testagent:vsix": "bun run rebuild-sdk && bun run typecheck && bun run lint && node esbuild.js --production && vsce package --no-dependencies",
-    "opencode:vsix": "bun run rebuild-sdk && bun run typecheck && bun run lint && BACKEND_RUNTIME=opencode node esbuild.js --production && vsce package --no-dependencies -o testagent-nodejs-tscode.vsix"
+    "testagent-nodejs:vsix": "bun script/package-nodejs-server.ts"
   },
   "devDependencies": {
     "@playwright/test": "1.57.0",
@@ -4678,10 +4678,10 @@ export type { KilocodeNotification } from "./types"
 export { KiloConnectionService } from "./connection-service"
 export { ServerStartupError } from "./server-manager"
 export { NodeServerManager } from "./node-server-manager"
-export { runtime, isTestagent, isOpencode } from "./runtime"
+export { runtime, isTestagentBun, isTestagentNodejs } from "./runtime"
 ```
 
-- 导出 `NodeServerManager`、`runtime`、`isTestagent`、`isOpencode`
+- 导出 `NodeServerManager`、`runtime`、`isTestagentBun`、`isTestagentNodejs`
 
 ---
 
@@ -4691,7 +4691,7 @@ export { runtime, isTestagent, isOpencode } from "./runtime"
 
 ```bash
 cd packages/kilo-vscode
-node esbuild.js --production       # BACKEND_RUNTIME 默认为 "testagent"
+node esbuild.js --production       # BACKEND_RUNTIME 默认为 "testagent-bun"
 vsce package --no-dependencies     # → testagent-tscode-1.0.4.vsix
 ```
 
@@ -4704,7 +4704,7 @@ cd packages/kilo-vscode
 bun script/package-nodejs-server.ts
 
 # 方式 2: 手动步骤
-BACKEND_RUNTIME=opencode node esbuild.js --production
+BACKEND_RUNTIME=testagent-nodejs node esbuild.js --production
 vsce package --no-dependencies -o testagent-nodejs-tscode.vsix
 ```
 
@@ -4730,9 +4730,9 @@ npm install --omit=dev  # 安装 node-pty 原生绑定
 ## 架构原理
 
 ```
-esbuild define: BACKEND_RUNTIME = "opencode"
+esbuild define: BACKEND_RUNTIME = "testagent-nodejs"
             ↓
-runtime.ts: isTestagent() → false, isOpencode() → true
+runtime.ts: isTestagentBun() → false, isTestagentNodejs() → true
             ↓
 connection-service.ts:
   this.serverManager = new NodeServerManager(context)  ✅

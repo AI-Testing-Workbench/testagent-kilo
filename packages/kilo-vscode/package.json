@@ -633,7 +633,7 @@
     "snapshot:install": "bun script/dev-snapshot.ts install",
     "extension": "bun script/launch.ts",
     "testagent:vsix": "bun run rebuild-sdk && bun run typecheck && bun run lint && node esbuild.js --production && vsce package --no-dependencies",
-    "opencode:vsix": "bun run rebuild-sdk && bun run typecheck && bun run lint && BACKEND_RUNTIME=opencode node esbuild.js --production && vsce package --no-dependencies -o testagent-nodejs-tscode.vsix"
+    "testagent-nodejs:vsix": "bun script/package-nodejs-server.ts"
   },
   "devDependencies": {
     "@playwright/test": "1.57.0",
