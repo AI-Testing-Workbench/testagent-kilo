@@ -29,7 +29,7 @@ const skipVsix = process.argv.includes("--skip-vsix")
 // Step 1: Build nodejs-server
 if (!skipBuild) {
   console.log("Step 1: Building nodejs-server...")
-  await $`cd ${SERVER_PKG} && bun run build`
+  await $`cd ${SERVER_PKG} && OPENCODE_CHANNEL=latest bun run build`
 } else {
   console.log("Step 1: Skipping server build (--skip-server-build)")
 }

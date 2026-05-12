@@ -663,9 +663,9 @@ export class KiloConnectionService {
     this.startHealthPoll(config.baseUrl, config.password)
 
     // testagent_change start - push current user ID to CLI after connection
-    if (isTestagentBun()) {
+    // if (isTestagentBun()) {
       await this.syncUserId()
-    }
+    // }
     // testagent_change end
   }
 
@@ -677,13 +677,20 @@ export class KiloConnectionService {
       const id = session?.account.id
       const name = session?.account.label
       const token = session?.accessToken
+      console.log("[testagent-vscode] syncUserId:", { hasSession: !!session, id, name, hasToken: !!token })
       const auth = `Basic ${Buffer.from(`opencode:${this.config.password}`).toString("base64")}`
-      await fetch(`${this.config.baseUrl}/kilocode/testagent/user`, {
+      const response = await fetch(`${this.config.baseUrl}/kilocode/testagent/user`, {
         method: "PUT",
         headers: { "Content-Type": "application/json", Authorization: auth },
         body: JSON.stringify({ id, name, token }),
       })
-    } catch {
+      console.log("[testagent-vscode] syncUserId response:", response.status, response.statusText)
+      if (!response.ok) {
+        const text = await response.text()
+        console.error("[testagent-vscode] syncUserId failed:", text)
+      }
+    } catch (e) {
+      console.error("[testagent-vscode] syncUserId error:", e)
       // non-critical, ignore
     }
   }

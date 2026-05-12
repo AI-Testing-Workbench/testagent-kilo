@@ -282,6 +282,12 @@ export class MarketplaceInstaller {
     workspace: string | undefined,
     filename: string,
   ): Promise<Record<string, Record<string, unknown>>> {
+    // testagent_change: Handle undefined workspace for project scope
+    if (scope === "project" && !workspace) {
+      // If project scope but no workspace available, return empty config
+      return {}
+    }
+    
     const base =
       scope === "project" ? path.join(workspace!, ".testagent") : path.join(os.homedir(), ".config", "testagent")
     const filepath = path.join(base, filename)
@@ -306,6 +312,12 @@ export class MarketplaceInstaller {
     config: Record<string, unknown>,
     filename: string,
   ): Promise<void> {
+    // testagent_change: Handle undefined workspace for project scope
+    if (scope === "project" && !workspace) {
+      // If project scope but no workspace available, skip writing
+      return
+    }
+    
     const base =
       scope === "project" ? path.join(workspace!, ".testagent") : path.join(os.homedir(), ".config", "testagent")
     const filepath = path.join(base, filename)
