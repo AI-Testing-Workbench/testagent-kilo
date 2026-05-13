@@ -499,9 +499,6 @@ const CustomProviderDialog = (props: CustomProviderDialogProps) => {
               <label style={{ "font-size": "12px", "font-weight": "500", color: "var(--text-weak-base)" }}>
                 {language.t("provider.custom.models.label")}
               </label>
-              <Show when={fetching()}>
-                <Spinner style={{ width: "12px", height: "12px" }} />
-              </Show>
             </div>
             <For each={form.models}>
               {(m, i) => (
