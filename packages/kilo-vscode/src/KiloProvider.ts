@@ -2150,27 +2150,44 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
    * Config.state is cleared and re-reads all files (including global) on next access.
    */
   private async invalidateAfterMarketplaceChange(scope: "project" | "global"): Promise<void> {
+    console.log("[TestAgent]  🔄 invalidateAfterMarketplaceChange: starting, scope =", scope) // testagent_change
     if (!this.client) return
+    
+    const dir = this.getWorkspaceDirectory()
+    
     if (scope === "global") {
-      // Use global.config.update with an empty config to trigger Config.updateGlobal()
-      // which calls Config.global.reset(). This invalidates the lazy-cached global
-      // config in the CLI process so it re-reads kilo.json from disk.
-      // An empty object merge is a no-op for the file content but resets the cache.
-      // (global.dispose alone is insufficient on older CLI versions that lack
-      // the Config.global.reset() call in the dispose handler.)
+      // testagent_change start: Use global.config.update({}) to trigger Config.updateGlobal()
+      // which now always calls invalidate() to clear the cachedGlobal cache (Duration.infinity TTL)
+      // This is critical because Config.Service has a cachedGlobal that won't be cleared by instance.dispose() alone.
+      console.log("[TestAgent]  🔄 invalidateAfterMarketplaceChange: invalidating global config cache") // testagent_change
       await this.client.global.config.update({ config: {} }).catch((e: unknown) => {
         console.warn("[TestAgent] global.config.update after marketplace change failed:", e)
       })
+      console.log("[TestAgent]  🔄 invalidateAfterMarketplaceChange: global config cache invalidated") // testagent_change
+      // testagent_change end
     }
+    
     // Always dispose the per-project instance so it rebuilds state from
     // the (possibly updated) global + project config on the next request.
-    const dir = this.getWorkspaceDirectory()
+    console.log("[TestAgent]  🔄 invalidateAfterMarketplaceChange: calling instance.dispose, dir =", dir) // testagent_change
     await this.client.instance.dispose({ directory: dir }).catch((e: unknown) => {
       console.warn("[TestAgent] instance.dispose() after marketplace change failed:", e)
     })
+    console.log("[TestAgent]  🔄 invalidateAfterMarketplaceChange: instance.dispose complete") // testagent_change
+    
+    // Clear cached messages and wait a bit for backend to rebuild state
     this.cachedAgentsMessage = null
     this.cachedConfigMessage = null
+    
+    // testagent_change start: Add delay to ensure backend has time to rebuild state
+    console.log("[TestAgent]  🔄 invalidateAfterMarketplaceChange: waiting 200ms for backend to rebuild state...") // testagent_change
+    await new Promise((resolve) => setTimeout(resolve, 200))
+    console.log("[TestAgent]  🔄 invalidateAfterMarketplaceChange: wait complete") // testagent_change
+    // testagent_change end
+    
+    console.log("[TestAgent]  🔄 invalidateAfterMarketplaceChange: fetching fresh data") // testagent_change
     await Promise.all([this.fetchAndSendAgents(), this.fetchAndSendConfig()])
+    console.log("[TestAgent]  🔄 invalidateAfterMarketplaceChange: complete") // testagent_change
   }
 
   /**
