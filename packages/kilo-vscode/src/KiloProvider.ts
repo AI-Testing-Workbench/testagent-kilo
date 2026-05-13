@@ -1800,6 +1800,8 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
 
     // Clear frontend cache
     this.cachedMcpStatusMessage = null
+    this.cachedConfigMessage = null
+    this.cachedAgentsMessage = null
 
     if (!this.client || this.connectionState !== "connected") {
       console.warn("[TestAgent] Cannot reload MCP: not connected to CLI backend")
@@ -1832,11 +1834,32 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
 
       console.log("[TestAgent] Backend MCP reload completed")
 
-      // Wait a bit for backend to stabilize
-      await new Promise((resolve) => setTimeout(resolve, 300))
+      // Invalidate backend config cache to ensure fresh config is loaded
+      // This is critical for picking up changes from both global and project config files
+      const dir = this.getWorkspaceDirectory()
+      console.log("[TestAgent] Invalidating backend config cache for directory:", dir)
+      
+      // Invalidate global config cache
+      await this.client.global.config.update({ config: {} }).catch((e: unknown) => {
+        console.warn("[TestAgent] global.config.update after MCP reload failed:", e)
+      })
+      
+      // Dispose instance to force rebuild from fresh config
+      await this.client.instance.dispose({ directory: dir }).catch((e: unknown) => {
+        console.warn("[TestAgent] instance.dispose after MCP reload failed:", e)
+      })
 
-      // Refresh MCP status in UI
-      await this.fetchAndSendMcpStatus()
+      // Wait for backend to rebuild state
+      console.log("[TestAgent] Waiting for backend to rebuild state...")
+      await new Promise((resolve) => setTimeout(resolve, 500))
+
+      // Refresh all relevant data in UI
+      console.log("[TestAgent] Fetching fresh data from backend...")
+      await Promise.all([
+        this.fetchAndSendMcpStatus(),
+        this.fetchAndSendConfig(),
+        this.fetchAndSendAgents(),
+      ])
 
       console.log("[TestAgent] MCP servers reloaded successfully")
       vscode.window.showInformationMessage("MCP 服务器已重新加载")
@@ -1847,9 +1870,15 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
       
       // Fallback: try to refresh UI anyway
       try {
-        await this.fetchAndSendMcpStatus()
+        this.cachedConfigMessage = null
+        this.cachedAgentsMessage = null
+        await Promise.all([
+          this.fetchAndSendMcpStatus(),
+          this.fetchAndSendConfig(),
+          this.fetchAndSendAgents(),
+        ])
       } catch (fetchError) {
-        console.error("[TestAgent] Failed to fetch MCP status:", fetchError)
+        console.error("[TestAgent] Failed to fetch data after reload error:", fetchError)
       }
     }
   }
