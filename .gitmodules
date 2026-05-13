@@ -5,3 +5,6 @@
 [submodule "packages/testagent-core"]
 	path = packages/testagent-core
 	url = git@github.com:AI-Testing-Workbench/testagent-core.git
+[submodule "packages/opencode-mocker"]
+	path = packages/opencode-mocker
+	url = https://github.com/AI-Testing-Workbench/opencode-mocker.git
