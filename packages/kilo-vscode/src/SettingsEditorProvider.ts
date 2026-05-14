@@ -157,6 +157,16 @@ export class SettingsEditorProvider implements vscode.Disposable {
     }
   }
 
+  /**
+   * Reload MCP servers for all panel providers.
+   * Called when MCP config changes externally and needs to be refreshed in all webviews.
+   */
+  async reloadMcp(): Promise<void> {
+    await Promise.all(
+      Array.from(this.providers.values()).map((provider) => provider.reloadMcp())
+    )
+  }
+
   dispose(): void {
     for (const [, panel] of this.panels) {
       panel.dispose()

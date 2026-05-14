@@ -55,6 +55,18 @@ export const ConfigProvider: ParentComponent = (props) => {
       // Skip if a save is in-flight — a stale configLoaded must not overwrite
       // the optimistically-updated state while the write is being confirmed.
       if (saving()) return
+
+      // If this is a refresh from MCP reload, discard draft and use server config directly
+      // to ensure the UI shows the latest config without stale draft data.
+      if (message.refresh) {
+        setDraft({})
+        setIsDirty(false)
+        setConfig(message.config)
+        setSaved(message.config)
+        setLoading(false)
+        return
+      }
+
       // Re-apply the draft on top so pending changes (e.g. a toggled switch the
       // user hasn't saved yet) stay visible instead of snapping back.
       setConfig(resolveConfig(message.config, draft(), isDirty()))
@@ -116,7 +128,10 @@ export const ConfigProvider: ParentComponent = (props) => {
 
   function updateConfig(partial: Partial<Config>) {
     // Optimistically update local state with deep merge + null stripping
-    setConfig((prev) => stripNulls(deepMerge(prev, partial)))
+    setConfig((prev) => {
+      console.log('最终config===1232131',stripNulls(deepMerge(prev, partial)))
+      return stripNulls(deepMerge(prev, partial))
+    })
     // Accumulate in draft — will be sent on saveConfig()
     setDraft((prev) => deepMerge(prev as Config, partial))
     setIsDirty(true)

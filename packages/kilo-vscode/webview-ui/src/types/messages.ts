@@ -477,6 +477,8 @@ export interface Config {
   tools?: Record<string, boolean>
   layout?: "auto" | "stretch"
   experimental?: ExperimentalConfig
+  shell?: string
+  logLevel?: "DEBUG" | "INFO" | "WARN" | "ERROR"
 }
 
 // ============================================
@@ -837,6 +839,8 @@ export interface BrowserSettingsLoadedMessage {
 export interface ConfigLoadedMessage {
   type: "configLoaded"
   config: Config
+  /** If true, this is a full refresh from MCP reload - ignore any pending draft */
+  refresh?: boolean
 }
 
 export interface ConfigUpdatedMessage {
@@ -1580,6 +1584,7 @@ export type ExtensionMessage =
   | SuggestionErrorMessage
   | BrowserSettingsLoadedMessage
   | ClaudeCompatSettingLoadedMessage
+  | GitInstalledResultMessage
   | ConfigLoadedMessage
   | ConfigUpdatedMessage
   | ConfigUpdateFailedMessage
@@ -1650,6 +1655,7 @@ export type ExtensionMessage =
   | ClearPendingPromptsMessage
   | ExtensionDataReadyMessage
   | RemoteStatusMessage
+  | ShellPathResolvedMessage
 
 // ============================================
 // Messages FROM webview TO extension
@@ -1982,6 +1988,26 @@ export interface RequestConfigMessage {
 
 export interface RequestGlobalConfigMessage {
   type: "requestGlobalConfig"
+}
+
+export interface CheckGitInstalledMessage {
+  type: "checkGitInstalled"
+}
+
+export interface GitInstalledResultMessage {
+  type: "gitInstalledResult"
+  installed: boolean
+}
+
+export interface ResolveShellPathMessage {
+  type: "resolveShellPath"
+  name: string
+}
+
+export interface ShellPathResolvedMessage {
+  type: "shellPathResolved"
+  name: string
+  path: string | null
 }
 
 export interface UpdateConfigMessage {
@@ -2342,6 +2368,7 @@ export interface RetryConnectionRequest {
 
 export interface RestartServerRequest {
   type: "restartServer"
+  logLevel?: "DEBUG" | "INFO" | "WARN" | "ERROR"
 }
 
 // Open a sub-agent session in a read-only editor panel
@@ -2590,6 +2617,7 @@ export type WebviewMessage =
   | RequestClaudeCompatSettingMessage
   | RequestConfigMessage
   | RequestGlobalConfigMessage
+  | CheckGitInstalledMessage
   | UpdateConfigMessage
   | RequestNotificationSettingsMessage
   | ResetAllSettingsRequest
@@ -2690,6 +2718,7 @@ export type WebviewMessage =
   | MoveToSectionRequest
   | MoveSectionRequest
   | RestartServerRequest
+  | ResolveShellPathMessage
 
 // ============================================
 // VS Code API type

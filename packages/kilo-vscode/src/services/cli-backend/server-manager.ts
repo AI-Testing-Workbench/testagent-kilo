@@ -18,8 +18,13 @@ const STARTUP_TIMEOUT_SECONDS = 30
 export class ServerManager {
   private instance: ServerInstance | null = null
   private startupPromise: Promise<ServerInstance> | null = null
+  private logLevel: string | undefined
 
   constructor(private readonly context: vscode.ExtensionContext) {}
+
+  setLogLevel(level: string | undefined) {
+    this.logLevel = level
+  }
 
   /**
    * Get or start the server instance
@@ -86,7 +91,9 @@ export class ServerManager {
       const claudeCompat = vscode.workspace.getConfiguration("testagent.new").get<boolean>("claudeCodeCompat", false)
       // Pin cwd so the CLI doesn't inherit the extension host's cwd ("/" under F5 debug)
       const spawnCwd = vscode.workspace.workspaceFolders?.[0]?.uri.fsPath ?? process.env.HOME ?? require("os").homedir()
-      const serverProcess = spawn(cliPath, ["serve", "--port", "0"], {
+      const args = ["serve", "--port", "0"]
+      if (this.logLevel) args.push("--log-level", this.logLevel)
+      const serverProcess = spawn(cliPath, args, {
         cwd: spawnCwd,
         env: {
           ...process.env,

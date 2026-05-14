@@ -23,6 +23,7 @@ import ExperimentalTab from "./ExperimentalTab"
 import LanguageTab from "./LanguageTab"
 import AboutKiloCodeTab from "./AboutKiloCodeTab"
 import { useServer } from "../../context/server"
+import NormalSettingTab from './NormalSettingTab'
 
 export interface SettingsProps {
   tab?: string
@@ -139,6 +140,10 @@ const Settings: Component<SettingsProps> = (props) => {
             <Icon name="server" />
             <span class="label">{language.t("settings.context.title")}</span>
           </Tabs.Trigger>
+          <Tabs.Trigger value="normalSetting">
+            <Icon name="settings-gear" />
+            <span class="label">通用设置</span>
+          </Tabs.Trigger>
           {/* testagent_change 注释实验性功能 、语言、关于*/}
           {/* <Tabs.Trigger value="experimental">
             <Icon name="settings-gear" />
@@ -193,6 +198,10 @@ const Settings: Component<SettingsProps> = (props) => {
         <Tabs.Content value="context">
           <h3>{language.t("settings.context.title")}</h3>
           <ContextTab />
+        </Tabs.Content>
+         <Tabs.Content value="normalSetting">
+          <h3>通用设置</h3>
+          <NormalSettingTab />
         </Tabs.Content>
         {/* testagent_content 注释关于内容 */}
         {/* <Tabs.Content value="experimental">

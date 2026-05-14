@@ -267,7 +267,10 @@ export function activate(context: vscode.ExtensionContext) {
     vscode.commands.registerCommand("testagent.new.reloadMcp", async () => {
       try {
         console.log("[TestAgent] Reload MCP command triggered")
-        await provider.reloadMcp()
+        await Promise.all([
+          provider.reloadMcp(),
+          settingsEditorProvider.reloadMcp(),
+        ])
         return { success: true }
       } catch (error) {
         console.error("[TestAgent] Failed to reload MCP:", error)

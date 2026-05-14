@@ -1,5 +1,6 @@
 /* eslint-disable max-lines */
 import * as path from "path"
+import * as fs from "fs"
 import * as vscode from "vscode"
 import { buildPreviewPath, getPreviewCommand, getPreviewDir, parseImage, trimEntries } from "./image-preview"
 import { isAbsolutePath } from "./path-utils"
@@ -60,6 +61,7 @@ import * as ModelState from "./kilo-provider/model-state"
 import { handleForkSession } from "./kilo-provider/fork-session"
 import { retryable, backoff, MAX_RETRIES } from "./util/retry"
 import { hasGit } from "./kilo-provider/git-status"
+import { exec } from "./util/process"
 // legacy-migration start
 import {
   checkAndShowMigrationWizard,
@@ -797,6 +799,19 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
         case "requestGlobalConfig":
           this.fetchAndSendGlobalConfig().catch((e) => console.error("[TestAgent] fetchAndSendGlobalConfig failed:", e))
           break
+        case "checkGitInstalled": {
+          const installed = await this.checkGitInstalled()
+          if (this.webview) {
+            this.webview.postMessage({ type: "gitInstalledResult", installed })
+          }
+          break
+        }
+        case "resolveShellPath": {
+          const { name } = message
+          const path = await this.resolveShell(name)
+          this.webview?.postMessage({ type: "shellPathResolved", name, path })
+          break
+        }
         case "updateConfig":
           await this.handleUpdateConfig(message.config)
           break
@@ -859,7 +874,7 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
           this.handleRemoteMessage(message.type, message.enabled)
           break
         case "restartServer":
-          void this.handleRestartServer()
+          void this.handleRestartServer(message.logLevel)
           break
         case "deleteSession":
           await this.handleDeleteSession(message.sessionID)
@@ -1857,7 +1872,7 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
       console.log("[TestAgent] Fetching fresh data from backend...")
       await Promise.all([
         this.fetchAndSendMcpStatus(),
-        this.fetchAndSendConfig(),
+        this.fetchAndSendConfig(true),
         this.fetchAndSendAgents(),
       ])
 
@@ -1874,7 +1889,7 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
         this.cachedAgentsMessage = null
         await Promise.all([
           this.fetchAndSendMcpStatus(),
-          this.fetchAndSendConfig(),
+          this.fetchAndSendConfig(true),
           this.fetchAndSendAgents(),
         ])
       } catch (fetchError) {
@@ -2222,8 +2237,8 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
   /**
    * Fetch backend config and send to webview.
    */
-  private async fetchAndSendConfig(): Promise<void> {
-    console.log("[TestAgent]  📋 fetchAndSendConfig called, connectionState:", this.connectionState) // testagent_change
+  private async fetchAndSendConfig(refresh = false): Promise<void> {
+    console.log("[TestAgent]  📋 fetchAndSendConfig called, connectionState:", this.connectionState, "refresh:", refresh) // testagent_change
     if (!this.client || this.connectionState !== "connected") {
       console.log("[TestAgent]  ⚠️ Not connected, cachedConfigMessage:", this.cachedConfigMessage) // testagent_change
       if (this.cachedConfigMessage) {
@@ -2247,10 +2262,11 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
       )
 
       console.log("[TestAgent]  ✅ Config fetched successfully, keys:", Object.keys(config || {}).length) // testagent_change
-      const message = {
+      const message: { type: "configLoaded"; config: unknown; refresh?: boolean } = {
         type: "configLoaded",
         config,
       }
+      if (refresh) message.refresh = true
       this.cachedConfigMessage = message
       this.postMessage(message)
     } catch (error) {
@@ -3167,10 +3183,10 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
   }
 
   /** Restart the CLI backend process and reconnect. */
-  private async handleRestartServer(): Promise<void> {
+  private async handleRestartServer(logLevel?: string): Promise<void> {
     this.postMessage({ type: "connectionState", state: "connecting" })
     try {
-      await this.connectionService.restart(this.getWorkspaceDirectory())
+      await this.connectionService.restart(this.getWorkspaceDirectory(), logLevel)
     } catch (e) {
       console.error("[TestAgent] restartServer failed:", e)
     }
@@ -3684,5 +3700,38 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
     this.ignoreController?.dispose()
     this.chatAutocomplete?.dispose()
     this.marketplace?.dispose()
+  }
+
+  private async resolveShell(name: string): Promise<string | null> {
+     if (process.platform === "win32" && name === "bash") {
+       const candidates = [
+         "C:/Program Files/Git/bin/bash.exe",
+         "C:/Program Files (x86)/Git/bin/bash.exe",
+         "C:/Program Files/Git/usr/bin/bash.exe",
+       ]
+       for (const f of candidates) {
+         if (fs.existsSync(f)) return f
+       }
+       try {
+         const { stdout } = await exec("where", ["bash"])
+         return (stdout.trim().split("\n")[0] || null)?.replace(/\\/g, "/") ?? null
+       } catch {}
+       return null
+     }
+     const which = process.platform === "win32" ? "where" : "which"
+     try {
+       const { stdout } = await exec(which, [name])
+       return (stdout.trim().split("\n")[0] || null)?.replace(/\\/g, "/") ?? null
+     } catch {}
+     return null
+   }
+
+   private async checkGitInstalled(): Promise<boolean> {
+    try {
+      await exec("git", ["--version"])
+      return true
+    } catch {
+      return false
+    }
   }
 }

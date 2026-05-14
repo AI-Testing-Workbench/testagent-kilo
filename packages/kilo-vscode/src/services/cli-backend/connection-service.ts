@@ -491,7 +491,7 @@ export class KiloConnectionService {
   /**
    * Clean up everything: kill server, close SSE, clear listeners.
    */
-  async restart(workspaceDir: string): Promise<void> {
+  async restart(workspaceDir: string, logLevel?: string): Promise<void> {
     this.stopHealthPoll()
     this.sseClient?.dispose()
     this.serverManager.dispose()
@@ -501,6 +501,7 @@ export class KiloConnectionService {
     this.info = null
     this.connectPromise = null
     this.setState("connecting")
+    this.serverManager.setLogLevel(logLevel)
     await this.connect(workspaceDir)
   }
 

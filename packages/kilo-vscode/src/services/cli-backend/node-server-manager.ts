@@ -21,8 +21,13 @@ const STARTUP_TIMEOUT_SECONDS = 30
 export class NodeServerManager {
   private instance: ServerInstance | null = null
   private startupPromise: Promise<ServerInstance> | null = null
+  private logLevel: string | undefined
 
   constructor(private readonly context: vscode.ExtensionContext) {}
+
+  setLogLevel(level: string | undefined) {
+    this.logLevel = level
+  }
 
   async getServer(): Promise<ServerInstance> {
     console.log("[OpenCode] NodeServerManager: 🔍 getServer called")
@@ -74,6 +79,7 @@ export class NodeServerManager {
         "--password", password,
         "--hostname", "127.0.0.1",
       ]
+      
 
       const proc = spawn(nodePath, args, {
         cwd: spawnCwd,
