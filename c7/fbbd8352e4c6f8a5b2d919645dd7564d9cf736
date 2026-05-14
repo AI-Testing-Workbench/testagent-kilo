@@ -1,0 +1,84 @@
+packages/kilo-vscode/webview-ui/src/components/settings/NormalSettingTab.tsx
+  s_cb1e0c2e2381a6::t_eedda1c7e0955d 56-60
+  s_cb1e0c2e2381a6::t_e11d44d2430776 129
+  s_321c598496fb20::t_732a9f36e017c8 156
+  s_321c598496fb20::t_35211a66f4eafb 1,4-8,23,35-36,39-43,45-47,63,82,92-102,104-107,113,124,141-146,155
+  s_cb1e0c2e2381a6::t_8a07f68e733b0f 14,19,24-30
+  s_321c598496fb20::t_adbeaf34986a48 103
+  s_321c598496fb20::t_d5904ce17ac3d9 12,15-18
+  s_cb1e0c2e2381a6::t_02d79b047fe77f 79
+  s_cb1e0c2e2381a6::t_e08f3617824b06 128,138
+  s_cb1e0c2e2381a6::t_5fe5d816a81257 131
+  s_cb1e0c2e2381a6::t_0b0f684ee576f7 167
+  s_cb1e0c2e2381a6::t_91f2c4292f97d7 44,64
+  s_321c598496fb20::t_5820544ca997da 3,20-22,31-32,65,78,80,149-152,154,157-162,179-183
+  s_cb1e0c2e2381a6::t_8cc799062d1e72 38
+  s_cb1e0c2e2381a6::t_a1c4e3af8d9db7 81,83-91,116
+  s_cb1e0c2e2381a6::t_fe419324d35d01 68-76
+  s_cb1e0c2e2381a6::t_786a8ac3059e1a 66
+  s_cb1e0c2e2381a6::t_020e23421c33ff 115
+  s_cb1e0c2e2381a6::t_68d8bc00fdc7ea 37,48-50,55,61-62,108-112,114,117-123
+  s_cb1e0c2e2381a6::t_7fd84ce89c23fb 125-127,130,132-137,139-140
+  s_cb1e0c2e2381a6::t_9b1699fd888f78 51-54
+  s_321c598496fb20::t_23fa6a69169608 67,77
+  s_cb1e0c2e2381a6::t_2d23513b74bbbc 153,163-166,168-178
+packages/kilo-vscode/src/services/cli-backend/server-manager.ts
+  s_cb1e0c2e2381a6::t_d80c1a70a48e87 94-96
+  s_cb1e0c2e2381a6::t_5ae1df0fa0cd84 21,25-27
+packages/kilo-vscode/src/services/cli-backend/connection-service.ts
+  s_cb1e0c2e2381a6::t_6340090599b60b 494,504
+packages/kilo-vscode/src/KiloProvider.ts
+  s_321c598496fb20::t_6c2529f44e0b05 3730-3735
+  s_321c598496fb20::t_9117f17e5d17dd 3704,3736
+  s_cb1e0c2e2381a6::t_68b7885e17c2b0 809,813-814
+  s_321c598496fb20::t_1ef349bbc9d7cd 64
+  s_cb1e0c2e2381a6::t_81f6f4abd139a1 3705-3729
+  s_321c598496fb20::t_239ed041896331 802-803,807-808
+  s_cb1e0c2e2381a6::t_c8bb2e00d4be97 3
+  s_321c598496fb20::t_3b07626f23fbe5 804-806
+  s_cb1e0c2e2381a6::t_a9c610e62513d8 810-811
+  s_cb1e0c2e2381a6::t_231777c9cb17e4 812
+  s_cb1e0c2e2381a6::t_67b94c53de2edb 877
+  s_cb1e0c2e2381a6::t_4149805ba6190a 3186,3189
+packages/kilo-vscode/src/extension.ts
+  s_cb1e0c2e2381a6::t_4c2de71d4ed04c 270-273
+packages/kilo-vscode/src/services/cli-backend/node-server-manager.ts
+  s_cb1e0c2e2381a6::t_9552384d0213b3 24,28-30
+  s_cb1e0c2e2381a6::t_3eb6df80d5b53d 82
+packages/kilo-vscode/webview-ui/src/types/messages.ts
+  s_cb1e0c2e2381a6::t_dc2d008c310ecd 2721
+  s_321c598496fb20::t_261c50688d5c06 480
+  s_cb1e0c2e2381a6::t_44b1ddad9c7300 1658
+  s_cb1e0c2e2381a6::t_263ee66570d3d4 2371
+  s_321c598496fb20::t_c2d568cc24015f 2620
+  s_321c598496fb20::t_edc9b16cb27752 1993-2001
+  s_cb1e0c2e2381a6::t_aa0d7032a2f279 481
+  s_321c598496fb20::t_2665861b579ec2 1587
+  s_cb1e0c2e2381a6::t_4d8760fe645569 2002-2012
+packages/kilo-vscode/webview-ui/src/components/settings/Settings.tsx
+  s_321c598496fb20::t_e6e7218e144792 143-146
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.4.8",
+  "base_commit_sha": "c7fbbd8352e4c6f8a5b2d919645dd7564d9cf736",
+  "prompts": {},
+  "sessions": {
+    "s_321c598496fb20": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_1dae69bfdffeZwm5QiiHnypyee",
+        "model": "minimax-m2.5-free"
+      },
+      "human_author": "邱文斌 <qiuwenbin@piscifun.com>"
+    },
+    "s_cb1e0c2e2381a6": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_1daa5516bffeVvGD5HsAweWGDz",
+        "model": "big-pickle"
+      },
+      "human_author": "邱文斌 <qiuwenbin@piscifun.com>"
+    }
+  }
+}
