@@ -312,6 +312,7 @@ export const SessionProvider: ParentComponent = (props) => {
 
   const removeMode = (name: string) => {
     setAgents((prev) => prev.filter((a) => a.name !== name))
+    // setAllAgents((prev) => prev.filter((a) => a.name !== name))
 
     // Clear stale selections so selectedAgentName() falls back to the default
     if (pendingAgentSelection() === name) {

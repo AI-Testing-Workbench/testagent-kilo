@@ -493,6 +493,7 @@ export interface ReadyMessage {
   languageOverride?: string
   workspaceDirectory?: string
   userId?: string // testagent_change
+  webviewType?: "sidebar" | "panel" | "unknown" // testagent_change
 }
 
 export interface GitStatusMessage {

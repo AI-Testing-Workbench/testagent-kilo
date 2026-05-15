@@ -49,8 +49,10 @@ export const ServerProvider: ParentComponent = (props) => {
   })
 
   // testagent_change start - extracted to reduce arrow function complexity
+  let webviewIdentifier = "unknown" // testagent_change - store webview type for logging
   function handleReady(message: Extract<ExtensionMessage, { type: "ready" }>) {
     console.log("[testagent] Server ready:", message.serverInfo)
+    if (message.webviewType) webviewIdentifier = message.webviewType // testagent_change
     setServerInfo(message.serverInfo)
     if (message.extensionVersion) setExtensionVersion(message.extensionVersion)
     setConnectionState("connected")
@@ -65,7 +67,7 @@ export const ServerProvider: ParentComponent = (props) => {
 
   onMount(() => {
     const unsubscribe = vscode.onMessage((message: ExtensionMessage) => {
-      console.log("[testagent] Webview received message:", message.type, message) // testagent_change - debug all messages
+      console.log(`[testagent:${webviewIdentifier}] Webview received message:`, message.type, message) // testagent_change - include webview type
       switch (message.type) {
         case "ready":
           handleReady(message) // testagent_change

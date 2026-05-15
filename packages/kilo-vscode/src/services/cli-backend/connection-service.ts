@@ -17,6 +17,7 @@ type ProfileChangeListener = (data: unknown) => void
 type MigrationCompleteListener = () => void
 type FavoritesChangeListener = (favorites: Array<{ providerID: string; modelID: string }>) => void
 type ClearPendingPromptsListener = () => void
+type AgentsChangeListener = () => void // testagent_change
 type DirectoryProvider = () => string[]
 
 // Poll /global/health at the same interval as packages/app/src/context/server.tsx.
@@ -68,6 +69,7 @@ export class KiloConnectionService {
   private readonly migrationCompleteListeners: Set<MigrationCompleteListener> = new Set()
   private readonly favoritesChangeListeners: Set<FavoritesChangeListener> = new Set()
   private readonly clearPendingPromptsListeners: Set<ClearPendingPromptsListener> = new Set()
+  private readonly agentsChangeListeners: Set<AgentsChangeListener> = new Set() // testagent_change
   private readonly directoryProviders: Set<DirectoryProvider> = new Set()
 
   /**
@@ -351,6 +353,27 @@ export class KiloConnectionService {
     this.clearPendingPromptsListeners.add(listener)
     return () => {
       this.clearPendingPromptsListeners.delete(listener)
+    }
+  }
+
+  /**
+   * Subscribe to agents change events broadcast from any KiloProvider. Returns unsubscribe function.
+   * testagent_change
+   */
+  onAgentsChanged(listener: AgentsChangeListener): () => void {
+    this.agentsChangeListeners.add(listener)
+    return () => {
+      this.agentsChangeListeners.delete(listener)
+    }
+  }
+
+  /**
+   * Broadcast an agents change event to all subscribed KiloProvider instances.
+   * testagent_change
+   */
+  notifyAgentsChanged(): void {
+    for (const listener of this.agentsChangeListeners) {
+      listener()
     }
   }
 
