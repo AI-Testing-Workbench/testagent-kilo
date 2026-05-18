@@ -28,3 +28,7 @@ AGENTS.md
 
 # Include opencode-server/ directory for Node.js server (opencode build)
 !opencode-server/**
+
+# testagent_change start - Include node-notifier vendor for system notifications
+!node_modules/node-notifier/**
+# testagent_change end
