@@ -190,6 +190,84 @@ const barBaz = 2
 const bazFoo = 3
 ```
 
+### Logging and Output
+
+**NEVER use `console.log`, `console.error`, `console.warn`, or `console.info` in application code.** These bypass the project's logging system and pollute stdout/stderr.
+
+**Use the unified logging system instead:**
+
+```ts
+import * as Log from "@opencode-ai/core/util/log"
+
+const log = Log.create({ service: "my-service" })
+
+log.debug("debug message", { data: value })
+log.info("info message", { data: value })
+log.warn("warning message", { error: err })
+log.error("error message", { error: err })
+```
+
+**Benefits:**
+- Logs are written to files (not terminal) by default
+- Controllable via log levels (DEBUG, INFO, WARN, ERROR)
+- Structured format with timestamps and service names
+- Won't interfere with CLI output or TUI rendering
+
+**Exceptions (when `console` is allowed):**
+
+1. **CLI command output** - Commands in `packages/opencode/src/cli/cmd/` that display results to users should use `process.stdout.write()` or `process.stderr.write()` for explicit output control
+2. **VS Code extension communication** - Special protocols like `[TESTAGENT_NOTIFICATION]` that the extension parses from stderr
+3. **TUI debugging** - `packages/opencode/src/cli/cmd/tui/plugin/runtime.ts` logs to both file and console for plugin debugging
+
+**Examples:**
+
+Good:
+
+```ts
+// Application code
+import { Log } from "@/util/log"
+const log = Log.create({ service: "provider" })
+
+async function fetchModels() {
+  log.info("fetching models")
+  try {
+    const models = await fetch(url)
+    log.debug("models fetched", { count: models.length })
+    return models
+  } catch (err) {
+    log.error("fetch failed", { error: err })
+    throw err
+  }
+}
+```
+
+```ts
+// CLI command output
+import { EOL } from "os"
+
+function handler() {
+  const result = computeResult()
+  process.stdout.write(JSON.stringify(result, null, 2) + EOL)
+}
+```
+
+Bad:
+
+```ts
+// DON'T DO THIS - bypasses logging system
+async function fetchModels() {
+  console.log("fetching models")
+  try {
+    const models = await fetch(url)
+    console.log("models:", models)
+    return models
+  } catch (err) {
+    console.error("fetch failed:", err)
+    throw err
+  }
+}
+```
+
 ## Testing
 
 You MUST avoid using `mocks` as much as possible.
