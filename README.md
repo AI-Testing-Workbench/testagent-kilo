@@ -79,3 +79,19 @@ const bar = 2
 
 - `packages/opencode/src/testagent/`
 - `packages/opencode/test/testagent/`
+
+
+## 打包node/bun双运行时vsix插件:默认node运行时
+#### 第一步
+```shell
+#打包sdk  一般只要执行以后；后续打包不需要重新生成SDK
+cd packages/kilo-vscode && bun run rebuild-sdk
+```
+#### 第二步
+```shell
+cd packages/testagent-core && bun bun:windows
+```
+
+#### 第三步
+```shell
+cd packages/kilo-vscode && bun testagent-nodejs:vsix

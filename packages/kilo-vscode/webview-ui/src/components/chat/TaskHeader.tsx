@@ -1,6 +1,6 @@
 /**
  * TaskHeader component
- * Sticky header above the chat messages showing session title,
+ * Sticky header above the chat messages showing session title、
  * cost, context usage, and a compact button.
  * Also shows todo progress when the session has todos.
  *
@@ -190,16 +190,21 @@ export const TaskHeader: Component<TaskHeaderProps> = (props) => {
               <div class="task-header-tokens">
                 <span class="task-header-tokens-label">Tokens</span>
                 <Show when={tk().input > 0}>
-                  <span class="task-header-tokens-value">
+                  <Tooltip value="包含内容：用户的问题/指令、系统提示词（system prompt）、对话历史、上下文信息（如文件内容、代码片段）、工具定义和文档">
+                    <span class="task-header-tokens-value">
                     <Icon name="arrow-up" size="small" />
-                    输入:{fmtNum(tk().input)}
+                    输入:{fmtNum(tk().input)}  
                   </span>
+                  </Tooltip>
                 </Show>
                 <Show when={tk().output > 0}>
+                  <Tooltip value='包含内容：AI 的回复文本、生成的代码、工具调用（function calls）、推理过程'>
+
                   <span class="task-header-tokens-value">
                     <Icon name="arrow-down-to-line" size="small" />
                     输出:{fmtNum(tk().output)}
                   </span>
+                  </Tooltip>
                 </Show>
                 <Show when={tk().cache?.write && tk().cache!.write > 0}>
                   <span class="task-header-tokens-value">

@@ -181,7 +181,7 @@ const NormalSetting: Component = () => {
           />
         </SettingsRow>
         <SettingsRow
-          title="CLI 运行时"
+          title="后端服务运行时"
           description={`选择后端运行时 (当前: ${runtime() === "bun" ? "Bun" : "Node.js"})`}
         >
           <Select
