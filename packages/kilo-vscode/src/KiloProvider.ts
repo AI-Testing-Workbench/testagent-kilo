@@ -3219,13 +3219,15 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
 
     console.log("[TestAgent] ✅ Step 1: Is busy→idle transition")
 
-    // Track this session if not already tracked
+    // Only notify if this provider is tracking the session
+    // This prevents duplicate notifications when multiple KiloProvider instances exist
+    // (sidebar, settings panel, tabs, etc.)
     if (!this.trackedSessionIds.has(sessionID)) {
-      console.log("[TestAgent] 📝 Session not tracked yet, adding to tracked sessions")
-      this.trackedSessionIds.add(sessionID)
+      console.log("[TestAgent] ❌ Session not tracked by this provider, skipping notification")
+      return
     }
 
-    console.log("[TestAgent] ✅ Step 2: Session is tracked")
+    console.log("[TestAgent] ✅ Step 2: Session is tracked by this provider")
 
     // Only notify if webview is hidden (check both sidebar and panel)
     // if (this.isWebviewVisible()) {
