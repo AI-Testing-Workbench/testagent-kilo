@@ -5,14 +5,14 @@ import { join } from "node:path"
 /**
  * Ensures the VS Code extension has a CLI binary at `packages/kilo-vscode/bin/testagent`.
  *
- * Always builds from packages/testagent-opencode:
+ * Always builds from packages/testagent-core:
  *   - bun bun:mac      (macOS / linux)
  *   - bun bun:windows  (windows)
  * Those scripts build the binary AND copy it into packages/kilo-vscode/bin/ automatically.
  */
-// testagent_change start - use testagent-opencode instead of opencode
+// testagent_change start - use testagent-core instead of opencode
 const kiloVscodeDir = join(import.meta.dir, "..")
-const testagentDir = join(kiloVscodeDir, "..", "testagent-opencode")
+const testagentDir = join(kiloVscodeDir, "..", "testagent-core")
 const script = process.platform === "win32" ? "bun:windows" : "bun:mac"
 
 function log(msg: string) {
@@ -27,7 +27,7 @@ async function main() {
     log(`Creating bin directory at ${binDir}`)
     await Bun.write(join(binDir, ".gitkeep"), "")
   }
-  log(`Building CLI binary via '${script}' in packages/testagent-opencode...`)
+  log(`Building CLI binary via '${script}' in packages/testagent-core...`)
   await $`bun run ${script}`.cwd(testagentDir)
   log(`Build complete. Binary copied to ${binDir}`)
 }
