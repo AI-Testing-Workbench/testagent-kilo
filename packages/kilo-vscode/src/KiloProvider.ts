@@ -851,13 +851,8 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
             break
           }
           const { runtime } = message
-          const workspaceDir = vscode.workspace.workspaceFolders?.[0]?.uri.fsPath
-          if (!workspaceDir) {
-            vscode.window.showErrorMessage("No workspace folder open")
-            break
-          }
           try {
-            await this.connectionService.switchRuntime(this.extensionContext, runtime, workspaceDir)
+            await this.connectionService.switchRuntime(this.extensionContext, runtime)
             this.webview?.postMessage({ type: "runtimeResult", runtime })
             vscode.window.showInformationMessage(`已切换到 ${runtime === "bun" ? "Bun" : "Node.js"} 运行时`)
           } catch (error) {
@@ -3573,6 +3568,13 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
       const sid = event.properties.sessionID
       const error = event.properties.error
       if (sid && error && this.trackedSessionIds.has(sid)) {
+        // Skip notification for MessageAbortedError (user-initiated abort is not an error)
+        const isAbortError =
+          typeof error === "object" && error !== null && "name" in error && error.name === "MessageAbortedError"
+        if (isAbortError) {
+          return
+        }
+
         // Extract error message from the error object
         const errorMsg =
           typeof error === "string"

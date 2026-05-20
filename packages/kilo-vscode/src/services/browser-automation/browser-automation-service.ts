@@ -45,7 +45,7 @@ export class BrowserAutomationService implements vscode.Disposable {
    */
   async syncWithSettings(): Promise<void> {
     const config = vscode.workspace.getConfiguration("testagent.new.browserAutomation")
-    const enabled = config.get<boolean>("enabled", false)
+    const enabled = config.get<boolean>("enabled", true)
 
     if (enabled) {
       await this.register()
@@ -60,7 +60,7 @@ export class BrowserAutomationService implements vscode.Disposable {
    */
   async reregisterIfEnabled(): Promise<void> {
     const config = vscode.workspace.getConfiguration("testagent.new.browserAutomation")
-    const enabled = config.get<boolean>("enabled", false)
+    const enabled = config.get<boolean>("enabled", true)
     if (enabled) {
       await this.register()
     }

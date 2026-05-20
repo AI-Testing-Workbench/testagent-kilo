@@ -538,7 +538,7 @@ export class KiloConnectionService {
    * Switch between Bun and Node.js runtime and restart the server.
    * Only available when both runtimes are bundled in the extension.
    */
-  async switchRuntime(context: vscode.ExtensionContext, runtime: "bun" | "nodejs", workspaceDir: string): Promise<void> {
+  async switchRuntime(context: vscode.ExtensionContext, runtime: "bun" | "nodejs"): Promise<void> {
     console.log(`[TestAgent] Switching runtime to: ${runtime}`)
     
     // Save the runtime preference
@@ -557,7 +557,8 @@ export class KiloConnectionService {
     // Create new server manager based on runtime
     this.serverManager = runtime === "bun" ? new ServerManager(context) : new NodeServerManager(context)
     
-    // Reconnect
+    // Reconnect - use workspace dir if available, otherwise use temp dir
+    const workspaceDir = vscode.workspace.workspaceFolders?.[0]?.uri.fsPath ?? require("os").tmpdir()
     this.setState("connecting")
     await this.connect(workspaceDir)
   }

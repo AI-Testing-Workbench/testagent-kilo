@@ -47,43 +47,43 @@ await fs.rm(TARGET, { recursive: true, force: true })
 await fs.mkdir(TARGET, { recursive: true })
 await fs.cp(serverDist, TARGET, { recursive: true })
 
-// Step 2.5: Copy Bun binary for runtime switching
-console.log("Step 2.5: Copying Bun binary for runtime switching...")
-const bunBinDir = join(ROOT, "bin")
-await fs.mkdir(bunBinDir, { recursive: true })
+// // Step 2.5: Copy Bun binary for runtime switching
+// console.log("Step 2.5: Copying Bun binary for runtime switching...")
+// const bunBinDir = join(ROOT, "bin")
+// await fs.mkdir(bunBinDir, { recursive: true })
 
-const platform = process.platform
-const arch = process.arch
-const bunBinary = platform === "win32" ? "testagent.exe" : "testagent"
+// const platform = process.platform
+// const arch = process.arch
+// const bunBinary = platform === "win32" ? "testagent.exe" : "testagent"
 
-// Determine the correct CLI dist directory based on platform
-let cliPlatformDir: string
-if (platform === "darwin") {
-  cliPlatformDir = arch === "arm64" ? "@kilocode/cli-darwin-arm64" : "@kilocode/cli-darwin-x64"
-} else if (platform === "linux") {
-  cliPlatformDir = arch === "arm64" ? "@kilocode/cli-linux-arm64" : "@kilocode/cli-linux-x64"
-} else if (platform === "win32") {
-  cliPlatformDir = arch === "arm64" ? "@kilocode/cli-windows-arm64" : "@kilocode/cli-windows-x64"
-} else {
-  console.warn(`  ⚠️ Unsupported platform: ${platform}, skipping Bun binary...`)
-  cliPlatformDir = ""
-}
+// // Determine the correct CLI dist directory based on platform
+// let cliPlatformDir: string
+// if (platform === "darwin") {
+//   cliPlatformDir = arch === "arm64" ? "@kilocode/cli-darwin-arm64" : "@kilocode/cli-darwin-x64"
+// } else if (platform === "linux") {
+//   cliPlatformDir = arch === "arm64" ? "@kilocode/cli-linux-arm64" : "@kilocode/cli-linux-x64"
+// } else if (platform === "win32") {
+//   cliPlatformDir = arch === "arm64" ? "@kilocode/cli-windows-arm64" : "@kilocode/cli-windows-x64"
+// } else {
+//   console.warn(`  ⚠️ Unsupported platform: ${platform}, skipping Bun binary...`)
+//   cliPlatformDir = ""
+// }
 
-if (cliPlatformDir) {
-  const cliDistDir = process.env.CLI_DIST_DIR || join(TESTAGENT_CORE, "dist")
-  const bunSource = join(cliDistDir, cliPlatformDir, "bin", bunBinary)
-  const bunTarget = join(bunBinDir, bunBinary)
+// if (cliPlatformDir) {
+//   const cliDistDir = process.env.CLI_DIST_DIR || join(TESTAGENT_CORE, "dist")
+//   const bunSource = join(cliDistDir, cliPlatformDir, "bin", bunBinary)
+//   const bunTarget = join(bunBinDir, bunBinary)
 
-  if (existsSync(bunSource)) {
-    await fs.copyFile(bunSource, bunTarget)
-    if (platform !== "win32") {
-      await fs.chmod(bunTarget, 0o755)
-    }
-    console.log(`  ✓ Copied ${bunBinary} to bin/ for runtime switching`)
-  } else {
-    console.warn(`  ⚠️ Bun binary not found at ${bunSource}, runtime switching will not work`)
-  }
-}
+//   if (existsSync(bunSource)) {
+//     await fs.copyFile(bunSource, bunTarget)
+//     if (platform !== "win32") {
+//       await fs.chmod(bunTarget, 0o755)
+//     }
+//     console.log(`  ✓ Copied ${bunBinary} to bin/ for runtime switching`)
+//   } else {
+//     console.warn(`  ⚠️ Bun binary not found at ${bunSource}, runtime switching will not work`)
+//   }
+// }
 
 // Step 3: Install dependencies (for native node-pty bindings)
 console.log("Step 3: Installing nodejs-server dependencies...")
