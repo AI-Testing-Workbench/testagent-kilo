@@ -1,6 +1,6 @@
 {
-  "name": "testagent-tscode",
-  "displayName": "TestAgent for TScode",
+  "name": "TestAgent",
+  "displayName": "TestAgent",
   "description": "TestAgent Code Extension",
   "version": "1.0.4",
   "icon": "assets/icons/logo-outline-black.png",

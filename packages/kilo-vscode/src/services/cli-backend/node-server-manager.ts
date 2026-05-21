@@ -30,22 +30,22 @@ export class NodeServerManager {
   }
 
   async getServer(): Promise<ServerInstance> {
-    console.log("[OpenCode] NodeServerManager: 🔍 getServer called")
+    console.log("[TestAgent] NodeServerManager: 🔍 getServer called")
     if (this.instance) {
-      console.log("[OpenCode] NodeServerManager: ♻️ Returning existing instance:", { port: this.instance.port })
+      console.log("[TestAgent] NodeServerManager: ♻️ Returning existing instance:", { port: this.instance.port })
       return this.instance
     }
 
     if (this.startupPromise) {
-      console.log("[OpenCode] NodeServerManager: ⏳ Startup already in progress, waiting...")
+      console.log("[TestAgent] NodeServerManager: ⏳ Startup already in progress, waiting...")
       return this.startupPromise
     }
 
-    console.log("[OpenCode] NodeServerManager: 🚀 Starting new server instance...")
+    console.log("[TestAgent] NodeServerManager: 🚀 Starting new server instance...")
     this.startupPromise = this.startServer()
     try {
       this.instance = await this.startupPromise
-      console.log("[OpenCode] NodeServerManager: ✅ Server started successfully:", { port: this.instance.port })
+      console.log("[TestAgent] NodeServerManager: ✅ Server started successfully:", { port: this.instance.port })
       return this.instance
     } finally {
       this.startupPromise = null
@@ -57,8 +57,8 @@ export class NodeServerManager {
     const nodePath = await this.resolveNodePath()
     const serverDir = this.getServerDir()
 
-    console.log("[OpenCode] NodeServerManager: 📍 Node path:", nodePath)
-    console.log("[OpenCode] NodeServerManager: 📍 Server dir:", serverDir)
+    console.log("[TestAgent] NodeServerManager: 📍 Node path:", nodePath)
+    console.log("[TestAgent] NodeServerManager: 📍 Server dir:", serverDir)
 
     const entry = path.join(serverDir, "cli.mjs")
     if (!fs.existsSync(entry)) {
@@ -70,7 +70,7 @@ export class NodeServerManager {
     const spawnCwd = vscode.workspace.workspaceFolders?.[0]?.uri.fsPath ?? process.env.HOME ?? require("os").homedir()
 
     return new Promise((resolve, reject) => {
-      console.log("[OpenCode] NodeServerManager: 🎬 Spawning Node.js server")
+      console.log("[TestAgent] NodeServerManager: 🎬 Spawning Node.js server")
 
       const args = [
         "--experimental-sqlite",
@@ -98,19 +98,19 @@ export class NodeServerManager {
         // windowsHide is already set by the spawn() wrapper in util/process.ts
       })
 
-      console.log("[OpenCode] NodeServerManager: 📦 Process spawned with PID:", proc.pid)
+      console.log("[TestAgent] NodeServerManager: 📦 Process spawned with PID:", proc.pid)
 
       let resolved = false
       const stderrLines: string[] = []
 
       proc.stdout?.on("data", (data: Buffer) => {
         const output = data.toString()
-        console.log("[OpenCode] NodeServerManager: 📥 stdout:", output)
+        console.log("[TestAgent] NodeServerManager: 📥 stdout:", output)
 
         const port = parseServerPort(output)
         if (port !== null && !resolved) {
           resolved = true
-          console.log("[OpenCode] NodeServerManager: 🎯 Port detected:", port)
+          console.log("[TestAgent] NodeServerManager: 🎯 Port detected:", port)
           resolve({ port, password, process: proc })
         }
       })
@@ -119,22 +119,40 @@ export class NodeServerManager {
         const output = data.toString()
         // Node.js experimental warnings are expected, don't treat as errors
         if (output.includes("ExperimentalWarning")) {
-          console.log("[OpenCode] NodeServerManager: ⚡ Node.js warning:", output.trim())
+          console.log("[TestAgent] NodeServerManager: ⚡ Node.js warning:", output.trim())
           return
         }
-        console.error("[OpenCode] NodeServerManager: ⚠️ stderr:", output)
+        console.error("[TestAgent] NodeServerManager: ⚠️ stderr:", output)
         stderrLines.push(output)
+
+        // testagent_change start - parse plugin notifications from stderr
+        const notificationMatch = output.match(/\[TESTAGENT_NOTIFICATION\] (.+)/)
+        if (notificationMatch) {
+          try {
+            const notification = JSON.parse(notificationMatch[1])
+            if (notification.type === "plugin-notification") {
+              if (notification.level === "info") {
+                vscode.window.showInformationMessage(`TestAgent: ${notification.message}`)
+              } else if (notification.level === "error") {
+                vscode.window.showErrorMessage(`TestAgent: ${notification.message}`)
+              }
+            }
+          } catch (err) {
+            console.error("[TestAgent] NodeServerManager: Failed to parse notification:", err)
+          }
+        }
+        // testagent_change end
       })
 
       proc.on("error", (error) => {
-        console.error("[OpenCode] NodeServerManager: ❌ Process error:", error)
+        console.error("[TestAgent] NodeServerManager: ❌ Process error:", error)
         if (!resolved) {
           reject(error)
         }
       })
 
       proc.on("exit", (code) => {
-        console.log("[OpenCode] NodeServerManager: 🛑 Process exited with code:", code)
+        console.log("[TestAgent] NodeServerManager: 🛑 Process exited with code:", code)
         if (this.instance?.process === proc) {
           this.instance = null
         }
@@ -150,7 +168,7 @@ export class NodeServerManager {
 
       setTimeout(() => {
         if (!resolved) {
-          console.error(`[OpenCode] NodeServerManager: ⏰ Server startup timeout (${STARTUP_TIMEOUT_SECONDS}s)`)
+          console.error(`[TestAgent] NodeServerManager: ⏰ Server startup timeout (${STARTUP_TIMEOUT_SECONDS}s)`)
           NodeServerManager.killProcess(proc)
           const { userMessage, userDetails } = toErrorMessage(
             t("server.startupTimeout", { seconds: STARTUP_TIMEOUT_SECONDS }),
@@ -194,20 +212,20 @@ export class NodeServerManager {
 
   private tryVSCodeNode(): string | null {
     const vscodeNode = process.execPath
-    console.log("[OpenCode] NodeServerManager: Checking VS Code built-in Node.js:", vscodeNode)
+    console.log("[TestAgent] NodeServerManager: Checking VS Code built-in Node.js:", vscodeNode)
     
     try {
       const { execSync } = require("child_process")
       const version = execSync(`"${vscodeNode}" --version`, { encoding: "utf8", timeout: 5000 }).trim()
-      console.log("[OpenCode] NodeServerManager: VS Code Node.js version:", version)
+      console.log("[TestAgent] NodeServerManager: VS Code Node.js version:", version)
       
       if (this.isVersionValid(version)) {
-        console.log("[OpenCode] NodeServerManager: ✅ Using VS Code built-in Node.js")
+        console.log("[TestAgent] NodeServerManager: ✅ Using VS Code built-in Node.js")
         return vscodeNode
       }
-      console.warn(`[OpenCode] NodeServerManager: VS Code Node.js ${version} too old, need >= 22.5.0`)
+      console.warn(`[TestAgent] NodeServerManager: VS Code Node.js ${version} too old, need >= 22.5.0`)
     } catch (err) {
-      console.warn("[OpenCode] NodeServerManager: Failed to check VS Code Node.js:", err)
+      console.warn("[TestAgent] NodeServerManager: Failed to check VS Code Node.js:", err)
     }
     return null
   }
@@ -220,12 +238,12 @@ export class NodeServerManager {
       if (!found) return null
 
       const version = execSync(`"${found}" --version`, { encoding: "utf8", timeout: 5000 }).trim()
-      console.log("[OpenCode] NodeServerManager: Found node:", found, version)
+      console.log("[TestAgent] NodeServerManager: Found node:", found, version)
       
       if (this.isVersionValid(version)) {
         return found
       }
-      console.warn(`[OpenCode] NodeServerManager: Node.js ${version} too old, need >= 22.5.0`)
+      console.warn(`[TestAgent] NodeServerManager: Node.js ${version} too old, need >= 22.5.0`)
     } catch {
       // which/where failed
     }
@@ -280,12 +298,12 @@ export class NodeServerManager {
     const proc = this.instance.process
     this.instance = null
 
-    console.log("[OpenCode] NodeServerManager: 🔴 Disposing — sending SIGTERM, PID:", proc.pid)
+    console.log("[TestAgent] NodeServerManager: 🔴 Disposing — sending SIGTERM, PID:", proc.pid)
     NodeServerManager.killProcess(proc, "SIGTERM")
 
     const timer = setTimeout(() => {
       if (proc.exitCode === null) {
-        console.warn("[OpenCode] NodeServerManager: ⚠️ Process did not exit, sending SIGKILL")
+        console.warn("[TestAgent] NodeServerManager: ⚠️ Process did not exit, sending SIGKILL")
         NodeServerManager.killProcess(proc, "SIGKILL")
       }
     }, 5000)

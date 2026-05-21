@@ -15,7 +15,28 @@ type VSCodeAPI = {
 
 declare function acquireVsCodeApi(): VSCodeAPI
 
-const vscode = acquireVsCodeApi()
+// testagent_change start - 使用单例模式避免重复调用 acquireVsCodeApi()
+let vscodeApi: VSCodeAPI | undefined
+
+function getVSCodeAPI(): VSCodeAPI {
+  if (!vscodeApi) {
+    if (typeof acquireVsCodeApi === "function") {
+      vscodeApi = acquireVsCodeApi()
+    } else {
+      // Mock for development/testing outside VS Code
+      console.warn("[KiloClaw] Running outside VS Code, using mock API")
+      vscodeApi = {
+        postMessage: (msg) => console.log("[KiloClaw] Mock postMessage:", msg),
+        getState: () => undefined,
+        setState: () => {},
+      }
+    }
+  }
+  return vscodeApi
+}
+
+const vscode = getVSCodeAPI()
+// testagent_change end
 
 const MAX_MESSAGES = 500
 

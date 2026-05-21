@@ -225,7 +225,7 @@ Good:
 
 ```ts
 // Application code
-import { Log } from "@/util/log"
+import * as Log from "@opencode-ai/core/util/log"
 const log = Log.create({ service: "provider" })
 
 async function fetchModels() {

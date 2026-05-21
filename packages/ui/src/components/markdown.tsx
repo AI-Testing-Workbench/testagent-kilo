@@ -232,24 +232,22 @@ function setupCodeCopy(root: HTMLDivElement, getLabels: () => CopyLabels) {
     event.stopPropagation()
 
     // 发送消息给 VS Code 扩展打开文件
-    if (typeof window !== "undefined" && "acquireVsCodeApi" in window) {
-      try {
-        // 使用全局缓存的 vscode API 实例，避免重复调用 acquireVsCodeApi()
-        const getVsCodeApi = () => {
-          if (!(window as any).__vscodeApi) {
-            (window as any).__vscodeApi = (window as any).acquireVsCodeApi()
-          }
-          return (window as any).__vscodeApi
+    try {
+      // 使用全局单例模式缓存 vscode API，避免重复调用 acquireVsCodeApi()
+      if (typeof window !== "undefined") {
+        const win = window as any
+        if (!win.__vscodeApi && typeof win.acquireVsCodeApi === "function") {
+          win.__vscodeApi = win.acquireVsCodeApi()
         }
-        
-        const vscode = getVsCodeApi()
-        vscode.postMessage({
-          type: "openFile",
-          filePath: href,
-        })
-      } catch (error) {
-        console.error("[Markdown] Failed to open file:", error)
+        if (win.__vscodeApi) {
+          win.__vscodeApi.postMessage({
+            type: "openFile",
+            filePath: href,
+          })
+        }
       }
+    } catch (error) {
+      console.error("[Markdown] Failed to open file:", error)
     }
   }
   // testagent_change end
@@ -260,11 +258,11 @@ function setupCodeCopy(root: HTMLDivElement, getLabels: () => CopyLabels) {
   }
 
   root.addEventListener("click", handleClick)
-  root.addEventListener("click", handleLinkClick) // testagent_change
+  root.addEventListener("click", handleLinkClick, true) // testagent_change - use capture phase
 
   return () => {
     root.removeEventListener("click", handleClick)
-    root.removeEventListener("click", handleLinkClick) // testagent_change
+    root.removeEventListener("click", handleLinkClick, true) // testagent_change
     for (const timeout of timeouts.values()) {
       clearTimeout(timeout)
     }

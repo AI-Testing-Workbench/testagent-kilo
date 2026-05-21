@@ -142,7 +142,7 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
 
   private webview: vscode.Webview | null = null
   private webviewView: vscode.WebviewView | null = null // testagent_change - store view reference for visibility check
-  
+
   // testagent_change start - System notification service
   private systemNotification: SystemNotificationService
   // testagent_change end
@@ -254,7 +254,7 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
     this.slimEditMetadata = options?.slimEditMetadata ?? true
 
     TelemetryProxy.getInstance().setProvider(this)
-    
+
     // testagent_change start - Initialize system notification service
     this.systemNotification = new SystemNotificationService(extensionUri)
     // testagent_change end
@@ -2641,14 +2641,14 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
       this.postMessage({ type: "configUpdated", config: merged })
       if (refreshProviders) await this.fetchAndSendProviders()
 
-      // testagent_change: Prompt user to reload window after config save
-      vscode.window
-        .showInformationMessage("配置已保存。是否重新加载窗口以应用更改？", "重新加载", "稍后")
-        .then((choice) => {
-          if (choice === "重新加载") {
-            vscode.commands.executeCommand("workbench.action.reloadWindow")
-          }
-        })
+      // testagent_change: Prompt user to reload window after config save  注释掉
+      // vscode.window
+      //   .showInformationMessage("配置已保存。是否重新加载窗口以应用更改？", "重新加载", "稍后")
+      //   .then((choice) => {
+      //     if (choice === "重新加载") {
+      //       vscode.commands.executeCommand("workbench.action.reloadWindow")
+      //     }
+      //   })
     } catch (error) {
       console.error("[TestAgent]  Config write succeeded but post-write refresh failed:", error)
       const cached = (this.cachedConfigMessage as { config?: unknown } | null)?.config
@@ -3236,7 +3236,7 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
     const notifications = vscode.workspace.getConfiguration("testagent.new.notifications")
     const notifyAgent = notifications.get<boolean>("agent", true)
     console.log("[TestAgent] 📋 Notification setting:", notifyAgent)
-    
+
     if (!notifyAgent) {
       console.log("[TestAgent] ❌ Notification disabled in settings")
       return
@@ -3244,23 +3244,26 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
 
     console.log("[TestAgent] ✅ Step 4: Notification is enabled")
     console.log("[TestAgent] 🎉 All checks passed! Showing notification...")
-    
+
     // Get task name from current session
     let taskName = "任务"
-    
+
     // Try to get from currentSession first
     if (this.currentSession?.id === sessionID && this.currentSession.title) {
       taskName = this.currentSession.title
       console.log("[TestAgent] 📋 Task name from currentSession:", taskName)
     } else if (this.client) {
       // If not available, try to fetch it asynchronously (don't wait)
-      this.client.session.get({ sessionID }).then(r => {
-        if (r.data?.title) {
-          console.log("[TestAgent] 📋 Task name from API:", r.data.title)
-        }
-      }).catch(() => {})
+      this.client.session
+        .get({ sessionID })
+        .then((r) => {
+          if (r.data?.title) {
+            console.log("[TestAgent] 📋 Task name from API:", r.data.title)
+          }
+        })
+        .catch(() => {})
     }
-    
+
     // Show system notification with task name
     this.systemNotification.notify({
       title: "TestAgent",
