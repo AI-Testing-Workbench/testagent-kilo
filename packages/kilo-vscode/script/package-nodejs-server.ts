@@ -88,47 +88,60 @@ await fs.cp(serverDist, TARGET, { recursive: true })
 // Step 3: Install dependencies (for native node-pty bindings)
 console.log("Step 3: Installing nodejs-server dependencies...")
 
-// First install base dependencies
-await $`cd ${TARGET} && npm install --omit=dev`
+// testagent_change start - only install win32-x64 platform binaries
+console.log("Step 3.1: Installing base dependencies...")
+await $`cd ${TARGET} && npm install --omit=dev --omit=optional`
 
-// npm refuses to install optionalDependencies for other platforms
-// Workaround: temporarily move them to regular dependencies
-console.log("Step 3.1: Patching package.json to force cross-platform installs...")
-const pkgJsonPath = join(TARGET, "package.json")
-const pkgJson = JSON.parse(await fs.readFile(pkgJsonPath, "utf8"))
-const optDeps = pkgJson.optionalDependencies || {}
-pkgJson.dependencies = { ...pkgJson.dependencies, ...optDeps }
-delete pkgJson.optionalDependencies
-await fs.writeFile(pkgJsonPath, JSON.stringify(pkgJson, null, 2))
+console.log("Step 3.2: Manually downloading win32-x64 platform binaries...")
+// Download and extract win32-x64 packages directly from npm registry
+const packages = [
+  { name: "@lydell/node-pty-win32-x64", version: "1.2.0-beta.10" },
+  { name: "@parcel/watcher-win32-x64", version: "2.5.0" },
+]
 
-// Now install all platform binaries
-console.log("Step 3.2: Installing platform-specific node-pty binaries...")
-await $`cd ${TARGET} && npm install --force`
-
-// Restore original package.json structure
-pkgJson.optionalDependencies = optDeps
-for (const key of Object.keys(optDeps)) {
-  delete pkgJson.dependencies[key]
+for (const pkg of packages) {
+  const tarballUrl = `https://registry.npmjs.org/${pkg.name}/-/${pkg.name.split("/")[1]}-${pkg.version}.tgz`
+  const targetDir = join(TARGET, "node_modules", pkg.name)
+  
+  console.log(`  Downloading ${pkg.name}@${pkg.version}...`)
+  
+  // Download tarball
+  const response = await fetch(tarballUrl)
+  if (!response.ok) {
+    throw new Error(`Failed to download ${pkg.name}: ${response.status}`)
+  }
+  
+  const tarballPath = join(TARGET, `${pkg.name.replace("/", "-")}.tgz`)
+  await fs.writeFile(tarballPath, Buffer.from(await response.arrayBuffer()))
+  
+  // Extract tarball
+  await fs.mkdir(targetDir, { recursive: true })
+  await $`cd ${targetDir} && tar -xzf ${tarballPath} --strip-components=1`
+  await fs.unlink(tarballPath)
+  
+  console.log(`  ✓ Installed ${pkg.name}`)
 }
-await fs.writeFile(pkgJsonPath, JSON.stringify(pkgJson, null, 2))
 
 // Verify critical platform packages were installed
 console.log("Step 3.3: Verifying platform binaries...")
-const requiredPlatforms = ["darwin-arm64", "darwin-x64", "linux-x64", "win32-x64"]
+const requiredPlatforms = ["win32-x64"]
 const missing = []
 for (const platform of requiredPlatforms) {
   const pkgPath = join(TARGET, "node_modules", `@lydell/node-pty-${platform}`)
   if (!existsSync(pkgPath)) {
     missing.push(platform)
+    console.log(`  ✗ node-pty-${platform} NOT FOUND`)
   } else {
     console.log(`  ✓ node-pty-${platform}`)
   }
 }
+
 if (missing.length > 0) {
-  console.error(`❌ Error: Missing node-pty binaries for: ${missing.join(", ")}`)
+  console.error(`\n❌ Error: Missing node-pty binaries for: ${missing.join(", ")}`)
   console.error("   Extension will not work on these platforms!")
   process.exit(1)
 }
+// testagent_change end
 
 // Step 4: Build extension with testagent-nodejs backend
 if (!skipVsix) {
