@@ -17,12 +17,6 @@ import DisplayTab from "./DisplayTab"
 import AutocompleteTab from "./AutocompleteTab"
 import NotificationsTab from "./NotificationsTab"
 import ContextTab from "./ContextTab"
-
-import CommitMessageTab from "./CommitMessageTab"
-import ExperimentalTab from "./ExperimentalTab"
-import LanguageTab from "./LanguageTab"
-import AboutKiloCodeTab from "./AboutKiloCodeTab"
-import { useServer } from "../../context/server"
 import NormalSettingTab from './NormalSettingTab'
 
 export interface SettingsProps {
@@ -32,7 +26,6 @@ export interface SettingsProps {
 }
 
 const Settings: Component<SettingsProps> = (props) => {
-  const server = useServer()
   const language = useLanguage()
   const vscode = useVSCode()
   const { isDirty, saving, saveError, saveConfig, discardConfig } = useConfig()
@@ -76,6 +69,10 @@ const Settings: Component<SettingsProps> = (props) => {
     vscode.postMessage({ type: "settingsTabChanged", tab })
   }
 
+  const open = (scope: "local" | "global") => {
+    vscode.postMessage({ type: "openConfigFile", scope })
+  }
+
   return (
     <div style={{ display: "flex", "flex-direction": "column", height: "100%", "min-height": 0 }}>
       {/* Header */}
@@ -85,10 +82,17 @@ const Settings: Component<SettingsProps> = (props) => {
           "border-bottom": "1px solid var(--border-weak-base)",
           display: "flex",
           "align-items": "center",
+          "flex-wrap": "wrap",
           gap: "8px",
         }}
       >
-        <h2 style={{ "font-size": "16px", "font-weight": "600", margin: 0 }}>{language.t("sidebar.settings")}</h2>
+        <h2 style={{ "font-size": "16px", "font-weight": "600", margin: 0,flex:1 }}>{language.t("sidebar.settings")}</h2>
+        <Button variant="secondary" size="small" icon="edit" onClick={() => open("local")}>
+          项目配置
+        </Button>
+        <Button variant="secondary" size="small" icon="edit" onClick={() => open("global")}>
+          全局配置
+        </Button>
       </div>
 
       {/* Settings tabs */}

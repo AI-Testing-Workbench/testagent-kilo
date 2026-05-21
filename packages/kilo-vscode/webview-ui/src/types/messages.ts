@@ -1826,6 +1826,11 @@ export interface OpenSettingsPanelRequest {
   tab?: string
 }
 
+export interface OpenConfigFileRequest {
+  type: "openConfigFile"
+  scope: "local" | "global"
+}
+
 export interface OpenVSCodeSettingsRequest {
   type: "openVSCodeSettings"
   query: string
@@ -2617,6 +2622,7 @@ export type WebviewMessage =
   | RefreshProfileRequest
   | OpenExternalRequest
   | OpenSettingsPanelRequest
+  | OpenConfigFileRequest
   | OpenVSCodeSettingsRequest
   | OpenMarketplacePanelRequest
   | OpenFileRequest

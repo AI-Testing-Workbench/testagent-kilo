@@ -716,6 +716,9 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
         case "openSettingsPanel":
           vscode.commands.executeCommand("testagent.new.settingsButtonClicked", message.tab)
           break
+        case "openConfigFile":
+          this.handleOpenConfigFile(message.scope)
+          break
         case "openVSCodeSettings":
           vscode.commands.executeCommand("workbench.action.openSettings", message.query)
           break
@@ -3173,6 +3176,103 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
       },
       (err) => console.error("[TestAgent]  Failed to open file:", uri.fsPath, err),
     )
+  }
+
+  /**
+   * Handle openConfigFile request from the webview — open or create testagent config file.
+   * For local scope: checks workspace folder, creates .testagent/testagent.jsonc if needed.
+   * For global scope: opens global config file directly.
+   */
+  private async handleOpenConfigFile(scope: "local" | "global"): Promise<void> {
+    const path = await import("path")
+    const fs = await import("fs/promises")
+    const os = await import("os")
+
+    if (scope === "local") {
+      // Check if workspace folder is open
+      const workspaceFolders = vscode.workspace.workspaceFolders
+      if (!workspaceFolders || workspaceFolders.length === 0) {
+        vscode.window.showWarningMessage("打开工作区文件夹以编辑项目testagent 配置文件")
+        return
+      }
+
+      // Use the first workspace folder
+      const workspaceRoot = workspaceFolders[0]!.uri.fsPath
+      const configDir = path.join(workspaceRoot, ".testagent")
+      const configFile = path.join(configDir, "testagent.jsonc")
+
+      try {
+        // Check if config file exists
+        await fs.access(configFile)
+        // File exists, open it
+        const doc = await vscode.workspace.openTextDocument(configFile)
+        await vscode.window.showTextDocument(doc)
+      } catch {
+        // File doesn't exist, create it
+        try {
+          await fs.mkdir(configDir, { recursive: true })
+          const defaultConfig = `{
+  // TestAgent 项目配置
+  // 更多配置选项请参考: https://doc.cmbchina.com/f/v?id=zf0suh
+  "$schema": "https://opencode.ai/config.json"
+}
+`
+          await fs.writeFile(configFile, defaultConfig, "utf-8")
+          const doc = await vscode.workspace.openTextDocument(configFile)
+          await vscode.window.showTextDocument(doc)
+        } catch (err) {
+          console.error("[TestAgent] Failed to create config file:", err)
+          vscode.window.showErrorMessage(`创建配置文件失败: ${err}`)
+        }
+      }
+    } else {
+      // Global scope - open global config file
+      const xdg = process.env.XDG_CONFIG_HOME || path.join(os.homedir(), ".config")
+      const configDir = path.join(xdg, "testagent")
+      const candidates = ["testagent.jsonc", "testagent.json", "opencode.jsonc", "opencode.json", "config.json"]
+
+      let configFile: string | null = null
+
+      // Check for existing config files
+      for (const candidate of candidates) {
+        const filePath = path.join(configDir, candidate)
+        try {
+          await fs.access(filePath)
+          configFile = filePath
+          break
+        } catch {
+          // File doesn't exist, continue
+        }
+      }
+
+      // If no config file exists, create testagent.jsonc
+      if (!configFile) {
+        configFile = path.join(configDir, "testagent.jsonc")
+        try {
+          await fs.mkdir(configDir, { recursive: true })
+          const defaultConfig = `{
+  // TestAgent 全局配置
+  // 更多配置选项请参考: https://doc.cmbchina.com/f/v?id=zf0suh
+  "$schema": "https://opencode.ai/config.json"
+}
+`
+          await fs.writeFile(configFile, defaultConfig, "utf-8")
+        } catch (err) {
+          console.error("[TestAgent] Failed to create global config file:", err)
+          vscode.window.showErrorMessage(`创建全局配置文件失败: ${err}`)
+          return
+        }
+      }
+
+      // Open the config file
+      try {
+        const doc = await vscode.workspace.openTextDocument(configFile)
+        await vscode.window.showTextDocument(doc)
+      } catch (err) {
+        console.error("[TestAgent] Failed to open global config file:", err)
+        vscode.window.showErrorMessage(`打开全局配置文件失败: ${err}`)
+      }
+    }
   }
 
   /**
