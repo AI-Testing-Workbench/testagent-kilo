@@ -848,7 +848,10 @@ export function UserMessageDisplay(props: {
                   </Show>
                 </span>
               </Show>
-              <Show when={props.onFork}>
+            
+              {/* testagent_change end */}
+              {/* testagent_change  注释掉原来的 Fork 按钮 */}
+              {/* <Show when={props.onFork}>
                 <Tooltip value={i18n.t("ui.message.forkMessage")} placement="right" gutter={4}>
                   <IconButton
                     icon="fork"
@@ -862,22 +865,8 @@ export function UserMessageDisplay(props: {
                     aria-label={i18n.t("ui.message.forkMessage")}
                   />
                 </Tooltip>
-              </Show>
-              <Show when={props.onRevert}>
-                <Tooltip value={i18n.t("ui.message.revertMessage")} placement="right" gutter={4}>
-                  <IconButton
-                    icon="arrow-left"
-                    size="normal"
-                    variant="ghost"
-                    onMouseDown={(e) => e.preventDefault()}
-                    onClick={(event) => {
-                      event.stopPropagation()
-                      props.onRevert?.()
-                    }}
-                    aria-label={i18n.t("ui.message.revertMessage")}
-                  />
-                </Tooltip>
-              </Show>
+              </Show> */}
+              
               <Tooltip
                 value={copied() ? i18n.t("ui.message.copied") : i18n.t("ui.message.copyMessage")}
                 placement="right"
@@ -896,6 +885,25 @@ export function UserMessageDisplay(props: {
                 />
               </Tooltip>
             </div>
+              {/* testagent_change start - 检查点样式 */}
+              <Show when={props.onRevert}>
+                <div data-slot="checkpoint-wrapper">
+                  <Icon name="branch" size="small" />
+                  <span data-slot="checkpoint-label">检查点</span>
+                  <div data-slot="checkpoint-divider" />
+                  <button
+                    data-slot="checkpoint-restore-button"
+                    onClick={(event) => {
+                      event.stopPropagation()
+                      props.onRevert?.()
+                    }}
+                    onMouseDown={(e) => e.preventDefault()}
+                    aria-label="重置到此检查点"
+                  >
+                    重置到此检查点
+                  </button>
+                </div>
+              </Show>
           </>
         </Show>
       </div>

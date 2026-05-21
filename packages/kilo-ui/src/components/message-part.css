@@ -8,7 +8,11 @@
   }
 
   [data-slot="text-part-copy-wrapper"] {
-    display: none;
+    /* testagent_change start - 让按钮一直显示 */
+    display: flex;
+    opacity: 1 !important;
+    pointer-events: auto !important;
+    /* testagent_change end */
   }
 
   [data-slot="text-part-copy-wrapper"][data-is-turn-copy] {
@@ -158,6 +162,69 @@ html[data-theme="kilo-vscode"] [data-component="bash-output"] {
   }
 }
 
+/* testagent_change start - 让代码块复制按钮一直显示 */
+[data-component="bash-output"] {
+  [data-slot="bash-copy"] {
+    opacity: 1 !important;
+    pointer-events: auto !important;
+  }
+}
+/* testagent_change end */
+
+/* testagent_change start - 检查点样式 */
+[data-slot="checkpoint-wrapper"] {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex: 1;
+  min-width: 0;
+  width:100%
+}
+
+[data-slot="checkpoint-label"] {
+  font-family: var(--font-family-sans);
+  font-size: 12px;
+  font-weight: 400;
+  color: var(--text-weak);
+  white-space: nowrap;
+}
+
+[data-slot="checkpoint-divider"] {
+  flex: 1;
+  height: 1px;
+  background: repeating-linear-gradient(
+    to right,
+    var(--border-weak-base) 0,
+    var(--border-weak-base) 4px,
+    transparent 4px,
+    transparent 8px
+  );
+  min-width: 20px;
+}
+
+[data-slot="checkpoint-restore-button"] {
+  font-family: var(--font-family-sans);
+  font-size: 12px;
+  font-weight: 400;
+  color: var(--text-weak);
+  background: none;
+  border: none;
+  padding: 0;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: color 0.15s ease;
+}
+
+[data-slot="checkpoint-restore-button"]:hover {
+  color: var(--text-base);
+}
+
+[data-slot="checkpoint-wrapper"] [data-component="icon"] {
+  color: var(--icon-weak);
+  flex-shrink: 0;
+}
+/* testagent_change end */
+
 /* Tool error inline card (upstream removed these styles in v1.2.25) */
 [data-component="tool-error"] {
   display: flex;
@@ -230,6 +297,10 @@ html[data-theme="kilo-vscode"] [data-component="bash-output"] {
     min-height: 0;
     height: 20px;
     margin-top: 0;
+    /* testagent_change start - 让按钮一直显示，不需要悬停 */
+    opacity: 1 !important;
+    pointer-events: auto !important;
+    /* testagent_change end */
 
     [data-slot="user-message-meta-wrap"] {
       display: none;

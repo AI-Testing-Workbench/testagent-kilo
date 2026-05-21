@@ -133,7 +133,7 @@ export class SystemNotificationService {
       const fs = require("fs")
       const os = require("os")
 
-      const appID = "TestAgent通知"
+      const appID = "TestAgent"
 
       // Escape XML special characters
       const xmlEscape = (str: string) =>
@@ -247,7 +247,7 @@ try {
 
     return new Promise((resolve, reject) => {
       const { exec } = require("child_process")
-      const appID = "TestAgent通知"
+      const appID = "TestAgent"
       const displayName = "TestAgent"
       const iconPath = path.join(this.extensionUri.fsPath, "resources", "icon.png").replace(/\\/g, "\\\\")
 
