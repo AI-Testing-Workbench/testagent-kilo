@@ -963,6 +963,15 @@ export const dict = {
   "ui.sessionTurn.cancel": "取消",
   "ui.sessionTurn.status.thinking": "思考中...",
   "ui.sessionTurn.status.consideringNextSteps": "正在考虑下一步...",
+  "ui.sessionTurn.status.delegating": "委派工作中...",
+  "ui.sessionTurn.status.delegatingWaitingPermission": "委派工作中（等待权限）...",
+  "ui.sessionTurn.status.delegatingWaitingQuestion": "委派工作中（等待回答）...",
+  "ui.sessionTurn.status.planning": "规划中...",
+  "ui.sessionTurn.status.gatheringContext": "收集上下文中...",
+  "ui.sessionTurn.status.searchingCodebase": "搜索代码库中...",
+  "ui.sessionTurn.status.searchingWeb": "搜索网络中...",
+  "ui.sessionTurn.status.makingEdits": "编辑中...",
+  "ui.sessionTurn.status.runningCommands": "运行命令中...",
 
   "dialog.model.noProviders": "无供应商",
 

@@ -975,6 +975,15 @@ export const dict = {
   "ui.sessionTurn.cancel": "Cancel",
   "ui.sessionTurn.status.thinking": "Thinking...",
   "ui.sessionTurn.status.consideringNextSteps": "Considering next steps...",
+  "ui.sessionTurn.status.delegating": "Delegating work...",
+  "ui.sessionTurn.status.delegatingWaitingPermission": "Delegating work (waiting for permission)...",
+  "ui.sessionTurn.status.delegatingWaitingQuestion": "Delegating work (waiting for answer)...",
+  "ui.sessionTurn.status.planning": "Planning...",
+  "ui.sessionTurn.status.gatheringContext": "Gathering context...",
+  "ui.sessionTurn.status.searchingCodebase": "Searching codebase...",
+  "ui.sessionTurn.status.searchingWeb": "Searching web...",
+  "ui.sessionTurn.status.makingEdits": "Making edits...",
+  "ui.sessionTurn.status.runningCommands": "Running commands...",
 
   "dialog.model.noProviders": "No providers",
 
