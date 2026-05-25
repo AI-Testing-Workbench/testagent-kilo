@@ -59,6 +59,14 @@ function compareVersion(
   return a.patch - b.patch
 }
 
+// testagent_change start - read version from kilo-vscode/package.json
+async function fetchLocalVersion() {
+  const vscodePkgPath = path.resolve(import.meta.dir, "../../../packages/kilo-vscode/package.json")
+  const vscodePkg = await Bun.file(vscodePkgPath).json()
+  return vscodePkg.version as string
+}
+// testagent_change end
+
 async function fetchLatest() {
   const data: any = await fetch("https://registry.npmjs.org/@kilocode/cli/latest").then((res) => {
     if (!res.ok) throw new Error(res.statusText)
@@ -68,18 +76,22 @@ async function fetchLatest() {
 }
 
 async function fetchHighest() {
-  if (!process.env.GH_REPO) return fetchLatest()
-  const data: { tagName: string }[] = await $`gh release list --json tagName --limit 100 --repo ${process.env.GH_REPO}`
-    .json()
-    .catch(() => [])
-  const versions = data.flatMap((item) => {
-    const version = parseVersion(item.tagName)
-    if (!version) return []
-    return [version]
-  })
-  const highest = versions.sort(compareVersion).at(-1)
-  if (highest) return highest.value
-  return fetchLatest()
+  // testagent_change - always use local version from kilo-vscode/package.json
+  return fetchLocalVersion()
+  
+  // kilocode_change - original logic (disabled)
+  // if (!process.env.GH_REPO) return fetchLatest()
+  // const data: { tagName: string }[] = await $`gh release list --json tagName --limit 100 --repo ${process.env.GH_REPO}`
+  //   .json()
+  //   .catch(() => [])
+  // const versions = data.flatMap((item) => {
+  //   const version = parseVersion(item.tagName)
+  //   if (!version) return []
+  //   return [version]
+  // })
+  // const highest = versions.sort(compareVersion).at(-1)
+  // if (highest) return highest.value
+  // return fetchLatest()
 }
 
 function bumpVersion(current: string, type: string) {
@@ -102,9 +114,8 @@ const VERSION = await (async () => {
     // kilocode_change end
     return `0.0.0-${CHANNEL}-${new Date().toISOString().slice(0, 16).replace(/[-:T]/g, "")}`
   }
-  const version = await fetchHighest() // kilocode_change
-  // testagent_change - default to patch bump if KILO_BUMP not set
-  return bumpVersion(version, env.KILO_BUMP?.toLowerCase() ?? "patch") // kilocode_change
+  // testagent_change - directly use version from kilo-vscode/package.json, no auto-bump
+  return await fetchHighest()
 })()
 
 // kilocode_change start

@@ -202,8 +202,8 @@ if (!skipVsix) {
   console.log("Step 5: Packaging VSIX...")
   // testagent_change - support target platform for VSIX naming
   const vsixName = targetPlatform
-    ? `testagent-nodejs-vscode-${targetPlatform}.vsix`
-    : "testagent-nodejs-vscode.vsix"
+    ? `testagent-nodejs-tscode-${targetPlatform}.vsix`
+    : "testagent-nodejs-tscode.vsix"
   
   // Build vsce command with proper argument handling
   if (targetPlatform) {
@@ -217,7 +217,7 @@ console.log("\n✅ Node.js Server VSIX build complete!")
 console.log(`   Server dir: ${TARGET}`)
 if (!skipVsix) {
   const vsixName = targetPlatform
-    ? `testagent-nodejs-vscode-${targetPlatform}.vsix`
-    : "testagent-nodejs-vscode.vsix"
+    ? `testagent-nodejs-tscode-${targetPlatform}.vsix`
+    : "testagent-nodejs-tscode.vsix"
   console.log(`   VSIX: ${join(ROOT, vsixName)}`)
 }

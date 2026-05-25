@@ -134,6 +134,66 @@ export const VscodeSessionTurn: Component<VscodeSessionTurnProps> = (props) => {
     return undefined
   })
 
+  // testagent_change start - calculate turn statistics (tokens and duration)
+  const turnStats = createMemo(() => {
+    const userMsg = message()
+    const assistantMsgs = assistantMessages()
+    
+    if (!userMsg || assistantMsgs.length === 0) {
+      return null
+    }
+
+    // Calculate total tokens from all assistant messages
+    let totalTokens = 0
+    let inputTokens = 0
+    let outputTokens = 0
+    let reasoningTokens = 0
+    let cacheReadTokens = 0
+    let cacheWriteTokens = 0
+    
+    for (const msg of assistantMsgs) {
+      if (msg.tokens) {
+        totalTokens += msg.tokens.total || 0
+        inputTokens += msg.tokens.input || 0
+        outputTokens += msg.tokens.output || 0
+        reasoningTokens += msg.tokens.reasoning || 0
+        cacheReadTokens += msg.tokens.cache?.read || 0
+        cacheWriteTokens += msg.tokens.cache?.write || 0
+      }
+    }
+
+    // Calculate duration: from user message creation to last assistant message completion
+    const startTime = userMsg.time?.created
+    const lastAssistantMsg = assistantMsgs[assistantMsgs.length - 1]
+    const endTime = lastAssistantMsg?.time?.completed
+    
+    let duration: string | null = null
+    if (startTime && endTime) {
+      const durationMs = endTime - startTime
+      const seconds = Math.floor(durationMs / 1000)
+      const minutes = Math.floor(seconds / 60)
+      const remainingSeconds = seconds % 60
+      
+      if (minutes > 0) {
+        duration = `${minutes}分${remainingSeconds}秒`
+      } else {
+        duration = `${seconds}秒`
+      }
+    }
+
+    return {
+      totalTokens,
+      inputTokens,
+      outputTokens,
+      reasoningTokens,
+      cacheReadTokens,
+      cacheWriteTokens,
+      duration,
+      completed: !!endTime,
+    }
+  })
+  // testagent_change end
+
   return (
     <Show when={message()}>
       {(msg) => (
@@ -173,6 +233,39 @@ export const VscodeSessionTurn: Component<VscodeSessionTurnProps> = (props) => {
               <For each={assistantMessages()}>
                 {(msg) => <AssistantMessage message={msg} showAssistantCopyPartID={showAssistantCopyPartID()} />}
               </For>
+              {/* testagent_change start - display turn statistics */}
+              <Show when={turnStats()?.completed}>
+                <div style={{ 
+                  "font-size": "12px", 
+                  "color": "var(--vscode-descriptionForeground)", 
+                  "margin-top": "-8px",
+                  "padding": "4px 8px",
+                  "opacity": "0.8"
+                }}>
+                  <Tooltip placement="top" value={(() => {
+                    const stats = turnStats()!
+                    const parts: string[] = []
+                    parts.push(`输入: ${stats.inputTokens.toLocaleString()}`)
+                    if (stats.reasoningTokens > 0) {
+                      parts.push(`推理: ${stats.reasoningTokens.toLocaleString()}`)
+                    }
+                    if (stats.cacheReadTokens > 0) {
+                      parts.push(`缓存读: ${stats.cacheReadTokens.toLocaleString()}`)
+                    }
+                    if (stats.cacheWriteTokens > 0) {
+                      parts.push(`缓存写: ${stats.cacheWriteTokens.toLocaleString()}`)
+                    }
+                    parts.push(`输出: ${stats.outputTokens.toLocaleString()}`)
+                    return parts.join(" | ")
+                  })()}>
+                    <span>
+                      本轮对话消耗token: {turnStats()!.totalTokens.toLocaleString()}
+                      {turnStats()!.duration && ` | 耗时: ${turnStats()!.duration}`}
+                    </span>
+                  </Tooltip>
+                </div>
+              </Show>
+              {/* testagent_change end */}
             </div>
           </Show>
 

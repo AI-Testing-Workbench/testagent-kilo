@@ -331,7 +331,7 @@ jobs:
       - name: Verify VSIX package
         if: steps.should_build.outputs.build == 'true'
         run: |
-          VSIX_FILE="packages/kilo-vscode/testagent-nodejs-vscode-${{ matrix.target }}.vsix"
+          VSIX_FILE="packages/kilo-vscode/testagent-nodejs-tscode-${{ matrix.target }}.vsix"
           if [ ! -f "$VSIX_FILE" ]; then
             echo "❌ Error: VSIX package not found!"
             ls -la packages/kilo-vscode/*.vsix || echo "No VSIX files found"
@@ -345,7 +345,7 @@ jobs:
         if: steps.should_build.outputs.build == 'true'
         with:
           name: testagent-vscode-${{ matrix.target }}
-          path: packages/kilo-vscode/testagent-nodejs-vscode-${{ matrix.target }}.vsix
+          path: packages/kilo-vscode/testagent-nodejs-tscode-${{ matrix.target }}.vsix
           retention-days: 7
 
 
