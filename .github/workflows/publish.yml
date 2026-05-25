@@ -233,6 +233,7 @@ jobs:
         if: steps.should_build.outputs.build == 'true'
         with:
           ref: ${{ inputs.branch || github.ref }}
+          submodules: recursive  # testagent_change - checkout submodules (testagent-core)
 
       - uses: ./.github/actions/setup-bun
         if: steps.should_build.outputs.build == 'true'
