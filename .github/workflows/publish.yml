@@ -61,11 +61,6 @@ jobs:
 
       - id: version
         run: |
-          echo "🔍 Debug Script values:"
-          echo "  Script.version: ${Script.version:-not set}"
-          echo "  Script.preview: ${Script.preview:-not set}"
-          echo "  Script.channel: ${Script.channel:-not set}"
-          echo ""
           ./script/version.ts
         env:
           GH_TOKEN: ${{ github.token }}
@@ -363,15 +358,6 @@ jobs:
     # testagent_change - always run publish if version task succeeded
     if: always() && needs.version.result == 'success' && needs.build-cli.result == 'success' && needs.build-vscode.result == 'success'
     steps:
-      # testagent_change - debug: show version outputs
-      - name: Debug version outputs
-        run: |
-          echo "📋 Version outputs:"
-          echo "  version: ${{ needs.version.outputs.version }}"
-          echo "  release: ${{ needs.version.outputs.release }}"
-          echo "  tag: ${{ needs.version.outputs.tag }}"
-          echo "  repo: ${{ needs.version.outputs.repo }}"
-
       - uses: actions/checkout@v3
         with:
           submodules: recursive
@@ -405,15 +391,6 @@ jobs:
           find packages/kilo-vscode/artifacts -name "*.vsix" -exec mv {} packages/kilo-vscode/out/ \;
           echo "✅ VSIX files organized"
           ls -lh packages/kilo-vscode/out/
-
-      # testagent_change - debug: list downloaded VSIX files
-      - name: List downloaded VSIX files
-        run: |
-          echo "📦 Downloaded VSIX files:"
-          ls -lh packages/kilo-vscode/out/ || echo "❌ No files found in packages/kilo-vscode/out/"
-          echo ""
-          echo "📂 Directory structure:"
-          find packages/kilo-vscode/out -type f || echo "❌ Directory not found"
 
       # 创建 CLI 压缩包
       - name: Create CLI release archives
