@@ -365,12 +365,13 @@ jobs:
       # 只用来跑 gh release upload
       - uses: ./.github/actions/setup-bun
 
-      - name: Setup Git Committer
-        id: committer
-        uses: ./.github/actions/setup-git-committer
-        with:
-          kilo-maintainer-app-id: ${{ secrets.KILO_MAINTAINER_APP_ID }}
-          kilo-maintainer-app-secret: ${{ secrets.KILO_MAINTAINER_APP_SECRET }}
+      # testagent_change - use GITHUB_TOKEN instead of app token for simplicity
+      # - name: Setup Git Committer
+      #   id: committer
+      #   uses: ./.github/actions/setup-git-committer
+      #   with:
+      #     kilo-maintainer-app-id: ${{ secrets.KILO_MAINTAINER_APP_ID }}
+      #     kilo-maintainer-app-secret: ${{ secrets.KILO_MAINTAINER_APP_SECRET }}
 
       # 下载 CLI 产物
       - uses: actions/download-artifact@v4
@@ -429,7 +430,7 @@ jobs:
             --clobber \
             --repo ${{ github.repository }}
         env:
-          GH_TOKEN: ${{ steps.committer.outputs.token }}
+          GH_TOKEN: ${{ github.token }}
 
       # 上传 VSIX 到 GitHub Release
       - name: Upload VSIX to GitHub Release
@@ -450,4 +451,4 @@ jobs:
           
           echo "✅ VSIX files uploaded successfully"
         env:
-          GH_TOKEN: ${{ steps.committer.outputs.token }}
+          GH_TOKEN: ${{ github.token }}
