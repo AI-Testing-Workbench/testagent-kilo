@@ -247,55 +247,53 @@ jobs:
         if: steps.should_build.outputs.build == 'true'
         run: bun install -g @vscode/vsce
 
-      - name: Download CLI binary
+      # testagent_change start - build dual-runtime VSIX with Node.js server
+      - name: Build nodejs-server
         if: steps.should_build.outputs.build == 'true'
-        uses: actions/download-artifact@v4
+        run: |
+          cd packages/testagent-core/packages/nodejs-server
+          OPENCODE_CHANNEL=latest bun run build
+          echo "✅ Node.js server built"
+
+      # testagent_change - cache nodejs-server node_modules
+      - name: Get nodejs-server package.json hash
+        if: steps.should_build.outputs.build == 'true'
+        id: nodejs_cache_key
+        run: |
+          HASH=$(sha256sum packages/testagent-core/packages/nodejs-server/dist/package.json | cut -d' ' -f1)
+          echo "hash=$HASH" >> $GITHUB_OUTPUT
+          echo "📦 package.json hash: $HASH"
+
+      - name: Cache nodejs-server node_modules
+        if: steps.should_build.outputs.build == 'true'
+        id: nodejs_cache
+        uses: actions/cache@v4
         with:
-          name: testagent-cli-${{ matrix.cli_target }}
-          path: packages/kilo-vscode/bin
+          path: packages/kilo-vscode/nodejs-server/node_modules
+          key: ${{ runner.os }}-${{ matrix.target }}-nodejs-modules-${{ steps.nodejs_cache_key.outputs.hash }}
+          restore-keys: |
+            ${{ runner.os }}-${{ matrix.target }}-nodejs-modules-
 
-      - name: Set executable permissions (Unix)
-        if: steps.should_build.outputs.build == 'true' && matrix.binary != 'testagent.exe'
-        run: chmod +x packages/kilo-vscode/bin/${{ matrix.binary }}
-
-      - name: Verify CLI binary
+      - name: Cache status
         if: steps.should_build.outputs.build == 'true'
         run: |
-          if [ ! -f packages/kilo-vscode/bin/${{ matrix.binary }} ]; then
-            echo "❌ Error: ${{ matrix.binary }} not found after download!"
-            ls -la packages/kilo-vscode/bin/ || true
-            exit 1
+          if [ "${{ steps.nodejs_cache.outputs.cache-hit }}" = "true" ]; then
+            echo "✅ Cache hit! Using cached node_modules"
+          else
+            echo "📥 Cache miss. Will install dependencies and cache them"
           fi
-          echo "✅ CLI binary downloaded successfully"
-          ls -lh packages/kilo-vscode/bin/
 
-      - name: Rebuild SDK types
-        if: steps.should_build.outputs.build == 'true'
-        run: bun run build
-        working-directory: ./packages/sdk/js
-
-      - name: Build extension
+      - name: Package dual-runtime VSIX for ${{ matrix.target }}
         if: steps.should_build.outputs.build == 'true'
         run: |
-          bun run check-types
-          bun run lint
-          node esbuild.js --production
-        working-directory: ./packages/kilo-vscode
-
-      - name: Package VSIX for ${{ matrix.target }}
-        if: steps.should_build.outputs.build == 'true'
-        run: |
-          VSIX_NAME="testagent-vscode-${{ matrix.target }}.vsix"
-          ARGS="--no-dependencies --skip-license --target ${{ matrix.target }} -o $VSIX_NAME"
-          vsce package $ARGS
-        working-directory: ./packages/kilo-vscode
-        env:
-          npm_config_ignore_scripts: "true"
+          cd packages/kilo-vscode
+          bun script/package-nodejs-server.ts --skip-server-build --target=${{ matrix.target }}
+          echo "✅ Dual-runtime VSIX packaged for ${{ matrix.target }}"
 
       - name: Verify VSIX package
         if: steps.should_build.outputs.build == 'true'
         run: |
-          VSIX_FILE="packages/kilo-vscode/testagent-vscode-${{ matrix.target }}.vsix"
+          VSIX_FILE="packages/kilo-vscode/testagent-nodejs-vscode-${{ matrix.target }}.vsix"
           if [ ! -f "$VSIX_FILE" ]; then
             echo "❌ Error: VSIX package not found!"
             ls -la packages/kilo-vscode/*.vsix || echo "No VSIX files found"
@@ -303,12 +301,13 @@ jobs:
           fi
           echo "✅ VSIX package built successfully"
           ls -lh "$VSIX_FILE"
+      # testagent_change end
 
       - uses: actions/upload-artifact@v4
         if: steps.should_build.outputs.build == 'true'
         with:
           name: testagent-vscode-${{ matrix.target }}
-          path: packages/kilo-vscode/testagent-vscode-${{ matrix.target }}.vsix
+          path: packages/kilo-vscode/testagent-nodejs-vscode-${{ matrix.target }}.vsix
           retention-days: 7
 
 

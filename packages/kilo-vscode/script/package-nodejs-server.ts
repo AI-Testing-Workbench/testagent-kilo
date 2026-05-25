@@ -26,6 +26,10 @@ const TARGET = join(ROOT, "nodejs-server")
 const skipBuild = process.argv.includes("--skip-server-build")
 const skipVsix = process.argv.includes("--skip-vsix")
 
+// testagent_change - support target platform argument
+const targetArg = process.argv.find((arg: string) => arg.startsWith("--target="))
+const targetPlatform = targetArg ? targetArg.split("=")[1] : undefined
+
 // Step 1: Build nodejs-server
 if (!skipBuild) {
   console.log("Step 1: Building nodejs-server...")
@@ -88,45 +92,88 @@ await fs.cp(serverDist, TARGET, { recursive: true })
 // Step 3: Install dependencies (for native node-pty bindings)
 console.log("Step 3: Installing nodejs-server dependencies...")
 
-// testagent_change start - only install win32-x64 platform binaries
-console.log("Step 3.1: Installing base dependencies...")
-await $`cd ${TARGET} && npm install --omit=dev --omit=optional`
+// testagent_change - check if node_modules already exists (from cache)
+const nodeModulesPath = join(TARGET, "node_modules")
+const hasNodeModules = existsSync(nodeModulesPath)
 
-console.log("Step 3.2: Manually downloading win32-x64 platform binaries...")
-// Download and extract win32-x64 packages directly from npm registry
-const packages = [
-  { name: "@lydell/node-pty-win32-x64", version: "1.2.0-beta.10" },
-  { name: "@parcel/watcher-win32-x64", version: "2.5.0" },
-]
+if (hasNodeModules) {
+  console.log("✅ node_modules found (from cache), skipping installation")
+  console.log("Step 3: Verifying cached dependencies...")
+} else {
+  console.log("📥 node_modules not found, installing dependencies...")
 
-for (const pkg of packages) {
-  const tarballUrl = `https://registry.npmjs.org/${pkg.name}/-/${pkg.name.split("/")[1]}-${pkg.version}.tgz`
-  const targetDir = join(TARGET, "node_modules", pkg.name)
-  
-  console.log(`  Downloading ${pkg.name}@${pkg.version}...`)
-  
-  // Download tarball
-  const response = await fetch(tarballUrl)
-  if (!response.ok) {
-    throw new Error(`Failed to download ${pkg.name}: ${response.status}`)
+  // testagent_change start - install platform-specific binaries based on target
+  console.log("Step 3.1: Installing base dependencies...")
+  await $`cd ${TARGET} && npm install --omit=dev --omit=optional`
+
+  // testagent_change - map VS Code target to node-pty platform names
+  const platformMap: Record<string, string[]> = {
+    "linux-x64": ["linux-x64"],
+    "linux-arm64": ["linux-arm64"],
+    "alpine-x64": ["linux-x64"], // Alpine uses linux binaries
+    "alpine-arm64": ["linux-arm64"],
+    "darwin-x64": ["darwin-x64"],
+    "darwin-arm64": ["darwin-arm64"],
+    "win32-x64": ["win32-x64"],
   }
-  
-  const tarballPath = join(TARGET, `${pkg.name.replace("/", "-")}.tgz`)
-  await fs.writeFile(tarballPath, Buffer.from(await response.arrayBuffer()))
-  
-  // Extract tarball
-  await fs.mkdir(targetDir, { recursive: true })
-  await $`cd ${targetDir} && tar -xzf ${tarballPath} --strip-components=1`
-  await fs.unlink(tarballPath)
-  
-  console.log(`  ✓ Installed ${pkg.name}`)
+
+  const platforms = targetPlatform ? platformMap[targetPlatform] || [] : Object.values(platformMap).flat()
+  const uniquePlatforms = [...new Set(platforms)]
+
+  console.log(`Step 3.2: Manually downloading platform binaries for: ${uniquePlatforms.join(", ")}...`)
+
+  // Download and extract platform-specific packages directly from npm registry
+  for (const platform of uniquePlatforms) {
+    const packages = [
+      { name: `@lydell/node-pty-${platform}`, version: "1.2.0-beta.10" },
+      { name: `@parcel/watcher-${platform}`, version: "2.5.0" },
+    ]
+
+    for (const pkg of packages) {
+      const tarballUrl = `https://registry.npmjs.org/${pkg.name}/-/${pkg.name.split("/")[1]}-${pkg.version}.tgz`
+      const targetDir = join(TARGET, "node_modules", pkg.name)
+
+      console.log(`  Downloading ${pkg.name}@${pkg.version}...`)
+
+      try {
+        // Download tarball
+        const response = await fetch(tarballUrl)
+        if (!response.ok) {
+          throw new Error(`Failed to download ${pkg.name}: ${response.status}`)
+        }
+
+        const tarballPath = join(TARGET, `${pkg.name.replace("/", "-")}.tgz`)
+        await fs.writeFile(tarballPath, Buffer.from(await response.arrayBuffer()))
+
+        // Extract tarball
+        await fs.mkdir(targetDir, { recursive: true })
+        await $`cd ${targetDir} && tar -xzf ${tarballPath} --strip-components=1`
+        await fs.unlink(tarballPath)
+
+        console.log(`  ✓ Installed ${pkg.name}`)
+      } catch (err) {
+        console.warn(`  ⚠️  Failed to install ${pkg.name}: ${err}`)
+      }
+    }
+  }
 }
 
 // Verify critical platform packages were installed
 console.log("Step 3.3: Verifying platform binaries...")
-const requiredPlatforms = ["win32-x64"]
+const platformMap: Record<string, string[]> = {
+  "linux-x64": ["linux-x64"],
+  "linux-arm64": ["linux-arm64"],
+  "alpine-x64": ["linux-x64"],
+  "alpine-arm64": ["linux-arm64"],
+  "darwin-x64": ["darwin-x64"],
+  "darwin-arm64": ["darwin-arm64"],
+  "win32-x64": ["win32-x64"],
+}
+const platforms = targetPlatform ? platformMap[targetPlatform] || [] : Object.values(platformMap).flat()
+const uniquePlatforms = [...new Set(platforms)]
+
 const missing = []
-for (const platform of requiredPlatforms) {
+for (const platform of uniquePlatforms) {
   const pkgPath = join(TARGET, "node_modules", `@lydell/node-pty-${platform}`)
   if (!existsSync(pkgPath)) {
     missing.push(platform)
@@ -136,10 +183,13 @@ for (const platform of requiredPlatforms) {
   }
 }
 
-if (missing.length > 0) {
+if (missing.length > 0 && targetPlatform) {
   console.error(`\n❌ Error: Missing node-pty binaries for: ${missing.join(", ")}`)
   console.error("   Extension will not work on these platforms!")
   process.exit(1)
+} else if (missing.length > 0) {
+  console.warn(`\n⚠️  Warning: Missing node-pty binaries for: ${missing.join(", ")}`)
+  console.warn("   Extension may not work on these platforms!")
 }
 // testagent_change end
 
@@ -150,11 +200,19 @@ if (!skipVsix) {
 
   // Step 5: Package VSIX
   console.log("Step 5: Packaging VSIX...")
-  await $`cd ${ROOT} && npx @vscode/vsce package --no-dependencies -o testagent-nodejs-tscode.vsix`
+  // testagent_change - support target platform for VSIX naming
+  const vsixName = targetPlatform
+    ? `testagent-nodejs-vscode-${targetPlatform}.vsix`
+    : "testagent-nodejs-vscode.vsix"
+  const vsceArgs = targetPlatform ? `--target ${targetPlatform}` : ""
+  await $`cd ${ROOT} && npx @vscode/vsce package --no-dependencies ${vsceArgs} -o ${vsixName}`.quiet()
 }
 
 console.log("\n✅ Node.js Server VSIX build complete!")
 console.log(`   Server dir: ${TARGET}`)
 if (!skipVsix) {
-  console.log(`   VSIX: ${join(ROOT, "testagent-nodejs-tscode.vsix")}`)
+  const vsixName = targetPlatform
+    ? `testagent-nodejs-vscode-${targetPlatform}.vsix`
+    : "testagent-nodejs-vscode.vsix"
+  console.log(`   VSIX: ${join(ROOT, vsixName)}`)
 }
