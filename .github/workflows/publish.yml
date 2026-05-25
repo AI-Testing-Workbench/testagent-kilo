@@ -248,6 +248,19 @@ jobs:
         if: steps.should_build.outputs.build == 'true'
         run: bun install -g @vscode/vsce
 
+      # testagent_change - install testagent-core dependencies (uses cached Bun packages)
+      - name: Install testagent-core dependencies
+        if: steps.should_build.outputs.build == 'true'
+        run: |
+          echo "📦 Installing testagent-core dependencies..."
+          cd packages/testagent-core
+          if [ "$RUNNER_OS" = "Windows" ]; then
+            bun install --linker hoisted
+          else
+            bun install
+          fi
+          echo "✅ testagent-core dependencies installed"
+
       # testagent_change start - build dual-runtime VSIX with Node.js server
       - name: Build nodejs-server
         if: steps.should_build.outputs.build == 'true'
