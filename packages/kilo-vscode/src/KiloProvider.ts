@@ -3213,7 +3213,7 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
           await fs.mkdir(configDir, { recursive: true })
           const defaultConfig = `{
   // TestAgent 项目配置
-  // 更多配置选项请参考: https://doc.cmbchina.com/f/v?id=zf0suh
+  // 更多配置选项请参考: https://tscode-gateway.paasuat.cmbchina.cn/help/testagent
   "$schema": "https://opencode.ai/config.json"
 }
 `
@@ -3252,7 +3252,7 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
           await fs.mkdir(configDir, { recursive: true })
           const defaultConfig = `{
   // TestAgent 全局配置
-  // 更多配置选项请参考: https://doc.cmbchina.com/f/v?id=zf0suh
+  // 更多配置选项请参考: https://tscode-gateway.paasuat.cmbchina.cn/help/testagent
   "$schema": "https://opencode.ai/config.json"
 }
 `

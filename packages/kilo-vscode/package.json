@@ -8,7 +8,7 @@
     "color": "#FFFFFF",
     "theme": "light"
   },
-  "publisher": "testagent",
+  "publisher": "test-tech.testagent",
   "repository": {
     "type": "git",
     "url": "https://github.com/Kilo-Org/kilocode.git",

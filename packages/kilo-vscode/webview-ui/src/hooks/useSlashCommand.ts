@@ -99,7 +99,7 @@ export function useSlashCommand(vscode: VSCodeContext, exclude?: Set<string>): S
       description: "打开帮助文档",
       hints: [],
       action: () => {
-        vscode.postMessage({ type: "openExternal", url: "https://doc.cmbchina.com/f/v?id=zf0suh" })
+        vscode.postMessage({ type: "openExternal", url: "https://tscode-gateway.paasuat.cmbchina.cn/help/testagent" })
       },
     },
     {
