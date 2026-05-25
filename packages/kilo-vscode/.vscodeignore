@@ -23,8 +23,11 @@ AGENTS.md
 # Include dist/ directory for compiled extension (production)
 !dist/**
 
-# Include bin/ directory for CLI binary (testagent/Bun build)
+# Include bin/ directory for CLI binary (Bun runtime)
 !bin/**
+
+# testagent_change - Include nodejs-server/ directory for Node.js runtime
+!nodejs-server/**
 
 # Include opencode-server/ directory for Node.js server (opencode build)
 !opencode-server/**

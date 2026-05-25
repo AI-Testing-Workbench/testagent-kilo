@@ -261,6 +261,28 @@ jobs:
           fi
           echo "✅ testagent-core dependencies installed"
 
+       # testagent_change - download CLI binary for dual-runtime support
+      - name: Download CLI binary for ${{ matrix.target }}
+        if: steps.should_build.outputs.build == 'true'
+        uses: actions/download-artifact@v4
+        with:
+          name: testagent-cli-${{ matrix.cli_target }}
+          path: packages/kilo-vscode/bin
+
+      - name: Set executable permissions (Unix)
+        if: steps.should_build.outputs.build == 'true' && matrix.binary != 'testagent.exe'
+        run: chmod +x packages/kilo-vscode/bin/${{ matrix.binary }}
+
+      - name: Verify CLI binary
+        if: steps.should_build.outputs.build == 'true'
+        run: |
+          if [ ! -f packages/kilo-vscode/bin/${{ matrix.binary }} ]; then
+            echo "❌ Error: ${{ matrix.binary }} not found after download!"
+            ls -la packages/kilo-vscode/bin/ || true
+            exit 1
+          fi
+          echo "✅ CLI binary downloaded successfully"
+          ls -lh packages/kilo-vscode/bin/
       # testagent_change start - build dual-runtime VSIX with Node.js server
       - name: Build nodejs-server
         if: steps.should_build.outputs.build == 'true'
@@ -268,6 +290,8 @@ jobs:
           cd packages/testagent-core/packages/nodejs-server
           OPENCODE_CHANNEL=latest bun run build
           echo "✅ Node.js server built"
+
+     
 
       # testagent_change - cache nodejs-server node_modules
       - name: Get nodejs-server package.json hash
@@ -331,7 +355,7 @@ jobs:
       - build-cli
       - build-vscode
     runs-on: ubuntu-24.04
-    if: needs.version.outputs.release == 'true'
+    if: needs.version.outputs.release != ''  # testagent_change - check if release exists (not == 'true')
     steps:
       - uses: actions/checkout@v3
         with:
@@ -359,6 +383,15 @@ jobs:
           pattern: testagent-vscode-*
           path: packages/kilo-vscode/out
           merge-multiple: true
+
+      # testagent_change - debug: list downloaded VSIX files
+      - name: List downloaded VSIX files
+        run: |
+          echo "📦 Downloaded VSIX files:"
+          ls -lh packages/kilo-vscode/out/ || echo "❌ No files found in packages/kilo-vscode/out/"
+          echo ""
+          echo "📂 Directory structure:"
+          find packages/kilo-vscode/out -type f || echo "❌ Directory not found"
 
       # 创建 CLI 压缩包
       - name: Create CLI release archives
