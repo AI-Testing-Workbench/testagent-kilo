@@ -138,6 +138,11 @@ jobs:
       - uses: ./.github/actions/setup-bun
         if: steps.should_build.outputs.build == 'true'
 
+      - name: Install dependencies
+        if: steps.should_build.outputs.build == 'true'
+        run: bun install
+        working-directory: ./packages/testagent-core
+
       - name: Build CLI (${{ matrix.target }})
         if: steps.should_build.outputs.build == 'true'
         run: |
