@@ -362,9 +362,6 @@ jobs:
         with:
           submodules: recursive
 
-      # 只用来跑 gh release upload
-      - uses: ./.github/actions/setup-bun
-
       # testagent_change - use GITHUB_TOKEN instead of app token for simplicity
       # - name: Setup Git Committer
       #   id: committer
