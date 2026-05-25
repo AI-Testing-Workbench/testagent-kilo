@@ -82,21 +82,27 @@ jobs:
 
       - uses: ./.github/actions/setup-bun
 
-      - name: Build
+      - name: Build CLI (Windows x64)
         id: build
-        run: |
-          ./packages/opencode/script/build.ts
+        run: bun run bun:windows
+        working-directory: ./packages/testagent-core
         env:
-          KILO_VERSION: ${{ needs.version.outputs.version }}
-          KILO_RELEASE: ${{ needs.version.outputs.release }}
-          KILO_PRE_RELEASE: ${{ inputs.pre_release }}
-          GH_TOKEN: ${{ github.token }}
-          GH_REPO: ${{ github.repository }}
+          OPENCODE_VERSION: ${{ needs.version.outputs.version }}
+          OPENCODE_CHANNEL: latest
+
+      - name: Verify CLI binary
+        run: |
+          if [ ! -f packages/kilo-vscode/bin/testagent.exe ]; then
+            echo "❌ Error: testagent.exe not found!"
+            exit 1
+          fi
+          echo "✅ CLI binary built successfully"
+          ls -lh packages/kilo-vscode/bin/testagent.exe
 
       - uses: actions/upload-artifact@v4
         with:
-          name: kilo-cli
-          path: packages/opencode/dist
+          name: testagent-cli
+          path: packages/kilo-vscode/bin/testagent.exe
 
     outputs:
       version: ${{ needs.version.outputs.version }}
@@ -115,27 +121,44 @@ jobs:
           node-version: "24"
           registry-url: "https://registry.npmjs.org"
 
-      - name: Install @vscode/vsce
-        run: bun install -g @vscode/vsce
-
-      - uses: actions/download-artifact@v4
+      - name: Download CLI artifact
+        uses: actions/download-artifact@v4
         with:
-          name: kilo-cli
-          path: packages/opencode/dist
+          name: testagent-cli
+          path: packages/kilo-vscode/bin
 
-      - name: Build VSIX packages
-        run: bun script/build.ts
+      - name: Verify CLI binary
+        run: |
+          if [ ! -f packages/kilo-vscode/bin/testagent.exe ]; then
+            echo "❌ Error: testagent.exe not found after download!"
+            exit 1
+          fi
+          echo "✅ CLI binary downloaded successfully"
+          ls -lh packages/kilo-vscode/bin/
+
+      - name: Build VSIX package
+        run: bun run testagent-nodejs:vsix
         working-directory: ./packages/kilo-vscode
         env:
-          CLI_DIST_DIR: ../../packages/opencode/dist
+          OPENCODE_VERSION: ${{ needs.build-cli.outputs.version }}
+          OPENCODE_CHANNEL: latest
           KILO_VERSION: ${{ needs.build-cli.outputs.version }}
           KILO_PRE_RELEASE: ${{ inputs.pre_release }}
-          GH_REPO: ${{ github.repository }}
+
+      - name: Verify VSIX package
+        run: |
+          if [ ! -f packages/kilo-vscode/testagent-nodejs-tscode.vsix ]; then
+            echo "❌ Error: VSIX package not found!"
+            ls -la packages/kilo-vscode/*.vsix || echo "No VSIX files found"
+            exit 1
+          fi
+          echo "✅ VSIX package built successfully"
+          ls -lh packages/kilo-vscode/*.vsix
 
       - uses: actions/upload-artifact@v4
         with:
-          name: kilo-vscode
-          path: packages/kilo-vscode/out
+          name: testagent-vscode
+          path: packages/kilo-vscode/*.vsix
 
   # build-tauri:
   #   needs:
