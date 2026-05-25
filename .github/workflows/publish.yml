@@ -172,12 +172,12 @@ jobs:
           echo "✅ CLI binary built successfully"
           ls -lh "$BINARY_PATH"
 
-      # testagent_change - upload entire platform directory including package.json
+      # testagent_change - upload only binary (avoid overwriting package.json in consumers)
       - uses: actions/upload-artifact@v4
         if: steps.should_build.outputs.build == 'true'
         with:
           name: testagent-cli-${{ matrix.target }}
-          path: packages/testagent-core/packages/opencode/dist/${{ matrix.output_dir }}
+          path: packages/testagent-core/packages/opencode/dist/${{ matrix.output_dir }}/bin
           retention-days: 7
 
     outputs:
@@ -247,12 +247,12 @@ jobs:
         if: steps.should_build.outputs.build == 'true'
         run: bun install -g @vscode/vsce
 
-      - name: Download CLI artifact
+      - name: Download CLI binary
         if: steps.should_build.outputs.build == 'true'
         uses: actions/download-artifact@v4
         with:
           name: testagent-cli-${{ matrix.cli_target }}
-          path: packages/kilo-vscode
+          path: packages/kilo-vscode/bin
 
       - name: Set executable permissions (Unix)
         if: steps.should_build.outputs.build == 'true' && matrix.binary != 'testagent.exe'
@@ -380,9 +380,9 @@ jobs:
             esac
 
             if [[ "$target" == win32-* ]]; then
-              (cd "$artifact_dir/bin" && zip -r "../../dist/${plat}.zip" .)
+              (cd "$artifact_dir" && zip -r "../../dist/${plat}.zip" .)
             else
-              tar -czf "dist/${plat}.tar.gz" -C "$artifact_dir/bin" .
+              tar -czf "dist/${plat}.tar.gz" -C "$artifact_dir" .
             fi
           done
 
