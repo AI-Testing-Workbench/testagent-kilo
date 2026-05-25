@@ -134,7 +134,9 @@ jobs:
         if: steps.should_build.outputs.build == 'true'
         with:
           ref: ${{ inputs.branch || github.ref }}
+          fetch-depth: 0
           fetch-tags: true
+          submodules: recursive
 
       - uses: ./.github/actions/setup-bun
         if: steps.should_build.outputs.build == 'true'
@@ -340,6 +342,8 @@ jobs:
     if: needs.version.outputs.release == 'true'
     steps:
       - uses: actions/checkout@v3
+        with:
+          submodules: recursive
 
       # 只用来跑 gh release upload
       - uses: ./.github/actions/setup-bun
