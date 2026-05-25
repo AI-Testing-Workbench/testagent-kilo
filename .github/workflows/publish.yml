@@ -49,6 +49,7 @@ jobs:
         with:
           ref: ${{ inputs.branch || github.ref }}
           fetch-depth: 0
+          submodules: recursive  
 
       - uses: ./.github/actions/setup-bun
 
