@@ -49,7 +49,7 @@ jobs:
 
       # kilocode_change start - install deps for version script workspace resolution
       - name: Install dependencies
-        run: bun install
+        run: bun install --ignore-scripts
 
       # testagent_change - removed: bun i -g @kilocode/cli (not needed for version script)
       # kilocode_change end
