@@ -3367,7 +3367,7 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
     // Show system notification with task name
     this.systemNotification.notify({
       title: "TestAgent",
-      message: `${taskName}已完成`,
+      message: `${taskName}`,
       type: "info",
       onClick: () => this.revealWebview(),
     })
