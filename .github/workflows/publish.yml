@@ -1,13 +1,8 @@
-# testagent_change start - simplified workflow
+# testagent_change start - manual trigger only
 name: publish
 run-name: "Build ${{ inputs.platform || 'all platforms' }} from ${{ inputs.branch || github.ref_name }}"
 
 on:
-  push:
-    branches:
-      - main
-      - dev
-      - beta
   workflow_dispatch:
     inputs:
       branch:
