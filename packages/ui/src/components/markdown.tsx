@@ -211,58 +211,15 @@ function setupCodeCopy(root: HTMLDivElement, getLabels: () => CopyLabels) {
     timeouts.set(button, timeout)
   }
 
-  // testagent_change start - 拦截文件链接点击
-  const handleLinkClick = (event: MouseEvent) => {
-    const target = event.target
-    if (!(target instanceof Element)) return
-
-    const link = target.closest("a")
-    if (!(link instanceof HTMLAnchorElement)) return
-
-    const href = link.getAttribute("href")
-    if (!href) return
-
-    // 检查是否是文件路径链接（不是 http/https 开头）
-    if (href.startsWith("http://") || href.startsWith("https://") || href.startsWith("#")) {
-      return // 让浏览器处理外部链接和锚点
-    }
-
-    // 拦截文件路径链接
-    event.preventDefault()
-    event.stopPropagation()
-
-    // 发送消息给 VS Code 扩展打开文件
-    try {
-      // 使用全局单例模式缓存 vscode API，避免重复调用 acquireVsCodeApi()
-      if (typeof window !== "undefined") {
-        const win = window as any
-        if (!win.__vscodeApi && typeof win.acquireVsCodeApi === "function") {
-          win.__vscodeApi = win.acquireVsCodeApi()
-        }
-        if (win.__vscodeApi) {
-          win.__vscodeApi.postMessage({
-            type: "openFile",
-            filePath: href,
-          })
-        }
-      }
-    } catch (error) {
-      console.error("[Markdown] Failed to open file:", error)
-    }
-  }
-  // testagent_change end
-
   const buttons = Array.from(root.querySelectorAll('[data-slot="markdown-copy-button"]'))
   for (const button of buttons) {
     if (button instanceof HTMLButtonElement) updateLabel(button)
   }
 
   root.addEventListener("click", handleClick)
-  root.addEventListener("click", handleLinkClick, true) // testagent_change - use capture phase
 
   return () => {
     root.removeEventListener("click", handleClick)
-    root.removeEventListener("click", handleLinkClick, true) // testagent_change
     for (const timeout of timeouts.values()) {
       clearTimeout(timeout)
     }

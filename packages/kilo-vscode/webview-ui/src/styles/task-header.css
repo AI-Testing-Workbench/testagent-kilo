@@ -204,6 +204,34 @@
   padding: 0 8px;
 }
 
+/* Context usage ring in compact header */
+.task-header-context-ring {
+  position: relative;
+  display: inline-grid;
+  place-items: center;
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  color: var(--vscode-foreground);
+  font-size: 9px;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  line-height: 1;
+}
+
+.task-header-context-ring::before {
+  content: "";
+  position: absolute;
+  inset: 3px;
+  border-radius: 50%;
+  background: var(--background-base);
+}
+
+.task-header-context-ring > span {
+  position: relative;
+  z-index: 1;
+}
+
 /* Token breakdown in expanded state */
 .task-header-tokens {
   display: flex;

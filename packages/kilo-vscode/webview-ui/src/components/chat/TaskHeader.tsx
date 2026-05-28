@@ -193,10 +193,22 @@ export const TaskHeader: Component<TaskHeaderProps> = (props) => {
           <Show when={context()}>
             {(ctx) => (
               <Tooltip
-                value={ctx().pct ? `${ctx().tokens} tokens (${ctx().pct} of context)` : `${ctx().tokens} tokens`}
+                value={ctx().pct ? `已使用 ${ctx().tokens} tokens（约占上下文 ${ctx().pct}）` : `${ctx().tokens}tokens`}
                 placement="bottom"
               >
-                <span>{ctx().pct ?? ctx().tokens}</span>
+                <Show when={ctx().pct} fallback={<span>{ctx().tokens}</span>}>
+                  {(pct) => (
+                    <span
+                      class="task-header-context-ring"
+                      style={{
+                        background: `conic-gradient(var(--vscode-foreground) ${pct()}, color-mix(in srgb, var(--vscode-foreground) 18%, transparent) 0)`,
+                      }}
+                      aria-label={`上下文已使用 ${pct()}`}
+                    >
+                      <span>{pct()}</span>
+                    </span>
+                  )}
+                </Show>
               </Tooltip>
             )}
           </Show>
@@ -257,8 +269,7 @@ export const TaskHeader: Component<TaskHeaderProps> = (props) => {
                   </Tooltip>
                 </Show>
                 <Show when={tk().output > 0}>
-                  <Tooltip value='包含内容：AI 的回复文本、生成的代码、工具调用（function calls）、推理过程'>
-
+                  <Tooltip value="包含内容：AI 的回复文本、生成的代码、工具调用（function calls）、推理过程">
                     <span class="task-header-tokens-value">
                       <Icon name="arrow-down-to-line" size="small" />
                       输出:{fmtNum(tk().output)}

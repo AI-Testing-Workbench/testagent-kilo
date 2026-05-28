@@ -636,7 +636,11 @@ export const { use: useMarked, provider: MarkedProvider } = createSimpleContext(
         renderer: {
           link({ href, title, text }) {
             const titleAttr = title ? ` title="${title}"` : ""
-            return `<a href="${href}"${titleAttr} class="external-link" target="_blank" rel="noopener noreferrer">${text}</a>`
+            // Only add target="_blank" for actual URLs; relative paths are handled by file-link click handlers
+            const isUrl = href.startsWith("http://") || href.startsWith("https://")
+            const targetAttr = isUrl ? ' target="_blank"' : ""
+            const relAttr = isUrl ? ' rel="noopener noreferrer"' : ""
+            return `<a href="${href}"${titleAttr}${targetAttr}${relAttr} class="external-link">${text}</a>`
           },
           // kilocode_change start
           codespan({ text }) {
