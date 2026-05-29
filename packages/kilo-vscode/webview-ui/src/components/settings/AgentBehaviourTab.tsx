@@ -403,7 +403,7 @@ const AgentBehaviourTab: Component = () => {
                             custom
                           </span>
                         </Show>
-                        <Show when={agent()?.mode === "subagent"}>
+                        <Show when={(agent()?.mode || config().agent?.[name]) === "subagent"}>
                           <span
                             style={{
                               "font-size": "10px",

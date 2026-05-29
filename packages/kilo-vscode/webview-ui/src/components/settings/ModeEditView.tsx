@@ -114,7 +114,7 @@ const ModeEditView: Component<Props> = (props) => {
       {/* Mode (custom modes only) */}
       <Show when={!native()}>
         <Card data-variant="wide-input" style={{ "margin-bottom": "12px" }}>
-          <SettingsRow title="Mode" description="Choose whether this mode is a primary agent or subagent." last>
+          <SettingsRow title="代理模式" description="设置该代理模式" last>
             <Select<Mode>
               options={[...modes]}
               current={cfg().mode === "subagent" ? "subagent" : "primary"}
