@@ -4,3 +4,6 @@
 [submodule "packages/opencode-mocker"]
 	path = packages/opencode-mocker
 	url = https://github.com/AI-Testing-Workbench/opencode-mocker.git
+[submodule "packages/testflow"]
+	path = packages/testflow
+	url = https://github.com/Pluto-AI-Workbench/testflow.git
