@@ -1,5 +1,6 @@
 import { Component, Show, createSignal } from "solid-js"
 import { TextField } from "@kilocode/kilo-ui/text-field"
+import { Select } from "@kilocode/kilo-ui/select"
 import { Card } from "@kilocode/kilo-ui/card"
 import { Button } from "@kilocode/kilo-ui/button"
 import { IconButton } from "@kilocode/kilo-ui/icon-button"
@@ -15,11 +16,15 @@ interface Props {
   onBack: () => void
 }
 
+type Mode = "primary" | "subagent"
+const modes: Mode[] = ["primary", "subagent"]
+
 const ModeCreateView: Component<Props> = (props) => {
   const language = useLanguage()
   const { config, updateConfig } = useConfig()
 
   const [name, setName] = createSignal("")
+  const [mode, setMode] = createSignal<Mode>("primary")
   const [description, setDescription] = createSignal("")
   const [prompt, setPrompt] = createSignal("")
   const [error, setError] = createSignal("")
@@ -33,6 +38,7 @@ const ModeCreateView: Component<Props> = (props) => {
 
   const reset = () => {
     setName("")
+    setMode("primary")
     setDescription("")
     setPrompt("")
     setError("")
@@ -52,7 +58,7 @@ const ModeCreateView: Component<Props> = (props) => {
     }
     const existing = config().agent ?? {}
     const partial: Partial<AgentConfig> = {
-      mode: "primary",
+      mode: mode(),
       description: description().trim() || undefined,
       prompt: prompt().trim() || undefined,
     }
@@ -98,6 +104,23 @@ const ModeCreateView: Component<Props> = (props) => {
               {error()}
             </div>
           </Show>
+        </SettingsRow>
+      </Card>
+      {/* Mode */}
+      <Card data-variant="wide-input" style={{ "margin-bottom": "12px" }}>
+        <SettingsRow title="Mode" description="Choose whether this mode is a primary agent or subagent." last>
+          <Select<Mode>
+            options={[...modes]}
+            current={mode()}
+            value={(val) => val}
+            label={(val) => val}
+            onSelect={(val) => {
+              if (!val) return
+              setMode(val)
+            }}
+            variant="secondary"
+            size="small"
+          />
         </SettingsRow>
       </Card>
 

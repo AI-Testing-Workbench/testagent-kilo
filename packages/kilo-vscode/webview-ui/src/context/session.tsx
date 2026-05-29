@@ -215,7 +215,7 @@ interface SessionContextValue {
     files?: FileAttachment[],
     draftID?: string,
   ) => void
-  abort: () => void
+  abort: (sessionID?: string) => void
   compact: () => void
   respondToPermission: (
     permissionId: string,
@@ -1794,18 +1794,18 @@ export const SessionProvider: ParentComponent = (props) => {
     })
   }
 
-  function abort() {
-    const sessionID = currentSessionID()
-    if (!sessionID) {
+  function abort(sessionID?: string) {
+    const sid = sessionID ?? currentSessionID()
+    if (!sid) {
       console.warn("[testagent] Cannot abort: no current session")
       return
     }
 
-    const queuedMessageIDs = queuedUserMessageIDs(messages(), statusInfo())
+    const queuedMessageIDs = queuedUserMessageIDs(store.messages[sid] ?? [], statusMap[sid] ?? idle)
 
     vscode.postMessage({
       type: "abort",
-      sessionID,
+      sessionID: sid,
       queuedMessageIDs,
     })
   }

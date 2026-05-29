@@ -33,6 +33,7 @@ export const TaskHeader: Component<TaskHeaderProps> = (props) => {
   const hasMessages = createMemo(() => session.messages().length > 0)
   const busy = createMemo(() => session.status() === "busy")
   const canCompact = createMemo(() => !busy() && hasMessages() && !!session.selected())
+  const stop = () => session.abort()
 
   // testagent_change start - export conversation to markdown
   const exportConversation = () => {
@@ -204,9 +205,7 @@ export const TaskHeader: Component<TaskHeaderProps> = (props) => {
                         background: `conic-gradient(var(--vscode-foreground) ${pct()}, color-mix(in srgb, var(--vscode-foreground) 18%, transparent) 0)`,
                       }}
                       aria-label={`上下文已使用 ${pct()}`}
-                    >
-                      <span>{pct()}</span>
-                    </span>
+                    ></span>
                   )}
                 </Show>
               </Tooltip>
@@ -225,6 +224,17 @@ export const TaskHeader: Component<TaskHeaderProps> = (props) => {
             </Tooltip>
           </Show>
           {/* testagent_change end */}
+          <Show when={props.readonly && busy()}>
+            <Tooltip value={language.t("prompt.action.stop")} placement="bottom">
+              <IconButton
+                icon="stop"
+                size="small"
+                variant="ghost"
+                onClick={stop}
+                aria-label={language.t("prompt.action.stop")}
+              />
+            </Tooltip>
+          </Show>
           <Show when={!props.readonly}>
             <Tooltip value={language.t("command.session.compact")} placement="bottom">
               <IconButton

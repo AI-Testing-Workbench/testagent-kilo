@@ -12,6 +12,7 @@ import { ToolRegistry, ToolProps, getToolInfo } from "@kilocode/kilo-ui/message-
 import { BasicTool } from "@kilocode/kilo-ui/basic-tool"
 import { Icon } from "@kilocode/kilo-ui/icon"
 import { IconButton } from "@kilocode/kilo-ui/icon-button"
+import { Tooltip } from "@kilocode/kilo-ui/tooltip"
 import { useData } from "@kilocode/kilo-ui/context/data"
 import { useLanguage } from "../../context/language"
 import { useI18n } from "@kilocode/kilo-ui/context/i18n"
@@ -53,6 +54,10 @@ const TaskToolRenderer: Component<ToolProps> = (props) => {
     })
 
   const running = createMemo(() => props.status === "pending" || props.status === "running")
+  const busy = createMemo(() => {
+    const id = childSessionId()
+    return id ? session.allStatusMap()[id]?.type === "busy" : false
+  })
 
   // Warm child session data immediately so completed task tools already have
   // their compact child tool list available when the user expands them.
@@ -87,6 +92,13 @@ const TaskToolRenderer: Component<ToolProps> = (props) => {
     vscode.postMessage({ type: "openSubAgentViewer", sessionID: id, title: description() })
   }
 
+  const stop = (e: MouseEvent) => {
+    e.stopPropagation()
+    const id = childSessionId()
+    if (!id) return
+    session.abort(id)
+  }
+
   const trigger = () => (
     <div data-slot="basic-tool-tool-info-structured">
       <div data-slot="basic-tool-tool-info-main">
@@ -102,6 +114,17 @@ const TaskToolRenderer: Component<ToolProps> = (props) => {
           </span>
         </Show>
       </div>
+      <Show when={childSessionId() && (running() || busy())}>
+        <Tooltip value={language.t("prompt.action.stop")} placement="top">
+          <IconButton
+            icon="stop"
+            size="small"
+            variant="ghost"
+            aria-label={language.t("prompt.action.stop")}
+            onClick={stop}
+          />
+        </Tooltip>
+      </Show>
       <Show when={childSessionId()}>
         <IconButton
           icon="square-arrow-top-right"

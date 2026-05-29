@@ -1,5 +1,6 @@
 import { Component, Show, For, createMemo, createSignal } from "solid-js"
 import { TextField } from "@kilocode/kilo-ui/text-field"
+import { Select } from "@kilocode/kilo-ui/select"
 import { Switch } from "@kilocode/kilo-ui/switch"
 import { Card } from "@kilocode/kilo-ui/card"
 import { Button } from "@kilocode/kilo-ui/button"
@@ -17,6 +18,9 @@ interface Props {
   onBack: () => void
   onRemove: (agent: AgentInfo) => void
 }
+
+type Mode = "primary" | "subagent"
+const modes: Mode[] = ["primary", "subagent"]
 
 const ModeEditView: Component<Props> = (props) => {
   const language = useLanguage()
@@ -104,6 +108,26 @@ const ModeEditView: Component<Props> = (props) => {
           >
             {language.t("settings.agentBehaviour.editMode.native")}
           </div>
+        </Card>
+      </Show>
+
+      {/* Mode (custom modes only) */}
+      <Show when={!native()}>
+        <Card data-variant="wide-input" style={{ "margin-bottom": "12px" }}>
+          <SettingsRow title="Mode" description="Choose whether this mode is a primary agent or subagent." last>
+            <Select<Mode>
+              options={[...modes]}
+              current={cfg().mode === "subagent" ? "subagent" : "primary"}
+              value={(val) => val}
+              label={(val) => val}
+              onSelect={(val) => {
+                if (!val) return
+                update({ mode: val })
+              }}
+              variant="secondary"
+              size="small"
+            />
+          </SettingsRow>
         </Card>
       </Show>
 
