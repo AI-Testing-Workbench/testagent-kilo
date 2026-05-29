@@ -2,7 +2,7 @@
   "name": "TestAgent",
   "displayName": "TestAgent",
   "description": "TestAgent Code Extension",
-  "version": "1.0.4",
+  "version": "1.0.5",
   "icon": "assets/icons/logo-outline-black.png",
   "galleryBanner": {
     "color": "#FFFFFF",
