@@ -198,15 +198,14 @@ export class MarketplaceInstaller {
   async removeMcp(item: McpMarketplaceItem, scope: "project" | "global", workspace?: string): Promise<RemoveResult> {
     // testagent_change start: Remove from all candidate config files
     const candidates = ["testagent.jsonc", "testagent.json", "opencode.jsonc", "opencode.json", "config.json"]
-    let removed = false
     for (const filename of candidates) {
-      const config = await this.readConfigByFilename(scope, workspace, filename)
-      if (config.mcp?.[item.id]) {
+      for (const filepath of this.configFilePaths(scope, workspace, filename)) {
+        const config = await this.readConfigFile(filepath)
+        if (!config.mcp?.[item.id]) continue
         delete config.mcp[item.id]
         if (Object.keys(config.mcp).length === 0) delete config.mcp
-        await this.writeConfigByFilename(scope, workspace, config, filename)
-        removed = true
-        console.log(`[TestAgent] Removed MCP server "${item.id}" from ${filename}`) // testagent_change
+        await this.writeConfigFile(filepath, config)
+        console.log(`[TestAgent] Removed MCP server "${item.id}" from ${filepath}`) // testagent_change
       }
     }
     // testagent_change: Return success even if not found (idempotent delete)
@@ -217,15 +216,14 @@ export class MarketplaceInstaller {
   async removeMode(item: ModeMarketplaceItem, scope: "project" | "global", workspace?: string): Promise<RemoveResult> {
     // testagent_change start: Remove from all candidate config files
     const candidates = ["testagent.jsonc", "testagent.json", "opencode.jsonc", "opencode.json", "config.json"]
-    let removed = false
     for (const filename of candidates) {
-      const config = await this.readConfigByFilename(scope, workspace, filename)
-      if (config.agent?.[item.id]) {
+      for (const filepath of this.configFilePaths(scope, workspace, filename)) {
+        const config = await this.readConfigFile(filepath)
+        if (!config.agent?.[item.id]) continue
         delete config.agent[item.id]
         if (Object.keys(config.agent).length === 0) delete config.agent
-        await this.writeConfigByFilename(scope, workspace, config, filename)
-        removed = true
-        console.log(`[TestAgent] Removed agent "${item.id}" from ${filename}`) // testagent_change
+        await this.writeConfigFile(filepath, config)
+        console.log(`[TestAgent] Removed agent "${item.id}" from ${filepath}`) // testagent_change
       }
     }
     // testagent_change: Return success even if not found (idempotent delete)
@@ -261,6 +259,30 @@ export class MarketplaceInstaller {
 
   // ── Config helpers ──────────────────────────────────────────────────
 
+  private configFilePaths(scope: "project" | "global", workspace: string | undefined, filename: string): string[] {
+    if (scope === "project") {
+      if (!workspace) return []
+      return this.parentDirs(workspace).flatMap((dir) => [
+        path.join(dir, filename),
+        path.join(dir, ".testagent", filename),
+        path.join(dir, ".opencode", filename),
+      ])
+    }
+
+    const xdg = process.env.XDG_CONFIG_HOME || path.join(os.homedir(), ".config")
+    return [path.join(xdg, "testagent", filename), path.join(xdg, "opencode", filename)]
+  }
+
+  private parentDirs(dir: string): string[] {
+    const root = path.parse(dir).root
+    const walk = (current: string): string[] => {
+      const resolved = path.resolve(current)
+      if (resolved === root) return [resolved]
+      return [resolved, ...walk(path.dirname(resolved))]
+    }
+    return walk(dir)
+  }
+
   private async readConfig(
     scope: "project" | "global",
     workspace?: string,
@@ -277,20 +299,7 @@ export class MarketplaceInstaller {
 
   // testagent_change start: Helper methods to read/write config by filename
   // testagent_change start: use jsonc parser to support comments and trailing commas
-  private async readConfigByFilename(
-    scope: "project" | "global",
-    workspace: string | undefined,
-    filename: string,
-  ): Promise<Record<string, Record<string, unknown>>> {
-    // testagent_change: Handle undefined workspace for project scope
-    if (scope === "project" && !workspace) {
-      // If project scope but no workspace available, return empty config
-      return {}
-    }
-    
-    const base =
-      scope === "project" ? path.join(workspace!, ".testagent") : path.join(os.homedir(), ".config", "testagent")
-    const filepath = path.join(base, filename)
+  private async readConfigFile(filepath: string): Promise<Record<string, Record<string, unknown>>> {
     try {
       const content = await fs.readFile(filepath, "utf-8")
       const errors: ParseError[] = []
@@ -306,21 +315,7 @@ export class MarketplaceInstaller {
   }
   // testagent_change end
 
-  private async writeConfigByFilename(
-    scope: "project" | "global",
-    workspace: string | undefined,
-    config: Record<string, unknown>,
-    filename: string,
-  ): Promise<void> {
-    // testagent_change: Handle undefined workspace for project scope
-    if (scope === "project" && !workspace) {
-      // If project scope but no workspace available, skip writing
-      return
-    }
-    
-    const base =
-      scope === "project" ? path.join(workspace!, ".testagent") : path.join(os.homedir(), ".config", "testagent")
-    const filepath = path.join(base, filename)
+  private async writeConfigFile(filepath: string, config: Record<string, unknown>): Promise<void> {
     await fs.mkdir(path.dirname(filepath), { recursive: true })
     await fs.writeFile(filepath, JSON.stringify(config, null, 2) + "\n", "utf-8")
   }

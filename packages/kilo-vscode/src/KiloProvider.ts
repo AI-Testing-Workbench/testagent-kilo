@@ -2249,6 +2249,21 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
     return false
   }
 
+  private async refreshGlobalConfigCache(): Promise<void> {
+    const raw = (this.client as unknown as {
+      client?: {
+        patch: (input: { url: string; body: Record<string, unknown> }) => Promise<{ error?: unknown }>
+      }
+    } | null)?.client
+
+    if (!raw || typeof raw.patch !== "function") {
+      throw new Error("SDK raw client patch method is not available")
+    }
+
+    const res = await raw.patch({ url: "/global/config", body: {} })
+    if (res.error) throw new Error(typeof res.error === "string" ? res.error : JSON.stringify(res.error))
+  }
+
   /**
    * Invalidate CLI caches and refresh the webview after a marketplace install/remove.
    *
@@ -2273,7 +2288,7 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
       // which now always calls invalidate() to clear the cachedGlobal cache (Duration.infinity TTL)
       // This is critical because Config.Service has a cachedGlobal that won't be cleared by instance.dispose() alone.
       console.log("[TestAgent]  🔄 invalidateAfterMarketplaceChange: invalidating global config cache") // testagent_change
-      await this.client.global.config.update({ config: {} }).catch((e: unknown) => {
+      await this.refreshGlobalConfigCache().catch((e: unknown) => {
         console.warn("[TestAgent] global.config.update after marketplace change failed:", e)
       })
       console.log("[TestAgent]  🔄 invalidateAfterMarketplaceChange: global config cache invalidated") // testagent_change
