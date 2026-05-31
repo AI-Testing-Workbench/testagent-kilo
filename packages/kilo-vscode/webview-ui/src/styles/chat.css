@@ -25,6 +25,9 @@
 @import "./suggest-bar.css";
 @import "./settings.css";
 @import "./high-contrast.css";
+/* testagent_change start - testflow integration */
+@import "./testflow.css";
+/* testagent_change end */
 
 
 

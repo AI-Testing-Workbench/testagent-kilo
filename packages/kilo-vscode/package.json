@@ -604,6 +604,7 @@
   },
   "scripts": {
     "prepare:cli-binary": "bun script/local-bin.ts",
+    "build:testflow": "bun script/build-testflow.ts",
     "compile": "bun run prepare:cli-binary -- --force && bun run rebuild-sdk && bun run typecheck && bun run lint && node esbuild.js",
     "watch": "bun run rebuild-sdk && bun run --parallel watch:esbuild watch:tsc",
     "watch:esbuild": "bun run prepare:cli-binary && node esbuild.js --watch",

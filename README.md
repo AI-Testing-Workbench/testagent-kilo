@@ -17,6 +17,7 @@ git submodule update --init --recursive
 # 安装依赖
 bun install
 bun install --cwd packages/testagent-core
+bun install --cwd packages/testflow
 ```
 
 ### 2. 启动开发环境
@@ -29,8 +30,9 @@ bun run extension
 
 该命令会自动完成：
 1. 构建 CLI 二进制文件（`packages/testagent-core` → `packages/kilo-vscode/bin/`）
-2. 构建 VS Code 扩展（extension + webview + Agent Manager）
-3. 启动 VS Code 开发模式并加载扩展
+2. 构建 testflow 独立二进制及资源文件（`packages/testflow` → `packages/kilo-vscode/bin/testflow.exe` + `testflow-res/`）
+3. 构建 VS Code 扩展（extension + webview + Agent Manager）
+4. 启动 VS Code 开发模式并加载扩展
 
 **跳过 CLI 构建**（当二进制文件已存在时）：
 ```bash
@@ -56,6 +58,7 @@ bun run rebuild-sdk
 
 **macOS / Linux:**
 ```bash
+# 1. 构建 testagent-core 二进制
 cd packages/testagent-core
 bun run bun:mac
 ```
@@ -64,6 +67,12 @@ bun run bun:mac
 ```bash
 cd packages/testagent-core
 bun run bun:windows
+```
+
+```bash
+# 2. 构建 testflow 独立二进制 + 资源文件
+cd packages/kilo-vscode
+bun run build:testflow
 ```
 
 #### 步骤 3：打包 VSIX
@@ -83,7 +92,9 @@ bun run testagent-nodejs:vsix
 testagent-kilo/
 ├── packages/
 │   ├── testagent-core/      # CLI 核心代码（子模块）
+│   ├── testflow/             # AI 驱动测试流程编排框架（子模块，bun workspace 成员）
 │   ├── kilo-vscode/          # VS Code 扩展
+│   ├── sdk/js/               # @kilocode/sdk
 │   ├── opencode-mocker/      # Mock 工具（子模块）
 │   └── ...
 └── README.md
@@ -107,7 +118,7 @@ cd packages/testagent-core && bun run clean
 cd packages/kilo-vscode && bun run clean
 ```
 
-### Q: 开发时修改了 CLI 代码，如何重新构建？
+### Q: 开发时修改了 CLI 或 testflow 代码，如何重新构建？
 ```bash
 # 方式 1：使用 extension 命令（推荐）
 bun run extension
@@ -115,6 +126,10 @@ bun run extension
 # 方式 2：手动构建
 cd packages/testagent-core
 bun run bun:mac  # 或 bun:windows
+
+# 构建 testflow 独立二进制 + 资源文件
+cd packages/kilo-vscode
+bun run build:testflow
 ```
 
 ---
