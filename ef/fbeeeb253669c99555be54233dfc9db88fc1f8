@@ -1,0 +1,19 @@
+.github/workflows/publish.yml
+  s_668730dedaeb36::t_48b3daf3cf801c 1,6-8
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.5.2",
+  "base_commit_sha": "effbeeeb253669c99555be54233dfc9db88fc1f8",
+  "prompts": {},
+  "sessions": {
+    "s_668730dedaeb36": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_17de25f41ffe5t4Iw9zWIfMldZ",
+        "model": "gpt-5.5"
+      },
+      "human_author": "邱文斌 <qiuwenbin@piscifun.com>"
+    }
+  }
+}
