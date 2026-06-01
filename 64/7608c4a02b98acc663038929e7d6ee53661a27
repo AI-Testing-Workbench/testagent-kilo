@@ -1,0 +1,14 @@
+packages/kilo-vscode/webview-ui/src/components/settings/Settings.tsx
+  h_dd14f57b35f29e 20,72
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.5.2",
+  "base_commit_sha": "647608c4a02b98acc663038929e7d6ee53661a27",
+  "prompts": {},
+  "humans": {
+    "h_dd14f57b35f29e": {
+      "author": "邱文斌 <qiuwenbin@piscifun.com>"
+    }
+  }
+}
