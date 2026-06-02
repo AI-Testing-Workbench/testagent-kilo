@@ -50,17 +50,6 @@
   ],
   "main": "./dist/extension.js",
   "contributes": {
-    "jsonValidation": [
-      {
-        "fileMatch": [
-          "/testagent.json",
-          "/testagent.jsonc",
-          "/.testagent/testagent.json",
-          "/.testagent/testagent.jsonc"
-        ],
-        "url": "./resources/schemas/testagent.config.schema.json"
-      }
-    ],
     "taskDefinitions": [
       {
         "type": "kilo-worktree-setup",
