@@ -18,6 +18,7 @@ import AutocompleteTab from "./AutocompleteTab"
 import NotificationsTab from "./NotificationsTab"
 import ContextTab from "./ContextTab"
 import NormalSettingTab from "./NormalSettingTab"
+import MemorySettingTab from "./MemorySettings"
 
 export interface SettingsProps {
   tab?: string
@@ -147,6 +148,10 @@ const Settings: Component<SettingsProps> = (props) => {
             <Icon name="server" />
             <span class="label">{language.t("settings.context.title")}</span>
           </Tabs.Trigger>
+          <Tabs.Trigger value="memorySettings">
+            <Icon name="brain" />
+            <span class="label">记忆设置</span>
+          </Tabs.Trigger>
           <Tabs.Trigger value="normalSetting">
             <Icon name="settings-gear" />
             <span class="label">通用设置</span>
@@ -205,6 +210,10 @@ const Settings: Component<SettingsProps> = (props) => {
         <Tabs.Content value="context">
           <h3>{language.t("settings.context.title")}</h3>
           <ContextTab />
+        </Tabs.Content>
+        <Tabs.Content value="memorySettings">
+          <h3>记忆设置</h3>
+          <MemorySettingTab />
         </Tabs.Content>
         <Tabs.Content value="normalSetting">
           <h3>通用设置</h3>

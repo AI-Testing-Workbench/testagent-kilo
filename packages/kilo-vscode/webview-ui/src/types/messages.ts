@@ -1548,6 +1548,48 @@ export interface ShellPathResolvedMessage {
   name: string
   path: string | null
 }
+
+export interface MemorySettingsConfig {
+  enable: boolean
+  debug: boolean
+  cmd: {
+    memory: boolean
+    dream: boolean
+  }
+  memory: {
+    autoExtractMaxLength: number
+    autoExtractBufferSize: number
+    personalMemoryEnable: boolean
+    personalMemoryPrompt: string
+    autoDreamEnable: boolean
+    autoExtractEnable: boolean
+  }
+  recall: {
+    recallEnable: boolean
+    llmRecall: boolean
+    providerID: string
+    modelID: string
+  }
+}
+
+export interface MemorySettingsLoadedMessage {
+  type: "memorySettingsLoaded"
+  settings: MemorySettingsConfig
+  path: string
+  error?: string
+}
+
+export interface MemorySettingsSavedMessage {
+  type: "memorySettingsSaved"
+  settings: MemorySettingsConfig
+  path: string
+  reloaded: boolean
+}
+
+export interface MemorySettingsFailedMessage {
+  type: "memorySettingsFailed"
+  message: string
+}
 // testagent_change end
 
 export type ExtensionMessage =
@@ -1663,6 +1705,9 @@ export type ExtensionMessage =
   | FavoritesLoadedMessage
   | RuntimeResultMessage // testagent_change
   | ShellPathResolvedMessage // testagent_change
+  | MemorySettingsLoadedMessage // testagent_change
+  | MemorySettingsSavedMessage // testagent_change
+  | MemorySettingsFailedMessage // testagent_change
   | ModelSelectionsLoadedMessage
   | LanguageChangedMessage
   | ContinueInWorktreeProgressMessage
@@ -2033,6 +2078,15 @@ export interface GetRuntimeRequest {
 export interface ChangeRuntimeRequest {
   type: "changeRuntime"
   runtime: "bun" | "nodejs"
+}
+
+export interface RequestMemorySettingsMessage {
+  type: "requestMemorySettings"
+}
+
+export interface UpdateMemorySettingsMessage {
+  type: "updateMemorySettings"
+  settings: MemorySettingsConfig
 }
 // testagent_change end
 
@@ -2775,6 +2829,8 @@ export type WebviewMessage =
   | ResolveShellPathMessage
   | GetRuntimeRequest // testagent_change
   | ChangeRuntimeRequest // testagent_change
+  | RequestMemorySettingsMessage // testagent_change
+  | UpdateMemorySettingsMessage // testagent_change
 
 // ============================================
 // VS Code API type

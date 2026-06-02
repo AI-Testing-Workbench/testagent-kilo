@@ -1,6 +1,7 @@
 /* eslint-disable max-lines */
 import * as path from "path"
 import * as fs from "fs"
+import * as os from "os"
 import * as vscode from "vscode"
 import { buildPreviewPath, getPreviewCommand, getPreviewDir, parseImage, trimEntries } from "./image-preview"
 import { isAbsolutePath } from "./path-utils"
@@ -120,6 +121,98 @@ type KiloProviderOptions = {
 }
 
 type MessageLoadMode = "replace" | "prepend" | "focus" | "reconcile"
+
+type MemorySettingsConfig = {
+  enable: boolean
+  debug: boolean
+  cmd: {
+    memory: boolean
+    dream: boolean
+  }
+  memory: {
+    autoExtractMaxLength: number
+    autoExtractBufferSize: number
+    personalMemoryEnable: boolean
+    personalMemoryPrompt: string
+    autoDreamEnable: boolean
+    autoExtractEnable: boolean
+  }
+  recall: {
+    recallEnable: boolean
+    llmRecall: boolean
+    providerID: string
+    modelID: string
+  }
+}
+
+const memoryDefaults: MemorySettingsConfig = {
+  enable: false,
+  debug: false,
+  cmd: {
+    memory: true,
+    dream: true,
+  },
+  memory: {
+    autoExtractMaxLength: 10000,
+    autoExtractBufferSize: 10,
+    personalMemoryEnable: true,
+    personalMemoryPrompt: "",
+    autoDreamEnable: true,
+    autoExtractEnable: true,
+  },
+  recall: {
+    recallEnable: true,
+    llmRecall: false,
+    providerID: "",
+    modelID: "",
+  },
+}
+
+const memoryPath = () => path.join(os.homedir(), ".config", "testagent", "testagent-memory.json")
+
+const memorySettings = (input: unknown): MemorySettingsConfig => {
+  const cfg = input && typeof input === "object" ? (input as Partial<MemorySettingsConfig>) : {}
+  return {
+    enable: typeof cfg.enable === "boolean" ? cfg.enable : memoryDefaults.enable,
+    debug: typeof cfg.debug === "boolean" ? cfg.debug : memoryDefaults.debug,
+    cmd: {
+      memory: typeof cfg.cmd?.memory === "boolean" ? cfg.cmd.memory : memoryDefaults.cmd.memory,
+      dream: typeof cfg.cmd?.dream === "boolean" ? cfg.cmd.dream : memoryDefaults.cmd.dream,
+    },
+    memory: {
+      autoExtractMaxLength:
+        typeof cfg.memory?.autoExtractMaxLength === "number"
+          ? cfg.memory.autoExtractMaxLength
+          : memoryDefaults.memory.autoExtractMaxLength,
+      autoExtractBufferSize:
+        typeof cfg.memory?.autoExtractBufferSize === "number"
+          ? cfg.memory.autoExtractBufferSize
+          : memoryDefaults.memory.autoExtractBufferSize,
+      personalMemoryEnable:
+        typeof cfg.memory?.personalMemoryEnable === "boolean"
+          ? cfg.memory.personalMemoryEnable
+          : memoryDefaults.memory.personalMemoryEnable,
+      personalMemoryPrompt:
+        typeof cfg.memory?.personalMemoryPrompt === "string"
+          ? cfg.memory.personalMemoryPrompt
+          : memoryDefaults.memory.personalMemoryPrompt,
+      autoDreamEnable:
+        typeof cfg.memory?.autoDreamEnable === "boolean"
+          ? cfg.memory.autoDreamEnable
+          : memoryDefaults.memory.autoDreamEnable,
+      autoExtractEnable:
+        typeof cfg.memory?.autoExtractEnable === "boolean"
+          ? cfg.memory.autoExtractEnable
+          : memoryDefaults.memory.autoExtractEnable,
+    },
+    recall: {
+      recallEnable: typeof cfg.recall?.recallEnable === "boolean" ? cfg.recall.recallEnable : memoryDefaults.recall.recallEnable,
+      llmRecall: typeof cfg.recall?.llmRecall === "boolean" ? cfg.recall.llmRecall : memoryDefaults.recall.llmRecall,
+      providerID: typeof cfg.recall?.providerID === "string" ? cfg.recall.providerID : memoryDefaults.recall.providerID,
+      modelID: typeof cfg.recall?.modelID === "string" ? cfg.recall.modelID : memoryDefaults.recall.modelID,
+    },
+  }
+}
 
 // Helper to map agent data to the subset of fields sent to the webview
 const mapAgent = (a: Agent) => ({
@@ -829,6 +922,12 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
           break
         case "requestGlobalConfig":
           this.fetchAndSendGlobalConfig().catch((e) => console.error("[TestAgent] fetchAndSendGlobalConfig failed:", e))
+          break
+        case "requestMemorySettings":
+          this.sendMemorySettings().catch((e) => console.error("[TestAgent] sendMemorySettings failed:", e))
+          break
+        case "updateMemorySettings":
+          this.saveMemorySettings(message.settings).catch((e) => console.error("[TestAgent] saveMemorySettings failed:", e))
           break
         case "checkGitInstalled": {
           const installed = await this.checkGitInstalled()
@@ -3305,6 +3404,47 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
         console.error("[TestAgent] Failed to open global config file:", err)
         vscode.window.showErrorMessage(`打开全局配置文件失败: ${err}`)
       }
+    }
+  }
+
+  private async sendMemorySettings(): Promise<void> {
+    const file = memoryPath()
+    try {
+      const txt = await fs.promises.readFile(file, "utf-8")
+      this.postMessage({ type: "memorySettingsLoaded", settings: memorySettings(JSON.parse(txt || "{}")), path: file })
+    } catch (err) {
+      if (err && typeof err === "object" && "code" in err && err.code === "ENOENT") {
+        this.postMessage({ type: "memorySettingsLoaded", settings: memoryDefaults, path: file })
+        return
+      }
+      const message = err instanceof Error ? err.message : String(err)
+      this.postMessage({ type: "memorySettingsLoaded", settings: memoryDefaults, path: file, error: message })
+    }
+  }
+
+  private async saveMemorySettings(input: unknown): Promise<void> {
+    const file = memoryPath()
+    try {
+      const cfg = memorySettings(input)
+      await fs.promises.mkdir(path.dirname(file), { recursive: true })
+      await fs.promises.writeFile(file, `${JSON.stringify(cfg, null, 2)}\n`, "utf-8")
+      this.postMessage({ type: "memorySettingsSaved", settings: cfg, path: file, reloaded: await this.reloadMemoryPlugin() })
+    } catch (err) {
+      this.postMessage({ type: "memorySettingsFailed", message: err instanceof Error ? err.message : String(err) })
+    }
+  }
+
+  private async reloadMemoryPlugin(): Promise<boolean> {
+    if (!this.client || this.connectionState !== "connected") return false
+    try {
+      this.clearCommandsCache()
+      await this.client.instance.dispose({ directory: this.getWorkspaceDirectory() })
+      await new Promise((resolve) => setTimeout(resolve, 200))
+      await this.fetchAndSendCommands()
+      return true
+    } catch (err) {
+      console.warn("[TestAgent] memory plugin reload failed:", err)
+      return false
     }
   }
 
