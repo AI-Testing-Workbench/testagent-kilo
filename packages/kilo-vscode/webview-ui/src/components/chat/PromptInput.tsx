@@ -30,12 +30,13 @@ import { convertToMentionPath } from "../../utils/path-mentions"
 import { usePromptHistory } from "../../hooks/usePromptHistory"
 import { WandSparkles } from "@kilocode/kilo-ui/lucide"
 import { fileName, dirName, buildHighlightSegments, atEnd, isPromptBusy } from "./prompt-input-utils"
-import type { ReviewComment, TextPart } from "../../types/messages"
+import type { CodeContext, ReviewComment, TextPart } from "../../types/messages"
 import { formatReviewCommentsMarkdown } from "../../utils/review-comment-markdown"
 import { pendingDraftKey, scopeDraftKey, sessionDraftKey } from "../../utils/prompt-drafts"
 
 // Per-session input text storage (module-level so it survives remounts)
 const drafts = new Map<string, string>()
+const codeDrafts = new Map<string, CodeContext[]>()
 const reviewDrafts = new Map<string, ReviewComment[]>()
 const imageDrafts = new Map<string, ImageAttachment[]>()
 
@@ -46,6 +47,10 @@ function mergeReviewComments(current: ReviewComment[], incoming: ReviewComment[]
     map.set(item.id, item)
   }
   return [...map.values()]
+}
+
+function formatCodeContext(item: CodeContext) {
+  return `${item.file}:${item.start}-${item.end}\n\`\`\`\n${item.text}\n\`\`\``
 }
 
 interface PromptInputProps {
@@ -99,9 +104,11 @@ export const PromptInput: Component<PromptInputProps> = (props) => {
     pendingDraftKey(props.pendingSessionID ?? session.draftSessionID()) ??
     "new"
   const draftKey = () => scopeDraftKey(boxKey(), rawKey())
-  const saveDraft = (key: string, next: string, comments: ReviewComment[], imgs: ImageAttachment[]) => {
+  const saveDraft = (key: string, next: string, code: CodeContext[], comments: ReviewComment[], imgs: ImageAttachment[]) => {
     if (next) drafts.set(key, next)
     else drafts.delete(key)
+    if (code.length > 0) codeDrafts.set(key, code)
+    else codeDrafts.delete(key)
     if (comments.length > 0) reviewDrafts.set(key, comments)
     else reviewDrafts.delete(key)
     if (imgs.length > 0) imageDrafts.set(key, imgs)
@@ -109,6 +116,7 @@ export const PromptInput: Component<PromptInputProps> = (props) => {
   }
 
   const [text, setText] = createSignal("")
+  const [codeContexts, setCodeContexts] = createSignal<CodeContext[]>([])
   const [reviewComments, setReviewComments] = createSignal<ReviewComment[]>([])
   const [enhancing, setEnhancing] = createSignal(false)
   let enhanceCounter = 0
@@ -129,6 +137,18 @@ export const PromptInput: Component<PromptInputProps> = (props) => {
 
   const removeReviewComment = (id: string) => {
     replaceReviewComments(reviewComments().filter((item) => item.id !== id))
+  }
+
+  const removeCodeContext = (id: string) => {
+    const next = codeContexts().filter((item) => item.id !== id)
+    setCodeContexts(next)
+    if (next.length > 0) codeDrafts.set(draftKey(), next)
+    else codeDrafts.delete(draftKey())
+  }
+
+  const clearCodeContexts = () => {
+    setCodeContexts([])
+    codeDrafts.delete(draftKey())
   }
 
   const openReviewFile = (item: ReviewComment) => {
@@ -188,11 +208,13 @@ export const PromptInput: Component<PromptInputProps> = (props) => {
   createEffect(
     on(draftKey, (key, prev) => {
       if (prev !== undefined && prev !== key) {
-        saveDraft(prev, untrack(text), untrack(reviewComments), untrack(imageAttach.images))
+        saveDraft(prev, untrack(text), untrack(codeContexts), untrack(reviewComments), untrack(imageAttach.images))
       }
       const draft = drafts.get(key) ?? ""
+      const code = codeDrafts.get(key) ?? []
       const pending = reviewDrafts.get(key) ?? []
       setText(draft)
+      setCodeContexts(code)
       setReviewComments(pending)
       imageAttach.replace(imageDrafts.get(key) ?? [])
       setEnhancing(false)
@@ -254,12 +276,13 @@ export const PromptInput: Component<PromptInputProps> = (props) => {
   // Start a new task, carrying over the current prompt text (without auto-sending it)
   const onNewTaskRequest = () => {
     const draft = text().trim()
+    const code = codeContexts()
     const comments = reviewComments()
     const imgs = imageAttach.images()
     session.clearCurrentSession()
     // After clearing, draftKey() points to the "new" bucket — save there
     // so the session-switch effect restores the prompt in the new-task view.
-    saveDraft(draftKey(), draft, comments, imgs)
+    saveDraft(draftKey(), draft, code, comments, imgs)
   }
   window.addEventListener("newTaskRequest", onNewTaskRequest)
   onCleanup(() => window.removeEventListener("newTaskRequest", onNewTaskRequest))
@@ -276,7 +299,13 @@ export const PromptInput: Component<PromptInputProps> = (props) => {
 
   const isBusy = () => isPromptBusy(session.status(), !!props.suggesting?.(), !!props.questioning?.())
   const isDisabled = () => !server.isConnected()
-  const hasInput = () => text().trim().length > 0 || imageAttach.images().length > 0 || reviewComments().length > 0
+  const hasInput = () =>
+    text().trim().length > 0 ||
+    codeContexts().length > 0 ||
+    imageAttach.images().length > 0 ||
+    reviewComments().length > 0
+  const clean = () =>
+    !text().trim() && codeContexts().length === 0 && reviewComments().length === 0 && imageAttach.images().length === 0
   const canSend = () => hasInput() && !isDisabled() && !terminal.pending() && !props.blocked?.()
   const showStop = () => isBusy() && !hasInput()
   const isAtEnd = () =>
@@ -296,6 +325,14 @@ export const PromptInput: Component<PromptInputProps> = (props) => {
         return language.t("prompt.placeholder.default")
     }
   }
+
+  const unsubscribeCode = vscode.onMessage((message) => {
+    if (message.type !== "appendCodeContext") return
+    const next = [...codeContexts(), message.context]
+    setCodeContexts(next)
+    codeDrafts.set(draftKey(), next)
+    textareaRef?.focus()
+  })
 
   const unsubscribe = vscode.onMessage((message) => {
     if (message.type === "setChatBoxMessage") {
@@ -321,10 +358,9 @@ export const PromptInput: Component<PromptInputProps> = (props) => {
     }
 
     if (message.type === "appendReviewComments") {
-      const empty = !text().trim() && reviewComments().length === 0 && imageAttach.images().length === 0
       const merged = mergeReviewComments(reviewComments(), message.comments)
       replaceReviewComments(merged)
-      if (message.autoSend && empty && !isDisabled() && !props.blocked?.()) {
+      if (message.autoSend && clean() && !isDisabled() && !props.blocked?.()) {
         void handleSend()
       } else {
         textareaRef?.focus()
@@ -376,9 +412,12 @@ export const PromptInput: Component<PromptInputProps> = (props) => {
       const pending = reviewDrafts.get(target)
       const imgs = imageDrafts.get(target)
       if (draft !== undefined) drafts.set(next, draft)
+      const code = codeDrafts.get(target)
+      if (code) codeDrafts.set(next, code)
       if (pending) reviewDrafts.set(next, pending)
       if (imgs) imageDrafts.set(next, imgs)
       drafts.delete(target)
+      codeDrafts.delete(target)
       reviewDrafts.delete(target)
       imageDrafts.delete(target)
       if (!session.currentSessionID() && (props.pendingSessionID ?? session.draftSessionID()) === message.draftID) {
@@ -413,7 +452,8 @@ export const PromptInput: Component<PromptInputProps> = (props) => {
 
   onCleanup(() => {
     // Persist current draft before unmounting
-    saveDraft(draftKey(), text(), reviewComments(), imageAttach.images())
+    saveDraft(draftKey(), text(), codeContexts(), reviewComments(), imageAttach.images())
+    unsubscribeCode()
     unsubscribe()
   })
 
@@ -598,11 +638,13 @@ export const PromptInput: Component<PromptInputProps> = (props) => {
     // Client-side slash command — runs locally without a backend round-trip
     if (matched?.action) {
       setText("")
+      clearCodeContexts()
       clearReviewComments()
       imageAttach.clear()
       mention.closeMention()
       slash.close()
       drafts.delete(draftKey())
+      codeDrafts.delete(draftKey())
       reviewDrafts.delete(draftKey())
       imageDrafts.delete(draftKey())
       if (textareaRef) textareaRef.style.height = "auto"
@@ -611,9 +653,11 @@ export const PromptInput: Component<PromptInputProps> = (props) => {
     }
 
     const imgs = imageAttach.images()
+    const code = codeContexts()
     const pending = reviewComments()
+    const ctx = code.length > 0 ? code.map(formatCodeContext).join("\n\n") : ""
     const review = pending.length > 0 ? formatReviewCommentsMarkdown(pending) : ""
-    const message = draft && review ? `${review}\n\n${draft}` : draft || review
+    const message = [ctx, review, draft].filter(Boolean).join("\n\n")
     if ((!message && imgs.length === 0) || isDisabled() || terminal.pending() || props.blocked?.()) return
 
     const mentionFiles = mention.parseFileAttachments(draft)
@@ -644,11 +688,13 @@ export const PromptInput: Component<PromptInputProps> = (props) => {
     history.append(draft)
     history.reset()
     setText("")
+    clearCodeContexts()
     clearReviewComments()
     imageAttach.clear()
     mention.closeMention()
     slash.close()
     drafts.delete(key)
+    codeDrafts.delete(key)
     reviewDrafts.delete(key)
     imageDrafts.delete(key)
 
@@ -663,6 +709,46 @@ export const PromptInput: Component<PromptInputProps> = (props) => {
       onDragLeave={imageAttach.handleDragLeave}
       onDrop={imageAttach.handleDrop}
     >
+      <Show when={codeContexts().length > 0}>
+        <div class="prompt-code-contexts">
+          <div class="prompt-code-contexts-header">
+            <span class="prompt-code-contexts-title">
+              {codeContexts().length === 1 ? "1 code selection" : `${codeContexts().length} code selections`}
+            </span>
+            <Button variant="ghost" size="small" onClick={clearCodeContexts}>
+              {language.t("agentManager.review.clearAll")}
+            </Button>
+          </div>
+          <div class="prompt-code-chip-list">
+            <For each={codeContexts()}>
+              {(item) => (
+                <div class="prompt-code-chip" title={formatCodeContext(item)}>
+                  <span class="prompt-code-chip-icon">
+                    <FileIcon node={{ path: item.file, type: "file" }} class="prompt-code-chip-file" />
+                  </span>
+                  <span class="prompt-code-chip-copy">
+                    <span class="prompt-code-chip-main">
+                      <span class="prompt-code-chip-title">{fileName(item.file)}</span>
+                      <span class="prompt-code-chip-line">
+                        L{item.start}-{item.end}
+                      </span>
+                    </span>
+                    <span class="prompt-code-chip-path">{dirName(item.file)}</span>
+                  </span>
+                  <button
+                    type="button"
+                    class="prompt-code-chip-remove"
+                    onClick={() => removeCodeContext(item.id)}
+                    aria-label={language.t("common.delete")}
+                  >
+                    ×
+                  </button>
+                </div>
+              )}
+            </For>
+          </div>
+        </div>
+      </Show>
       <Show when={reviewComments().length > 0}>
         <div class="prompt-review-comments">
           <div class="prompt-review-comments-header">

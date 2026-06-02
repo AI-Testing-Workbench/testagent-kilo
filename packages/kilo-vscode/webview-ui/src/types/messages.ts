@@ -677,6 +677,19 @@ export interface AppendChatBoxMessage {
   text: string
 }
 
+export interface CodeContext {
+  id: string
+  file: string
+  start: number
+  end: number
+  text: string
+}
+
+export interface AppendCodeContextMessage {
+  type: "appendCodeContext"
+  context: CodeContext
+}
+
 export interface ReviewComment {
   id: string
   file: string
@@ -1661,6 +1674,7 @@ export type ExtensionMessage =
   | AgentManagerSendInitialMessage
   | SetChatBoxMessage
   | AppendChatBoxMessage
+  | AppendCodeContextMessage
   | AppendReviewCommentsMessage
   | TriggerTaskMessage
   | VariantsLoadedMessage

@@ -55,13 +55,16 @@ export function registerCodeActions(
     vscode.commands.registerCommand("testagent.new.addToContext", () => {
       const ctx = getEditorContext()
       if (!ctx) return
-      const prompt = createPrompt("ADD_TO_CONTEXT", {
-        filePath: ctx.filePath,
-        startLine: String(ctx.startLine),
-        endLine: String(ctx.endLine),
-        selectedText: ctx.selectedText,
+      target().postMessage({
+        type: "appendCodeContext",
+        context: {
+          id: `${ctx.filePath}:${ctx.startLine}-${ctx.endLine}:${Date.now()}`,
+          file: ctx.filePath,
+          start: ctx.startLine,
+          end: ctx.endLine,
+          text: ctx.selectedText,
+        },
       })
-      target().postMessage({ type: "appendChatBoxMessage", text: prompt })
     }),
 
     vscode.commands.registerCommand("testagent.new.focusChatInput", () => {
