@@ -48,6 +48,12 @@ jobs:
           fetch-depth: 0
           submodules: recursive
 
+      # testagent_change - use latest testagent-core commit for release builds
+      - name: Update testagent-core submodule
+        run: |
+          git submodule sync --recursive packages/testagent-core
+          git submodule update --init --remote --recursive packages/testagent-core
+
       - uses: ./.github/actions/setup-bun
 
       # kilocode_change start - install deps for version script workspace resolution
@@ -130,6 +136,13 @@ jobs:
           fetch-depth: 0
           fetch-tags: true
           submodules: recursive
+
+      # testagent_change - use latest testagent-core commit for release builds
+      - name: Update testagent-core submodule
+        if: steps.should_build.outputs.build == 'true'
+        run: |
+          git submodule sync --recursive packages/testagent-core
+          git submodule update --init --remote --recursive packages/testagent-core
 
       - uses: ./.github/actions/setup-bun
         if: steps.should_build.outputs.build == 'true'
@@ -232,6 +245,13 @@ jobs:
         with:
           ref: ${{ inputs.branch || github.ref }}
           submodules: recursive # testagent_change - checkout submodules (testagent-core)
+
+      # testagent_change - use latest testagent-core commit for release builds
+      - name: Update testagent-core submodule
+        if: steps.should_build.outputs.build == 'true'
+        run: |
+          git submodule sync --recursive packages/testagent-core
+          git submodule update --init --remote --recursive packages/testagent-core
 
       - uses: ./.github/actions/setup-bun
         if: steps.should_build.outputs.build == 'true'
