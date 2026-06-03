@@ -1849,6 +1849,14 @@ export interface OpenExternalRequest {
   url: string
 }
 
+// testagent_change start
+export interface OpenBeeEyesRequest {
+  type: "openBeeEyes"
+  userId: string
+  sessionId: string
+}
+// testagent_change end
+
 export interface OpenFileRequest {
   type: "openFile"
   filePath: string
@@ -2705,6 +2713,7 @@ export type WebviewMessage =
   | LogoutRequest
   | RefreshProfileRequest
   | OpenExternalRequest
+  | OpenBeeEyesRequest // testagent_change
   | OpenSettingsPanelRequest
   | OpenConfigFileRequest
   | OpenVSCodeSettingsRequest

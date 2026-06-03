@@ -47,16 +47,15 @@ export function useSlashCommand(vscode: VSCodeContext, exclude?: Set<string>): S
   const serverCtx = useServer()
   const sessionCtx = useSession()
 
-  // testagent_change start - /log action extracted to avoid stale closure
-  const openLangfuseTrace = () => {
+  // testagent_change start - /log action triggers BeeEyes tracing extension
+  const openBeeEyes = () => {
     const sid = sessionCtx.currentSessionID()
     const uid = serverCtx.userId() ?? ""
     if (!sid) {
       showToast({ variant: "error", title: "暂无会话", description: "请先发送一条消息" })
       return
     }
-    const url = `https://testhub-agent-trace.paasuat.cmbchina.cn/redirect?type=sessions&sessions=${sid}&user_id=${uid}`
-    vscode.postMessage({ type: "openExternal", url })
+    vscode.postMessage({ type: "openBeeEyes", userId: uid, sessionId: sid })
   }
   // testagent_change end
 
@@ -156,7 +155,7 @@ export function useSlashCommand(vscode: VSCodeContext, exclude?: Set<string>): S
       name: "log",
       description: "打开观测空间",
       hints: ["trace", "debug"],
-      action: openLangfuseTrace,
+      action: openBeeEyes,
     },
     // testagent_change end
   ]

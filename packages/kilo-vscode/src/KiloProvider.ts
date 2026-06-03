@@ -811,6 +811,21 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
         case "openExternal":
           this.openExternal(message.url)
           break
+        // testagent_change start
+        case "openBeeEyes": {
+          const ext = vscode.extensions.getExtension("test-tech.beeeyes")
+          if (!ext) {
+            vscode.window.showErrorMessage("未找到 BeeEyes，请先安装 BeeEyes。")
+            break
+          }
+          await ext.activate()
+          await vscode.commands.executeCommand("testTech.beeEyes.openTracing", {
+            user_id: message.userId,
+            sessionId: message.sessionId,
+          })
+          break
+        }
+        // testagent_change end
         case "openSettingsPanel":
           vscode.commands.executeCommand("testagent.new.settingsButtonClicked", message.tab)
           break
