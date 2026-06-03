@@ -623,7 +623,7 @@
     "watch:esbuild": "bun run prepare:cli-binary && node esbuild.js --watch",
     "watch:tsc": "tsc --noEmit --watch --project tsconfig.json",
     "watch:cli": "bun script/watch-cli.ts",
-    "package": "bun run prepare:cli-binary && bun run rebuild-sdk && bun run typecheck && bun run lint && node esbuild.js --production",
+    "package": "bun run prepare:cli-binary && bun run build:testflow && bun run rebuild-sdk && bun run typecheck && bun run lint && node esbuild.js --production",
     "compile-tests": "tsc -p . --outDir out",
     "watch-tests": "tsc -p . -w --outDir out",
     "pretest": "bun run compile-tests && bun run compile && bun run lint",
@@ -646,7 +646,7 @@
     "snapshot:build": "bun script/dev-snapshot.ts build",
     "snapshot:install": "bun script/dev-snapshot.ts install",
     "extension": "bun script/launch.ts",
-    "testagent:vsix": "bun run rebuild-sdk && bun run typecheck && bun run lint && node esbuild.js --production && vsce package --no-dependencies",
+    "testagent:vsix": "bun run build:testflow && bun run rebuild-sdk && bun run typecheck && bun run lint && node esbuild.js --production && vsce package --no-dependencies",
     "testagent-nodejs:vsix": "bun script/package-nodejs-server.ts"
   },
   "devDependencies": {

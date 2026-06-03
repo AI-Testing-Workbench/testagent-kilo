@@ -11,8 +11,9 @@ function log(msg: string) {
   console.log(`[build-testflow] ${msg}`)
 }
 
-const testflowBin = join(binDir, process.platform === "win32" ? "testflow.exe" : "testflow")
+const testflowBin = join(binDir, "testflow.exe")
 const testflowResDir = join(binDir, "testflow-res")
+const target = "bun-windows-x64"
 
 // 1. build testflow dist (tsc)
 log("Building testflow dist...")
@@ -20,7 +21,7 @@ await $`bun run build`.cwd(testflowDir)
 
 // 2. compile standalone binary
 log("Compiling testflow binary...")
-await $`bun build src/cli-entry.ts --compile --outfile ${testflowBin}`.cwd(testflowDir)
+await $`bun build src/cli-entry.ts --compile --target=${target} --outfile ${testflowBin}`.cwd(testflowDir)
 
 // 3. copy resource files (templates + config) next to the binary
 log("Copying testflow resources...")

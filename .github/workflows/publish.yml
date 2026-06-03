@@ -253,6 +253,13 @@ jobs:
           git submodule sync --recursive packages/testagent-core
           git submodule update --init --remote --recursive packages/testagent-core
 
+      # testagent_change - use latest testflow commit for VSIX builds
+      - name: Update testflow submodule
+        if: steps.should_build.outputs.build == 'true'
+        run: |
+          git submodule sync --recursive packages/testflow
+          git submodule update --init --remote --recursive packages/testflow
+
       - uses: ./.github/actions/setup-bun
         if: steps.should_build.outputs.build == 'true'
 
@@ -265,6 +272,11 @@ jobs:
       - name: Install @vscode/vsce
         if: steps.should_build.outputs.build == 'true'
         run: bun install -g @vscode/vsce
+
+      # testagent_change - install root workspace deps for kilo-vscode and testflow
+      - name: Install workspace dependencies
+        if: steps.should_build.outputs.build == 'true'
+        run: bun install --ignore-scripts
 
       # testagent_change - install testagent-core dependencies (uses cached Bun packages)
       - name: Install testagent-core dependencies
@@ -341,6 +353,7 @@ jobs:
         if: steps.should_build.outputs.build == 'true'
         run: |
           cd packages/kilo-vscode
+          bun run build:testflow
           bun script/package-nodejs-server.ts --skip-server-build --target=${{ matrix.target }}
           echo "✅ Dual-runtime VSIX packaged for ${{ matrix.target }}"
 
