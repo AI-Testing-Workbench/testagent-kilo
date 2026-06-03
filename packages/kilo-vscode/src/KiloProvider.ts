@@ -64,6 +64,9 @@ import { handleForkSession } from "./kilo-provider/fork-session"
 import { retryable, backoff, MAX_RETRIES } from "./util/retry"
 import { hasGit } from "./kilo-provider/git-status"
 import { exec } from "./util/process"
+// testagent_change start - testflow integration
+import { SdtRunner } from "./testagent/sdt-runner"
+// testagent_change end
 // legacy-migration start
 import {
   checkAndShowMigrationWizard,
@@ -305,6 +308,9 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
   private unsubscribeDirectoryProvider: (() => void) | null = null
   private initConnectionPromise: Promise<void> | null = null
   private webviewMessageDisposable: vscode.Disposable | null = null
+  // testagent_change start - testflow integration
+  private readonly sdtRunner = new SdtRunner()
+  // testagent_change end
   private viewStateDisposable: vscode.Disposable | null = null
   private visibilityDisposable: vscode.Disposable | null = null
 
@@ -597,6 +603,40 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
   }
 
   /**
+   * Sync a child session to the webview - fetches session info and loads messages.
+   * Called when testflow detects a task tool part with a child session ID.
+   */
+  private async syncChildSession(sessionID: string): Promise<void> {
+    const client = this.client
+    if (!client) return
+
+    try {
+      const { data: session } = await client.session.get({ sessionID })
+      if (!session) {
+        console.warn(`[Testflow] Child session ${sessionID} not found`)
+        return
+      }
+
+      // Register session in webview
+      this.postMessage({
+        type: "sessionCreated",
+        session: {
+          id: session.id,
+          title: session.title,
+          parentID: session.parentID,
+          directory: session.directory,
+          createdAt: new Date().toISOString(),
+        },
+      })
+
+      // Load session messages
+      await this.loadMessages(sessionID)
+    } catch (err) {
+      console.error(`[Testflow] Failed to sync child session ${sessionID}:`, err)
+    }
+  }
+
+  /**
    * Register a directory override for a session (e.g., worktree path).
    * When set, all operations for this session use this directory instead of the workspace root.
    */
@@ -743,6 +783,20 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
           this.cancelRetry(message.sessionID ?? "")
           await this.handleAbort(message.sessionID, parseQueued(message.queuedMessageIDs))
           break
+        // testagent_change start - testflow message handlers
+        case "testflow.questionReply":
+          this.sdtRunner.reply(message.id, message.answers)
+          break
+        case "testflow.questionReject":
+          this.sdtRunner.reject(message.id)
+          break
+        case "testflow.abort":
+          this.sdtRunner.abort()
+          break
+        case "testflow.syncChildSession":
+          await this.syncChildSession(message.sessionID)
+          break
+        // testagent_change end
         case "revertSession":
           this.handleRevertSession(message.sessionID, message.messageID).catch((e) =>
             console.error("[TestAgent] handleRevertSession failed:", e),
@@ -2933,6 +2987,44 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
     }
   }
 
+  // testagent_change start - testflow command handler
+  private async handleSdtCommand(text: string, sessionID?: string, providerID?: string, modelID?: string, messageID?: string): Promise<void> {
+    const parts = text.trim().split(/\s+/)
+    const cmd = parts[0].slice(5) // strip "/sdt-"
+    const args = parts.slice(1)
+
+    const serverConfig = this.connectionService.getServerConfig()
+    if (!serverConfig) {
+      void vscode.window.showErrorMessage("TestAgent: Not connected to CLI backend")
+      return
+    }
+
+    const resolved = await this.resolveSession(sessionID)
+    if (!resolved) {
+      void vscode.window.showErrorMessage("TestAgent: Not connected to CLI backend")
+      return
+    }
+
+    this.sdtRunner.run({
+      cmd,
+      args,
+      cwd: resolved.dir,
+      env: {
+        OPENCODE_SERVER_URL: serverConfig.baseUrl,
+        OPENCODE_SERVER_PASSWORD: serverConfig.password,
+        OPENCODE_SESSION_ID: resolved.sid,
+        OPENCODE_PROVIDER_ID: providerID || "",
+        OPENCODE_MODEL_ID: modelID || "",
+        SDT_USER_TEXT: text,
+      },
+      sessionID: resolved.sid,
+      userText: text,
+      userMessageID: messageID,
+      post: (msg) => this.postMessage(msg),
+    })
+  }
+  // testagent_change end
+
   private async handleSendMessage(
     text: string,
     messageID?: string,
@@ -2944,6 +3036,13 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
     variant?: string,
     files?: MessageFile[],
   ): Promise<void> {
+    // testagent_change start - intercept /sdt-* commands for testflow
+    if (text.startsWith("/sdt-")) {
+      await this.handleSdtCommand(text, sessionID, providerID, modelID, messageID)
+      return
+    }
+    // testagent_change end
+
     if (!this.client) {
       this.postMessage({
         type: "sendMessageFailed",
@@ -3021,6 +3120,13 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
     variant?: string,
     files?: MessageFile[],
   ): Promise<void> {
+    // testagent_change start - intercept sdt-* commands for testflow
+    if (command.startsWith("sdt-")) {
+      await this.handleSdtCommand(`/${command} ${args}`.trim(), sessionID, providerID, modelID, messageID)
+      return
+    }
+    // testagent_change end
+
     // testagent_change start - Check CLI connection status
     console.log("[TestAgent] 🔍 handleSendCommand called:", {
       command,

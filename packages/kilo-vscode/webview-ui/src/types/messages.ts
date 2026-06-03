@@ -1731,6 +1731,16 @@ export type ExtensionMessage =
   | ExtensionDataReadyMessage
   | RemoteStatusMessage
   | ShellPathResolvedMessage
+  // testagent_change start - testflow messages
+  | TestflowTextMessage
+  | TestflowStepMessage
+  | TestflowQuestionMessage
+  | TestflowAgentStartMessage
+  | TestflowAgentDoneMessage
+  | TestflowLogMessage
+  | TestflowErrorMessage
+  | TestflowDoneMessage
+  // testagent_change end
 
 // ============================================
 // Messages FROM webview TO extension
@@ -2863,6 +2873,105 @@ export type WebviewMessage =
   | ChangeRuntimeRequest // testagent_change
   | RequestMemorySettingsMessage // testagent_change
   | UpdateMemorySettingsMessage // testagent_change
+  // testagent_change start - testflow messages
+  | TestflowQuestionReplyMessage
+  | TestflowQuestionRejectMessage
+  | TestflowAbortMessage
+  | TestflowSyncChildSessionMessage
+  // testagent_change end
+
+// ============================================
+// testflow messages (extension → webview)
+// testagent_change start
+// ============================================
+
+export interface TestflowTextMessage {
+  type: "testflow.text"
+  sessionID: string
+  text: string
+}
+
+export interface TestflowStepMessage {
+  type: "testflow.step"
+  sessionID: string
+  title: string
+  status: "start" | "complete" | "exception"
+  stage_id?: string
+}
+
+export interface TestflowQuestionMessage {
+  type: "testflow.question"
+  sessionID: string
+  id: string
+  header: string
+  question: string
+  options: { label: string; description: string }[]
+  multiple?: boolean
+  custom?: boolean
+}
+
+export interface TestflowAgentStartMessage {
+  type: "testflow.agent_start"
+  sessionID: string
+  skill?: string
+  prompt?: string
+}
+
+export interface TestflowAgentDoneMessage {
+  type: "testflow.agent_done"
+  sessionID: string
+  success: boolean
+  summary?: string
+}
+
+export interface TestflowLogMessage {
+  type: "testflow.log"
+  sessionID: string
+  level: "info" | "warn" | "error"
+  message: string
+}
+
+export interface TestflowErrorMessage {
+  type: "testflow.error"
+  sessionID: string
+  error: string
+  code?: string
+}
+
+export interface TestflowDoneMessage {
+  type: "testflow.done"
+  sessionID: string
+  exitCode: number
+  summary?: string
+}
+
+// ============================================
+// testflow messages (webview → extension)
+// ============================================
+
+export interface TestflowQuestionReplyMessage {
+  type: "testflow.questionReply"
+  id: string
+  answers: string[]
+  sessionID?: string
+}
+
+export interface TestflowQuestionRejectMessage {
+  type: "testflow.questionReject"
+  id: string
+  sessionID?: string
+}
+
+export interface TestflowAbortMessage {
+  type: "testflow.abort"
+  sessionID?: string
+}
+
+export interface TestflowSyncChildSessionMessage {
+  type: "testflow.syncChildSession"
+  sessionID: string
+}
+// testagent_change end
 
 // ============================================
 // VS Code API type

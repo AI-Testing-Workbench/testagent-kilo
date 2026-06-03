@@ -157,6 +157,36 @@ export function useSlashCommand(vscode: VSCodeContext, exclude?: Set<string>): S
       hints: ["trace", "debug"],
       action: openBeeEyes,
     },
+    {
+      name: "sdt-new",
+      description: "启动测试流程 - 创建新任务",
+      hints: ["testflow", "new task"],
+    },
+    {
+      name: "sdt-run",
+      description: "执行指定任务的某个阶段",
+      hints: ["testflow", "run", "stage"],
+    },
+    {
+      name: "sdt-init",
+      description: "初始化 TestFlow 框架全局环境",
+      hints: ["testflow", "init", "setup"],
+    },
+    {
+      name: "sdt-validate",
+      description: "校验流程阶段配置文件的合法性",
+      hints: ["testflow", "validate", "check", "config"],
+    },
+    {
+      name: "sdt-switch",
+      description: "切换工作空间内的默认工作任务",
+      hints: ["testflow", "switch", "task"],
+    },
+    {
+      name: "sdt-list",
+      description: "查看当前的任务列表",
+      hints: ["testflow", "list", "tasks"],
+    },
     // testagent_change end
   ]
 

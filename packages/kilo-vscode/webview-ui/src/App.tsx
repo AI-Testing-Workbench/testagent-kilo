@@ -22,12 +22,18 @@ import { ChatView } from "./components/chat"
 import { MarketplaceView } from "./components/marketplace"
 import { registerExpandedTaskTool } from "./components/chat/TaskToolExpanded"
 import { registerVscodeToolOverrides } from "./components/chat/VscodeToolOverrides"
+// testagent_change start - testflow tool renderers
+import { registerTestflowToolRenderers } from "./components/chat/TestflowToolRenderers"
+// testagent_change end
 
 // Override the upstream "task" tool renderer with the fully-expanded version
 // that shows child session parts inline in the VS Code sidebar.
 registerExpandedTaskTool()
 // Apply VS Code sidebar preferences to other tools (e.g. bash expanded by default).
 registerVscodeToolOverrides()
+// testagent_change start - register testflow tool renderers
+registerTestflowToolRenderers()
+// testagent_change end
 import HistoryView from "./components/history/HistoryView"
 import { MigrationWizard } from "./components/migration" // legacy-migration
 import { NotificationsProvider } from "./context/notifications"
