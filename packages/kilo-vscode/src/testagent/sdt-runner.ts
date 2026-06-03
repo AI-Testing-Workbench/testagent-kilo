@@ -45,8 +45,8 @@ export class SdtRunner {
     // Use bundled testflow binary from extension's bin/ directory
     const extDir = path.resolve(__dirname, '..')
     const testflowBin = path.join(extDir, 'bin', process.platform === 'win32' ? 'testflow.exe' : 'testflow')
-    console.log('[TestAgent] Using bundled testflow binary:', testflowBin)
-    console.log('[TestAgent] Spawning testflow:', { cmd: testflowBin, args: [opts.cmd, ...opts.args], cwd: opts.cwd })
+    // console.log('[TestAgent] Using bundled testflow binary:', testflowBin)
+    // console.log('[TestAgent] Spawning testflow:', { cmd: testflowBin, args: [opts.cmd, ...opts.args], cwd: opts.cwd })
 
     const testflowResDir = path.join(extDir, 'bin', 'testflow-res')
     this.proc = spawn(testflowBin, [opts.cmd, ...opts.args], {
@@ -57,11 +57,11 @@ export class SdtRunner {
 
     const rl = readline.createInterface({ input: this.proc.stdout!, terminal: false })
     rl.on("line", (line) => {
-      console.log('[TestAgent] testflow stdout:', line)
+      // console.log('[TestAgent] testflow stdout:', line)
       if (!line.trim()) return
       try {
         const event = JSON.parse(line) as JsonLine
-        console.log('[TestAgent] testflow event:', event.type)
+        // console.log('[TestAgent] testflow event:', event.type)
         this.dispatch(event)
       } catch {
         console.log('[TestAgent] testflow non-JSON output:', line)
@@ -156,7 +156,14 @@ export class SdtRunner {
         this.bridge.onText(event.text as string)
         break
       case "log":
-        this.bridge.onLog(event.level as string, event.message as string)
+        if (event.level === 'info') {
+          console.info('[TestAgent] testflow info:', event.msg as string)
+        } else if (event.level === 'warn') {
+          console.warn('[TestAgent] testflow warn:', event.msg as string)
+        } else if (event.level === 'error') {
+          console.error('[TestAgent] testflow error:', event.msg as string)
+        }
+        // this.bridge.onLog(event.level as string, event.message as string)
         break
       case "error":
         this.bridge.onError(event.error as string)
