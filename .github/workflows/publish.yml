@@ -64,6 +64,8 @@ jobs:
             echo "::error::TESTFLOW_GITHUB_TOKEN is required to clone private submodule Pluto-AI-Workbench/testflow"
             exit 1
           fi
+          git config --local --unset-all http.https://github.com/.extraheader || true
+          git config --global --unset-all http.https://github.com/.extraheader || true
           git config --global url."https://x-access-token:${TESTFLOW_GITHUB_TOKEN}@github.com/Pluto-AI-Workbench/".insteadOf "https://github.com/Pluto-AI-Workbench/"
           git submodule sync --recursive packages/testflow
           git submodule update --init --remote --recursive packages/testflow
@@ -279,6 +281,8 @@ jobs:
             echo "::error::TESTFLOW_GITHUB_TOKEN is required to clone private submodule Pluto-AI-Workbench/testflow"
             exit 1
           fi
+          git config --local --unset-all http.https://github.com/.extraheader || true
+          git config --global --unset-all http.https://github.com/.extraheader || true
           git config --global url."https://x-access-token:${TESTFLOW_GITHUB_TOKEN}@github.com/Pluto-AI-Workbench/".insteadOf "https://github.com/Pluto-AI-Workbench/"
           git submodule sync --recursive packages/testflow
           git submodule update --init --remote --recursive packages/testflow
