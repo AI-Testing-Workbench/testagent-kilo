@@ -7,4 +7,4 @@
 	url = https://github.com/AI-Testing-Workbench/opencode-mocker.git
 [submodule "packages/testflow"]
 	path = packages/testflow
-	url = git@github.com:Pluto-AI-Workbench/testflow.git
+	url = https://github.com/Pluto-AI-Workbench/testflow.git
