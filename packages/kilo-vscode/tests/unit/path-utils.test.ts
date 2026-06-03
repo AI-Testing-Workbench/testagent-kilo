@@ -1,5 +1,5 @@
 import { describe, expect, it } from "bun:test"
-import { isAbsolutePath } from "../../src/path-utils"
+import { isAbsolutePath, isManagedSkillLocation } from "../../src/path-utils"
 
 describe("isAbsolutePath", () => {
   // ── Unix absolute paths ──────────────────────────────────────────────
@@ -161,5 +161,31 @@ describe("isAbsolutePath", () => {
     it("rejects path starting with single dot", () => {
       expect(isAbsolutePath(".")).toBe(false)
     })
+  })
+})
+
+describe("isManagedSkillLocation", () => {
+  it("allows Windows global testagent skill directories with singular skill", () => {
+    expect(isManagedSkillLocation("C:\\Users\\it011794\\.config\\testagent\\skill\\xautotest\\SKILL.md")).toBe(true)
+  })
+
+  it("allows Windows global testagent skill directories with plural skills", () => {
+    expect(isManagedSkillLocation("C:\\Users\\it011794\\.config\\testagent\\skills\\xautotest\\SKILL.md")).toBe(true)
+  })
+
+  it("allows project skill directories", () => {
+    expect(isManagedSkillLocation("/repo/.testagent/skills/xautotest/SKILL.md")).toBe(true)
+    expect(isManagedSkillLocation("/repo/.opencode/skill/xautotest/SKILL.md")).toBe(true)
+  })
+
+  it("allows Claude and agents compatible skill directories", () => {
+    expect(isManagedSkillLocation("/home/user/.claude/skills/xautotest/SKILL.md")).toBe(true)
+    expect(isManagedSkillLocation("/home/user/.agents/skills/xautotest/SKILL.md")).toBe(true)
+  })
+
+  it("rejects unmanaged or invalid skill paths", () => {
+    expect(isManagedSkillLocation("C:\\Users\\it011794\\Downloads\\xautotest\\SKILL.md")).toBe(false)
+    expect(isManagedSkillLocation("C:\\Users\\it011794\\.config\\testagent\\skill\\xautotest\\README.md")).toBe(false)
+    expect(isManagedSkillLocation("/repo/.claude/skill/xautotest/SKILL.md")).toBe(false)
   })
 })

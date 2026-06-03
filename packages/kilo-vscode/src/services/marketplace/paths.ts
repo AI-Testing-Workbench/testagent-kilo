@@ -21,6 +21,6 @@ export class MarketplacePaths {
   /** Skill install directory (where the marketplace installer writes to). */
   skillsDir(scope: "project" | "global", workspace?: string): string {
     if (scope === "project") return path.join(workspace!, ".testagent", "skills")
-    return path.join(os.homedir(), ".testagent", "skills")
+    return path.join(globalConfigDir(), "skills")
   }
 }

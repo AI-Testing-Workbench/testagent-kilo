@@ -1,3 +1,5 @@
+import * as path from "path"
+
 /**
  * Check whether a file path is absolute.
  *
@@ -24,4 +26,34 @@ export function isAbsolutePath(filePath: string): boolean {
   if (filePath.length >= 2 && filePath.charCodeAt(0) === 92 /* \ */ && filePath.charCodeAt(1) === 92 /* \ */)
     return true
   return false
+}
+
+function pathStyle(filePath: string) {
+  if (/^[A-Za-z]:[\\/]/.test(filePath) || filePath.startsWith("\\\\")) return path.win32
+  return path.posix
+}
+
+export function isManagedSkillLocation(location: string): boolean {
+  if (!location) return false
+
+  const style = pathStyle(location)
+  const file = style.resolve(location)
+  const root = style.parse(file).root
+  const dir = style.dirname(file)
+  if (style.basename(file) !== "SKILL.md" || dir === root) return false
+
+  const parts = dir.split(/[\\/]+/).filter(Boolean)
+  return parts.some((part, i) => {
+    const key = part.toLowerCase()
+    const next = parts[i + 1]?.toLowerCase()
+    if ((key === ".opencode" || key === ".testagent") && (next === "skill" || next === "skills")) return true
+    if ((key === ".claude" || key === ".agents") && next === "skills") return true
+    if (
+      (key === "opencode" || key === "testagent") &&
+      (next === "skill" || next === "skills") &&
+      parts.some((item) => item.toLowerCase() === ".config")
+    )
+      return true
+    return false
+  })
 }

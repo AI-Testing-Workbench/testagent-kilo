@@ -4,7 +4,7 @@ import * as fs from "fs"
 import * as os from "os"
 import * as vscode from "vscode"
 import { buildPreviewPath, getPreviewCommand, getPreviewDir, parseImage, trimEntries } from "./image-preview"
-import { isAbsolutePath } from "./path-utils"
+import { isAbsolutePath, isManagedSkillLocation } from "./path-utils"
 import type {
   KiloClient,
   Session,
@@ -905,7 +905,7 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
           this.fetchAndSendCommands().catch((e) => console.error("[TestAgent] fetchAndSendCommands failed:", e))
           break
         case "removeSkill":
-          this.removeSkillViaCli(message.location).catch((e: unknown) =>
+          this.removeSkill(message.location).catch((e: unknown) =>
             console.error("[TestAgent] removeSkill failed:", e),
           )
           break
@@ -2147,32 +2147,55 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
   }
 
   /**
-   * Remove a skill via the CLI backend (deletes from disk + clears cache), then refresh.
+   * Remove a skill from disk, then refresh the CLI-backed skill/command state.
    * Returns true on success, false on failure.
    * On failure, re-fetches skills so the webview reverts to the authoritative state.
    */
-  private async removeSkillViaCli(location: string): Promise<boolean> {
+  private async removeSkill(location: string): Promise<boolean> {
     if (!this.client) return false
+
+    const refresh = async () => {
+      this.cachedSkillsMessage = null
+      this.clearCommandsCache()
+      await Promise.all([this.fetchAndSendSkills(), this.fetchAndSendCommands()])
+    }
+
     try {
       const dir = this.getWorkspaceDirectory()
-      const result = await this.client.kilocode.removeSkill({ location, directory: dir })
-      if (result.error) {
-        console.error("[TestAgent] removeSkill returned error:", result.error)
-        this.cachedSkillsMessage = null
-        this.clearCommandsCache()
-        await Promise.all([this.fetchAndSendSkills(), this.fetchAndSendCommands()])
+      const file = path.resolve(location)
+      const root = path.parse(file).root
+      const base = path.dirname(file)
+
+      if (path.basename(file) !== "SKILL.md" || base === root) {
+        console.error("[TestAgent] Invalid skill location:", location)
+        await refresh()
         return false
       }
+
+      if (!isManagedSkillLocation(location)) {
+        console.error("[TestAgent] Refusing to remove skill outside managed directories:", location)
+        await refresh()
+        return false
+      }
+
+      const stat = await fs.promises.stat(file)
+      if (!stat.isFile()) {
+        console.error("[TestAgent] Skill location is not a file:", location)
+        await refresh()
+        return false
+      }
+
+      await fs.promises.rm(base, { recursive: true, force: true })
+      await this.client.instance.dispose({ directory: dir }).catch((error: unknown) => {
+        console.warn("[TestAgent] instance.dispose after skill removal failed:", error)
+      })
     } catch (error) {
       console.error("[TestAgent] Failed to remove skill:", error)
-      this.cachedSkillsMessage = null
-      this.cachedCommandsMessage = null
-      await Promise.all([this.fetchAndSendSkills(), this.fetchAndSendCommands()])
+      await refresh()
       return false
     }
-    this.cachedSkillsMessage = null
-    this.cachedCommandsMessage = null
-    await Promise.all([this.fetchAndSendSkills(), this.fetchAndSendCommands()])
+
+    await refresh()
     return true
   }
 

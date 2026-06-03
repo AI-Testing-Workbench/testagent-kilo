@@ -1,4 +1,4 @@
-import { describe, it, expect, afterEach } from "bun:test"
+import { describe, it, expect, afterEach, beforeEach } from "bun:test"
 import * as fs from "fs/promises"
 import * as os from "os"
 import * as path from "path"
@@ -6,6 +6,17 @@ import { MarketplaceInstaller } from "../../src/services/marketplace/installer"
 import { MarketplacePaths } from "../../src/services/marketplace/paths"
 
 const tmpDir = path.join(os.tmpdir(), `kilo-test-${Date.now()}`)
+const xdg = process.env.XDG_CONFIG_HOME
+
+beforeEach(() => {
+  process.env.XDG_CONFIG_HOME = path.join(tmpDir, "xdg")
+})
+
+afterEach(async () => {
+  if (xdg === undefined) delete process.env.XDG_CONFIG_HOME
+  else process.env.XDG_CONFIG_HOME = xdg
+  await fs.rm(tmpDir, { recursive: true }).catch(() => {})
+})
 
 class TestPaths extends MarketplacePaths {
   override configPath(scope: "project" | "global", workspace?: string): string {
@@ -18,10 +29,6 @@ class TestPaths extends MarketplacePaths {
 }
 
 describe("MarketplaceInstaller MCP format normalization", () => {
-  afterEach(async () => {
-    await fs.rm(tmpDir, { recursive: true }).catch(() => {})
-  })
-
   it("converts local command+args+env format to CLI format", async () => {
     const installer = new MarketplaceInstaller(new TestPaths())
     const item = {
@@ -92,5 +99,12 @@ describe("MarketplaceInstaller MCP format normalization", () => {
     const written = JSON.parse(await fs.readFile(new TestPaths().configPath("global"), "utf-8"))
     const mcp = written.mcp?.already
     expect(mcp).toEqual({ type: "local", command: ["npx", "-y", "someserver"], environment: { KEY: "val" } })
+  })
+})
+
+describe("MarketplacePaths", () => {
+  it("uses the testagent config directory for global skills", () => {
+    const paths = new MarketplacePaths()
+    expect(paths.skillsDir("global")).toBe(path.join(tmpDir, "xdg", "testagent", "skills"))
   })
 })
