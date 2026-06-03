@@ -216,6 +216,7 @@ interface SessionContextValue {
     files?: FileAttachment[],
     draftID?: string,
   ) => void
+  continueTask: () => void  // testagent_change - 添加继续任务方法
   abort: (sessionID?: string) => void
   compact: () => void
   respondToPermission: (
@@ -1795,6 +1796,44 @@ export const SessionProvider: ParentComponent = (props) => {
     })
   }
 
+  // testagent_change start - 添加继续任务方法
+  function continueTask() {
+    if (!server.isConnected()) {
+      console.warn("[testagent] Cannot continue task: not connected")
+      return
+    }
+
+    const sid = currentSessionID()
+    if (!sid) {
+      console.warn("[testagent] Cannot continue task: no active session")
+      return
+    }
+
+    const msgs = messages()
+    if (msgs.length === 0) {
+      console.warn("[testagent] Cannot continue task: no messages")
+      return
+    }
+
+    // testagent_change start - 找到最后一条 assistant 消息并重用其 messageID
+    // 从后往前查找最后一条 assistant 消息
+    const lastAssistant = [...msgs].reverse().find((m) => m.role === "assistant")
+    
+    if (!lastAssistant) {
+      console.warn("[testagent] Cannot continue task: no assistant message found")
+      return
+    }
+
+    console.log("[testagent] Continuing task with existing messageID:", lastAssistant.id)
+    vscode.postMessage({
+      type: "continueTask",
+      sessionID: sid,
+      messageID: lastAssistant.id, // 重用现有的 assistant message ID
+    })
+    // testagent_change end
+  }
+  // testagent_change end
+
   function abort(sessionID?: string) {
     const sid = sessionID ?? currentSessionID()
     if (!sid) {
@@ -2274,6 +2313,7 @@ export const SessionProvider: ParentComponent = (props) => {
     unrevertSession,
     sendMessage,
     sendCommand,
+    continueTask,  // testagent_change - 添加继续任务方法
     abort,
     compact,
     respondToPermission,

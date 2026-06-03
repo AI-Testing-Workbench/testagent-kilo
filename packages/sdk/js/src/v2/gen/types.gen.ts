@@ -6199,6 +6199,45 @@ export type SessionUnrevertResponses = {
 
 export type SessionUnrevertResponse = SessionUnrevertResponses[keyof SessionUnrevertResponses]
 
+export type SessionResumeData = {
+  body?: {
+    messageID: string
+  }
+  path: {
+    sessionID: string
+  }
+  query?: {
+    directory?: string
+    workspace?: string
+  }
+  url: "/session/{sessionID}/resume"
+}
+
+export type SessionResumeErrors = {
+  /**
+   * Bad request
+   */
+  400: BadRequestError
+  /**
+   * Not found
+   */
+  404: NotFoundError
+}
+
+export type SessionResumeError = SessionResumeErrors[keyof SessionResumeErrors]
+
+export type SessionResumeResponses = {
+  /**
+   * Resumed message
+   */
+  200: {
+    info: Message
+    parts: Array<Part>
+  }
+}
+
+export type SessionResumeResponse = SessionResumeResponses[keyof SessionResumeResponses]
+
 export type PermissionRespondData = {
   body?: {
     response: "once" | "always" | "reject"

@@ -734,6 +734,11 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
           )
           break
         }
+        // testagent_change start - 添加继续任务处理
+        case "continueTask":
+          await this.handleContinueTask(message.sessionID, message.messageID)
+          break
+        // testagent_change end
         case "abort":
           this.cancelRetry(message.sessionID ?? "")
           await this.handleAbort(message.sessionID, parseQueued(message.queuedMessageIDs))
@@ -3061,6 +3066,61 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
       })
     }
   }
+
+  // testagent_change start - 修改继续任务方法调用 resume API
+  private async handleContinueTask(sessionID?: string, messageID?: string): Promise<void> {
+    console.log("[TestAgent] 🔄 handleContinueTask called:", { sessionID, messageID })
+
+    if (!this.client) {
+      console.error("[TestAgent] ❌ Cannot continue task: not connected to CLI backend")
+      return
+    }
+
+    if (!sessionID) {
+      console.error("[TestAgent] ❌ Cannot continue task: no session ID")
+      return
+    }
+
+    if (!messageID) {
+      console.error("[TestAgent] ❌ Cannot continue task: no message ID")
+      return
+    }
+
+    try {
+      const dir = this.getWorkspaceDirectory(sessionID)
+      
+      // Track the message ID (important for confirmation handling)
+      this.connectionService.recordMessageSessionId(messageID, sessionID)
+
+      console.log("[TestAgent] 📤 Calling resume API:", { sessionID, messageID, dir })
+
+      // Use SDK's resume method to continue generating from existing assistant message
+      await runWithMessageConfirmation(this.confirmations, messageID, "Resume task request", () =>
+        this.withRetry(
+          () =>
+            this.client!.session.resume({
+              sessionID,
+              messageID,
+              directory: dir,
+            }),
+          sessionID,
+          messageID,
+        ),
+      )
+
+      console.log("[TestAgent] ✅ Resume task request sent successfully")
+    } catch (error: any) {
+      console.error("[TestAgent] ❌ Failed to resume task:", error)
+      console.error("[TestAgent] Error details:", {
+        name: error?.name,
+        message: error?.message,
+        cause: error?.cause,
+        code: error?.code,
+        stack: error?.stack,
+      })
+    }
+  }
+  // testagent_change end
 
   private async handleAbort(sessionID?: string, queuedMessageIDs: string[] = []): Promise<void> {
     if (!this.client) {

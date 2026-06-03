@@ -1925,6 +1925,14 @@ export interface SendCommandRequest {
   files?: FileAttachment[]
 }
 
+// testagent_change start - 添加继续任务请求类型
+export interface ContinueTaskRequest {
+  type: "continueTask"
+  sessionID: string
+  messageID?: string // testagent_change - 添加 messageID 用于追踪
+}
+// testagent_change end
+
 export interface RemoveSkillMessage {
   type: "removeSkill"
   location: string
@@ -2711,6 +2719,7 @@ export type WebviewMessage =
   | RequestSkillsMessage
   | RequestCommandsMessage
   | SendCommandRequest
+  | ContinueTaskRequest
   | RemoveSkillMessage
   | RemoveModeMessage
   | RemoveMcpMessage

@@ -47,6 +47,25 @@ export const ChatView: Component<ChatViewProps> = (props) => {
   const hasMessages = () => session.messages().length > 0
   const idle = () => session.status() !== "busy"
 
+  // testagent_change start - 判断最后一条 assistant 消息是否处于可继续状态（出错或被中断）
+  const lastAssistantMsg = () => {
+    const msgs = session.messages()
+    for (let i = msgs.length - 1; i >= 0; i--) {
+      if (msgs[i].role === "assistant") return msgs[i]
+    }
+    return undefined
+  }
+  const canContinue = () => {
+    const msg = lastAssistantMsg()
+    if (!msg) return false
+    // 有 error 字段 → 出错
+    if (msg.error) return true
+    // 已完成（time.completed 存在）但没有有效的 finish → 被中断
+    if (typeof msg.time?.completed === "number" && (!msg.finish || msg.finish === "unknown")) return true
+    return false
+  }
+  // testagent_change end
+
   // "Continue in Worktree" state
   const [transferring, setTransferring] = createSignal(false)
   const [transferDetail, setTransferDetail] = createSignal("")
@@ -162,6 +181,23 @@ export const ChatView: Component<ChatViewProps> = (props) => {
           <Show when={!props.readonly && hasMessages() && idle() && !blocked()}>
             <div class="new-task-button-wrapper">
               <div class="session-actions-row">
+                {/* testagent_change start - 继续按钮：仅在出错或中断时显示 */}
+                <Show when={canContinue()}>
+                  <Tooltip value="Continue with the current task" placement="top">
+                    <Button
+                      variant="primary"
+                      size="small"
+                      onClick={() => {
+                        session.continueTask()
+                      }}
+                      aria-label={language.t("command.session.continue")}
+                    >
+                      {language.t("command.session.continue")}
+                    </Button>
+                  </Tooltip>
+                </Show>
+                {/* testagent_change end */}
+                
                 <Tooltip value="Start a new conversation" placement="top">
                   <Button
                     variant="secondary"

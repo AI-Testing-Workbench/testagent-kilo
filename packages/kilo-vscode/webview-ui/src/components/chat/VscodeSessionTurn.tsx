@@ -367,17 +367,10 @@ export const VscodeSessionTurn: Component<VscodeSessionTurnProps> = (props) => {
           <Show when={error()}>
             <ErrorDisplay error={error()!} onLogin={server.startLogin} />
             <div>
+              {/* testagent_change start - 修改重试按钮为继续任务 */}
               <span
                 onClick={() => {
-                  const msg = message()
-                  if (!msg) return
-                  const textPart = (data.store.part?.[msg.id] ?? emptyParts).find((p) => p.type === "text") as
-                    | { type: "text"; text: string }
-                    | undefined
-                  if (textPart?.text) {
-                    const sel = session.selected()
-                    session.sendMessage(textPart.text, sel?.providerID, sel?.modelID)
-                  }
+                  session.continueTask()
                 }}
                 style={{ width: "16px", display: "inline-block" ,cursor: "pointer"}}
               >
@@ -393,6 +386,7 @@ export const VscodeSessionTurn: Component<VscodeSessionTurnProps> = (props) => {
                   </svg>
                 </Tooltip>
               </span>
+              {/* testagent_change end */}
               {/* testagent_change 注释继续 */}
                {/* <span
                 onClick={() => {
