@@ -66,9 +66,17 @@ jobs:
           fi
           git config --local --unset-all http.https://github.com/.extraheader || true
           git config --global --unset-all http.https://github.com/.extraheader || true
-          git config --global url."https://x-access-token:${TESTFLOW_GITHUB_TOKEN}@github.com/Pluto-AI-Workbench/".insteadOf "https://github.com/Pluto-AI-Workbench/"
-          git submodule sync --recursive packages/testflow
-          git submodule update --init --remote --recursive packages/testflow
+          STATUS=$(curl -sS -o /tmp/testflow-repo.json -w "%{http_code}" \
+            -H "Authorization: Bearer ${TESTFLOW_GITHUB_TOKEN}" \
+            https://api.github.com/repos/Pluto-AI-Workbench/testflow)
+          if [ "$STATUS" != "200" ]; then
+            echo "::error::TESTFLOW_GITHUB_TOKEN cannot read Pluto-AI-Workbench/testflow (HTTP $STATUS)"
+            cat /tmp/testflow-repo.json
+            exit 1
+          fi
+          git submodule init packages/testflow
+          git config submodule.packages/testflow.url "https://${GITHUB_ACTOR}:${TESTFLOW_GITHUB_TOKEN}@github.com/Pluto-AI-Workbench/testflow.git"
+          git submodule update --remote --recursive packages/testflow
 
       - uses: ./.github/actions/setup-bun
 
@@ -283,9 +291,17 @@ jobs:
           fi
           git config --local --unset-all http.https://github.com/.extraheader || true
           git config --global --unset-all http.https://github.com/.extraheader || true
-          git config --global url."https://x-access-token:${TESTFLOW_GITHUB_TOKEN}@github.com/Pluto-AI-Workbench/".insteadOf "https://github.com/Pluto-AI-Workbench/"
-          git submodule sync --recursive packages/testflow
-          git submodule update --init --remote --recursive packages/testflow
+          STATUS=$(curl -sS -o /tmp/testflow-repo.json -w "%{http_code}" \
+            -H "Authorization: Bearer ${TESTFLOW_GITHUB_TOKEN}" \
+            https://api.github.com/repos/Pluto-AI-Workbench/testflow)
+          if [ "$STATUS" != "200" ]; then
+            echo "::error::TESTFLOW_GITHUB_TOKEN cannot read Pluto-AI-Workbench/testflow (HTTP $STATUS)"
+            cat /tmp/testflow-repo.json
+            exit 1
+          fi
+          git submodule init packages/testflow
+          git config submodule.packages/testflow.url "https://${GITHUB_ACTOR}:${TESTFLOW_GITHUB_TOKEN}@github.com/Pluto-AI-Workbench/testflow.git"
+          git submodule update --remote --recursive packages/testflow
 
       - uses: ./.github/actions/setup-bun
         if: steps.should_build.outputs.build == 'true'
