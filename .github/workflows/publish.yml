@@ -46,6 +46,7 @@ jobs:
         with:
           ref: ${{ inputs.branch || github.ref }}
           fetch-depth: 0
+          token: ${{ secrets.TESTFLOW_GITHUB_TOKEN || github.token }}
           submodules: recursive
 
       # testagent_change - use latest testagent-core commit for release builds
@@ -135,6 +136,7 @@ jobs:
           ref: ${{ inputs.branch || github.ref }}
           fetch-depth: 0
           fetch-tags: true
+          token: ${{ secrets.TESTFLOW_GITHUB_TOKEN || github.token }}
           submodules: recursive
 
       # testagent_change - use latest testagent-core commit for release builds
@@ -244,6 +246,7 @@ jobs:
         if: steps.should_build.outputs.build == 'true'
         with:
           ref: ${{ inputs.branch || github.ref }}
+          token: ${{ secrets.TESTFLOW_GITHUB_TOKEN || github.token }}
           submodules: recursive # testagent_change - checkout submodules (testagent-core)
 
       # testagent_change - use latest testagent-core commit for release builds
@@ -387,6 +390,7 @@ jobs:
     steps:
       - uses: actions/checkout@v3
         with:
+          token: ${{ secrets.TESTFLOW_GITHUB_TOKEN || github.token }}
           submodules: recursive
 
       # testagent_change - use GITHUB_TOKEN instead of app token for simplicity
