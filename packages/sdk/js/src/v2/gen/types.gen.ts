@@ -5194,6 +5194,40 @@ export type PermissionReplyResponses = {
 
 export type PermissionReplyResponse = PermissionReplyResponses[keyof PermissionReplyResponses]
 
+export type PermissionSaveAlwaysRulesData = {
+  body?: {
+    approvedAlways?: Array<string>
+    deniedAlways?: Array<string>
+  }
+  path: {
+    requestID: string
+  }
+  query?: {
+    directory?: string
+    workspace?: string
+  }
+  url: "/permission/{requestID}/always-rules"
+}
+
+export type PermissionSaveAlwaysRulesErrors = {
+  /**
+   * NotFoundError
+   */
+  404: NotFoundError
+}
+
+export type PermissionSaveAlwaysRulesError = PermissionSaveAlwaysRulesErrors[keyof PermissionSaveAlwaysRulesErrors]
+
+export type PermissionSaveAlwaysRulesResponses = {
+  /**
+   * Always-rules saved
+   */
+  200: boolean
+}
+
+export type PermissionSaveAlwaysRulesResponse =
+  PermissionSaveAlwaysRulesResponses[keyof PermissionSaveAlwaysRulesResponses]
+
 export type ProviderListData = {
   body?: never
   path?: never
