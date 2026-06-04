@@ -611,11 +611,13 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
     if (!client) return
 
     try {
-      const { data: session } = await client.session.get({ sessionID })
+      const dir = this.getContextDirectory()
+      const { data: session } = await client.session.get({ sessionID, directory: dir })
       if (!session) {
         console.warn(`[Testflow] Child session ${sessionID} not found`)
         return
       }
+      this.trackDirectory(session.id, session.directory)
 
       // Register session in webview
       this.postMessage({
@@ -916,7 +918,12 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
           this.initializeConnection().catch((e) => console.error("[TestAgent]  ❌ Retry connection failed:", e))
           break
         case "openSubAgentViewer":
-          vscode.commands.executeCommand("testagent.new.openSubAgentViewer", message.sessionID, message.title)
+          vscode.commands.executeCommand(
+            "testagent.new.openSubAgentViewer",
+            message.sessionID,
+            message.title,
+            this.getWorkspaceDirectory(message.sessionID),
+          )
           break
         case "previewImage":
           this.handlePreviewImage(message.dataUrl, message.filename)

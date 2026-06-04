@@ -411,9 +411,12 @@ export function activate(context: vscode.ExtensionContext) {
     vscode.commands.registerCommand("testagent.new.showChanges", () => {
       diffViewerProvider.openPanel()
     }),
-    vscode.commands.registerCommand("testagent.new.openSubAgentViewer", (sessionID: string, title?: string) => {
-      subAgentViewerProvider.openPanel(sessionID, title)
-    }),
+    vscode.commands.registerCommand(
+      "testagent.new.openSubAgentViewer",
+      (sessionID: string, title?: string, dir?: string) => {
+        subAgentViewerProvider.openPanel(sessionID, title, dir)
+      },
+    ),
     vscode.commands.registerCommand("testagent.new.agentManager.previousSession", () => {
       agentManagerProvider.postMessage({ type: "action", action: "sessionPrevious" })
     }),

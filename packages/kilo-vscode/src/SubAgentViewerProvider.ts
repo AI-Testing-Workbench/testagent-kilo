@@ -21,7 +21,7 @@ export class SubAgentViewerProvider implements vscode.Disposable {
     private readonly context: vscode.ExtensionContext,
   ) {}
 
-  openPanel(sessionID: string, title?: string): void {
+  openPanel(sessionID: string, title?: string, dir?: string): void {
     const existing = this.panels.get(sessionID)
     if (existing) {
       existing.reveal(vscode.ViewColumn.One)
@@ -43,6 +43,7 @@ export class SubAgentViewerProvider implements vscode.Disposable {
 
     const provider = new KiloProvider(this.extensionUri, this.connectionService, this.context)
     provider.resolveWebviewPanel(panel)
+    if (dir) provider.setSessionDirectory(sessionID, dir)
 
     // Once the webview is ready, fetch the session and display it in read-only mode.
     const readyDisposable = panel.webview.onDidReceiveMessage(async (msg) => {
@@ -54,7 +55,9 @@ export class SubAgentViewerProvider implements vscode.Disposable {
 
       try {
         const client = this.connectionService.getClient()
-        const { data: session } = await client.session.get({ sessionID }, { throwOnError: true })
+        const params = dir ? { sessionID, directory: dir } : { sessionID }
+        const { data: session } = await client.session.get(params, { throwOnError: true })
+        if (session.directory) provider.setSessionDirectory(session.id, session.directory)
 
         // Register the session on the provider — this adds it to
         // trackedSessionIds for live SSE updates and sends

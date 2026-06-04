@@ -1,6 +1,7 @@
 import { describe, it, expect } from "bun:test"
 
 // vscode mock is provided by the shared preload (tests/setup/vscode-mock.ts)
+const vscode = await import("vscode")
 const { KiloProvider } = await import("../../src/KiloProvider")
 
 type State = "connecting" | "connected" | "disconnected" | "error"
@@ -41,16 +42,22 @@ function createClient(options?: {
   messagesDeferred?: Deferred<{ data: unknown[]; response: { headers: Headers } }>
   messagesData?: unknown[]
   deleteDeferred?: Deferred<unknown>
+  sessionData?: unknown
 }) {
-  const calls: { before?: string; limit?: number }[] = []
+  const calls: { before?: string; directory?: string; limit?: number }[] = []
+  const gets: { directory?: string }[] = []
   return {
     calls,
+    gets,
     session: {
       list: async () => ({ data: [] }),
-      get: async () => ({ data: null }),
+      get: async (params: { directory?: string } = {}) => {
+        gets.push({ directory: params.directory })
+        return { data: options?.sessionData ?? null }
+      },
       status: async () => ({ data: {} }),
-      messages: async (params: { before?: string; limit?: number }) => {
-        calls.push({ before: params.before, limit: params.limit })
+      messages: async (params: { before?: string; directory?: string; limit?: number }) => {
+        calls.push({ before: params.before, directory: params.directory, limit: params.limit })
         if (options?.messagesDeferred) return options.messagesDeferred.promise
         return mkResult(options?.messagesData ?? [])
       },
@@ -100,6 +107,11 @@ type ProviderInternals = {
   trackedSessionIds: Set<string>
   handleLoadMessages: (sid: string, opts?: { mode?: string; before?: string; limit?: number }) => Promise<void>
   handleDeleteSession: (sid: string) => Promise<void>
+  syncChildSession: (sid: string) => Promise<void>
+  contextSessionID?: string
+  setupWebviewMessageHandler: (webview: {
+    onDidReceiveMessage: (cb: (message: unknown) => Promise<void>) => { dispose: () => void }
+  }) => void
 }
 
 function makeProvider(client: ReturnType<typeof createClient>) {
@@ -210,6 +222,55 @@ describe("KiloProvider.loadMessages / sub-agent viewer full history", () => {
     expect(client.calls).toHaveLength(1)
     const limit = client.calls[0]?.limit
     expect(limit === undefined || limit === 0).toBe(true)
+  })
+
+  it("passes the child session directory when opening a sub-agent viewer", async () => {
+    const client = createClient()
+    const { provider, internal } = makeProvider(client)
+    const calls: unknown[][] = []
+    const exec = vscode.commands.executeCommand
+    ;(vscode.commands as { executeCommand: (...args: unknown[]) => Promise<unknown> }).executeCommand = async (
+      ...args
+    ) => {
+      calls.push(args)
+      return undefined
+    }
+
+    const box: { handler?: (message: unknown) => Promise<void> } = {}
+    internal.setupWebviewMessageHandler({
+      onDidReceiveMessage: (cb) => {
+        box.handler = cb
+        return { dispose: () => {} }
+      },
+    })
+    provider.setSessionDirectory("s1", "/worktree")
+
+    try {
+      await box.handler?.({ type: "openSubAgentViewer", sessionID: "s1", title: "child task" })
+    } finally {
+      ;(vscode.commands as { executeCommand: (...args: unknown[]) => Promise<unknown> }).executeCommand = exec
+    }
+
+    expect(calls).toEqual([["testagent.new.openSubAgentViewer", "s1", "child task", "/worktree"]])
+  })
+
+  it("syncs child sessions using the current context directory", async () => {
+    const client = createClient({
+      sessionData: {
+        id: "child",
+        title: "child task",
+        parentID: "parent",
+        directory: "/worktree",
+      },
+    })
+    const { provider, internal } = makeProvider(client)
+    provider.setSessionDirectory("parent", "/worktree")
+    internal.contextSessionID = "parent"
+
+    await internal.syncChildSession("child")
+
+    expect(client.gets[0]).toEqual({ directory: "/worktree" })
+    expect(client.calls[0]).toEqual({ before: undefined, directory: "/worktree", limit: 0 })
   })
 })
 
