@@ -102,7 +102,7 @@ export function useSlashCommand(vscode: VSCodeContext, exclude?: Set<string>): S
       },
     },
     {
-      name: "reloadSkills",
+      name: "reload-skills",
       description: "重新加载SKILLS",
       hints: [],
       action: () => {
@@ -110,7 +110,7 @@ export function useSlashCommand(vscode: VSCodeContext, exclude?: Set<string>): S
       },
     },
     {
-      name: "reloadMCP",
+      name: "reload-mcp",
       description: "重新加载MCP",
       hints: [],
       action: () => {
