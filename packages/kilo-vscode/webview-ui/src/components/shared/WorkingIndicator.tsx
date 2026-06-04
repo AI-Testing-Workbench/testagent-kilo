@@ -7,6 +7,7 @@
 import { type Component, Show, createSignal, createEffect, onCleanup } from "solid-js"
 import { Spinner } from "@kilocode/kilo-ui/spinner"
 import { Button } from "@kilocode/kilo-ui/button"
+import { Tooltip } from "@kilocode/kilo-ui/tooltip"
 import { useSession } from "../../context/session"
 import { useLanguage } from "../../context/language"
 import { useVSCode } from "../../context/vscode"
@@ -146,7 +147,9 @@ export const WorkingIndicator: Component = () => {
     <Show when={session.status() !== "idle" && !blocked()}>
       <div class="working-indicator">
         <ThinkingAvatar />
-        <span class="working-text">{statusText()}</span>
+        <Tooltip value={statusText()} placement="top">
+          <span class="working-text">{statusText()}</span>
+        </Tooltip>
         <Show when={elapsed() > 0}>
           <span class="working-elapsed">{formatElapsed()}</span>
         </Show>
