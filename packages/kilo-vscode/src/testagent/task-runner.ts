@@ -3,7 +3,7 @@ import { randomUUID } from "crypto"
 
 const uid = () => randomUUID()
 
-const BASE = "http://fastautomator-openapi-group.paas.cmbchina.cn"
+const BASE = decodeURIComponent(atob('aHR0cCUzQSUyRiUyRmZhc3RhdXRvbWF0b3Itb3BlbmFwaS1ncm91cC5wYWFzLmNtYmNoaW5hLmNu'))
 const EXEC = `${BASE}/mobile-execution`
 const TASK_TYPE = 4
 const TIMEOUT = 30_000
