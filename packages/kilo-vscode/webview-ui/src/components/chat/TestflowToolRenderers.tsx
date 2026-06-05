@@ -233,7 +233,7 @@ const TaskQueryTool: Component<ToolProps> = (props) => {
       trigger={{
         title: title(),
         titleClass: "task-query-title",
-        subtitle: "不计入对话上下文",
+        subtitle: "该命令操作不涉及上下文对话",
         subtitleClass: "task-query-subtitle",
       }}
       defaultOpen={true}
