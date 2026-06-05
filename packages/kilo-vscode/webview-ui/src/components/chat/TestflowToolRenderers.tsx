@@ -18,6 +18,8 @@ import { Button } from "@kilocode/kilo-ui/button"
 import { Icon } from "@kilocode/kilo-ui/icon"
 import { Spinner } from "@kilocode/kilo-ui/spinner"
 import { ToolRegistry, type ToolProps } from "@kilocode/kilo-ui/message-part"
+import { BasicTool } from "@kilocode/kilo-ui/basic-tool"
+import { Markdown } from "@kilocode/kilo-ui/markdown"
 import { useVSCode } from "../../context/vscode"
 
 // ---------------------------------------------------------------------------
@@ -208,6 +210,46 @@ const TestflowProgressTool: Component<ToolProps> = (props) => {
 }
 
 // ---------------------------------------------------------------------------
+// task-query
+// ---------------------------------------------------------------------------
+
+const TaskQueryTool: Component<ToolProps> = (props) => {
+  const title = () => ((props.input as any).title as string) || "任务详情"
+  const output = () => props.output ?? ""
+  const formatted = () => {
+    const raw = output()
+    if (!raw) return ""
+    try {
+      return "```json\n" + JSON.stringify(JSON.parse(raw), null, 2) + "\n```"
+    } catch {
+      return raw
+    }
+  }
+
+  return (
+    <BasicTool
+      icon="mcp"
+      status={props.status}
+      trigger={{
+        title: title(),
+        titleClass: "task-query-title",
+        subtitle: "不计入对话上下文",
+        subtitleClass: "task-query-subtitle",
+      }}
+      defaultOpen={true}
+    >
+      <Show when={formatted()}>
+        {(text) => (
+          <div data-component="tool-output" data-scrollable>
+            <Markdown text={text()} />
+          </div>
+        )}
+      </Show>
+    </BasicTool>
+  )
+}
+
+// ---------------------------------------------------------------------------
 // Registration
 // ---------------------------------------------------------------------------
 
@@ -221,4 +263,5 @@ export function registerTestflowToolRenderers() {
   ToolRegistry.register({ name: "testflow-question", render: TestflowQuestionTool })
   ToolRegistry.register({ name: "testflow-agent", render: TestflowAgentTool })
   ToolRegistry.register({ name: "testflow-progress", render: TestflowProgressTool })
+  ToolRegistry.register({ name: "task-query", render: TaskQueryTool })
 }

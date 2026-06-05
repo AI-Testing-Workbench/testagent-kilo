@@ -150,6 +150,26 @@ function postText(opts: TaskRunnerOpts, asstMsgID: string, text: string) {
   })
 }
 
+function postToolResult(opts: TaskRunnerOpts, asstMsgID: string, title: string, output: string) {
+  opts.post({
+    type: "partUpdated",
+    sessionID: opts.sessionID,
+    messageID: asstMsgID,
+    part: {
+      type: "tool",
+      id: uid(),
+      messageID: asstMsgID,
+      tool: "task-query",
+      state: {
+        status: "completed",
+        input: { title },
+        output,
+        title,
+      },
+    },
+  })
+}
+
 function finish(opts: TaskRunnerOpts, asstMsgID: string, ok: boolean) {
   const now = Date.now()
   opts.post({
@@ -177,8 +197,6 @@ async function runQuery(opts: TaskRunnerOpts, asstMsgID: string): Promise<void> 
     return
   }
 
-  postText(opts, asstMsgID, `🔍 查询任务 ${taskId}...`)
-
   const raw = await apiPost(`${EXEC}/exec/task/list?taskType=${TASK_TYPE}`, [id])
   const data = checkCode(raw)
 
@@ -189,7 +207,7 @@ async function runQuery(opts: TaskRunnerOpts, asstMsgID: string): Promise<void> 
     return
   }
 
-  postText(opts, asstMsgID, "```json\n" + formatDetail(taskId, item) + "\n```")
+  postToolResult(opts, asstMsgID, `任务详情`, formatDetail(taskId, item))
 }
 
 // ── Entry point ─────────────────────────────────────────────────────────────

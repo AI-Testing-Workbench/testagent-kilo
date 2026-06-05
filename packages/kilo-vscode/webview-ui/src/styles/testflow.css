@@ -221,3 +221,15 @@ pre.testflow-log {
   font-size: 12px;
   color: var(--vscode-foreground);
 }
+
+/* ── task-query ────────────────────────────────────────────────── */
+
+[data-slot="basic-tool-tool-title"].task-query-title {
+  font-weight: 700;
+  color: var(--vscode-foreground);
+}
+
+[data-slot="basic-tool-tool-subtitle"].task-query-subtitle {
+  color: var(--vscode-errorForeground, #f48771);
+  font-size: 11px;
+}
