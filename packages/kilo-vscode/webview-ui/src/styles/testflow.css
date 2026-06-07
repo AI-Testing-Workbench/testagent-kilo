@@ -112,6 +112,37 @@ pre.testflow-log {
   background: var(--vscode-textCodeBlock-background, #2a2a2a);
 }
 
+/* ── testflow-result ─────────────────────────────────────────── */
+
+[data-slot="basic-tool-tool-title"].testflow-result-title {
+  font-weight: 700;
+}
+
+[data-slot="basic-tool-tool-title"].testflow-result-success {
+  color: var(--vscode-testing-iconPassed, #73c991);
+}
+
+[data-slot="basic-tool-tool-title"].testflow-result-warning {
+  color: var(--vscode-editorWarning-foreground, #cca700);
+}
+
+[data-slot="basic-tool-tool-title"].testflow-result-error {
+  color: var(--vscode-errorForeground, #f48771);
+}
+
+[data-slot="basic-tool-tool-subtitle"].testflow-result-subtitle {
+  color: var(--vscode-descriptionForeground, #888);
+  font-size: 11px;
+}
+
+.testflow-result-body {
+  margin: 4px 0;
+  padding: 8px 12px;
+  font-size: 13px;
+  line-height: 1.6;
+  background: var(--vscode-editorWidget-background, transparent);
+}
+
 .testflow-progress-next {
   margin-top: 4px;
   display: flex;

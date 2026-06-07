@@ -187,6 +187,40 @@ export class TestflowMessageBridge {
     this.appendLog(`! ${error}`)
   }
 
+  /**
+   * 一锤子命令的最终结果。bridge 将其转为一个 tool: "testflow-result" 的
+   * completed part 渲染成结果卡，渲染细节由 webview 端按 `kind` 分支处理。
+   */
+  onResult(payload: Record<string, unknown>): void {
+    const kind = (payload.kind as string) ?? "unknown"
+    const titles: Record<string, string> = {
+      init: "初始化 TestFlow 框架",
+      new: "创建测试任务",
+      list: "任务列表",
+      switch: "切换默认任务",
+      validate: "校验流程配置",
+      error: "命令执行失败",
+    }
+    const title = titles[kind] ?? "命令结果"
+    this.post?.({
+      type: "partUpdated",
+      sessionID: this.sessionID,
+      messageID: this.asstMsgID,
+      part: {
+        type: "tool",
+        id: uid(),
+        messageID: this.asstMsgID,
+        tool: "testflow-result",
+        state: {
+          status: "completed",
+          input: { kind, ...payload },
+          output: JSON.stringify(payload, null, 2),
+          title,
+        },
+      },
+    })
+  }
+
   onDone(exitCode: number, summary?: string): void {
     if (summary) this.appendLog(summary)
 

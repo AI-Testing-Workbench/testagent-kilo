@@ -10,6 +10,8 @@
 import { Component, For, Show, createMemo } from "solid-js"
 import { Dynamic } from "solid-js/web"
 import { Part, PART_MAPPING, ToolRegistry } from "@kilocode/kilo-ui/message-part"
+import { BasicTool } from "@kilocode/kilo-ui/basic-tool"
+import { Markdown } from "@kilocode/kilo-ui/markdown"
 import type {
   AssistantMessage as SDKAssistantMessage,
   Part as SDKPart,
@@ -28,7 +30,7 @@ export const UPSTREAM_SUPPRESSED_TOOLS = new Set(["todowrite", "todoread"])
 
 // testagent_change start - testflow tools bypass ToolPartDisplay entirely
 // so they render without the McpTool card wrapper.
-const TESTFLOW_TOOLS = new Set(["testflow-progress"])
+const TESTFLOW_TOOLS = new Set(["testflow-progress", "testflow-result"])
 
 function checkTestflowLog(part: SDKPart): boolean {
   return part.type === "text" && !!(part as SDKPart & { testflow?: boolean }).testflow
@@ -91,6 +93,11 @@ function TestflowToolCard(props: { part: ToolPart }) {
   const state = props.part.state as any
   const input = () => (state?.input ?? {}) as Record<string, any>
   const status = () => state?.status as string | undefined
+
+  // testflow-result
+  if (props.part.tool === "testflow-result") {
+    return <TestflowResultCard input={input() as TestflowResultInput} output={String(state?.output ?? "")} />
+  }
 
   // testflow-progress
   if (props.part.tool === "testflow-progress") {
@@ -175,6 +182,122 @@ function TestflowToolCard(props: { part: ToolPart }) {
 
   return null
 }
+
+// ---------------------------------------------------------------------------
+// testflow-result
+// 一锤子命令（init/new/list/switch/validate）结果卡片
+// ---------------------------------------------------------------------------
+
+type TestflowResultInput = {
+  kind: "init" | "new" | "list" | "switch" | "validate" | "error"
+  [k: string]: unknown
+}
+
+function buildResultMarkdown(kind: string, payload: Record<string, unknown>): string {
+  if (kind === "init") {
+    const baseDir = String(payload.baseDir ?? "")
+    const nextStep = String(payload.nextStep ?? "")
+    const created = Array.isArray(payload.createdDirs) ? (payload.createdDirs as string[]) : []
+    const tree = created.length
+      ? created.map((line) => `  ${line}`).join("\n")
+      : "  (无)"
+    return [
+      `📂 **基目录** \`${baseDir}\``,
+      "",
+      "**目录结构**",
+      "```",
+      tree,
+      "```",
+      "",
+      `**下一步**: \`${nextStep}\``,
+    ].join("\n")
+  }
+  if (kind === "new") {
+    const taskName = String(payload.taskName ?? "")
+    const taskDir = String(payload.taskDir ?? "")
+    const created = Number(payload.created ?? 0)
+    const existed = Number(payload.existed ?? 0)
+    return [
+      `📁 **任务** \`${taskName}\``,
+      "",
+      `**目录**: \`${taskDir}\``,
+      "",
+      `**新建**: ${created} 项 · **已存在跳过**: ${existed} 项`,
+    ].join("\n")
+  }
+  if (kind === "list") {
+    const tasks = Array.isArray(payload.tasks) ? (payload.tasks as Array<{ sdtTaskId: string; taskId: string | null }>) : []
+    if (tasks.length === 0) return "_当前没有任务_"
+    const lines = tasks.map((t, i) => {
+      const id = t.taskId ? ` _(TMS: ${t.taskId})_` : ""
+      return `${i + 1}. \`${t.sdtTaskId}\`${id}`
+    })
+    return `共 **${tasks.length}** 个任务：\n\n${lines.join("\n")}`
+  }
+  if (kind === "switch") {
+    return `当前默认任务已切换为 \`${String(payload.current ?? "")}\``
+  }
+  if (kind === "validate") {
+    const taskName = String(payload.taskName ?? "")
+    const passed = Boolean(payload.passed)
+    const configFile = payload.configFile ? String(payload.configFile) : ""
+    const errors = Array.isArray(payload.errors) ? (payload.errors as string[]) : []
+    if (passed) {
+      return [
+        `任务 \`${taskName}\` 的流程配置校验通过。`,
+        configFile ? `\n**配置**: \`${configFile}\`` : "",
+      ].join("")
+    }
+    return [
+      `任务 \`${taskName}\` 的流程配置校验失败：`,
+      "",
+      errors.map((e) => `- ${e}`).join("\n"),
+    ].join("\n")
+  }
+  // kind === "error"
+  return `❌ **${String(payload.command ?? "命令")} 执行失败**\n\n\`\`\`\n${String(payload.error ?? "")}\n\`\`\``
+}
+
+function buildResultStatusClass(kind: string): string {
+  if (kind === "error") return "testflow-result-error"
+  if (kind === "validate") return "testflow-result-warning"
+  return "testflow-result-success"
+}
+
+const TestflowResultCard: Component<{ input: TestflowResultInput; output: string }> = (props) => {
+  const kind = () => props.input.kind
+  const title = () => (() => {
+    switch (kind()) {
+      case "init": return "初始化 SDT 框架"
+      case "new": return "创建测试任务"
+      case "list": return "任务列表"
+      case "switch": return "切换默认任务"
+      case "validate": return "校验流程配置"
+      case "error": return "命令执行失败"
+      default: return "命令结果"
+    }
+  })()
+  const body = () => buildResultMarkdown(kind(), props.input as Record<string, unknown>)
+
+  return (
+    <BasicTool
+      icon="mcp"
+      status="completed"
+      defaultOpen={true}
+      trigger={{
+        title: title(),
+        titleClass: `testflow-result-title ${buildResultStatusClass(kind())}`,
+        subtitle: "该命令操作不涉及上下文对话",
+        subtitleClass: "testflow-result-subtitle",
+      }}
+    >
+      <div data-component="tool-output" data-scrollable class="testflow-result-body">
+        <Markdown text={body()} />
+      </div>
+    </BasicTool>
+  )
+}
+
 // testagent_change end
 
 export const AssistantMessage: Component<AssistantMessageProps> = (props) => {

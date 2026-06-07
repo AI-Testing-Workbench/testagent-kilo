@@ -9,6 +9,13 @@ import { TestflowMessageBridge } from "./testflow-bridge"
 const ANSI_RE = /[\u001b\u009b][[()#;?]*(?:[0-9]{1,4}(?:;[0-9]{0,4})*)?[0-9A-ORZcf-nqry=><~]/g
 const stripAnsi = (s: string) => s.replace(ANSI_RE, "")
 
+/**
+ * 一锤子命令的子命令名集合。这些命令不跑 AI、不发 progress 事件，
+ * 而是发 `result` 事件（一个），由 bridge 渲染成结果卡。对应的
+ * stdout/stderr 实时日志会被丢弃，避免和卡片内容重复。
+ */
+const ONE_SHOT_COMMANDS = new Set(["init", "new", "list", "switch", "validate"])
+
 export interface SdtRunnerOpts {
   cmd: string
   args: string[]
@@ -53,6 +60,7 @@ export class SdtRunner {
       stdio: ["pipe", "pipe", "pipe"],
     })
 
+    const isOneShot = ONE_SHOT_COMMANDS.has(opts.cmd)
     const rl = readline.createInterface({ input: this.proc.stdout!, terminal: false })
     rl.on("line", (line) => {
       // console.log('[TestAgent] testflow stdout:', line)
@@ -62,13 +70,22 @@ export class SdtRunner {
         // console.log('[TestAgent] testflow event:', event.type)
         this.dispatch(event)
       } catch {
-        console.log('[TestAgent] testflow non-JSON output:', line)
-        this.bridge.onText(stripAnsi(line))
+        // 一锤子命令的实时日志丢进卡片反而是噪声，忽略；其他命令照旧回流到 chat
+        if (!isOneShot) {
+          console.log('[TestAgent] testflow non-JSON output:', line)
+          this.bridge.onText(stripAnsi(line))
+        }
       }
     })
 
     this.proc.stderr?.on("data", (chunk: Buffer) => {
       const text = stripAnsi(chunk.toString().trim())
+      if (isOneShot) {
+        // 一锤子命令的 stderr 由 cli-entry.ts 的错误路径转成 result 事件，
+        // 这里只打 console.log 留痕，不进 chat
+        if (text) console.log('[TestAgent] testflow stderr (one-shot):', text)
+        return
+      }
       console.log('[TestAgent] testflow stderr:', text)
       if (text) this.bridge.onLog("error", text)
     })
@@ -101,6 +118,13 @@ export class SdtRunner {
   private dispatch(event: JsonLine): void {
     const type = event.type as string
     switch (type) {
+      case "result": {
+        // 一锤子命令的最终结果：抽出 kind 之外的字段作为 payload
+        const { type: _t, ...payload } = event
+        void _t
+        this.bridge.onResult(payload)
+        break
+      }
       case "progress":
         this.bridge.onProgress(
           event.task_name as string,
