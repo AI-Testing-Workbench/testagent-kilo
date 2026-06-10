@@ -1617,6 +1617,14 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
       return
     }
     const dir = this.getWorkspaceDirectory(sessionID)
+    console.log("[TestAgent] loadMessages: request", {
+      sessionID,
+      dir,
+      mode,
+      before: options.before,
+      limit: options.limit ?? MESSAGE_PAGE_LIMIT,
+      tracked: this.trackedSessionIds.has(sessionID),
+    })
     if (mode === "focus") {
       this.refreshSessionDetails(sessionID, dir)
       // Reconcile tail so SSE drops self-heal. Throttled to skip rapid tab-switching bursts.
@@ -1667,7 +1675,15 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
       this.recoverPendingPrompts()
     } catch (error) {
       if (abort?.signal.aborted) return
-      console.error("[TestAgent]  Failed to load messages:", error)
+      console.error("[TestAgent]  Failed to load messages:", {
+        sessionID,
+        dir,
+        mode,
+        before: options.before,
+        limit: options.limit ?? MESSAGE_PAGE_LIMIT,
+        message: getErrorMessage(error),
+        error,
+      })
       this.postMessage({ type: "error", message: getErrorMessage(error) || "Failed to load messages", sessionID })
     }
   }

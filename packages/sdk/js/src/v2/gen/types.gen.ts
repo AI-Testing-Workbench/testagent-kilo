@@ -1172,6 +1172,25 @@ export type Config = {
         },
       ]
   >
+  plugin_origins?: Array<{
+    spec:
+      | string
+      | [
+          string,
+          {
+            [key: string]: unknown
+          },
+        ]
+    source: string
+    scope: "global" | "local"
+  }>
+  plugin_status?: {
+    success: Array<string>
+    failed: Array<{
+      spec: string
+      error: string
+    }>
+  }
   share?: "manual" | "auto" | "disabled"
   autoshare?: boolean
   /**

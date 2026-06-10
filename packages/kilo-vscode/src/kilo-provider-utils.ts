@@ -1,4 +1,5 @@
 import type { Session, Agent, Event, ProviderListResponse } from "@kilocode/sdk/v2/client"
+import * as path from "path"
 import { prettifyError } from "zod/v4"
 import type { CloudSessionMessage } from "./services/cli-backend/types"
 import type { PartBatch, PartUpdate } from "./kilo-provider/session-stream-scheduler"
@@ -225,6 +226,12 @@ export interface SessionRefreshContext {
   postMessage(message: unknown): void
 }
 
+function norm(dir: string): string {
+  const value = path.resolve(dir)
+  if (process.platform === "win32") return value.toLowerCase()
+  return value
+}
+
 /**
  * Load sessions from the workspace and all registered worktree directories.
  * Sets pendingSessionRefresh when the HTTP client isn't ready yet.
@@ -277,6 +284,15 @@ export async function loadSessions(ctx: SessionRefreshContext): Promise<string |
       sessions.push(s)
       seen.add(s.id)
     }
+  }
+
+  const root = norm(ctx.workspaceDirectory)
+  for (const s of sessions) {
+    if (norm(s.directory) === root) {
+      ctx.sessionDirectories.delete(s.id)
+      continue
+    }
+    ctx.sessionDirectories.set(s.id, s.directory)
   }
 
   // Sessions whose worktree directories failed to list — the webview must

@@ -146,7 +146,21 @@ const AgentBehaviourTab: Component = () => {
 
   const pluginName = (plugin: PluginSpec) => (Array.isArray(plugin) ? plugin[0] : plugin)
   const pluginOptions = (plugin: PluginSpec) => (Array.isArray(plugin) ? plugin[1] : undefined)
-  const samePlugin = (a: PluginSpec, b: PluginSpec) => pluginName(a) === pluginName(b)
+  const pluginKey = (name: string) => {
+    if (name.startsWith("file://")) return name.toLowerCase()
+    const raw = name.replace(/^npm:/, "")
+    if (raw.startsWith("@")) {
+      const parts = raw.split("/")
+      const pkg = parts[1]?.split("@")[0]
+      return pkg ? `${parts[0]}/${pkg}` : raw
+    }
+    return raw.split("@")[0] || raw
+  }
+  const sameName = (a: string, b: string) => a === b || pluginKey(a) === pluginKey(b)
+  const samePlugin = (a: PluginSpec, b: PluginSpec) => sameName(pluginName(a), pluginName(b))
+  const hasStatus = (items: string[], plugin: PluginSpec) => items.some((item) => sameName(pluginName(plugin), item))
+  const failedStatus = (plugin: PluginSpec) =>
+    config().plugin_status?.failed.find((item) => sameName(pluginName(plugin), item.spec))
   const pluginPath = (plugin: PluginSpec) => {
     const name = pluginName(plugin)
     if (!name.startsWith("file://")) return name
@@ -186,16 +200,14 @@ const AgentBehaviourTab: Component = () => {
 
   const plugins = createMemo<PluginItem[]>(() => {
     const origins = config().plugin_origins
+    const status = config().plugin_status
+    if (!status) return []
     if (origins?.length) {
-      const status = config().plugin_status
-      const list = status ? origins.filter((origin) => status.success.includes(pluginName(origin.spec))) : origins
+      const list = origins.filter((origin) => !failedStatus(origin.spec) && hasStatus(status.success, origin.spec))
       return list.map((origin) => pluginItem(origin.spec, origin))
     }
 
-    const status = config().plugin_status
-    const list = status
-      ? (config().plugin ?? []).filter((plugin) => status.success.includes(pluginName(plugin)))
-      : (config().plugin ?? [])
+    const list = (config().plugin ?? []).filter((plugin) => !failedStatus(plugin) && hasStatus(status.success, plugin))
     return list.map((plugin) => pluginItem(plugin))
   })
 
@@ -203,7 +215,7 @@ const AgentBehaviourTab: Component = () => {
     const failed = config().plugin_status?.failed ?? []
     const origins = config().plugin_origins ?? []
     return failed.map((item) => {
-      const origin = origins.find((origin) => samePlugin(origin.spec, item.spec))
+      const origin = origins.find((origin) => sameName(pluginName(origin.spec), item.spec))
       return pluginItem(origin?.spec ?? item.spec, origin, item.error)
     })
   })
