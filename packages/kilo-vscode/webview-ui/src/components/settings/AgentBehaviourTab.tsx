@@ -12,7 +12,7 @@ import { useConfig } from "../../context/config"
 import { useSession } from "../../context/session"
 import { useLanguage } from "../../context/language"
 import { useVSCode } from "../../context/vscode"
-import type { AgentInfo, SkillInfo } from "../../types/messages"
+import type { AgentInfo, PluginSpec, SkillInfo } from "../../types/messages"
 import ModeEditView from "./ModeEditView"
 import ModeCreateView from "./ModeCreateView"
 import McpEditView from "./McpEditView"
@@ -20,7 +20,7 @@ import WorkflowsTab from "./agent-behaviour/WorkflowsTab"
 import { parseImport, MAX_IMPORT_SIZE } from "./mode-io"
 import type { ImportError } from "./mode-io"
 
-type SubtabId = "agents" | "mcpServers" | "rules" | "workflows" | "skills"
+type SubtabId = "agents" | "mcpServers" | "rules" | "workflows" | "skills" | "plugins"
 
 interface SubtabConfig {
   id: SubtabId
@@ -33,11 +33,23 @@ const subtabs: SubtabConfig[] = [
   { id: "rules", labelKey: "settings.agentBehaviour.subtab.rules" },
   { id: "workflows", labelKey: "settings.agentBehaviour.subtab.workflows" },
   { id: "skills", labelKey: "settings.agentBehaviour.subtab.skills" },
+  { id: "plugins", labelKey: "插件" },
 ]
 
 interface SelectOption {
   value: string
   label: string
+}
+
+interface PluginItem {
+  spec: PluginSpec
+  name: string
+  description: string
+  path: string
+  source?: string
+  scope?: "global" | "local"
+  options?: Record<string, unknown>
+  error?: string
 }
 
 import SettingsRow from "./SettingsRow"
@@ -132,6 +144,70 @@ const AgentBehaviourTab: Component = () => {
   const skillPaths = () => config().skills?.paths ?? []
   const skillUrls = () => config().skills?.urls ?? []
 
+  const pluginName = (plugin: PluginSpec) => (Array.isArray(plugin) ? plugin[0] : plugin)
+  const pluginOptions = (plugin: PluginSpec) => (Array.isArray(plugin) ? plugin[1] : undefined)
+  const samePlugin = (a: PluginSpec, b: PluginSpec) => pluginName(a) === pluginName(b)
+  const pluginPath = (plugin: PluginSpec) => {
+    const name = pluginName(plugin)
+    if (!name.startsWith("file://")) return name
+    return decodeURIComponent(name.replace(/^file:\/\//, ""))
+  }
+  const pluginTitle = (plugin: PluginSpec) => {
+    const path = pluginPath(plugin)
+    if (!pluginName(plugin).startsWith("file://")) return path
+    return (
+      path
+        .split(/[\\/]/)
+        .pop()
+        ?.replace(/\.[^.]+$/, "") || path
+    )
+  }
+  const pluginDescription = (plugin: PluginSpec) => {
+    const description = pluginOptions(plugin)?.description
+    if (typeof description === "string" && description.trim()) return description
+    if (pluginName(plugin).startsWith("file://")) return "本地插件"
+    return "NPM 插件"
+  }
+  const pluginLocation = (plugin: PluginSpec) => {
+    const name = pluginName(plugin)
+    if (!name.startsWith("file://")) return undefined
+    return name
+  }
+  const pluginItem = (plugin: PluginSpec, origin?: { source: string; scope: "global" | "local" }, error?: string) => ({
+    spec: plugin,
+    name: pluginTitle(plugin),
+    description: pluginDescription(plugin),
+    path: pluginPath(plugin),
+    source: origin?.source,
+    scope: origin?.scope,
+    options: pluginOptions(plugin),
+    error,
+  })
+
+  const plugins = createMemo<PluginItem[]>(() => {
+    const origins = config().plugin_origins
+    if (origins?.length) {
+      const status = config().plugin_status
+      const list = status ? origins.filter((origin) => status.success.includes(pluginName(origin.spec))) : origins
+      return list.map((origin) => pluginItem(origin.spec, origin))
+    }
+
+    const status = config().plugin_status
+    const list = status
+      ? (config().plugin ?? []).filter((plugin) => status.success.includes(pluginName(plugin)))
+      : (config().plugin ?? [])
+    return list.map((plugin) => pluginItem(plugin))
+  })
+
+  const failedPlugins = createMemo<PluginItem[]>(() => {
+    const failed = config().plugin_status?.failed ?? []
+    const origins = config().plugin_origins ?? []
+    return failed.map((item) => {
+      const origin = origins.find((origin) => samePlugin(origin.spec, item.spec))
+      return pluginItem(origin?.spec ?? item.spec, origin, item.error)
+    })
+  })
+
   const addSkillPath = () => {
     const value = newSkillPath().trim()
     if (!value) {
@@ -188,6 +264,49 @@ const AgentBehaviourTab: Component = () => {
               }}
             >
               {language.t("settings.agentBehaviour.removeSkill.button")}
+            </Button>
+          </div>
+        </div>
+      </Dialog>
+    ))
+  }
+
+  const removePlugin = (plugin: PluginItem) => {
+    const current = config().plugin ?? plugins().map((item) => item.spec)
+    const origins = config().plugin_origins
+    const location = pluginLocation(plugin.spec)
+    if (location) {
+      vscode.postMessage({ type: "removePlugin", location })
+    }
+    updateConfig({
+      plugin: current.filter((item) => !samePlugin(item, plugin.spec)),
+      plugin_origins: origins?.filter((item) => !samePlugin(item.spec, plugin.spec)),
+    })
+  }
+
+  const confirmRemovePlugin = (plugin: PluginItem) => {
+    dialog.show(() => (
+      <Dialog title={language.t("common.delete")} fit>
+        <div class="dialog-confirm-body">
+          <span>
+            删除插件 "{plugin.name}" 吗？
+            {pluginLocation(plugin.spec)
+              ? "这会删除本地插件文件，并从配置中的 plugin 列表移除它。"
+              : "这会从配置中的 plugin 列表移除它。"}
+          </span>
+          <div class="dialog-confirm-actions">
+            <Button variant="ghost" size="large" onClick={() => dialog.close()}>
+              {language.t("common.cancel")}
+            </Button>
+            <Button
+              variant="primary"
+              size="large"
+              onClick={() => {
+                removePlugin(plugin)
+                dialog.close()
+              }}
+            >
+              {language.t("common.delete")}
             </Button>
           </div>
         </div>
@@ -947,6 +1066,111 @@ const AgentBehaviourTab: Component = () => {
       </Card>
     </div>
   )
+  // plugin tab
+  const renderPluginsSubtab = () => (
+    <div>
+      <h4 style={{ "margin-top": "0", "margin-bottom": "8px" }}>已加载插件</h4>
+      <Show
+        when={plugins().length > 0}
+        fallback={
+          <Card style={{ "margin-bottom": "16px" }}>
+            <div data-slot="settings-row-label-subtitle">当前运行时没有成功加载的外部插件。</div>
+          </Card>
+        }
+      >
+        <Card style={{ "margin-bottom": "16px" }}>
+          <For each={plugins()}>
+            {(plugin, index) => (
+              <div
+                style={{
+                  display: "flex",
+                  "align-items": "center",
+                  "justify-content": "space-between",
+                  padding: "8px 0",
+                  "border-bottom": index() < plugins().length - 1 ? "1px solid var(--border-weak-base)" : "none",
+                  gap: "8px",
+                }}
+              >
+                <div style={{ flex: 1, "min-width": 0 }}>
+                  <div data-slot="settings-row-label-title" style={{ "margin-bottom": "0" }}>
+                    {plugin.name}
+                  </div>
+                  <div
+                    data-slot="settings-row-label-subtitle"
+                    style={{
+                      "margin-top": "4px",
+                      "font-family": "var(--vscode-editor-font-family, monospace)",
+                      "overflow-wrap": "anywhere",
+                    }}
+                  >
+                    <div>{plugin.description}</div>
+                    <div>{plugin.path}</div>
+                    <Show when={plugin.source}>
+                      {(source) => (
+                        <div>
+                          {plugin.scope ? `${plugin.scope} · ` : ""}
+                          {source()}
+                        </div>
+                      )}
+                    </Show>
+                    <Show when={plugin.options}>{(options) => <div>options: {JSON.stringify(options())}</div>}</Show>
+                  </div>
+                </div>
+                <IconButton size="small" variant="ghost" icon="close" onClick={() => confirmRemovePlugin(plugin)} />
+              </div>
+            )}
+          </For>
+        </Card>
+      </Show>
+      <Show when={failedPlugins().length > 0}>
+        <h4 style={{ "margin-top": "0", "margin-bottom": "8px" }}>加载失败插件</h4>
+        <Card style={{ "margin-bottom": "16px" }}>
+          <For each={failedPlugins()}>
+            {(plugin, index) => (
+              <div
+                style={{
+                  display: "flex",
+                  "align-items": "center",
+                  "justify-content": "space-between",
+                  padding: "8px 0",
+                  "border-bottom": index() < failedPlugins().length - 1 ? "1px solid var(--border-weak-base)" : "none",
+                  gap: "8px",
+                }}
+              >
+                <div style={{ flex: 1, "min-width": 0 }}>
+                  <div data-slot="settings-row-label-title" style={{ "margin-bottom": "0" }}>
+                    {plugin.name}
+                  </div>
+                  <div
+                    data-slot="settings-row-label-subtitle"
+                    style={{
+                      "margin-top": "4px",
+                      "font-family": "var(--vscode-editor-font-family, monospace)",
+                      "overflow-wrap": "anywhere",
+                    }}
+                  >
+                    <div>{plugin.description}</div>
+                    <div>{plugin.path}</div>
+                    <Show when={plugin.error}>{(error) => <div>error: {error()}</div>}</Show>
+                    <Show when={plugin.source}>
+                      {(source) => (
+                        <div>
+                          {plugin.scope ? `${plugin.scope} · ` : ""}
+                          {source()}
+                        </div>
+                      )}
+                    </Show>
+                    <Show when={plugin.options}>{(options) => <div>options: {JSON.stringify(options())}</div>}</Show>
+                  </div>
+                </div>
+                <IconButton size="small" variant="ghost" icon="close" onClick={() => confirmRemovePlugin(plugin)} />
+              </div>
+            )}
+          </For>
+        </Card>
+      </Show>
+    </div>
+  )
 
   const renderRulesSubtab = () => (
     <div>
@@ -1077,6 +1301,8 @@ const AgentBehaviourTab: Component = () => {
         return <WorkflowsTab />
       case "skills":
         return renderSkillsSubtab()
+      case "plugins":
+        return renderPluginsSubtab()
       default:
         return null
     }

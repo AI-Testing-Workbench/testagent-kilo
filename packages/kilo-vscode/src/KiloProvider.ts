@@ -3,8 +3,9 @@ import * as path from "path"
 import * as fs from "fs"
 import * as os from "os"
 import * as vscode from "vscode"
+import { fileURLToPath } from "url"
 import { buildPreviewPath, getPreviewCommand, getPreviewDir, parseImage, trimEntries } from "./image-preview"
-import { isAbsolutePath, isManagedSkillLocation } from "./path-utils"
+import { isAbsolutePath, isManagedPluginLocation, isManagedSkillLocation } from "./path-utils"
 import type {
   KiloClient,
   Session,
@@ -960,6 +961,11 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
         case "removeSkill":
           this.removeSkill(message.location).catch((e: unknown) =>
             console.error("[TestAgent] removeSkill failed:", e),
+          )
+          break
+        case "removePlugin":
+          this.removePlugin(message.location).catch((e: unknown) =>
+            console.error("[TestAgent] removePlugin failed:", e),
           )
           break
         case "removeMode":
@@ -2244,6 +2250,53 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
       })
     } catch (error) {
       console.error("[TestAgent] Failed to remove skill:", error)
+      await refresh()
+      return false
+    }
+
+    await refresh()
+    return true
+  }
+
+  private async removePlugin(location: string): Promise<boolean> {
+    if (!this.client) return false
+
+    const refresh = async () => {
+      this.cachedConfigMessage = null
+      this.cachedSkillsMessage = null
+      this.clearCommandsCache()
+      await Promise.all([
+        this.fetchAndSendConfig(),
+        this.fetchAndSendSkills(),
+        this.fetchAndSendCommands(),
+        this.fetchAndSendAgents(),
+        this.fetchAndSendMcpStatus(),
+      ])
+    }
+
+    try {
+      const dir = this.getWorkspaceDirectory()
+      const file = path.resolve(location.startsWith("file://") ? fileURLToPath(location) : location)
+
+      if (!isManagedPluginLocation(file)) {
+        console.error("[TestAgent] Refusing to remove plugin outside managed directories:", location)
+        await refresh()
+        return false
+      }
+
+      const stat = await fs.promises.stat(file)
+      if (!stat.isFile()) {
+        console.error("[TestAgent] Plugin location is not a file:", location)
+        await refresh()
+        return false
+      }
+
+      await fs.promises.rm(file, { force: true })
+      await this.client.instance.dispose({ directory: dir }).catch((error: unknown) => {
+        console.warn("[TestAgent] instance.dispose after plugin removal failed:", error)
+      })
+    } catch (error) {
+      console.error("[TestAgent] Failed to remove plugin:", error)
       await refresh()
       return false
     }

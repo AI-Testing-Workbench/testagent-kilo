@@ -57,3 +57,23 @@ export function isManagedSkillLocation(location: string): boolean {
     return false
   })
 }
+
+export function isManagedPluginLocation(location: string): boolean {
+  if (!location) return false
+
+  const style = pathStyle(location)
+  const file = style.resolve(location)
+  const ext = style.extname(file).toLowerCase()
+  if (ext !== ".ts" && ext !== ".js") return false
+
+  const dir = style.dirname(file)
+  const key = style.basename(style.dirname(dir)).toLowerCase()
+  const parent = style.basename(dir).toLowerCase()
+  if ((key === ".opencode" || key === ".testagent") && (parent === "plugin" || parent === "plugins")) return true
+
+  const parts = file.split(/[\\/]+/).filter(Boolean)
+  if ((key === "opencode" || key === "testagent") && (parent === "plugin" || parent === "plugins")) {
+    return parts.some((item) => item.toLowerCase() === ".config")
+  }
+  return false
+}
