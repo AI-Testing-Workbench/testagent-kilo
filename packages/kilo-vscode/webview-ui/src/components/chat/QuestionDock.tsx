@@ -483,9 +483,10 @@ export const QuestionDock: Component<{ request: QuestionRequest }> = (props) => 
 
           {/* Footer row — inside the same box */}
           <div data-slot="question-dock-footer">
-            <Button variant="ghost" size="small" onClick={reject} disabled={store.sending}>
+            {/* testagent_change 注释掉忽略 */}
+            {/* <Button variant="ghost" size="small" onClick={reject} disabled={store.sending}>
               {language.t("ui.common.dismiss")}
-            </Button>
+            </Button> */}
             <div data-slot="question-footer-actions">
               <Show when={store.tab > 0}>
                 <Button variant="secondary" size="small" onClick={back} disabled={store.sending}>
