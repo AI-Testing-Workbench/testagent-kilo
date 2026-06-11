@@ -215,6 +215,7 @@ interface SessionContextValue {
     modelID?: string,
     files?: FileAttachment[],
     draftID?: string,
+    goal?: string,
   ) => void
   continueTask: () => void  // testagent_change - 添加继续任务方法
   abort: (sessionID?: string) => void
@@ -1743,6 +1744,7 @@ export const SessionProvider: ParentComponent = (props) => {
     modelID?: string,
     files?: FileAttachment[],
     draftID?: string,
+    goal?: string,
   ) {
     if (!server.isConnected()) {
       console.warn("[testagent] Cannot send command: not connected")
@@ -1765,6 +1767,7 @@ export const SessionProvider: ParentComponent = (props) => {
         files,
         command,
         commandArgs: args,
+        goal,
       })
       return
     }
@@ -1785,6 +1788,7 @@ export const SessionProvider: ParentComponent = (props) => {
       type: "sendCommand",
       command,
       arguments: args,
+      goal,
       messageID,
       sessionID: sid,
       draftID,

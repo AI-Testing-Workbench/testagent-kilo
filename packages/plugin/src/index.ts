@@ -266,7 +266,7 @@ export interface Hooks {
   ) => Promise<void>
   "permission.ask"?: (input: Permission, output: { status: "ask" | "deny" | "allow" }) => Promise<void>
   "command.execute.before"?: (
-    input: { command: string; sessionID: string; arguments: string },
+    input: { command: string; sessionID: string; arguments: string; goal?: string },
     output: { parts: Part[] },
   ) => Promise<void>
   "tool.execute.before"?: (

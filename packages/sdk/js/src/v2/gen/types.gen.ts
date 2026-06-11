@@ -6091,6 +6091,7 @@ export type SessionCommandData = {
     model?: string
     arguments: string
     command: string
+    goal?: string
     variant?: string
     parts?: Array<{
       id?: string
