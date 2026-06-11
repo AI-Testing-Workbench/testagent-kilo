@@ -3054,51 +3054,6 @@ export class Permission extends HeyApiClient {
   }
 
   /**
-   * Save always-allow/deny permission rules
-   *
-   * Save approved/denied always-rules for a pending permission request.
-   */
-  public saveAlwaysRules<ThrowOnError extends boolean = false>(
-    parameters: {
-      requestID: string
-      directory?: string
-      workspace?: string
-      approvedAlways?: Array<string>
-      deniedAlways?: Array<string>
-    },
-    options?: Options<never, ThrowOnError>,
-  ) {
-    const params = buildClientParams(
-      [parameters],
-      [
-        {
-          args: [
-            { in: "path", key: "requestID" },
-            { in: "query", key: "directory" },
-            { in: "query", key: "workspace" },
-            { in: "body", key: "approvedAlways" },
-            { in: "body", key: "deniedAlways" },
-          ],
-        },
-      ],
-    )
-    return (options?.client ?? this.client).post<
-      PermissionSaveAlwaysRulesResponses,
-      PermissionSaveAlwaysRulesErrors,
-      ThrowOnError
-    >({
-      url: "/permission/{requestID}/always-rules",
-      ...options,
-      ...params,
-      headers: {
-        "Content-Type": "application/json",
-        ...options?.headers,
-        ...params.headers,
-      },
-    })
-  }
-
-  /**
    * Respond to permission
    *
    * Approve or deny a permission request from the AI assistant.
