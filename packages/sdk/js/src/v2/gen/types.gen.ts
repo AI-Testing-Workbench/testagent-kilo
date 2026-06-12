@@ -492,6 +492,7 @@ export type SubtaskPart = {
     modelID: string
   }
   command?: string
+  system?: string
 }
 
 export type ReasoningPart = {
@@ -1731,6 +1732,8 @@ export type SubtaskPartInput = {
     modelID: string
   }
   command?: string
+  system?: string
+  task_id?: string
 }
 
 export type V2SessionsResponse = {

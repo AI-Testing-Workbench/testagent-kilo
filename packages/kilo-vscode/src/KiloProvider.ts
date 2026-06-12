@@ -12,6 +12,7 @@ import type {
   Event,
   TextPartInput,
   FilePartInput,
+  SubtaskPartInput,
   Config,
 } from "@kilocode/sdk/v2/client"
 import { type KiloConnectionService, type KilocodeNotification, ServerStartupError } from "./services/cli-backend"
@@ -306,6 +307,10 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
   private unsubscribeMigrationComplete: (() => void) | null = null // legacy-migration
   private unsubscribeClearPendingPrompts: (() => void) | null = null
   private unsubscribeAgentsChange: (() => void) | null = null // testagent_change
+  /** 跟踪待完成的 sdt-run finalize 信息 */
+  private pendingFinalize = new Map<string, { stageId: string; commandType: 'run' | 'next'; executionTime: string; cwd: string; env: Record<string, string | undefined> }>()
+  /** 跟踪待恢复的子 agent 信息（task_id 机制） */
+  private pendingResume = new Map<string, { taskId: string; stageId: string; commandType: 'run' | 'next'; cwd: string; env: Record<string, string | undefined> }>()
   private unsubscribeDirectoryProvider: (() => void) | null = null
   private initConnectionPromise: Promise<void> | null = null
   private webviewMessageDisposable: vscode.Disposable | null = null
@@ -3004,18 +3009,97 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
       return
     }
 
+    const env = {
+      OPENCODE_SERVER_URL: serverConfig.baseUrl,
+      OPENCODE_SERVER_PASSWORD: serverConfig.password,
+      OPENCODE_SESSION_ID: resolved.sid,
+      OPENCODE_PROVIDER_ID: providerID || "",
+      OPENCODE_MODEL_ID: modelID || "",
+      SDT_USER_TEXT: text,
+    }
+
+    // 对于 run/next 命令，使用核心原生 subagent 机制（SubtaskPartInput）
+    if (cmd === 'run' || cmd === 'next') {
+      try {
+        // run 命令需要 stage_id，next 命令从记忆文件获取
+        if (cmd === 'run' && !args[0]) {
+          void vscode.window.showErrorMessage("TestAgent: sdt-run 需要指定 stage_id")
+          return
+        }
+
+        // Step 1: 调用 testflow prepare 获取 prompt 数据
+        console.log('[TestAgent] sdt-run: calling prepare for', cmd, 'args:', args)
+        const prepareResult = await this.sdtRunner.runPrepare({
+          commandType: cmd,
+          stageId: cmd === 'run' ? args[0] : undefined,
+          args: cmd === 'run' ? args.slice(1) : args,
+          cwd: resolved.dir,
+          env,
+        })
+
+        // Step 2: 发送 SubtaskPartInput 到主会话
+        // 核心 handleSubtask 会自动创建子会话、执行 AI、收集结果、注入摘要消息
+        // 模型优先级：agent config > 当前会话模型
+
+        // 清除旧的 pendingResume（新任务会覆盖旧的子 agent）
+        this.pendingResume.delete(resolved.sid)
+        console.log('[TestAgent] sdt-run: cleared pendingResume for session', resolved.sid)
+
+        const model = providerID && modelID ? { providerID, modelID } : undefined
+        console.log('model:'+model?.modelID);
+        
+        const subtaskPart: SubtaskPartInput = {
+          type: 'subtask',
+          prompt: prepareResult.prompt,
+          description: prepareResult.description,
+          agent: prepareResult.agent,
+          model: providerID && modelID ? { providerID, modelID } : undefined,
+          command: `sdt-${cmd}`,
+          system: prepareResult.systemPrompt,
+        }
+
+        console.log('[TestAgent] sdt-run: sending SubtaskPartInput to session', resolved.sid)
+        console.log('[TestAgent] sdt-run: subtaskPart.system length:', subtaskPart.system?.length ?? 0)
+        console.log('[TestAgent] sdt-run: subtaskPart.system preview:', subtaskPart.system)
+
+        // 存储待完成的 finalize 信息
+        const finalizeKey = resolved.sid
+        this.pendingFinalize.set(finalizeKey, {
+          stageId: prepareResult.stageId,
+          commandType: cmd as 'run' | 'next',
+          executionTime: prepareResult.executionTime,
+          cwd: resolved.dir,
+          env,
+        })
+
+        await runWithMessageConfirmation(this.confirmations, messageID, " Subtask request", () =>
+          this.withRetry(
+            () =>
+              this.client!.session.promptAsync({
+                sessionID: resolved.sid,
+                directory: resolved.dir,
+                parts: [subtaskPart],
+                model: providerID && modelID ? { providerID, modelID } : undefined,
+                system: prepareResult.systemPrompt,
+              }),
+            resolved.sid,
+            messageID,
+          ),
+        )
+        console.log('[TestAgent] sdt-run: SubtaskPartInput sent successfully')
+      } catch (err) {
+        console.error('[TestAgent] sdt-run failed:', err)
+        void vscode.window.showErrorMessage(`TestAgent: ${(err as Error).message}`)
+      }
+      return
+    }
+
+    // 其他命令（init, validate, switch, list）保持原有 CLI 子进程方式
     this.sdtRunner.run({
       cmd,
       args,
       cwd: resolved.dir,
-      env: {
-        OPENCODE_SERVER_URL: serverConfig.baseUrl,
-        OPENCODE_SERVER_PASSWORD: serverConfig.password,
-        OPENCODE_SESSION_ID: resolved.sid,
-        OPENCODE_PROVIDER_ID: providerID || "",
-        OPENCODE_MODEL_ID: modelID || "",
-        SDT_USER_TEXT: text,
-      },
+      env,
       sessionID: resolved.sid,
       userText: text,
       userMessageID: messageID,
@@ -3091,6 +3175,40 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
     let resolved: { sid: string; dir: string } | undefined
     try {
       resolved = await this.resolveSession(sessionID, draftID)
+
+      // testagent_change start - check for pending resume (task_id mechanism)
+      if (resolved) {
+        const pendingResume = this.pendingResume.get(resolved.sid)
+        if (pendingResume) {
+          console.log(`[TestAgent] Resuming subagent with task_id: ${pendingResume.taskId}`)
+          this.pendingResume.delete(resolved.sid)
+
+          // 创建 SubtaskPartInput 来恢复子 agent
+          const subtaskPart: SubtaskPartInput = {
+            type: 'subtask',
+            prompt: text,
+            description: `Resume: ${text.substring(0, 30)}`,
+            agent: 'general',
+            command: `sdt-${pendingResume.commandType}`,
+            task_id: pendingResume.taskId,
+          }
+
+          await runWithMessageConfirmation(this.confirmations, messageID, " Resume subagent request", () =>
+            this.withRetry(
+              () =>
+                this.client!.session.promptAsync({
+                  sessionID: resolved!.sid,
+                  directory: resolved!.dir,
+                  parts: [subtaskPart],
+                }),
+              resolved!.sid,
+              messageID,
+            ),
+          )
+          return
+        }
+      }
+      // testagent_change end
 
       const parts: Array<TextPartInput | FilePartInput> = []
       if (files) {
@@ -4171,13 +4289,48 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
         type?: string
         tool?: string
         metadata?: { sessionId?: string }
-        state?: { metadata?: { sessionId?: string } }
+        state?: { metadata?: { sessionId?: string }; status?: string; output?: string; error?: string }
         sessionID?: string
       }
       const childId = childID(part)
       if (childId && !this.trackedSessionIds.has(childId)) {
         console.log("[TestAgent]  🔗 Auto-adopting child session from task tool", { childId })
         void this.handleSyncSession(childId, part.sessionID ?? sessionID)
+      }
+
+      // 检测 task tool part 完成/失败，触发 sdt-run finalize
+      if (part.type === "tool" && part.tool === "task" && (part.state?.status === "completed" || part.state?.status === "error")) {
+        const partSessionId = part.sessionID || sessionID
+        const pending = this.pendingFinalize.get(partSessionId)
+        if (pending) {
+          this.pendingFinalize.delete(partSessionId)
+          const isSuccess = part.state.status === "completed"
+
+          // 保存 task_id 以便后续 resume（仅在成功时）
+          if (isSuccess && part.state?.metadata?.sessionId) {
+            console.log(`[TestAgent] sdt-run: saving task_id ${part.state.metadata.sessionId} for resume`)
+            this.pendingResume.set(partSessionId, {
+              taskId: part.state.metadata.sessionId,
+              stageId: pending.stageId,
+              commandType: pending.commandType,
+              cwd: pending.cwd,
+              env: pending.env,
+            })
+          }
+
+          console.log(`[TestAgent] sdt-run: task tool ${part.state.status}, calling finalize for stage`, pending.stageId)
+          void this.sdtRunner.runFinalize({
+            stageId: pending.stageId,
+            commandType: pending.commandType,
+            success: isSuccess,
+            error: isSuccess ? undefined : (part.state.error || "AI 执行失败"),
+            executionTime: pending.executionTime,
+            cwd: pending.cwd,
+            env: pending.env,
+          }).catch((err) => {
+            console.error("[TestAgent] sdt-run: finalize failed:", err)
+          })
+        }
       }
     }
 

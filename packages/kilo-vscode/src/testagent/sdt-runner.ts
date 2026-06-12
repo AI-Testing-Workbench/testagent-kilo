@@ -3,6 +3,8 @@ import { spawn } from "../util/process"
 import type { ChildProcess } from "child_process"
 import * as readline from "readline"
 import * as path from "path"
+import * as os from "os"
+import * as fs from "fs"
 import { TestflowMessageBridge } from "./testflow-bridge"
 
 // Strip ANSI escape codes (colors, cursor moves, etc.) from terminal output
@@ -113,6 +115,132 @@ export class SdtRunner {
     }
     this.bridge.onDone(1, "Aborted by user")
     this.cleanup()
+  }
+
+  /**
+   * 调用 testflow prepare 命令，获取阶段执行的 prompt 数据。
+   * 结果通过临时文件传递，避免 stdout 混杂其他输出。
+   */
+  async runPrepare(opts: {
+    commandType: 'run' | 'next'
+    stageId?: string
+    args: string[]
+    cwd: string
+    env: Record<string, string | undefined>
+  }): Promise<{
+    prompt: string
+    systemPrompt: string
+    agent: string
+    model?: { providerID: string; modelID: string }
+    description: string
+    stageId: string
+    taskname: string
+    skill: string
+    executionTime: string
+  }> {
+    const extDir = path.resolve(__dirname, '..')
+    const testflowBin = path.join(extDir, 'bin', process.platform === 'win32' ? 'testflow.exe' : 'testflow')
+    const testflowResDir = path.join(extDir, 'bin', 'testflow-res')
+
+    // 生成临时文件路径用于传递结果
+    const tmpFile = path.join(os.tmpdir(), `testflow-prepare-${Date.now()}-${Math.random().toString(36).slice(2)}.json`)
+
+    // 构建 CLI 参数：prepare [stage_id] --command-type=run|next --output=<tmpFile> [其他参数]
+    const cliArgs = ['prepare']
+    if (opts.stageId) cliArgs.push(opts.stageId)
+    cliArgs.push(`--command-type=${opts.commandType}`)
+    cliArgs.push(`--output=${tmpFile}`)
+    cliArgs.push(...opts.args)
+
+    return new Promise((resolve, reject) => {
+      const proc = spawn(testflowBin, cliArgs, {
+        cwd: opts.cwd,
+        env: { ...process.env, ...opts.env, KILO_INTEGRATION: '1', _TESTFLOW_RESOURCES_DIR: testflowResDir },
+        stdio: ['pipe', 'pipe', 'pipe'],
+      })
+
+      let stderr = ''
+
+      proc.stdout!.on('data', () => { /* 忽略 stdout */ })
+      proc.stderr!.on('data', (chunk: Buffer) => { stderr += chunk.toString() })
+
+      proc.on('close', (code) => {
+        if (code !== 0) {
+          console.error('[TestAgent] testflow prepare failed:', stderr)
+          reject(new Error(`testflow prepare exited with code ${code}: ${stderr.trim()}`))
+          return
+        }
+
+        // 从临时文件读取结果
+        try {
+          const content = fs.readFileSync(tmpFile, 'utf-8')
+          const result = JSON.parse(content)
+          const { type: _t, ...data } = result
+          void _t
+          resolve(data)
+        } catch (e) {
+          reject(new Error(`Failed to read prepare result from ${tmpFile}: ${(e as Error).message}`))
+        } finally {
+          // 清理临时文件
+          try { fs.unlinkSync(tmpFile) } catch { /* 忽略 */ }
+        }
+      })
+
+      proc.on('error', (err) => {
+        reject(new Error(`Failed to spawn testflow prepare: ${err.message}`))
+      })
+    })
+  }
+
+  /**
+   * 调用 testflow finalize 命令，执行阶段后置处理。
+   */
+  async runFinalize(opts: {
+    stageId: string
+    commandType: 'run' | 'next'
+    success: boolean
+    error?: string
+    executionTime: string
+    cwd: string
+    env: Record<string, string | undefined>
+  }): Promise<void> {
+    const extDir = path.resolve(__dirname, '..')
+    const testflowBin = path.join(extDir, 'bin', process.platform === 'win32' ? 'testflow.exe' : 'testflow')
+    const testflowResDir = path.join(extDir, 'bin', 'testflow-res')
+
+    const cliArgs = [
+      'finalize',
+      opts.stageId,
+      `--command-type=${opts.commandType}`,
+      opts.success ? '--success' : `--error=${opts.error || '未知错误'}`,
+      `--execution-time=${opts.executionTime}`,
+    ]
+
+    return new Promise((resolve, reject) => {
+      const proc = spawn(testflowBin, cliArgs, {
+        cwd: opts.cwd,
+        env: { ...process.env, ...opts.env, KILO_INTEGRATION: '1', _TESTFLOW_RESOURCES_DIR: testflowResDir },
+        stdio: ['pipe', 'pipe', 'pipe'],
+      })
+
+      let stderr = ''
+      proc.stderr!.on('data', (chunk: Buffer) => { stderr += chunk.toString() })
+      proc.stdout!.on('data', () => { /* 忽略 stdout */ })
+
+      proc.on('close', (code) => {
+        if (code !== 0) {
+          console.error('[TestAgent] testflow finalize failed:', stderr)
+          reject(new Error(`testflow finalize exited with code ${code}: ${stderr.trim()}`))
+          return
+        }
+        console.log('[TestAgent] testflow finalize completed for stage', opts.stageId)
+        resolve()
+      })
+
+      proc.on('error', (err) => {
+        reject(new Error(`Failed to spawn testflow finalize: ${err.message}`))
+      })
+    })
   }
 
   private dispatch(event: JsonLine): void {
