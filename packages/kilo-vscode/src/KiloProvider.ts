@@ -211,7 +211,8 @@ const memorySettings = (input: unknown): MemorySettingsConfig => {
           : memoryDefaults.memory.autoExtractEnable,
     },
     recall: {
-      recallEnable: typeof cfg.recall?.recallEnable === "boolean" ? cfg.recall.recallEnable : memoryDefaults.recall.recallEnable,
+      recallEnable:
+        typeof cfg.recall?.recallEnable === "boolean" ? cfg.recall.recallEnable : memoryDefaults.recall.recallEnable,
       llmRecall: typeof cfg.recall?.llmRecall === "boolean" ? cfg.recall.llmRecall : memoryDefaults.recall.llmRecall,
       providerID: typeof cfg.recall?.providerID === "string" ? cfg.recall.providerID : memoryDefaults.recall.providerID,
       modelID: typeof cfg.recall?.modelID === "string" ? cfg.recall.modelID : memoryDefaults.recall.modelID,
@@ -959,9 +960,7 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
           this.fetchAndSendCommands().catch((e) => console.error("[TestAgent] fetchAndSendCommands failed:", e))
           break
         case "removeSkill":
-          this.removeSkill(message.location).catch((e: unknown) =>
-            console.error("[TestAgent] removeSkill failed:", e),
-          )
+          this.removeSkill(message.location).catch((e: unknown) => console.error("[TestAgent] removeSkill failed:", e))
           break
         case "removePlugin":
           this.removePlugin(message.location).catch((e: unknown) =>
@@ -1006,7 +1005,9 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
           this.sendMemorySettings().catch((e) => console.error("[TestAgent] sendMemorySettings failed:", e))
           break
         case "updateMemorySettings":
-          this.saveMemorySettings(message.settings).catch((e) => console.error("[TestAgent] saveMemorySettings failed:", e))
+          this.saveMemorySettings(message.settings).catch((e) =>
+            console.error("[TestAgent] saveMemorySettings failed:", e),
+          )
           break
         case "checkGitInstalled": {
           const installed = await this.checkGitInstalled()
@@ -2514,11 +2515,13 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
   }
 
   private async refreshGlobalConfigCache(): Promise<void> {
-    const raw = (this.client as unknown as {
-      client?: {
-        patch: (input: { url: string; body: Record<string, unknown> }) => Promise<{ error?: unknown }>
-      }
-    } | null)?.client
+    const raw = (
+      this.client as unknown as {
+        client?: {
+          patch: (input: { url: string; body: Record<string, unknown> }) => Promise<{ error?: unknown }>
+        }
+      } | null
+    )?.client
 
     if (!raw || typeof raw.patch !== "function") {
       throw new Error("SDK raw client patch method is not available")
@@ -3056,7 +3059,13 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
   }
 
   // testagent_change start - testflow command handler
-  private async handleSdtCommand(text: string, sessionID?: string, providerID?: string, modelID?: string, messageID?: string): Promise<void> {
+  private async handleSdtCommand(
+    text: string,
+    sessionID?: string,
+    providerID?: string,
+    modelID?: string,
+    messageID?: string,
+  ): Promise<void> {
     const parts = text.trim().split(/\s+/)
     const cmd = parts[0].slice(5) // strip "/sdt-"
     const args = parts.slice(1)
@@ -3319,7 +3328,12 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
   }
 
   // testagent_change start - 修改继续任务方法调用 resume API
-  private async handleContinueTask(sessionID?: string, messageID?: string, providerID?: string, modelID?: string): Promise<void> {
+  private async handleContinueTask(
+    sessionID?: string,
+    messageID?: string,
+    providerID?: string,
+    modelID?: string,
+  ): Promise<void> {
     console.log("[TestAgent] 🔄 handleContinueTask called:", { sessionID, messageID, providerID, modelID })
 
     if (!this.client) {
@@ -3339,7 +3353,7 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
 
     try {
       const dir = this.getWorkspaceDirectory(sessionID)
-      
+
       this.connectionService.recordMessageSessionId(messageID, sessionID)
 
       console.log("[TestAgent] 📤 Calling resume API:", { sessionID, messageID, dir, providerID, modelID })
@@ -3738,7 +3752,12 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
       const cfg = memorySettings(input)
       await fs.promises.mkdir(path.dirname(file), { recursive: true })
       await fs.promises.writeFile(file, `${JSON.stringify(cfg, null, 2)}\n`, "utf-8")
-      this.postMessage({ type: "memorySettingsSaved", settings: cfg, path: file, reloaded: await this.reloadMemoryPlugin() })
+      this.postMessage({
+        type: "memorySettingsSaved",
+        settings: cfg,
+        path: file,
+        reloaded: await this.reloadMemoryPlugin(),
+      })
     } catch (err) {
       this.postMessage({ type: "memorySettingsFailed", message: err instanceof Error ? err.message : String(err) })
     }
@@ -3780,19 +3799,8 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
     prevStatus: SessionStatus["type"] | undefined,
     newStatus: SessionStatus["type"],
   ): void {
-    console.log("[TestAgent] 🔔 Notification check:", {
-      sessionID,
-      prevStatus,
-      newStatus,
-      isTracked: this.trackedSessionIds.has(sessionID),
-      isChild: this.syncedChildSessions.has(sessionID),
-      isVisible: this.isWebviewVisible(),
-      trackedSessions: Array.from(this.trackedSessionIds),
-    })
-
     // Only notify on busy → idle transition
     if (prevStatus !== "busy" || newStatus !== "idle") {
-      console.log("[TestAgent] ❌ Not a busy→idle transition, skipping")
       return
     }
 

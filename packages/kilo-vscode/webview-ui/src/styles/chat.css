@@ -2983,7 +2983,7 @@ body.vscode-light
   [data-slot="question-dock-footer"] {
     display: flex;
     align-items: center;
-    justify-content: space-between;
+    justify-content: end;
     padding: 6px 10px 10px;
   }
 
