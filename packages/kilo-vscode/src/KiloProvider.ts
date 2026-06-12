@@ -2069,7 +2069,7 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
     await this.fetchAndSendSkills()
     await this.fetchAndSendCommands()
     // testagent_change end
-
+     vscode.window.showInformationMessage("skills已重新加载")
     console.log("[TestAgent] Skills and commands reloaded successfully")
   }
 

@@ -1027,7 +1027,7 @@ const AgentBehaviourTab: Component = () => {
       </Card>
 
       {/* Skill URLs */}
-      <h4 style={{ "margin-top": "0", "margin-bottom": "8px" }}>{language.t("settings.agentBehaviour.skillUrls")}</h4>
+      {/* <h4 style={{ "margin-top": "0", "margin-bottom": "8px" }}>{language.t("settings.agentBehaviour.skillUrls")}</h4>
       <Card>
         <div
           style={{
@@ -1075,7 +1075,7 @@ const AgentBehaviourTab: Component = () => {
             </div>
           )}
         </For>
-      </Card>
+      </Card> */}
     </div>
   )
   // plugin tab
