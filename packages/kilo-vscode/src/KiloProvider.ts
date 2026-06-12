@@ -308,7 +308,7 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
   private unsubscribeClearPendingPrompts: (() => void) | null = null
   private unsubscribeAgentsChange: (() => void) | null = null // testagent_change
   /** 跟踪待完成的 sdt-run finalize 信息 */
-  private pendingFinalize = new Map<string, { stageId: string; commandType: 'run' | 'next'; executionTime: string; cwd: string; env: Record<string, string | undefined> }>()
+  private pendingFinalize = new Map<string, { stageId: string; commandType: 'run' | 'next'; executionTime: string; cwd: string; env: Record<string, string | undefined>; agentConfigPath: string }>()
   /** 跟踪待恢复的子 agent 信息（task_id 机制） */
   private pendingResume = new Map<string, { taskId: string; stageId: string; commandType: 'run' | 'next'; cwd: string; env: Record<string, string | undefined> }>()
   private unsubscribeDirectoryProvider: (() => void) | null = null
@@ -3070,6 +3070,7 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
           executionTime: prepareResult.executionTime,
           cwd: resolved.dir,
           env,
+          agentConfigPath: prepareResult.agentConfigPath,
         })
 
         await runWithMessageConfirmation(this.confirmations, messageID, " Subtask request", () =>
@@ -4327,6 +4328,7 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
             executionTime: pending.executionTime,
             cwd: pending.cwd,
             env: pending.env,
+            agentConfigPath: pending.agentConfigPath,
           }).catch((err) => {
             console.error("[TestAgent] sdt-run: finalize failed:", err)
           })
