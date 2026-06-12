@@ -308,7 +308,7 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
   private unsubscribeClearPendingPrompts: (() => void) | null = null
   private unsubscribeAgentsChange: (() => void) | null = null // testagent_change
   /** 跟踪待完成的 sdt-run finalize 信息 */
-  private pendingFinalize = new Map<string, { stageId: string; commandType: 'run' | 'next'; executionTime: string; cwd: string; env: Record<string, string | undefined>; agentConfigPath: string }>()
+  private pendingFinalize = new Map<string, { stageId: string; commandType: 'run' | 'next'; executionTime: string; cwd: string; env: Record<string, string | undefined> }>()
   /** 跟踪待恢复的子 agent 信息（task_id 机制） */
   private pendingResume = new Map<string, { taskId: string; stageId: string; commandType: 'run' | 'next'; cwd: string; env: Record<string, string | undefined> }>()
   private unsubscribeDirectoryProvider: (() => void) | null = null
@@ -3055,12 +3055,9 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
           agent: prepareResult.agent,
           model: providerID && modelID ? { providerID, modelID } : undefined,
           command: `sdt-${cmd}`,
-          system: prepareResult.systemPrompt,
         }
 
         console.log('[TestAgent] sdt-run: sending SubtaskPartInput to session', resolved.sid)
-        console.log('[TestAgent] sdt-run: subtaskPart.system length:', subtaskPart.system?.length ?? 0)
-        console.log('[TestAgent] sdt-run: subtaskPart.system preview:', subtaskPart.system)
 
         // 存储待完成的 finalize 信息
         const finalizeKey = resolved.sid
@@ -3070,7 +3067,6 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
           executionTime: prepareResult.executionTime,
           cwd: resolved.dir,
           env,
-          agentConfigPath: prepareResult.agentConfigPath,
         })
 
         await runWithMessageConfirmation(this.confirmations, messageID, " Subtask request", () =>
@@ -3081,7 +3077,6 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
                 directory: resolved.dir,
                 parts: [subtaskPart],
                 model: providerID && modelID ? { providerID, modelID } : undefined,
-                system: prepareResult.systemPrompt,
               }),
             resolved.sid,
             messageID,
@@ -4328,7 +4323,6 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
             executionTime: pending.executionTime,
             cwd: pending.cwd,
             env: pending.env,
-            agentConfigPath: pending.agentConfigPath,
           }).catch((err) => {
             console.error("[TestAgent] sdt-run: finalize failed:", err)
           })

@@ -129,15 +129,12 @@ export class SdtRunner {
     env: Record<string, string | undefined>
   }): Promise<{
     prompt: string
-    systemPrompt: string
     agent: string
-    model?: { providerID: string; modelID: string }
     description: string
     stageId: string
     taskname: string
     skill: string
     executionTime: string
-    agentConfigPath: string
   }> {
     const extDir = path.resolve(__dirname, '..')
     const testflowBin = path.join(extDir, 'bin', process.platform === 'win32' ? 'testflow.exe' : 'testflow')
@@ -204,7 +201,6 @@ export class SdtRunner {
     executionTime: string
     cwd: string
     env: Record<string, string | undefined>
-    agentConfigPath: string
   }): Promise<void> {
     const extDir = path.resolve(__dirname, '..')
     const testflowBin = path.join(extDir, 'bin', process.platform === 'win32' ? 'testflow.exe' : 'testflow')
@@ -215,7 +211,6 @@ export class SdtRunner {
       opts.stageId,
       `--command-type=${opts.commandType}`,
       opts.success ? '--success' : `--error=${opts.error || '未知错误'}`,
-      `--agent-config-path=${opts.agentConfigPath}`,
       `--execution-time=${opts.executionTime}`,
     ]
 
