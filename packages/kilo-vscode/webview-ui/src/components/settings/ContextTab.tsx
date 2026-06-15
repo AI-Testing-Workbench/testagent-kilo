@@ -42,7 +42,7 @@ const ContextTab: Component = () => {
           description={language.t("settings.context.autoCompaction.description")}
         >
           <Switch
-            checked={config().compaction?.auto ?? false}
+            checked={config().compaction?.auto ?? true}
             onChange={(checked) => updateConfig({ compaction: { ...config().compaction, auto: checked } })}
             hideLabel
           >
