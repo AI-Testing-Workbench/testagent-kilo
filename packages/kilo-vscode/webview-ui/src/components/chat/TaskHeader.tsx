@@ -113,17 +113,21 @@ export const TaskHeader: Component<TaskHeaderProps> = (props) => {
     return { tokens, pct }
   })
 
-  // Token breakdown from the last assistant message — only return if at least one value is > 0
+  // Token breakdown from all assistant messages in the session
   const tokens = createMemo(() => {
     const msgs = session.messages()
+    let total = { input: 0, output: 0, reasoning: 0, cache: { read: 0, write: 0 } }
     for (let i = msgs.length - 1; i >= 0; i--) {
       const m = msgs[i]
       if (m.role !== "assistant" || !m.tokens) continue
-      const tk = m.tokens
-      const has = tk.input > 0 || tk.output > 0 || (tk.cache?.write ?? 0) > 0 || (tk.cache?.read ?? 0) > 0
-      if (has) return tk
+      total.input += m.tokens.input || 0
+      total.output += m.tokens.output || 0
+      total.reasoning += m.tokens.reasoning || 0
+      total.cache.read += m.tokens.cache?.read || 0
+      total.cache.write += m.tokens.cache?.write || 0
     }
-    return undefined
+    const has = total.input > 0 || total.output > 0 || (total.cache?.write ?? 0) > 0 || (total.cache?.read ?? 0) > 0
+    return has ? total : undefined
   })
 
   const fmtNum = (n: number): string => {

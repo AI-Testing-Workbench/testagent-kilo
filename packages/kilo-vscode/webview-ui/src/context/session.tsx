@@ -2214,17 +2214,32 @@ export const SessionProvider: ParentComponent = (props) => {
 
   const contextUsage = createMemo<ContextUsage | undefined>(() => {
     const msgs = messages()
+    let totalInput = 0
+    let totalOutput = 0
+    let totalReasoning = 0
+    let totalCacheRead = 0
+    let totalCacheWrite = 0
+
     for (let i = msgs.length - 1; i >= 0; i--) {
       const m = msgs[i]
       if (m.role !== "assistant" || !m.tokens) continue
-      const usage = calcContextUsage(m.tokens, undefined)
-      if (usage.tokens === 0) continue
-      const sel = selected()
-      const model = sel ? provider.findModel(sel) : undefined
-      const limit = model?.limit?.context ?? model?.contextLength
-      return calcContextUsage(m.tokens, limit)
+      totalInput += m.tokens.input || 0
+      totalOutput += m.tokens.output || 0
+      totalReasoning += m.tokens.reasoning || 0
+      totalCacheRead += m.tokens.cache?.read || 0
+      totalCacheWrite += m.tokens.cache?.write || 0
     }
-    return undefined
+
+    const hasTokens = totalInput + totalOutput + totalReasoning + totalCacheRead + totalCacheWrite > 0
+    if (!hasTokens) return undefined
+
+    const sel = selected()
+    const model = sel ? provider.findModel(sel) : undefined
+    const limit = model?.limit?.context ?? model?.contextLength
+    return calcContextUsage(
+      { input: totalInput, output: totalOutput, reasoning: totalReasoning, cache: { read: totalCacheRead, write: totalCacheWrite } },
+      limit,
+    )
   })
 
   const value: SessionContextValue = {
