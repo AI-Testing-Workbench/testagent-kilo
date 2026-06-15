@@ -144,6 +144,16 @@ describe("ConfigState", () => {
     expect(s.config.snapshot).toBe(false)
   })
 
+  it("keeps null delete sentinels in the draft while removing them from visible config", () => {
+    const s = new ConfigState()
+    s.handleConfigLoaded({ default_agent: "build" })
+
+    s.updateConfig({ default_agent: null })
+
+    expect(s.config.default_agent).toBeUndefined()
+    expect(s.draft.default_agent).toBe(null)
+  })
+
   it("discardConfig restores server state", () => {
     const s = new ConfigState()
     s.handleConfigLoaded({ snapshot: true, username: "alice" })

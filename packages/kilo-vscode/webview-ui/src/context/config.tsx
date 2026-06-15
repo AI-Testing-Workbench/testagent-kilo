@@ -128,10 +128,7 @@ export const ConfigProvider: ParentComponent = (props) => {
 
   function updateConfig(partial: Partial<Config>) {
     // Optimistically update local state with deep merge + null stripping
-    setConfig((prev) => {
-      console.log('最终config===1232131',stripNulls(deepMerge(prev, partial)))
-      return stripNulls(deepMerge(prev, partial))
-    })
+    setConfig((prev) => stripNulls(deepMerge(prev, partial)))
     // Accumulate in draft — will be sent on saveConfig()
     setDraft((prev) => deepMerge(prev as Config, partial))
     setIsDirty(true)

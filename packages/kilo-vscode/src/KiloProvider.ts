@@ -125,6 +125,10 @@ type KiloProviderOptions = {
   slimEditMetadata?: boolean
 }
 
+type ConfigPatch = Partial<Config> & {
+  default_agent?: string | null
+}
+
 type MessageLoadMode = "replace" | "prepend" | "focus" | "reconcile"
 
 type MemorySettingsConfig = {
@@ -2891,7 +2895,7 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
    * Applies a partial config update via the global config endpoint, then pushes
    * the full merged config back to the webview.
    */
-  private async handleUpdateConfig(partial: Partial<Config>): Promise<void> {
+  private async handleUpdateConfig(partial: ConfigPatch): Promise<void> {
     if (!this.client || this.connectionState !== "connected") {
       this.postMessage({ type: "configUpdateFailed", message: "Not connected to CLI backend" })
       return
