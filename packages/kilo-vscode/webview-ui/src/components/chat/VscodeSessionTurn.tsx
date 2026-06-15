@@ -90,66 +90,6 @@ export const VscodeSessionTurn: Component<VscodeSessionTurnProps> = (props) => {
     () => assistantMessages().find((m) => m.error && m.error.name !== "MessageAbortedError")?.error,
   )
 
-  const fmtNum = (n: number): string => {
-    if (n >= 1_000_000) return `${(n / 1_000_000).toFixed(1)}M`
-    if (n >= 1_000) return `${(n / 1_000).toFixed(1)}K`
-    return String(n)
-  }
-
-  // Calculate turn statistics (tokens and duration)
-  const turnStats = createMemo(() => {
-    const msgs = assistantMessages()
-    if (msgs.length === 0) return null
-
-    let totalTokens = 0
-    let inputTokens = 0
-    let outputTokens = 0
-    let reasoningTokens = 0
-    let cacheReadTokens = 0
-    let cacheWriteTokens = 0
-
-    for (const msg of msgs) {
-      if (msg.tokens) {
-        totalTokens += msg.tokens.total || 0
-        inputTokens += msg.tokens.input || 0
-        outputTokens += msg.tokens.output || 0
-        reasoningTokens += msg.tokens.reasoning || 0
-        cacheReadTokens += msg.tokens.cache?.read || 0
-        cacheWriteTokens += msg.tokens.cache?.write || 0
-      }
-    }
-
-    // Calculate duration: from user message creation to last assistant message completion
-    const startTime = props.turn.user.time?.created
-    const lastAssistantMsg = msgs[msgs.length - 1]
-    const endTime = lastAssistantMsg?.time?.completed
-
-    let duration: string | null = null
-    if (startTime && endTime) {
-      const durationMs = endTime - startTime
-      const seconds = Math.floor(durationMs / 1000)
-      const minutes = Math.floor(seconds / 60)
-      const remainingSeconds = seconds % 60
-
-      if (minutes > 0) {
-        duration = `${minutes}分${remainingSeconds}秒`
-      } else {
-        duration = `${seconds}秒`
-      }
-    }
-
-    return {
-      totalTokens,
-      inputTokens,
-      outputTokens,
-      reasoningTokens,
-      cacheReadTokens,
-      cacheWriteTokens,
-      duration,
-      completed: !!endTime,
-    }
-  })
-
   // Diffs from message summary
   const diffs = createMemo(() => {
     const rawDiffs = (message() as unknown as { summary?: { diffs?: unknown[] } } | undefined)?.summary?.diffs
@@ -233,37 +173,6 @@ export const VscodeSessionTurn: Component<VscodeSessionTurnProps> = (props) => {
               <For each={assistantMessages()}>
                 {(msg) => <AssistantMessage message={msg} showAssistantCopyPartID={showAssistantCopyPartID()} />}
               </For>
-              {/* Display turn statistics */}
-              <Show when={turnStats()?.completed}>
-                <div style={{ 
-                  "font-size": "12px", 
-                  "color": "var(--vscode-descriptionForeground)", 
-                  "margin-top": "-8px",
-                  "padding": "4px 8px",
-                  "opacity": "0.8"
-                }}>
-                  <Tooltip placement="top-start" value={(() => {
-                    const stats = turnStats()!
-                    const parts: string[] = []
-                    parts.push(`输入: ${fmtNum(stats.inputTokens)}`)
-                    if (stats.reasoningTokens > 0) {
-                      parts.push(`推理: ${fmtNum(stats.reasoningTokens)}`)
-                    }
-                    if (stats.cacheReadTokens > 0) {
-                      parts.push(`缓存读: ${fmtNum(stats.cacheReadTokens)}`)
-                    }
-                    if (stats.cacheWriteTokens > 0) {
-                      parts.push(`缓存写: ${fmtNum(stats.cacheWriteTokens)}`)
-                    }
-                    parts.push(`输出: ${fmtNum(stats.outputTokens)}`)
-                    return parts.join(" | ")
-                  })()}>
-                    <span style={{"cursor":"pointer"}}>
-                      本轮对话消耗token: {fmtNum(turnStats()!.totalTokens)} {turnStats()!.duration && ` | 耗时: ${turnStats()!.duration}`}
-                    </span>
-                  </Tooltip>
-                </div>
-              </Show>
             </div>
           </Show>
 
