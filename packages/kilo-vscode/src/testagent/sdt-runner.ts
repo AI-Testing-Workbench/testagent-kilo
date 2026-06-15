@@ -195,6 +195,7 @@ export class SdtRunner {
    */
   async runFinalize(opts: {
     stageId: string
+    taskname: string
     commandType: 'run' | 'next'
     success: boolean
     error?: string
@@ -212,6 +213,7 @@ export class SdtRunner {
       `--command-type=${opts.commandType}`,
       opts.success ? '--success' : `--error=${opts.error || '未知错误'}`,
       `--execution-time=${opts.executionTime}`,
+      `--taskname=${opts.taskname}`,
     ]
 
     return new Promise((resolve, reject) => {

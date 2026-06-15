@@ -308,7 +308,7 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
   private unsubscribeClearPendingPrompts: (() => void) | null = null
   private unsubscribeAgentsChange: (() => void) | null = null // testagent_change
   /** 跟踪待完成的 sdt-run finalize 信息 */
-  private pendingFinalize = new Map<string, { stageId: string; commandType: 'run' | 'next'; executionTime: string; cwd: string; env: Record<string, string | undefined> }>()
+  private pendingFinalize = new Map<string, { stageId: string; taskname: string; commandType: 'run' | 'next'; executionTime: string; cwd: string; env: Record<string, string | undefined> }>()
   /** 跟踪待恢复的子 agent 信息（task_id 机制） */
   private pendingResume = new Map<string, { taskId: string; stageId: string; commandType: 'run' | 'next'; cwd: string; env: Record<string, string | undefined> }>()
   private unsubscribeDirectoryProvider: (() => void) | null = null
@@ -3063,6 +3063,7 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
         const finalizeKey = resolved.sid
         this.pendingFinalize.set(finalizeKey, {
           stageId: prepareResult.stageId,
+          taskname: prepareResult.taskname,
           commandType: cmd as 'run' | 'next',
           executionTime: prepareResult.executionTime,
           cwd: resolved.dir,
@@ -4317,6 +4318,7 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
           console.log(`[TestAgent] sdt-run: task tool ${part.state.status}, calling finalize for stage`, pending.stageId)
           void this.sdtRunner.runFinalize({
             stageId: pending.stageId,
+            taskname: pending.taskname,
             commandType: pending.commandType,
             success: isSuccess,
             error: isSuccess ? undefined : (part.state.error || "AI 执行失败"),
