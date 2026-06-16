@@ -20,6 +20,9 @@ function fmt(n: number): string {
   return String(n)
 }
 
+// alias to match TaskHeader naming
+const fmtNum = fmt
+
 export const ContextProgress: Component = () => {
   const session = useSession()
   const provider = useProvider()
@@ -55,7 +58,7 @@ export const ContextProgress: Component = () => {
     <Show when={data()}>
       {(d) => (
         <div class="context-progress">
-          <span class="context-progress-count">已使用token:{fmt(d().used)}</span>
+          <span class="context-progress-count">当前消息消耗：{fmt(d().used)}</span>
           <Tooltip value={tip()} placement="top">
             <div class="context-progress-bar">
               <div
@@ -68,7 +71,7 @@ export const ContextProgress: Component = () => {
               </Show>
             </div>
           </Tooltip>
-          <span class="context-progress-count">上下文context限制:{fmt(d().limit)}</span>
+          <span class="context-progress-count">上下文上限：{fmt(d().limit)}</span>
         </div>
       )}
     </Show>

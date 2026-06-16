@@ -280,7 +280,7 @@ export const TaskHeader: Component<TaskHeaderProps> = (props) => {
           <Show when={tokens()}>
             {(tk) => (
               <div class="task-header-tokens">
-                <span class="task-header-tokens-label">Tokens</span>
+                <span class="task-header-tokens-label" style={{"margin-right":'10px'}}>当前消息Tokens</span>
                 <Show when={tk().input > 0}>
                   <Tooltip value="包含内容：用户的问题/指令、系统提示词（system prompt）、对话历史、上下文信息（如文件内容、代码片段）、工具定义和文档">
                     <span class="task-header-tokens-value">
