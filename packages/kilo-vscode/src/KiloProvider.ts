@@ -3093,6 +3093,7 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
         OPENCODE_PROVIDER_ID: providerID || "",
         OPENCODE_MODEL_ID: modelID || "",
         SDT_USER_TEXT: text,
+        BRIDGE_USER_MSG_ID: messageID || "",
       },
       sessionID: resolved.sid,
       userText: text,

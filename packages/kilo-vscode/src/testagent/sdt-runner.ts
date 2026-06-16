@@ -163,6 +163,9 @@ export class SdtRunner {
           event.part as any,
         )
         break
+      case "asst_msg_id":
+        this.bridge.onAsstMsgID(event.messageID as string)
+        break
       case "new_assistant":
         this.bridge.onNewAssistant()
         break

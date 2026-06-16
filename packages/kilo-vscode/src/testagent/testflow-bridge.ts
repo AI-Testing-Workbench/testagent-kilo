@@ -41,10 +41,10 @@ export class TestflowMessageBridge {
     this.post = opts.post
     this.logPartID = ""
     this.logText = ""
+    this.asstMsgID = ""
 
     const now = Date.now()
     this.userMsgID = opts.userMessageID ?? uid()
-    this.asstMsgID = uid()
 
     // 1. Inject/confirm the user message.
     //    If userMessageID was provided, the webview already has an optimistic entry with this ID.
@@ -70,21 +70,40 @@ export class TestflowMessageBridge {
       },
     })
 
-    // 2. Inject the assistant message shell (no parts yet)
-    this.post({
+    // 2. Don't create the assistant message here — the server will create it
+    //    via SSE when testflow calls client.session.prompt(). The server's
+    //    assistant message ID will be relayed back via 'asst_msg_id' event.
+    //    This avoids duplicate assistant messages in the webview.
+
+    // 3. Mark session as busy
+    this.post({ type: "sessionStatus", sessionID: this.sessionID, status: "busy" })
+  }
+
+  /** Set the assistant message ID from the server's prompt response. */
+  onAsstMsgID(messageID: string): void {
+    this.asstMsgID = messageID
+  }
+
+  /**
+   * Lazily create an assistant message if none exists.
+   * One-shot commands (init/list/switch etc.) don't have a server-created
+   * assistant message, so we need to create one when the first event arrives.
+   * Agent commands receive the server's assistant ID via onAsstMsgID first.
+   */
+  private ensureAsstMsg(): void {
+    if (this.asstMsgID) return
+    this.asstMsgID = uid()
+    this.post?.({
       type: "messageCreated",
       message: {
         id: this.asstMsgID,
         sessionID: this.sessionID,
         role: "assistant",
         parentID: this.userMsgID,
-        createdAt: new Date(now + 1).toISOString(),
-        time: { created: now + 1 },
+        createdAt: new Date().toISOString(),
+        time: { created: Date.now() },
       },
     })
-
-    // 3. Mark session as busy
-    this.post({ type: "sessionStatus", sessionID: this.sessionID, status: "busy" })
   }
 
   onProgress(
@@ -96,6 +115,7 @@ export class TestflowMessageBridge {
     nextHint: string,
     exceptionHint: string | null,
   ): void {
+    this.ensureAsstMsg()
     const partID = uid()
     this.post?.({
       type: "partUpdated",
@@ -117,19 +137,21 @@ export class TestflowMessageBridge {
 
   onNewAssistant(): void {
     const now = Date.now()
-    // Close the current assistant message
-    this.post?.({
-      type: "messageCreated",
-      message: {
-        id: this.asstMsgID,
-        sessionID: this.sessionID,
-        role: "assistant",
-        parentID: this.userMsgID,
-        createdAt: new Date(now).toISOString(),
-        time: { created: now, completed: now },
-        finish: "stop",
-      },
-    })
+    // Close the current assistant message (if any)
+    if (this.asstMsgID) {
+      this.post?.({
+        type: "messageCreated",
+        message: {
+          id: this.asstMsgID,
+          sessionID: this.sessionID,
+          role: "assistant",
+          parentID: this.userMsgID,
+          createdAt: new Date(now).toISOString(),
+          time: { created: now, completed: now },
+          finish: "stop",
+        },
+      })
+    }
 
     // Create a new assistant message shell
     this.asstMsgID = uid()
@@ -150,6 +172,7 @@ export class TestflowMessageBridge {
   }
 
   onResponsePart(sessionID: string, messageID: string, sequence: number, part: any): void {
+    this.ensureAsstMsg()
     // Check if this is a task tool part - trigger child session sync if so
     if (part.type === 'tool' && part.tool === 'task') {
       const childSessionId = part.state?.metadata?.sessionId
@@ -192,6 +215,7 @@ export class TestflowMessageBridge {
    * completed part 渲染成结果卡，渲染细节由 webview 端按 `kind` 分支处理。
    */
   onResult(payload: Record<string, unknown>): void {
+    this.ensureAsstMsg()
     const kind = (payload.kind as string) ?? "unknown"
     const titles: Record<string, string> = {
       init: "初始化 TestFlow 框架",
@@ -223,6 +247,7 @@ export class TestflowMessageBridge {
 
   onDone(exitCode: number, summary?: string): void {
     if (summary) this.appendLog(summary)
+    this.ensureAsstMsg()
 
     const now = Date.now()
     // Close the assistant message with a completed timestamp
@@ -244,6 +269,7 @@ export class TestflowMessageBridge {
 
   private appendLog(text: string): void {
     if (!text.trim()) return
+    this.ensureAsstMsg()
     this.logText = this.logText ? `${this.logText}\n${text}` : text
 
     if (!this.logPartID) {
