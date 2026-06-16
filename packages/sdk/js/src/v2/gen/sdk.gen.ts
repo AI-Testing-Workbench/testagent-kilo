@@ -242,7 +242,7 @@ import type {
 export type Options<TData extends TDataShape = TDataShape, ThrowOnError extends boolean = boolean> = Options2<
   TData,
   ThrowOnError
-> & {
+  > & {
   /**
    * You can provide a client instance returned by `createClient()` instead of
    * individual options. This might be also useful if you want to implement a
@@ -789,7 +789,7 @@ export class Console extends HeyApiClient {
       ExperimentalConsoleGetResponses,
       ExperimentalConsoleGetErrors,
       ThrowOnError
-    >({
+      >({
       url: "/experimental/console",
       ...options,
       ...params,
@@ -823,7 +823,7 @@ export class Console extends HeyApiClient {
       ExperimentalConsoleListOrgsResponses,
       ExperimentalConsoleListOrgsErrors,
       ThrowOnError
-    >({
+      >({
       url: "/experimental/console/orgs",
       ...options,
       ...params,
@@ -1044,7 +1044,7 @@ export class Workspace extends HeyApiClient {
       ExperimentalWorkspaceCreateResponses,
       ExperimentalWorkspaceCreateErrors,
       ThrowOnError
-    >({
+      >({
       url: "/experimental/workspace",
       ...options,
       ...params,
@@ -1145,7 +1145,7 @@ export class Workspace extends HeyApiClient {
       ExperimentalWorkspaceRemoveResponses,
       ExperimentalWorkspaceRemoveErrors,
       ThrowOnError
-    >({
+      >({
       url: "/experimental/workspace/{id}",
       ...options,
       ...params,
@@ -1185,7 +1185,7 @@ export class Workspace extends HeyApiClient {
       ExperimentalWorkspaceWarpResponses,
       ExperimentalWorkspaceWarpErrors,
       ThrowOnError
-    >({
+      >({
       url: "/experimental/workspace/warp",
       ...options,
       ...params,
@@ -2395,7 +2395,7 @@ export class EnhancePrompt extends HeyApiClient {
       EnhancePromptEnhanceResponses,
       EnhancePromptEnhanceErrors,
       ThrowOnError
-    >({
+      >({
       url: "/enhance-prompt",
       ...options,
       ...params,
@@ -3041,7 +3041,52 @@ export class Permission extends HeyApiClient {
       PermissionSaveAlwaysRulesResponses,
       PermissionSaveAlwaysRulesErrors,
       ThrowOnError
-    >({
+      >({
+      url: "/permission/{requestID}/always-rules",
+      ...options,
+      ...params,
+      headers: {
+        "Content-Type": "application/json",
+        ...options?.headers,
+        ...params.headers,
+      },
+    })
+  }
+
+  /**
+   * Save always-allow/deny permission rules
+   *
+   * Save approved/denied always-rules for a pending permission request.
+   */
+  public saveAlwaysRules<ThrowOnError extends boolean = false>(
+    parameters: {
+      requestID: string
+      directory?: string
+      workspace?: string
+      approvedAlways?: Array<string>
+      deniedAlways?: Array<string>
+    },
+    options?: Options<never, ThrowOnError>,
+  ) {
+    const params = buildClientParams(
+      [parameters],
+      [
+        {
+          args: [
+            { in: "path", key: "requestID" },
+            { in: "query", key: "directory" },
+            { in: "query", key: "workspace" },
+            { in: "body", key: "approvedAlways" },
+            { in: "body", key: "deniedAlways" },
+          ],
+        },
+      ],
+    )
+    return (options?.client ?? this.client).post<
+      PermissionSaveAlwaysRulesResponses,
+      PermissionSaveAlwaysRulesErrors,
+      ThrowOnError
+      >({
       url: "/permission/{requestID}/always-rules",
       ...options,
       ...params,
@@ -3133,7 +3178,7 @@ export class Oauth extends HeyApiClient {
       ProviderOauthAuthorizeResponses,
       ProviderOauthAuthorizeErrors,
       ThrowOnError
-    >({
+      >({
       url: "/provider/{providerID}/oauth/authorize",
       ...options,
       ...params,
@@ -3178,7 +3223,7 @@ export class Oauth extends HeyApiClient {
       ProviderOauthCallbackResponses,
       ProviderOauthCallbackErrors,
       ThrowOnError
-    >({
+      >({
       url: "/provider/{providerID}/oauth/callback",
       ...options,
       ...params,
@@ -3718,7 +3763,7 @@ export class Session2 extends HeyApiClient {
       SessionDeleteMessageResponses,
       SessionDeleteMessageErrors,
       ThrowOnError
-    >({
+      >({
       url: "/session/{sessionID}/message/{messageID}",
       ...options,
       ...params,
@@ -4057,6 +4102,7 @@ export class Session2 extends HeyApiClient {
       model?: string
       arguments?: string
       command?: string
+      goal?: string
       variant?: string
       parts?: Array<{
         id?: string
@@ -4082,6 +4128,7 @@ export class Session2 extends HeyApiClient {
             { in: "body", key: "model" },
             { in: "body", key: "arguments" },
             { in: "body", key: "command" },
+            { in: "body", key: "goal" },
             { in: "body", key: "variant" },
             { in: "body", key: "parts" },
           ],

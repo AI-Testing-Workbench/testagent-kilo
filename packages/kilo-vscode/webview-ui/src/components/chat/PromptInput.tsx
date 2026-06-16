@@ -53,6 +53,16 @@ function formatCodeContext(item: CodeContext) {
   return `${item.file}:${item.start}-${item.end}\n\`\`\`\n${item.text}\n\`\`\``
 }
 
+function parseGoalArgument(input: string): { args: string; goal?: string } {
+  const match = input.match(/(?:^|\s)--goal(?:=|\s+)("[^"]*"|'[^']*'|\S+)/)
+  if (!match) return { args: input }
+
+  return {
+    args: `${input.slice(0, match.index).trimEnd()} ${input.slice((match.index ?? 0) + match[0].length).trimStart()}`.trim(),
+    goal: match[1].replace(/^["']|["']$/g, "").trim() || undefined,
+  }
+}
+
 interface PromptInputProps {
   blocked?: () => boolean
   /** When true, session is busy only because a suggestion is pending — treat as idle for input */
@@ -679,8 +689,9 @@ export const PromptInput: Component<PromptInputProps> = (props) => {
     // Server-side slash command (cmdMatch/matched already computed above)
     if (matched) {
       const rest = draft.slice(cmdMatch![0].length).trim()
-      const args = review && rest ? `${review}\n\n${rest}` : rest || review
-      session.sendCommand(matched.name, args, sel?.providerID, sel?.modelID, attachments, pendingId)
+      const parsed = parseGoalArgument(rest)
+      const args = review && parsed.args ? `${review}\n\n${parsed.args}` : parsed.args || review
+      session.sendCommand(matched.name, args, sel?.providerID, sel?.modelID, attachments, pendingId, parsed.goal)
     } else {
       session.sendMessage(message, sel?.providerID, sel?.modelID, attachments, pendingId)
     }

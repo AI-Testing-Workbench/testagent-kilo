@@ -1851,6 +1851,7 @@ export interface ImportAndSendMessage {
   files?: FileAttachment[]
   command?: string
   commandArgs?: string
+  goal?: string
 }
 
 export interface LoginRequest {
@@ -1944,6 +1945,7 @@ export interface SendCommandRequest {
   type: "sendCommand"
   command: string
   arguments: string
+  goal?: string
   messageID?: string
   sessionID?: string
   draftID?: string
