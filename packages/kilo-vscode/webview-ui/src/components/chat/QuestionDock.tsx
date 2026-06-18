@@ -10,6 +10,8 @@ import { createStore } from "solid-js/store"
 import { Button } from "@kilocode/kilo-ui/button"
 import { Icon } from "@kilocode/kilo-ui/icon"
 import { Markdown } from "@kilocode/kilo-ui/markdown" // testagent_change
+import { useData } from "@kilocode/kilo-ui/context/data" // testagent_change
+import { extractFilePathFromHref } from "@kilocode/kilo-ui/file-path" // testagent_change
 import { useSession } from "../../context/session"
 import { useLanguage } from "../../context/language"
 import type { QuestionRequest } from "../../types/messages"
@@ -24,6 +26,7 @@ import {
 export const QuestionDock: Component<{ request: QuestionRequest }> = (props) => {
   const session = useSession()
   const language = useLanguage()
+  const data = useData() // testagent_change
 
   const questions = createMemo(() => props.request.questions)
   const single = createMemo(() => questions().length === 1 && questions()[0]?.multiple !== true)
@@ -62,6 +65,22 @@ export const QuestionDock: Component<{ request: QuestionRequest }> = (props) => 
     if (!value) return false
     return store.answers[store.tab]?.includes(value) ?? false
   })
+
+  // testagent_change start
+  const clickMarkdown = (e: MouseEvent) => {
+    if (!data.openFile) return
+    const target = e.target
+    if (!(target instanceof HTMLElement)) return
+    const anchor = target.closest("a.external-link") as HTMLAnchorElement | null
+    if (!anchor) return
+    const href = anchor.getAttribute("href")
+    if (!href) return
+    const file = extractFilePathFromHref(href)
+    if (!file) return
+    e.preventDefault()
+    data.openFile(file)
+  }
+  // testagent_change end
 
   const total = createMemo(() => questions().length)
   const last = createMemo(() => store.tab >= total() - 1)
@@ -356,7 +375,11 @@ export const QuestionDock: Component<{ request: QuestionRequest }> = (props) => 
           <Show when={!confirm()}>
             {/* testagent_change start */}
             <div data-slot="question-text">
-              <Markdown text={question()?.question ?? ""} style={{ "max-height": "200px", "overflow-y": "scroll" }} />
+              <Markdown
+                text={question()?.question ?? ""}
+                style={{ "max-height": "200px", "overflow-y": "scroll" }}
+                onClick={clickMarkdown}
+              />
             </div>
             {/* testagent_change end */}
             <Show when={multi()} fallback={<div data-slot="question-hint">{language.t("ui.question.singleHint")}</div>}>
@@ -483,9 +506,10 @@ export const QuestionDock: Component<{ request: QuestionRequest }> = (props) => 
 
           {/* Footer row — inside the same box */}
           <div data-slot="question-dock-footer">
-            <Button variant="ghost" size="small" onClick={reject} disabled={store.sending}>
+            {/* testagent_change 注释掉忽略 */}
+            {/* <Button variant="ghost" size="small" onClick={reject} disabled={store.sending}>
               {language.t("ui.common.dismiss")}
-            </Button>
+            </Button> */}
             <div data-slot="question-footer-actions">
               <Show when={store.tab > 0}>
                 <Button variant="secondary" size="small" onClick={back} disabled={store.sending}>

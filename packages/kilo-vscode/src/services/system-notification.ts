@@ -28,26 +28,18 @@ export class SystemNotificationService {
   notify(options: SystemNotificationOptions): void {
     const { title, message, type = "info", onClick } = options
 
-    console.log("[TestAgent] 🔔 Attempting to show system notification:", { title, message, type })
-
-    // Get icon path based on notification type
     const iconPath = this.getIconPath(type)
-    console.log("[TestAgent] 📁 Icon path:", iconPath)
 
-    // Check platform and use appropriate method
     if (process.platform === "darwin") {
-      // macOS: Use osascript
       this.showMacOSNotification(title, message, onClick)
       return
     }
 
     if (process.platform === "win32") {
-      // Windows: Use node-notifier with AppID registration
       this.showWindowsNotification(title, message, onClick)
       return
     }
 
-    // Linux or fallback: Try node-notifier
     try {
       notifier.notify(
         {
@@ -59,23 +51,16 @@ export class SystemNotificationService {
         } as any,
         (err, response) => {
           if (err) {
-            console.error("[TestAgent] ❌ System notification error:", err)
             this.showVSCodeFallback(title, message, type, onClick)
             return
           }
 
-          console.log("[TestAgent] ✅ System notification shown successfully, response:", response)
-
           if (response === "activate" && onClick) {
-            console.log("[TestAgent] 👆 User clicked notification, calling onClick")
             onClick()
           }
         },
       )
-
-      console.log("[TestAgent] 📤 notifier.notify() called, waiting for callback...")
     } catch (error) {
-      console.error("[TestAgent] ❌ Exception while showing notification:", error)
       this.showVSCodeFallback(title, message, type, onClick)
     }
   }
@@ -93,11 +78,9 @@ export class SystemNotificationService {
 
     exec(`osascript -e '${script}'`, (error: any) => {
       if (error) {
-        console.error("[TestAgent] ❌ macOS notification error:", error)
         this.showVSCodeFallback(title, message, "info", onClick)
         return
       }
-      console.log("[TestAgent] ✅ macOS notification shown successfully")
     })
   }
 
@@ -106,19 +89,9 @@ export class SystemNotificationService {
    * This is more reliable than node-notifier in VS Code extension context.
    */
   private showWindowsNotification(title: string, message: string, onClick?: () => void): void {
-    console.log("[TestAgent] 🪟 Starting Windows notification with PowerShell Toast")
-    console.log("[TestAgent] 📝 Title:", title)
-    console.log("[TestAgent] 📝 Message:", message)
-
-    // Ensure AppID is registered first
     this.ensureWindowsAppIDRegistered()
-      .then(() => {
-        console.log("[TestAgent] ✅ AppID registered, showing Toast notification...")
-        return this.showPowerShellToast(title, message, onClick)
-      })
+      .then(() => this.showPowerShellToast(title, message, onClick))
       .catch((err) => {
-        console.error("[TestAgent] ❌ Toast notification failed:", err.message)
-        console.log("[TestAgent] 🔄 Falling back to VS Code notification")
         this.showVSCodeFallback(title, message, "info", onClick)
       })
   }

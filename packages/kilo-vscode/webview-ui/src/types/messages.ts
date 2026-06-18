@@ -452,6 +452,20 @@ export interface CommitMessageConfig {
   prompt?: string
 }
 
+export type PluginOptions = Record<string, unknown>
+export type PluginSpec = string | [string, PluginOptions]
+
+export interface PluginOrigin {
+  spec: PluginSpec
+  source: string
+  scope: "global" | "local"
+}
+
+export interface PluginStatus {
+  success: string[]
+  failed: Array<{ spec: string; error: string }>
+}
+
 export interface Config {
   permission?: PermissionConfig
   model?: string | null
@@ -463,6 +477,9 @@ export interface Config {
   enabled_providers?: string[]
   mcp?: Record<string, McpConfig>
   command?: Record<string, CommandConfig>
+  plugin?: PluginSpec[]
+  plugin_origins?: PluginOrigin[]
+  plugin_status?: PluginStatus
   instructions?: string[]
   skills?: SkillsConfig
   snapshot?: boolean
@@ -1952,6 +1969,11 @@ export interface RemoveSkillMessage {
   location: string
 }
 
+export interface RemovePluginMessage {
+  type: "removePlugin"
+  location: string
+}
+
 export interface RemoveModeMessage {
   type: "removeMode"
   name: string
@@ -2736,6 +2758,7 @@ export type WebviewMessage =
   | SendCommandRequest
   | ContinueTaskRequest
   | RemoveSkillMessage
+  | RemovePluginMessage
   | RemoveModeMessage
   | RemoveMcpMessage
   | RequestMcpStatusMessage

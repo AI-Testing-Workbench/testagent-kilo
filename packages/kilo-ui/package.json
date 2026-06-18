@@ -58,6 +58,7 @@
     "./dock-surface": "./src/components/dock-surface.tsx",
     "./scroll-view": "./src/components/scroll-view.tsx",
     "./file": "./src/components/file.tsx",
+    "./file-path": "./src/file-path.ts",
     "./motion-spring": "./src/components/motion-spring.tsx",
     "./line-comment-annotations": "./src/components/line-comment-annotations.tsx",
     "./animated-number": "./src/components/animated-number.tsx",

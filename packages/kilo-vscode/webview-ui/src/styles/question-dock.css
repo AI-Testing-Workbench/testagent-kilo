@@ -368,7 +368,7 @@
   [data-slot="question-dock-footer"] {
     display: flex;
     align-items: center;
-    justify-content: space-between;
+    justify-content: end;
     padding: 4px 8px 6px;
   }
 

@@ -83,6 +83,7 @@ function createConnection(client: ReturnType<typeof createClient>) {
     onMigrationComplete: () => () => undefined,
     onFavoritesChanged: () => () => undefined,
     onClearPendingPrompts: () => () => undefined,
+    onAgentsChanged: () => () => undefined,
     registerDirectoryProvider: () => () => undefined,
     getServerInfo: () => ({ port: 12345 }),
     getConnectionState: () => "connected" as const,
@@ -235,6 +236,51 @@ describe("KiloProvider pending session refresh", () => {
     const msg = sent[0] as { sessions: { id: string }[]; preserveSessionIds?: string[] }
     expect(msg.sessions.map((s) => s.id)).toEqual(["ses_root", "ses_wt"])
     expect(msg.preserveSessionIds).toBeUndefined()
+  })
+
+  it("tracks directories from loaded sessions", async () => {
+    const ctx = createContext({
+      connectionState: "connected",
+      sessionDirectories: new Map([
+        ["ses_root", "/old"],
+        ["ses_old", "/stale"],
+      ]),
+      listSessions: async (dir) => {
+        if (dir === "/repo") {
+          return [
+            {
+              id: "ses_root",
+              projectID: "project",
+              title: "root",
+              directory: "/repo",
+              time: { created: 1, updated: 1 },
+            },
+            {
+              id: "ses_other",
+              projectID: "project",
+              title: "other",
+              directory: "/other",
+              time: { created: 2, updated: 2 },
+            },
+          ] as never
+        }
+        return [
+          {
+            id: "ses_old",
+            projectID: "project",
+            title: "old",
+            directory: "/stale",
+            time: { created: 3, updated: 3 },
+          },
+        ] as never
+      },
+    })
+
+    await loadSessions(ctx)
+
+    expect(ctx.sessionDirectories.get("ses_root")).toBeUndefined()
+    expect(ctx.sessionDirectories.get("ses_other")).toBe("/other")
+    expect(ctx.sessionDirectories.get("ses_old")).toBe("/stale")
   })
 
   it("flushes deferred refresh via flushPendingSessionRefresh", async () => {

@@ -950,8 +950,7 @@ export const dict = {
   "settings.aboutKiloCode.title": "关于 TestAgent",
 
   "session.messages.empty": "在下方输入消息以开始对话。",
-  "session.messages.welcome":
-    "测小智TestAgent",
+  "session.messages.welcome": "测小智TestAgent",
   "session.messages.scrollToBottom": "滚动到底部",
   "session.messages.initializing": "初始化中...",
   "session.messages.taskStarting": "启动中...",
