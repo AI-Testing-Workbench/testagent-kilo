@@ -311,8 +311,6 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
   private unsubscribeAgentsChange: (() => void) | null = null // testagent_change
   /** 跟踪待完成的 sdt-run finalize 信息 */
   private pendingFinalize = new Map<string, { stageId: string; taskname: string; commandType: 'run' | 'next'; executionTime: string; cwd: string; env: Record<string, string | undefined> }>()
-  /** 跟踪待恢复的子 agent 信息（task_id 机制） */
-  private pendingResume = new Map<string, { taskId: string; stageId: string; commandType: 'run' | 'next'; cwd: string; env: Record<string, string | undefined> }>()
   private unsubscribeDirectoryProvider: (() => void) | null = null
   private initConnectionPromise: Promise<void> | null = null
   private webviewMessageDisposable: vscode.Disposable | null = null
@@ -3097,14 +3095,8 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
     }
 
     // 对于 run/next 命令，使用核心原生 subagent 机制（SubtaskPartInput）
-    if (cmd === 'run' || cmd === 'next') {
+    if (cmd === 'run' || cmd === 'run next') {
       try {
-        // run 命令需要 stage_id，next 命令从记忆文件获取
-        if (cmd === 'run' && !args[0]) {
-          void vscode.window.showErrorMessage("TestAgent: sdt-run 需要指定 stage_id")
-          return
-        }
-
         // Step 1: 调用 testflow prepare 获取 prompt 数据
         console.log('[TestAgent] sdt-run: calling prepare for', cmd, 'args:', args)
         const prepareResult = await this.sdtRunner.runPrepare({
@@ -3118,10 +3110,6 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
         // Step 2: 发送 SubtaskPartInput 到主会话
         // 核心 handleSubtask 会自动创建子会话、执行 AI、收集结果、注入摘要消息
         // 模型优先级：agent config > 当前会话模型
-
-        // 清除旧的 pendingResume（新任务会覆盖旧的子 agent）
-        this.pendingResume.delete(resolved.sid)
-        console.log('[TestAgent] sdt-run: cleared pendingResume for session', resolved.sid)
 
         const model = providerID && modelID ? { providerID, modelID } : undefined
         console.log('model:'+model?.modelID);
@@ -3250,40 +3238,6 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
     let resolved: { sid: string; dir: string } | undefined
     try {
       resolved = await this.resolveSession(sessionID, draftID)
-
-      // testagent_change start - check for pending resume (task_id mechanism)
-      if (resolved) {
-        const pendingResume = this.pendingResume.get(resolved.sid)
-        if (pendingResume) {
-          console.log(`[TestAgent] Resuming subagent with task_id: ${pendingResume.taskId}`)
-          this.pendingResume.delete(resolved.sid)
-
-          // 创建 SubtaskPartInput 来恢复子 agent
-          const subtaskPart: SubtaskPartInput = {
-            type: 'subtask',
-            prompt: text,
-            description: `Resume: ${text.substring(0, 30)}`,
-            agent: 'general',
-            command: `sdt-${pendingResume.commandType}`,
-            task_id: pendingResume.taskId,
-          }
-
-          await runWithMessageConfirmation(this.confirmations, messageID, " Resume subagent request", () =>
-            this.withRetry(
-              () =>
-                this.client!.session.promptAsync({
-                  sessionID: resolved!.sid,
-                  directory: resolved!.dir,
-                  parts: [subtaskPart],
-                }),
-              resolved!.sid,
-              messageID,
-            ),
-          )
-          return
-        }
-      }
-      // testagent_change end
 
       const parts: Array<TextPartInput | FilePartInput> = []
       if (files) {
@@ -4380,17 +4334,8 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
           this.pendingFinalize.delete(partSessionId)
           const isSuccess = part.state.status === "completed"
 
-          // 保存 task_id 以便后续 resume（仅在成功时）
-          if (isSuccess && part.state?.metadata?.sessionId) {
-            console.log(`[TestAgent] sdt-run: saving task_id ${part.state.metadata.sessionId} for resume`)
-            this.pendingResume.set(partSessionId, {
-              taskId: part.state.metadata.sessionId,
-              stageId: pending.stageId,
-              commandType: pending.commandType,
-              cwd: pending.cwd,
-              env: pending.env,
-            })
-          }
+          // task_id 已在 TaskTool.execute 的 output 中返回给主agent
+          // 主agent的LLM会自行决定是否 resume（通过 task 工具的 task_id 参数）
 
           console.log(`[TestAgent] sdt-run: task tool ${part.state.status}, calling finalize for stage`, pending.stageId)
           void this.sdtRunner.runFinalize({

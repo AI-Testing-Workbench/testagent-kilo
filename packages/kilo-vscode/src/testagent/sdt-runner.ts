@@ -122,7 +122,7 @@ export class SdtRunner {
    * 结果通过临时文件传递，避免 stdout 混杂其他输出。
    */
   async runPrepare(opts: {
-    commandType: 'run' | 'next'
+    commandType: 'run' | 'run next'
     stageId?: string
     args: string[]
     cwd: string
