@@ -122,7 +122,7 @@ export class SdtRunner {
    * 结果通过临时文件传递，避免 stdout 混杂其他输出。
    */
   async runPrepare(opts: {
-    commandType: 'run' | 'run next'
+    commandType: 'run' | 'next'
     stageId?: string
     args: string[]
     cwd: string
@@ -135,6 +135,8 @@ export class SdtRunner {
     taskname: string
     skill: string
     executionTime: string
+    useSubAgent: boolean
+    testflowBin: string
   }> {
     const extDir = path.resolve(__dirname, '..')
     const testflowBin = path.join(extDir, 'bin', process.platform === 'win32' ? 'testflow.exe' : 'testflow')
@@ -175,7 +177,7 @@ export class SdtRunner {
           const result = JSON.parse(content)
           const { type: _t, ...data } = result
           void _t
-          resolve(data)
+          resolve({ ...data, testflowBin })
         } catch (e) {
           reject(new Error(`Failed to read prepare result from ${tmpFile}: ${(e as Error).message}`))
         } finally {
