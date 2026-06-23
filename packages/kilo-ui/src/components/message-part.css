@@ -278,6 +278,52 @@ html[data-theme="kilo-vscode"] [data-component="bash-output"] {
       color: var(--syntax-string, var(--vscode-editor-foreground));
       font-family: var(--font-family-mono, monospace);
     }
+
+    [data-slot="code-block"] {
+      display: block;
+
+      [data-highlight="code"] {
+        display: block;
+        white-space: pre-wrap;
+      }
+    }
+
+    [data-slot="code-file-header"] {
+      display: block;
+      padding: 3px 8px;
+      margin-bottom: 4px;
+      border-radius: 4px;
+      background: var(--background-stronger, rgba(128, 128, 128, 0.08));
+      color: var(--text-link, var(--vscode-textLink-foreground));
+      font-family: var(--font-family-mono, monospace);
+      font-size: var(--font-size-small, 12px);
+      cursor: pointer;
+      transition: background 0.15s ease;
+
+      &:hover {
+        background: var(--background-strong, rgba(128, 128, 128, 0.15));
+        text-decoration: underline;
+      }
+    }
+
+    [data-slot="code-toggle"] {
+      display: block;
+      width: 100%;
+      margin-top: 4px;
+      padding: 2px 8px;
+      border: none;
+      border-radius: 4px;
+      background: var(--background-stronger, rgba(128, 128, 128, 0.08));
+      color: var(--text-link, var(--vscode-textLink-foreground));
+      font-size: var(--font-size-small, 12px);
+      cursor: pointer;
+      text-align: center;
+      transition: background 0.15s ease;
+
+      &:hover {
+        background: var(--background-strong, rgba(128, 128, 128, 0.15));
+      }
+    }
   }
 
   [data-slot="user-message-queued-indicator"] {

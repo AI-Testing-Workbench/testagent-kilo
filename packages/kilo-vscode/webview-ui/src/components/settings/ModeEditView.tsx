@@ -330,6 +330,22 @@ const PermissionRuleset: Component<RulesetProps> = (props) => {
     return [...tools.entries()].sort((a, b) => a[0].localeCompare(b[0]))
   })
 
+  const BUILTIN_ORDER = ["question", "bash", "read", "glob", "grep", "edit", "write", "task", "webfetch", "todowrite", "skill", "sandbox"]
+
+  // Sort: built-in tools first (in predefined order), then pattern="*" rules, then pattern-specific rules
+  const sortedRules = createMemo(() => {
+    return [...props.rules].sort((a, b) => {
+      const ai = BUILTIN_ORDER.indexOf(a.permission)
+      const bi = BUILTIN_ORDER.indexOf(b.permission)
+      if (ai !== -1 && bi !== -1) return ai - bi
+      if (ai !== -1) return -1
+      if (bi !== -1) return 1
+      if (a.pattern === "*" && b.pattern !== "*") return -1
+      if (a.pattern !== "*" && b.pattern === "*") return 1
+      return a.permission.localeCompare(b.permission)
+    })
+  })
+
   const copy = (e: MouseEvent) => {
     e.stopPropagation()
     const data = { agent: props.agent, rules: props.rules }
@@ -446,7 +462,7 @@ const PermissionRuleset: Component<RulesetProps> = (props) => {
               </tr>
             </thead>
             <tbody>
-              <For each={props.rules}>
+              <For each={sortedRules()}>
                 {(rule, idx) => {
                   const colors = ACTION_COLORS[rule.action] ?? ACTION_COLORS.unknown
                   return (
