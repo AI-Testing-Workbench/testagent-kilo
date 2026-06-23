@@ -136,7 +136,6 @@ export interface MessageProps {
   parts: PartType[]
   actions?: UserActions
   showAssistantCopyPartID?: string | null
-  queued?: boolean // kilocode_change
   showReasoningSummaries?: boolean
 }
 
@@ -804,12 +803,7 @@ export function Message(props: MessageProps) {
     <Switch>
       <Match when={props.message.role === "user" && props.message}>
         {(userMessage) => (
-          <UserMessageDisplay
-            message={userMessage() as UserMessage}
-            parts={props.parts}
-            actions={props.actions}
-            queued={props.queued} // kilocode_change
-          />
+          <UserMessageDisplay message={userMessage() as UserMessage} parts={props.parts} actions={props.actions} />
         )}
       </Match>
       <Match when={props.message.role === "assistant" && props.message}>
@@ -1000,12 +994,7 @@ function ContextToolGroup(props: { parts: ToolPart[]; busy?: boolean }) {
   )
 }
 
-export function UserMessageDisplay(props: {
-  message: UserMessage
-  parts: PartType[]
-  actions?: UserActions
-  queued?: boolean // kilocode_change
-}) {
+export function UserMessageDisplay(props: { message: UserMessage; parts: PartType[]; actions?: UserActions }) {
   const data = useData()
   const dialog = useDialog()
   const i18n = useI18n()
@@ -1093,7 +1082,6 @@ export function UserMessageDisplay(props: {
                   data-slot="user-message-attachment"
                   data-type={type}
                   data-clickable={type === "image" ? "true" : undefined}
-                  data-queued={props.queued ? "" : undefined} // kilocode_change
                   title={type === "file" ? name : undefined}
                   onClick={() => {
                     if (type === "image") openImagePreview(file.url, name)
@@ -1119,17 +1107,9 @@ export function UserMessageDisplay(props: {
       <Show when={text()}>
         <>
           <div data-slot="user-message-body">
-            <div data-slot="user-message-text" data-queued={props.queued ? "" : undefined}>
-              {/* kilocode_change */}
+            <div data-slot="user-message-text">
               <HighlightedText text={text()} references={inlineFiles()} agents={agents()} />
             </div>
-            {/* kilocode_change start */}
-            <Show when={props.queued}>
-              <div data-slot="user-message-queued-indicator">
-                <TextShimmer text={i18n.t("ui.message.queued")} />
-              </div>
-            </Show>
-            {/* kilocode_change end */}
           </div>
           <div data-slot="user-message-copy-wrapper">
             <Show when={metaHead() || metaTail()}>
@@ -1191,7 +1171,7 @@ export function UserMessageDisplay(props: {
   )
 }
 
-type HighlightSegment = { text: string; type?: "file" | "agent" | "code" }
+type HighlightSegment = { text: string; type?: "file" | "agent" }
 
 function HighlightedText(props: { text: string; references: FilePart[]; agents: AgentPart[] }) {
   const segments = createMemo(() => {
@@ -1206,44 +1186,22 @@ function HighlightedText(props: { text: string; references: FilePart[]; agents: 
         .map((a) => ({ start: a.source!.start, end: a.source!.end, type: "agent" as const })),
     ].sort((a, b) => a.start - b.start)
 
-    const refSegments: HighlightSegment[] = []
+    const result: HighlightSegment[] = []
     let lastIndex = 0
 
     for (const ref of allRefs) {
       if (ref.start < lastIndex) continue
 
       if (ref.start > lastIndex) {
-        refSegments.push({ text: text.slice(lastIndex, ref.start) })
+        result.push({ text: text.slice(lastIndex, ref.start) })
       }
 
-      refSegments.push({ text: text.slice(ref.start, ref.end), type: ref.type })
+      result.push({ text: text.slice(ref.start, ref.end), type: ref.type })
       lastIndex = ref.end
     }
 
     if (lastIndex < text.length) {
-      refSegments.push({ text: text.slice(lastIndex) })
-    }
-
-    const result: HighlightSegment[] = []
-    for (const seg of refSegments) {
-      if (seg.type) {
-        result.push(seg)
-      } else {
-        let remaining = seg.text
-        const re = /```[\s\S]*?```/g
-        let match: RegExpExecArray | null = null
-        let lastPos = 0
-        while ((match = re.exec(remaining)) !== null) {
-          if (match.index > lastPos) {
-            result.push({ text: remaining.slice(lastPos, match.index) })
-          }
-          result.push({ text: match[0].slice(3, -3), type: "code" })
-          lastPos = match.index + match[0].length
-        }
-        if (lastPos < remaining.length) {
-          result.push({ text: remaining.slice(lastPos) })
-        }
-      }
+      result.push({ text: text.slice(lastIndex) })
     }
 
     return result
@@ -1323,7 +1281,7 @@ function ToolFileAccordion(props: { path: string; actions?: JSX.Element; childre
                 <FileIcon node={{ path: props.path, type: "file" }} />
                 <div data-slot="apply-patch-file-name-container">
                   <Show when={props.path.includes("/")}>
-                    <span data-slot="apply-patch-directory">{`\u2066${getDirectory(props.path)}\u2069`}</span>
+                    <span data-slot="apply-patch-directory">{`\u202A${getDirectory(props.path)}\u202C`}</span>
                   </Show>
                   <span data-slot="apply-patch-filename">{getFilename(props.path)}</span>
                 </div>
@@ -1618,7 +1576,6 @@ ToolRegistry.register({
       <BasicTool
         {...props}
         icon="bullet-list"
-        defer
         trigger={{ title: i18n.t("ui.tool.list"), subtitle: getDirectory(props.input.path || "/") }}
       >
         <Show when={props.output}>
@@ -1639,7 +1596,6 @@ ToolRegistry.register({
       <BasicTool
         {...props}
         icon="magnifying-glass-menu"
-        defer
         trigger={{
           title: i18n.t("ui.tool.glob"),
           subtitle: getDirectory(props.input.path || "/"),
@@ -1667,7 +1623,6 @@ ToolRegistry.register({
       <BasicTool
         {...props}
         icon="magnifying-glass-menu"
-        defer
         trigger={{
           title: i18n.t("ui.tool.grep"),
           subtitle: getDirectory(props.input.path || "/"),
@@ -1888,7 +1843,6 @@ ToolRegistry.register({
       <BasicTool
         {...props}
         icon="console"
-        defer
         trigger={
           <div data-slot="basic-tool-tool-info-structured">
             <div data-slot="basic-tool-tool-info-main">
@@ -2138,7 +2092,7 @@ ToolRegistry.register({
                                   <FileIcon node={{ path: file.relativePath, type: "file" }} />
                                   <div data-slot="apply-patch-file-name-container">
                                     <Show when={file.relativePath.includes("/")}>
-                                      <span data-slot="apply-patch-directory">{`\u2066${getDirectory(file.relativePath)}\u2069`}</span>
+                                      <span data-slot="apply-patch-directory">{`\u202A${getDirectory(file.relativePath)}\u202C`}</span>
                                     </Show>
                                     <span data-slot="apply-patch-filename">{getFilename(file.relativePath)}</span>
                                   </div>

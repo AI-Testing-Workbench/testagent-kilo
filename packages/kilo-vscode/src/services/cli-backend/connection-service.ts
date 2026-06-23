@@ -24,6 +24,12 @@ type DirectoryProvider = () => string[]
 // This provides a second detection channel for server death independent of the SSE heartbeat.
 const HEALTH_POLL_INTERVAL_MS = 10_000
 
+// How many consecutive health-check failures before forcing an SSE reconnect.
+// This guards against spurious reconnects when the extension host event loop
+// is temporarily blocked (e.g. by other extensions or CPU-heavy work).
+// The threshold is low (3) so real server deaths are still caught within ~30s.
+const HEALTH_CHECK_FAIL_THRESHOLD = 3
+
 /**
  * Reject all pending network-offline waits for a given directory.
  * The network namespace is not yet in the SDK KiloClient type (pending SDK regeneration),
@@ -616,15 +622,28 @@ export class KiloConnectionService {
    */
   private startHealthPoll(baseUrl: string, password: string): void {
     this.stopHealthPoll()
+    let consecutiveFailures = 0
 
     this.healthPollTimer = setInterval(async () => {
       if (this.state !== "connected") {
+        consecutiveFailures = 0
         return
       }
       const healthy = await this.checkHealth(baseUrl, password)
       if (!healthy && this.state === "connected") {
-        console.warn("[TestAgent] ConnectionService: ❤️‍🩹 Health check failed — forcing SSE reconnect")
-        this.sseClient?.reconnect()
+        consecutiveFailures++
+        if (consecutiveFailures >= HEALTH_CHECK_FAIL_THRESHOLD) {
+          console.warn(
+            `[TestAgent] ConnectionService: ❤️‍🩹 Health check failed ${consecutiveFailures} times — forcing SSE reconnect`,
+          )
+          this.sseClient?.reconnect()
+        } else {
+          console.warn(
+            `[TestAgent] ConnectionService: ❤️‍🩹 Health check failed (${consecutiveFailures}/${HEALTH_CHECK_FAIL_THRESHOLD})`,
+          )
+        }
+      } else {
+        consecutiveFailures = 0
       }
     }, HEALTH_POLL_INTERVAL_MS)
 

@@ -1,6 +1,6 @@
 import type { Component, JSX } from "solid-js"
-import { createMemo, createUniqueId, splitProps, Show } from "solid-js"
-import sprite from "./file-icons/sprite.svg"
+import { createMemo, splitProps, Show } from "solid-js"
+import spriteIcons from "./file-icons/sprite.svg"
 import type { IconName } from "./file-icons/types"
 
 export type FileIconProps = JSX.GSVGAttributes<SVGSVGElement> & {
@@ -12,20 +12,24 @@ export type FileIconProps = JSX.GSVGAttributes<SVGSVGElement> & {
 export const FileIcon: Component<FileIconProps> = (props) => {
   const [local, rest] = splitProps(props, ["node", "class", "classList", "expanded", "mono"])
   const name = createMemo(() => chooseIconName(local.node.path, local.node.type, local.expanded || false))
-  const id = `file-icon-mono-${createUniqueId()}`
+  const icon = createMemo(
+    () => (spriteIcons as unknown as Record<string, { viewBox: string; content: string }>)[name()],
+  )
+  const id = `file-icon-mono-${name()}-${Math.random().toString(36).slice(2, 8)}`
   return (
     <svg
       data-component="file-icon"
+      viewBox={icon()?.viewBox || "0 0 16 16"}
       {...rest}
       classList={{
         ...(local.classList ?? {}),
         [local.class ?? ""]: !!local.class,
       }}
     >
-      <Show when={local.mono} fallback={<use href={`${sprite}#${name()}`} />}>
+      <Show when={local.mono} fallback={<g innerHTML={icon()?.content || ""} />}>
         <defs>
           <mask id={id} mask-type="alpha">
-            <use href={`${sprite}#${name()}`} />
+            <g innerHTML={icon()?.content || ""} />
           </mask>
         </defs>
         <rect width="100%" height="100%" fill="currentColor" mask={`url(#${id})`} />

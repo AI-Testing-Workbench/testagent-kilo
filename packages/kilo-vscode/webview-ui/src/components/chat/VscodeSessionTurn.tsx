@@ -90,17 +90,34 @@ export const VscodeSessionTurn: Component<VscodeSessionTurnProps> = (props) => {
 
   const error = createMemo(() => {
     const ids = dismissedErrorIds()
-    return assistantMessages().find(
+    const msgs = assistantMessages()
+    console.log("[dismiss-debug] error memo recompute", {
+      dismissedCount: ids.size,
+      dismissedIds: [...ids],
+      msgsWithError: msgs.filter((m) => m.error).map((m) => ({ id: m.id, errorName: m.error?.name })),
+    })
+    return msgs.find(
       (m) => m.error && m.error.name !== "MessageAbortedError" && !ids.has(m.id),
     )?.error
   })
 
   function dismissError() {
-    const msg = assistantMessages().find(
-      (m) => m.error && m.error.name !== "MessageAbortedError",
-    )
-    if (msg) {
-      setDismissedErrorIds((prev) => new Set([...prev, msg.id]))
+    const msgs = assistantMessages()
+    const errorMsgs = msgs.filter((m) => m.error && m.error.name !== "MessageAbortedError")
+    console.log("[dismiss-debug] dismissError called", {
+      errorMsgs: errorMsgs.map((m) => ({ id: m.id, errorName: m.error?.name })),
+    })
+    if (errorMsgs.length > 0) {
+      const msg = errorMsgs[0]
+      setDismissedErrorIds((prev) => {
+        const next = new Set([...prev, msg.id])
+        console.log("[dismiss-debug] setDismissedErrorIds", {
+          prev: [...prev],
+          added: msg.id,
+          next: [...next],
+        })
+        return next
+      })
     }
   }
 

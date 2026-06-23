@@ -911,64 +911,7 @@ export function UserMessageDisplay(props: {
   )
 }
 
-type HighlightSegment = { text: string; type?: "file" | "agent" | "code"; filePath?: { path: string; startLine?: number; endLine?: number } }
-
-const CODE_PREVIEW_LINES = 3
-const CODE_COLLAPSE_THRESHOLD = 6
-
-const FILE_PATH_RE = /([\w\-./]+(?:\.[a-zA-Z]+))(?::(\d+)(?:-(\d+))?)?$/
-
-function parseFilePath(text: string): { path: string; startLine?: number; endLine?: number } | null {
-  const trimmed = text.trimEnd()
-  const m = trimmed.match(FILE_PATH_RE)
-  if (!m) return null
-  const startLine = m[2] ? parseInt(m[2], 10) : undefined
-  const endLine = m[3] ? parseInt(m[3], 10) : undefined
-  return { path: m[1], startLine, endLine }
-}
-
-function CodeSegment(props: { text: string; filePath?: { path: string; startLine?: number; endLine?: number } }) {
-  const data = useData()
-  const lines = () => props.text.split("\n")
-  const isLong = () => lines().length > CODE_COLLAPSE_THRESHOLD
-  const [open, setOpen] = createSignal(false)
-  const remaining = () => lines().length - CODE_PREVIEW_LINES
-
-  const handleOpen = (e: MouseEvent) => {
-    e.stopPropagation()
-    if (props.filePath && data.openFile) {
-      data.openFile(props.filePath.path, props.filePath.startLine, props.filePath.endLine)
-    }
-  }
-
-  return (
-    <Show when={isLong()} fallback={
-      <Show when={props.filePath} fallback={<span data-highlight="code">{props.text}</span>}>
-        <span data-slot="code-block">
-          <span data-slot="code-file-header" onClick={handleOpen}>
-            {props.filePath!.path}{props.filePath!.startLine ? `:${props.filePath!.startLine}${props.filePath!.endLine ? `-${props.filePath!.endLine}` : ""}` : ""}
-          </span>
-          <span data-highlight="code">{props.text}</span>
-        </span>
-      </Show>
-    }>
-      <span data-slot="code-block">
-        <Show when={props.filePath}>
-          <span data-slot="code-file-header" onClick={handleOpen}>
-            {props.filePath!.path}{props.filePath!.startLine ? `:${props.filePath!.startLine}${props.filePath!.endLine ? `-${props.filePath!.endLine}` : ""}` : ""}
-          </span>
-        </Show>
-        <span data-highlight="code">{lines().slice(0, CODE_PREVIEW_LINES).join("\n")}</span>
-        <Show when={open()}>
-          <span data-highlight="code">{"\n"}{lines().slice(CODE_PREVIEW_LINES).join("\n")}</span>
-        </Show>
-        <button data-slot="code-toggle" onClick={() => setOpen(!open())}>
-          {open() ? "收起代码" : `展开 ${remaining()} 行`}
-        </button>
-      </span>
-    </Show>
-  )
-}
+type HighlightSegment = { text: string; type?: "file" | "agent" }
 
 function HighlightedText(props: { text: string; references: FilePart[]; agents: AgentPart[] }) {
   const segments = createMemo(() => {
@@ -983,64 +926,28 @@ function HighlightedText(props: { text: string; references: FilePart[]; agents: 
         .map((a) => ({ start: a.source!.start, end: a.source!.end, type: "agent" as const })),
     ].sort((a, b) => a.start - b.start)
 
-    const refSegments: HighlightSegment[] = []
+    const result: HighlightSegment[] = []
     let lastIndex = 0
 
     for (const ref of allRefs) {
       if (ref.start < lastIndex) continue
 
       if (ref.start > lastIndex) {
-        refSegments.push({ text: text.slice(lastIndex, ref.start) })
+        result.push({ text: text.slice(lastIndex, ref.start) })
       }
 
-      refSegments.push({ text: text.slice(ref.start, ref.end), type: ref.type })
+      result.push({ text: text.slice(ref.start, ref.end), type: ref.type })
       lastIndex = ref.end
     }
 
     if (lastIndex < text.length) {
-      refSegments.push({ text: text.slice(lastIndex) })
-    }
-
-    const result: (HighlightSegment & { filePath?: { path: string; startLine?: number; endLine?: number } })[] = []
-    for (const seg of refSegments) {
-      if (seg.type) {
-        result.push(seg)
-      } else {
-        let remaining = seg.text
-        const re = /```[\s\S]*?```/g
-        let match: RegExpExecArray | null = null
-        let lastPos = 0
-        while ((match = re.exec(remaining)) !== null) {
-          if (match.index > lastPos) {
-            result.push({ text: remaining.slice(lastPos, match.index) })
-          }
-          const codeText = match[0].slice(3, -3)
-          // 检查 code 前面第一个非空行的末尾是否有文件路径
-          const prevText = remaining.slice(lastPos, match.index)
-          const fp = parseFilePath(prevText)
-          result.push({ text: codeText, type: "code", filePath: fp ?? undefined })
-          lastPos = match.index + match[0].length
-        }
-        if (lastPos < remaining.length) {
-          result.push({ text: remaining.slice(lastPos) })
-        }
-      }
+      result.push({ text: text.slice(lastIndex) })
     }
 
     return result
   })
 
-  return (
-    <For each={segments()}>
-      {(segment) =>
-        segment.type === "code" ? (
-          <CodeSegment text={segment.text} filePath={segment.filePath} />
-        ) : (
-          <span data-highlight={segment.type}>{segment.text}</span>
-        )
-      }
-    </For>
-  )
+  return <For each={segments()}>{(segment) => <span data-highlight={segment.type}>{segment.text}</span>}</For>
 }
 
 export function Part(props: MessagePartProps) {

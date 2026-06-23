@@ -125,21 +125,21 @@ const svgSpritePlugin = {
   setup(build) {
     build.onLoad({ filter: /sprite\.svg$/ }, (args) => {
       const content = require("fs").readFileSync(args.path, "utf8")
+      // Extract each <symbol id="X" viewBox="..."> ... </symbol>
+      const symbols = {}
+      const re = /<symbol\s+([^>]*?)id="([^"]+)"([^>]*?)>([\s\S]*?)<\/symbol>/g
+      let m
+      while ((m = re.exec(content)) !== null) {
+        const id = m[2]
+        const attrs = m[1] + " " + m[3]
+        const vb = attrs.match(/viewBox="([^"]+)"/)?.[1] || "0 0 16 16"
+        symbols[id] = { viewBox: vb, content: m[4] }
+      }
       return {
         contents: `
-          const svg = ${JSON.stringify(content)};
-          const inject = () => {
-            if (!document.getElementById("kilo-sprite")) {
-              const el = document.createElement("div");
-              el.id = "kilo-sprite";
-              el.style.display = "none";
-              el.innerHTML = svg;
-              document.body.appendChild(el);
-            }
-          };
-          if (document.body) inject();
-          else document.addEventListener("DOMContentLoaded", inject);
-          export default "";
+          const symbols = ${JSON.stringify(symbols)};
+          export function getIcon(id) { return symbols[id]; }
+          export default symbols;
         `,
         loader: "js",
       }
