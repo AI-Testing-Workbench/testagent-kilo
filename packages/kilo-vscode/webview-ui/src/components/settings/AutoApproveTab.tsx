@@ -114,6 +114,7 @@ const TRAILING_TOOLS: ToolDef[] = [
 const TOOL_DEFAULTS: Partial<Record<string, PermissionLevel>> = {
   doom_loop: "ask",
   external_directory: "ask",
+  sandbox: "deny",
 }
 
 const RESTRICTION_ORDER: Record<PermissionLevel, number> = { allow: 0, ask: 1, deny: 2 }
