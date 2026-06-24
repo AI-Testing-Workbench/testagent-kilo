@@ -9,7 +9,14 @@ import { IconButton } from "@kilocode/kilo-ui/icon-button"
 import { useConfig } from "../../context/config"
 import { useSession } from "../../context/session"
 import { useLanguage } from "../../context/language"
-import type { AgentConfig, AgentInfo, PermissionConfig, PermissionLevel, PermissionRule, PermissionRuleItem } from "../../types/messages"
+import type {
+  AgentConfig,
+  AgentInfo,
+  PermissionConfig,
+  PermissionLevel,
+  PermissionRule,
+  PermissionRuleItem,
+} from "../../types/messages"
 import SettingsRow from "./SettingsRow"
 import { buildExport } from "./mode-io"
 
@@ -32,7 +39,7 @@ const ModeEditView: Component<Props> = (props) => {
   // custom modes) and all fields read from cfg() which comes from config context.
   const agent = () => session.allAgents().find((a) => a.name === props.name)
   const native = () => agent()?.native ?? false
-  const [expanded, setExpanded] = createSignal(false)
+  const [expanded, setExpanded] = createSignal(true)
   const [focus, setFocus] = createSignal<"temp" | "top">()
   const [temp, setTemp] = createSignal("")
   const [top, setTop] = createSignal("")
@@ -203,6 +210,31 @@ const ModeEditView: Component<Props> = (props) => {
         />
       </Card>
 
+      {/* Calculated permissions (editable, collapsible) */}
+      <Show when={displayRules().length > 0}>
+        <PermissionRuleset
+          agent={props.name}
+          rules={displayRules()}
+          expanded={expanded()}
+          onToggle={() => setExpanded((v) => !v)}
+          onUpdate={(perm, pattern, action) => {
+            const p = { ...(cfg().permission ?? {}) } as Record<string, PermissionRule>
+            if (pattern === "*") {
+              p[perm] = action
+            } else {
+              const merged = displayRules()
+              const wc = merged.find((r) => r.permission === perm && r.pattern === "*")?.action ?? "allow"
+              const base: Record<string, PermissionLevel> = { "*": wc as PermissionLevel }
+              for (const r of merged) {
+                if (r.permission === perm && r.pattern !== "*") base[r.pattern] = r.action as PermissionLevel
+              }
+              base[pattern] = action
+              p[perm] = base
+            }
+            update({ permission: Object.keys(p).length ? p : undefined })
+          }}
+        />
+      </Show>
       {/* Config overrides (wider inputs) */}
       <Card data-variant="wide-input" style={{ "margin-bottom": "12px" }}>
         <SettingsRow
@@ -304,32 +336,6 @@ const ModeEditView: Component<Props> = (props) => {
         </SettingsRow>
       </Card>
 
-      {/* Calculated permissions (editable, collapsible) */}
-      <Show when={displayRules().length > 0}>
-        <PermissionRuleset
-          agent={props.name}
-          rules={displayRules()}
-          expanded={expanded()}
-          onToggle={() => setExpanded((v) => !v)}
-          onUpdate={(perm, pattern, action) => {
-            const p = { ...(cfg().permission ?? {}) } as Record<string, PermissionRule>
-            if (pattern === "*") {
-              p[perm] = action
-            } else {
-              const merged = displayRules()
-              const wc = merged.find((r) => r.permission === perm && r.pattern === "*")?.action ?? "allow"
-              const base: Record<string, PermissionLevel> = { "*": wc as PermissionLevel }
-              for (const r of merged) {
-                if (r.permission === perm && r.pattern !== "*") base[r.pattern] = r.action as PermissionLevel
-              }
-              base[pattern] = action
-              p[perm] = base
-            }
-            update({ permission: Object.keys(p).length ? p : undefined })
-          }}
-        />
-      </Show>
-
       <div style={{ display: "flex", "justify-content": "flex-end" }}>
         <Button variant="ghost" onClick={props.onBack}>
           {language.t("settings.agentBehaviour.editMode.back")}
@@ -375,7 +381,20 @@ const PermissionRuleset: Component<RulesetProps> = (props) => {
     return [...tools.entries()].sort((a, b) => a[0].localeCompare(b[0]))
   })
 
-  const BUILTIN_ORDER = ["question", "bash", "read", "glob", "grep", "edit", "write", "task", "webfetch", "todowrite", "skill", "sandbox"]
+  const BUILTIN_ORDER = [
+    "question",
+    "bash",
+    "read",
+    "glob",
+    "grep",
+    "edit",
+    "write",
+    "task",
+    "webfetch",
+    "todowrite",
+    "skill",
+    "sandbox",
+  ]
 
   // Deduplicate by permission+pattern (last wins — matches backend findLast semantics).
   // Then expand the wildcard (*/*) into individual rows for each built-in tool that

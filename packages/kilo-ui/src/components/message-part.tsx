@@ -713,12 +713,21 @@ export function UserMessageDisplay(props: {
   const dialog = useDialog()
   const i18n = useI18n()
   const [copied, setCopied] = createSignal(false)
+  const [expanded, setExpanded] = createSignal(false)
+  const EXPAND_THRESHOLD = 800
 
   const textPart = createMemo(
     () => props.parts?.find((p) => p.type === "text" && !(p as TextPart).synthetic) as TextPart | undefined,
   )
 
   const text = createMemo(() => textPart()?.text || "")
+
+  const shouldCollapse = createMemo(() => text().length > EXPAND_THRESHOLD)
+  const collapseSize = createMemo(() => {
+    const len = text().length
+    if (len >= 1000) return `${(len / 1000).toFixed(1)}KB`
+    return `${len}B`
+  })
 
   const files = createMemo(() => (props.parts?.filter((p) => p.type === "file") as FilePart[]) ?? [])
 
@@ -819,7 +828,22 @@ export function UserMessageDisplay(props: {
           <>
             <div data-slot="user-message-body">
               <div data-slot="user-message-text" data-queued={props.queued ? "" : undefined}>
-                <HighlightedText text={text()} references={inlineFiles()} agents={agents()} />
+                <Show when={shouldCollapse()}>
+                  <div data-slot="user-message-collapse" data-expanded={expanded()}>
+                    <HighlightedText text={text()} references={inlineFiles()} agents={agents()} />
+                  </div>
+                  <button
+                    data-slot="user-message-expand-btn"
+                    onClick={() => setExpanded(!expanded())}
+                  >
+                    {expanded()
+                      ? i18n.t("ui.message.collapse.collapse")
+                      : i18n.t("ui.message.collapse.expand", { size: collapseSize() })}
+                  </button>
+                </Show>
+                <Show when={!shouldCollapse()}>
+                  <HighlightedText text={text()} references={inlineFiles()} agents={agents()} />
+                </Show>
               </div>
               <GrowBox animate={!!props.animate} open={!!props.queued}>
                 <div data-slot="user-message-queued-indicator">

@@ -108,12 +108,14 @@ export const VscodeSessionTurn: Component<VscodeSessionTurnProps> = (props) => {
       errorMsgs: errorMsgs.map((m) => ({ id: m.id, errorName: m.error?.name })),
     })
     if (errorMsgs.length > 0) {
-      const msg = errorMsgs[0]
       setDismissedErrorIds((prev) => {
-        const next = new Set([...prev, msg.id])
+        const next = new Set(prev)
+        for (const m of errorMsgs) {
+          next.add(m.id)
+        }
         console.log("[dismiss-debug] setDismissedErrorIds", {
           prev: [...prev],
-          added: msg.id,
+          added: errorMsgs.map((m) => m.id),
           next: [...next],
         })
         return next

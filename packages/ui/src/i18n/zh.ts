@@ -147,6 +147,8 @@ export const dict = {
   "ui.message.revert": "Revert to here",
   "ui.message.interrupted": "已中断",
   "ui.message.queued": "用户新消息排队中，等待上次大模型返回后发出",
+  "ui.message.collapse.expand": "展开全部 ({{size}})",
+  "ui.message.collapse.collapse": "收起",
   "ui.message.attachment.alt": "附件",
 
   "ui.patch.action.deleted": "已删除",

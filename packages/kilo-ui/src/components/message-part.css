@@ -274,6 +274,33 @@ html[data-theme="kilo-vscode"] [data-component="bash-output"] {
       opacity: 0.6;
     }
 
+    [data-slot="user-message-collapse"] {
+      max-height: 360px;
+      overflow: hidden;
+      transition: max-height 0.25s ease;
+
+      &[data-expanded="true"] {
+        max-height: none;
+      }
+    }
+
+    [data-slot="user-message-expand-btn"] {
+      display: block;
+      margin-top: 6px;
+      padding: 2px 10px;
+      border: none;
+      border-radius: 4px;
+      background: var(--background-stronger, rgba(128, 128, 128, 0.08));
+      color: var(--text-link, var(--vscode-textLink-foreground));
+      font-size: 11px;
+      cursor: pointer;
+      transition: background 0.15s ease;
+
+      &:hover {
+        background: var(--background-strong, rgba(128, 128, 128, 0.15));
+      }
+    }
+
     [data-slot="code-file-header"] {
       display: block;
       padding: 3px 8px;
