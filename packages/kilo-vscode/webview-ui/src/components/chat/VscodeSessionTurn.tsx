@@ -35,6 +35,9 @@ import { useSession } from "../../context/session"
 import { useLanguage } from "../../context/language"
 import type { Message as WebMessage } from "../../types/messages"
 
+// 模块级 Map，跨组件生命周期持久存在
+const dismissedErrorIds = new Map<string, Set<string>>()
+
 function getDirectory(path: string): string {
   const sep = path.includes("/") ? "/" : "\\"
   const idx = path.lastIndexOf(sep)
@@ -86,41 +89,27 @@ export const VscodeSessionTurn: Component<VscodeSessionTurnProps> = (props) => {
 
   const interrupted = createMemo(() => assistantMessages().some((m) => m.error?.name === "MessageAbortedError"))
 
-  const [dismissedErrorIds, setDismissedErrorIds] = createSignal<Set<string>>(new Set())
+  const [tick, bump] = createSignal(0)
 
   const error = createMemo(() => {
-    const ids = dismissedErrorIds()
+    tick()
+    const ids = dismissedErrorIds.get(props.turn.id)
     const msgs = assistantMessages()
-    console.log("[dismiss-debug] error memo recompute", {
-      dismissedCount: ids.size,
-      dismissedIds: [...ids],
-      msgsWithError: msgs.filter((m) => m.error).map((m) => ({ id: m.id, errorName: m.error?.name })),
-    })
     return msgs.find(
-      (m) => m.error && m.error.name !== "MessageAbortedError" && !ids.has(m.id),
+      (m) => m.error && m.error.name !== "MessageAbortedError" && !ids?.has(m.id),
     )?.error
   })
 
   function dismissError() {
     const msgs = assistantMessages()
     const errorMsgs = msgs.filter((m) => m.error && m.error.name !== "MessageAbortedError")
-    console.log("[dismiss-debug] dismissError called", {
-      errorMsgs: errorMsgs.map((m) => ({ id: m.id, errorName: m.error?.name })),
-    })
-    if (errorMsgs.length > 0) {
-      setDismissedErrorIds((prev) => {
-        const next = new Set(prev)
-        for (const m of errorMsgs) {
-          next.add(m.id)
-        }
-        console.log("[dismiss-debug] setDismissedErrorIds", {
-          prev: [...prev],
-          added: errorMsgs.map((m) => m.id),
-          next: [...next],
-        })
-        return next
-      })
+    let ids = dismissedErrorIds.get(props.turn.id)
+    if (!ids) {
+      ids = new Set()
+      dismissedErrorIds.set(props.turn.id, ids)
     }
+    for (const m of errorMsgs) ids.add(m.id)
+    bump((v) => v + 1)
   }
 
   // Diffs from message summary

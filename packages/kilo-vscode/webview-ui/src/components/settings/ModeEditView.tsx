@@ -182,13 +182,15 @@ const ModeEditView: Component<Props> = (props) => {
               variant="secondary"
               size="small"
             />
-            <div
+          </SettingsRow>
+          <div
               style={{
                 "text-align": "end",
                 "font-size": "12px",
                 color: "var(--vscode-descriptionForeground)",
                 "margin-top": "6px",
                 "line-height": "1.4",
+                "align-self":'end'
               }}
             >
               {
@@ -197,7 +199,6 @@ const ModeEditView: Component<Props> = (props) => {
                 ]
               }
             </div>
-          </SettingsRow>
         </Card>
       </Show>
 
