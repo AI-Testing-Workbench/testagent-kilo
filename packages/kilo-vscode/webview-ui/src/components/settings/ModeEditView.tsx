@@ -26,8 +26,13 @@ interface Props {
   onRemove: (agent: AgentInfo) => void
 }
 
-type Mode = "primary" | "subagent"
-const modes: Mode[] = ["primary", "subagent"]
+type Mode = "primary" | "subagent" | "all"
+const modes: Mode[] = ["primary", "subagent", "all"]
+const modeDescriptions: Record<Mode, string> = {
+  primary: "此代理显示在 Agent 切换栏中，用户可直接选择使用。适用于通用任务。",
+  subagent: "此代理不会显示在切换栏中，只能由其他 Agent 通过 @ 语法调用。适用于后台工具类代理。",
+  all: "此代理既显示在切换栏中供用户选择，也可以被其他 Agent 调用。",
+}
 
 const ModeEditView: Component<Props> = (props) => {
   const language = useLanguage()
@@ -167,7 +172,7 @@ const ModeEditView: Component<Props> = (props) => {
           <SettingsRow title="代理模式" description="设置该代理模式" last>
             <Select<Mode>
               options={[...modes]}
-              current={cfg().mode === "subagent" ? "subagent" : "primary"}
+              current={(modes as readonly string[]).includes(cfg().mode ?? "") ? (cfg().mode as Mode) : "primary"}
               value={(val) => val}
               label={(val) => val}
               onSelect={(val) => {
@@ -177,6 +182,21 @@ const ModeEditView: Component<Props> = (props) => {
               variant="secondary"
               size="small"
             />
+            <div
+              style={{
+                "text-align": "end",
+                "font-size": "12px",
+                color: "var(--vscode-descriptionForeground)",
+                "margin-top": "6px",
+                "line-height": "1.4",
+              }}
+            >
+              {
+                modeDescriptions[
+                  (modes as readonly string[]).includes(cfg().mode ?? "") ? (cfg().mode as Mode) : "primary"
+                ]
+              }
+            </div>
           </SettingsRow>
         </Card>
       </Show>

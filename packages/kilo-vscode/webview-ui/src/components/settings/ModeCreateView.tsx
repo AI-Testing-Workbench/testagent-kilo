@@ -16,8 +16,13 @@ interface Props {
   onBack: () => void
 }
 
-type Mode = "primary" | "subagent"
-const modes: Mode[] = ["primary", "subagent"]
+type Mode = "primary" | "subagent" | "all"
+const modes: Mode[] = ["primary", "subagent", "all"]
+const modeDescriptions: Record<Mode, string> = {
+  primary: "此代理显示在 Agent 切换栏中，用户可直接选择使用。适用于通用任务。",
+  subagent: "此代理不会显示在切换栏中，只能由其他 Agent 通过 @ 语法调用。适用于后台工具类代理。",
+  all: "此代理既显示在切换栏中供用户选择，也可以被其他 Agent 调用。",
+}
 
 const ModeCreateView: Component<Props> = (props) => {
   const language = useLanguage()
@@ -121,6 +126,16 @@ const ModeCreateView: Component<Props> = (props) => {
             variant="secondary"
             size="small"
           />
+          <div
+            style={{
+              "font-size": "12px",
+              color: "var(--vscode-descriptionForeground)",
+              "margin-top": "6px",
+              "line-height": "1.4",
+            }}
+          >
+            {modeDescriptions[mode()]}
+          </div>
         </SettingsRow>
       </Card>
 
