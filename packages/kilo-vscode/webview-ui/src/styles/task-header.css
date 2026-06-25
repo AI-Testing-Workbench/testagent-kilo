@@ -175,6 +175,31 @@
   background: color-mix(in srgb, var(--vscode-errorForeground) 60%, rgba(128, 0, 0, 1));
 }
 
+/* Compact inline bar for stats row */
+.context-progress-inline {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35em;
+  font-size: 11px;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+  color: var(--vscode-descriptionForeground);
+  cursor: default;
+}
+.context-progress-inline::before {
+  content: "";
+  display: inline-block;
+  width: 5em;
+  height: 4px;
+  border-radius: 2px;
+  overflow: hidden;
+  background: linear-gradient(
+    to right,
+    var(--ctx-bar-color, var(--vscode-foreground)) var(--ctx-bar-pct, 0%),
+    color-mix(in srgb, var(--vscode-foreground) 20%, transparent) var(--ctx-bar-pct, 0%)
+  );
+}
+
 .context-progress-reserved {
   height: 100%;
   background: color-mix(in srgb, var(--vscode-foreground) 30%, transparent);

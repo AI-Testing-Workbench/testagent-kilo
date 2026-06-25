@@ -1,15 +1,5 @@
-/**
- * ContextProgress — three-segment progress bar showing context window usage.
- *
- * Segments:
- *   1. Used tokens (foreground color, turns red when >= 50%)
- *   2. Reserved for output (medium gray)
- *   3. Available (transparent / background)
- *
- * Token counts flanking the bar: used on left, total on right.
- */
-
-import { Component, createMemo, Show } from "solid-js"
+import type { Component, JSX } from "solid-js"
+import { createMemo, Show } from "solid-js"
 import { Tooltip } from "@kilocode/kilo-ui/tooltip"
 import { useSession } from "../../context/session"
 import { useProvider } from "../../context/provider"
@@ -23,7 +13,11 @@ function fmt(n: number): string {
 // alias to match TaskHeader naming
 const fmtNum = fmt
 
-export const ContextProgress: Component = () => {
+interface ContextProgressProps {
+  compact?: boolean
+}
+
+export const ContextProgress: Component<ContextProgressProps> = (props) => {
   const session = useSession()
   const provider = useProvider()
 
@@ -46,13 +40,41 @@ export const ContextProgress: Component = () => {
     return { used, available, limit, pctUsed, pctAvail }
   })
 
+  const level = createMemo<JSX.CSSProperties["color"]>(() => {
+    const d = data()
+    if (!d) return undefined
+    if (d.pctUsed >= 80) return "var(--context-progress-danger, var(--vscode-errorForeground, #f14c4c))"
+    if (d.pctUsed >= 50) return "var(--context-progress-warn, var(--vscode-editorWarning-foreground, #e2b714))"
+    return "var(--context-progress-safe, var(--vscode-testing-iconPassed, #5cb85c))"
+  })
+
   const tip = createMemo(() => {
     const d = data()
     if (!d) return ""
-    const lines = [`${fmt(d.used)} / ${fmt(d.limit)} tokens used`]
-    if (d.available > 0) lines.push(`${fmt(d.available)} available`)
+    const lines = [`已用 ${fmt(d.used)} / ${fmt(d.limit)} tokens`]
+    if (d.available > 0) lines.push(`可用 ${fmt(d.available)}`)
     return lines.join("\n")
   })
+
+  if (props.compact) {
+    return (
+      <Show when={data()}>
+        {(d) => (
+          <Tooltip value={tip()} placement="bottom">
+            <span
+              class="context-progress-inline"
+              style={{
+                "--ctx-bar-color": level(),
+                "--ctx-bar-pct": `${d().pctUsed}%`,
+              } as JSX.CSSProperties}
+            >
+              {fmt(d().used)}/{fmt(d().limit)}
+            </span>
+          </Tooltip>
+        )}
+      </Show>
+    )
+  }
 
   return (
     <Show when={data()}>

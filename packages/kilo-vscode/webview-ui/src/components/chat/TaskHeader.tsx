@@ -105,24 +105,11 @@ export const TaskHeader: Component<TaskHeaderProps> = (props) => {
     )
   })
 
-  const context = createMemo(() => {
-    const usage = session.contextUsage()
-    if (!usage) return undefined
-    const tokens = usage.tokens.toLocaleString(language.locale())
-    const pct = usage.percentage !== null ? `${usage.percentage}%` : undefined
-    return { tokens, pct }
-  })
-
-  // Token breakdown from the last assistant message — only return if at least one value is > 0
   const tokens = createMemo(() => {
-    const msgs = session.messages()
-    for (let i = msgs.length - 1; i >= 0; i--) {
-      const m = msgs[i]
-      if (m.role !== "assistant" || !m.tokens) continue
-      const tk = m.tokens
-      const has = tk.input > 0 || tk.output > 0 || (tk.cache?.write ?? 0) > 0 || (tk.cache?.read ?? 0) > 0
-      if (has) return tk
-    }
+    const tk = session.familyTokens()
+    if (!tk) return undefined
+    const has = tk.input > 0 || tk.output > 0 || tk.cache.read > 0 || tk.cache.write > 0
+    if (has) return tk
     return undefined
   })
 
@@ -186,57 +173,7 @@ export const TaskHeader: Component<TaskHeaderProps> = (props) => {
         </div>
 
         <div data-slot="task-header-stats">
-          <Show when={cost()}>
-            {(c) => (
-              <Tooltip value={costTooltip()} placement="bottom">
-                <span>{c()}</span>
-              </Tooltip>
-            )}
-          </Show>
-          <Show when={context()}>
-            {(ctx) => (
-              <Tooltip
-                value={ctx().pct ? `已使用 ${ctx().tokens} tokens（约占上下文 ${ctx().pct}）` : `${ctx().tokens}tokens`}
-                placement="bottom"
-              >
-                <Show when={ctx().pct} fallback={<span>{ctx().tokens}</span>}>
-                  {(pct) => (
-                    <span
-                      class="task-header-context-ring"
-                      style={{
-                        background: `conic-gradient(var(--vscode-foreground) ${pct()}, color-mix(in srgb, var(--vscode-foreground) 18%, transparent) 0)`,
-                      }}
-                      aria-label={`上下文已使用 ${pct()}`}
-                    ></span>
-                  )}
-                </Show>
-              </Tooltip>
-            )}
-          </Show>
-          {/* testagent_change start - export conversation button */}
-          <Show when={hasMessages() && !busy()}>
-            <Tooltip value="导出对话" placement="bottom">
-              <IconButton
-                icon="download"
-                size="small"
-                variant="ghost"
-                onClick={exportConversation}
-                aria-label="导出对话"
-              />
-            </Tooltip>
-          </Show>
-          {/* testagent_change end 暂时注释子agent 停止功能 */}
-          {/* <Show when={props.readonly && busy()}>
-            <Tooltip value={language.t("prompt.action.stop")} placement="bottom">
-              <IconButton
-                icon="stop"
-                size="small"
-                variant="ghost"
-                onClick={stop}
-                aria-label={language.t("prompt.action.stop")}
-              />
-            </Tooltip>
-          </Show> */}
+          <ContextProgress compact />
           <Show when={!props.readonly}>
             <Tooltip value={language.t("command.session.compact")} placement="bottom">
               <IconButton
@@ -258,6 +195,18 @@ export const TaskHeader: Component<TaskHeaderProps> = (props) => {
               />
             </Tooltip>
           </Show>
+          {/* testagent_change start - export conversation button */}
+          <Show when={hasMessages() && !busy()}>
+            <Tooltip value="导出对话" placement="bottom">
+              <IconButton
+                icon="download"
+                size="small"
+                variant="ghost"
+                onClick={exportConversation}
+                aria-label="导出对话"
+              />
+            </Tooltip>
+          </Show>
           <Show when={hasMessages()}>
             <button
               data-slot="task-header-expand"
@@ -274,15 +223,15 @@ export const TaskHeader: Component<TaskHeaderProps> = (props) => {
       <Show when={expanded() && session.messages().some((m) => m.role === "assistant")}>
         <div data-component="task-header-graph">
           <TaskTimeline />
-          <div data-slot="task-header-graph-row">
+          {/* <div data-slot="task-header-graph-row">
             <ContextProgress />
-          </div>
+          </div> */}
           <Show when={tokens()}>
             {(tk) => (
               <div class="task-header-tokens">
-                <span class="task-header-tokens-label" style={{"margin-right":'10px'}}>当前消息Tokens</span>
+                <span class="task-header-tokens-label" style={{"margin-right":'10px'}}>会话累计消耗tokens</span>
                 <Show when={tk().input > 0}>
-                  <Tooltip value="包含内容：用户的问题/指令、系统提示词（system prompt）、对话历史、上下文信息（如文件内容、代码片段）、工具定义和文档">
+                  <Tooltip value="会话全部turn累计的输入tokens，包含：用户的问题/指令、系统提示词（system prompt）、对话历史、上下文信息（如文件内容、代码片段）、工具定义和文档">
                     <span class="task-header-tokens-value">
                       <Icon name="arrow-up" size="small" />
                       输入:{fmtNum(tk().input)}
@@ -290,7 +239,7 @@ export const TaskHeader: Component<TaskHeaderProps> = (props) => {
                   </Tooltip>
                 </Show>
                 <Show when={tk().output > 0}>
-                  <Tooltip value="包含内容：AI 的回复文本、生成的代码、工具调用（function calls）、推理过程">
+                  <Tooltip value="会话全部turn累计的输出tokens，包含：AI 的回复文本、生成的代码、工具调用（function calls）、推理过程">
                     <span class="task-header-tokens-value">
                       <Icon name="arrow-down-to-line" size="small" />
                       输出:{fmtNum(tk().output)}
