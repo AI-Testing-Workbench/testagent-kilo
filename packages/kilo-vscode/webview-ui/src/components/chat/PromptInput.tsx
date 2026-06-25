@@ -33,6 +33,7 @@ import { fileName, dirName, buildHighlightSegments, atEnd, isPromptBusy } from "
 import type { CodeContext, ReviewComment, TextPart } from "../../types/messages"
 import { formatReviewCommentsMarkdown } from "../../utils/review-comment-markdown"
 import { pendingDraftKey, scopeDraftKey, sessionDraftKey } from "../../utils/prompt-drafts"
+import { ContextRing, SessionInfoContent } from "./SessionInfo"
 
 // Per-session input text storage (module-level so it survives remounts)
 const drafts = new Map<string, string>()
@@ -988,6 +989,9 @@ export const PromptInput: Component<PromptInputProps> = (props) => {
           </Show>
         </div>
         <div class="prompt-input-hint-actions">
+          <Tooltip value={<SessionInfoContent />} placement="top">
+            <ContextRing />
+          </Tooltip>
           <Tooltip value={language.t("prompt.action.enhance")} placement="top">
             <Button
               variant="ghost"
