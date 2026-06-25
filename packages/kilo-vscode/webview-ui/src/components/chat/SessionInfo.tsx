@@ -86,7 +86,15 @@ export const ContextRing: Component = () => {
     return "var(--vscode-testing-iconPassed, #5cb85c)"
   })
 
+  const canCompact = createMemo(() => {
+    if (session.status() === "busy") return false
+    if (session.messages().length === 0) return false
+    if (!session.selected()) return false
+    return true
+  })
+
   const handleClick = () => {
+    if (!canCompact()) return
     const messageID = Identifier.ascending("message")
     const sessionID = session.currentSession()?.id
     if (sessionID) {
@@ -96,9 +104,10 @@ export const ContextRing: Component = () => {
   }
 
   return (
-    <button
+    <Button
       class="context-ring-btn"
       aria-label={`Context: ${pct()}% used`}
+      disabled={!canCompact()}
       onClick={handleClick}
     >
       <svg width="18" height="18" viewBox="0 0 18 18">
@@ -125,7 +134,7 @@ export const ContextRing: Component = () => {
           {pct()}%
         </text>
       </svg>
-    </button>
+    </Button>
   )
 }
 

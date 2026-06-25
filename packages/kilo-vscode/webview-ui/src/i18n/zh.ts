@@ -1245,6 +1245,9 @@ export const dict = {
   "settings.context.watcherPatterns": "文件监视器忽略模式",
   "settings.context.watcherPatterns.description": "监视器应忽略的文件的 glob 模式",
 
+  "settings.providers.subagentModel.title": "子代理模型",
+  "settings.providers.subagentModel.description": "任务工具子代理的默认模型和推理强度。留空则继承调用方 agent 的模型。",
+
   "settings.commitMessage.title": "Commit Message",
   "settings.commitMessage.override.title": "使用自定义 prompt",
   "settings.commitMessage.override.description":
