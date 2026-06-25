@@ -231,7 +231,22 @@ export const TaskHeader: Component<TaskHeaderProps> = (props) => {
               <div class="task-header-tokens">
                 <span class="task-header-tokens-label" style={{"margin-right":'10px'}}>会话累计消耗tokens</span>
                 <Show when={tk().input > 0}>
-                  <Tooltip value="会话全部turn累计的输入tokens，包含：用户的问题/指令、系统提示词（system prompt）、对话历史、上下文信息（如文件内容、代码片段）、工具定义和文档">
+                  <Tooltip
+                    value={
+                      <Show when={tk().breakdown} fallback="会话全部turn累计的输入tokens">
+                        {(br) => (
+                          <div style={{ "text-align": "left", "white-space": "nowrap" }}>
+                            <div>系统提示词: {fmtNum(br().system)}</div>
+                            <div>对话历史:   {fmtNum(br().messages)}</div>
+                            <div>工具定义:   {fmtNum(br().tools)}</div>
+                            <hr style={{ margin: "2px 0", border: "none", "border-top": "1px solid currentColor", opacity: 0.3 }} />
+                            <div>合计:       {fmtNum(tk().input)}</div>
+                          </div>
+                        )}
+                      </Show>
+                    }
+                    placement="bottom"
+                  >
                     <span class="task-header-tokens-value">
                       <Icon name="arrow-up" size="small" />
                       输入:{fmtNum(tk().input)}

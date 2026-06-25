@@ -105,6 +105,7 @@ export interface FamilyTokens {
   output: number
   reasoning: number
   cache: { read: number; write: number }
+  breakdown?: { system: number; messages: number; tools: number }
 }
 
 /**
@@ -125,6 +126,13 @@ export function buildFamilyTokens(
       total.reasoning += m.tokens.reasoning ?? 0
       total.cache.read += m.tokens.cache?.read ?? 0
       total.cache.write += m.tokens.cache?.write ?? 0
+      // Accumulate breakdown per message
+      if (m.tokens.breakdown) {
+        if (!total.breakdown) total.breakdown = { system: 0, messages: 0, tools: 0 }
+        total.breakdown.system += m.tokens.breakdown.system
+        total.breakdown.messages += m.tokens.breakdown.messages
+        total.breakdown.tools += m.tokens.breakdown.tools
+      }
       has = true
     }
   }

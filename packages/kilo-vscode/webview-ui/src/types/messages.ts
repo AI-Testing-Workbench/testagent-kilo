@@ -98,6 +98,11 @@ export interface TokenUsage {
   output: number
   reasoning?: number
   cache?: { read: number; write: number }
+  breakdown?: {
+    system: number
+    messages: number
+    tools: number
+  }
 }
 
 // Context usage derived from the last assistant message's tokens
