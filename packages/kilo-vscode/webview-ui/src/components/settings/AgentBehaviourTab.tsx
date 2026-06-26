@@ -59,7 +59,7 @@ type AgentView = "list" | "create" | "edit"
 
 const AgentBehaviourTab: Component = () => {
   const language = useLanguage()
-  const { config, updateConfig } = useConfig()
+  const { config, updateConfig, saveConfig } = useConfig()
   const session = useSession()
   const dialog = useDialog()
   const vscode = useVSCode()
@@ -641,7 +641,12 @@ const AgentBehaviourTab: Component = () => {
               size="large"
               onClick={() => {
                 dialog.close()
-                setTimeout(() => session.removeMcp(name), 150)
+                // Clean up legacy files (kilo/mcp.json, marketplace, etc.)
+                session.removeMcp(name)
+                // Remove from main config via null sentinel,
+                // so deepMerge overrides the draft entry and stripNulls cleans it up.
+                updateConfig({ mcp: { ...config().mcp, [name]: null } as any })
+                saveConfig()
               }}
             >
               {language.t("settings.agentBehaviour.removeMcp.button")}
@@ -650,6 +655,79 @@ const AgentBehaviourTab: Component = () => {
         </div>
       </Dialog>
     ))
+  }
+
+  // Add MCP dialog state
+  const [addMcpName, setAddMcpName] = createSignal("")
+  const [addMcpError, setAddMcpError] = createSignal("")
+
+  const showAddMcpDialog = () => {
+    setAddMcpName("")
+    setAddMcpError("")
+
+    const existingNames = () => Object.keys(config().mcp ?? {})
+
+    const doAdd = () => {
+      const trimmed = addMcpName().trim()
+      if (!trimmed) {
+        setAddMcpError(language.t("settings.agentBehaviour.addMcpDialog.nameRequired"))
+        return
+      }
+      if (existingNames().includes(trimmed)) {
+        setAddMcpError(language.t("settings.agentBehaviour.addMcpDialog.nameTaken"))
+        return
+      }
+      dialog.close()
+      const existing = config().mcp ?? {}
+      updateConfig({
+        mcp: {
+          ...existing,
+          [trimmed]: { type: "remote", url: "" },
+        },
+      })
+      setEditingMcp(trimmed)
+    }
+
+    dialog.show(() => {
+      const name = addMcpName
+      const error = addMcpError
+
+      return (
+        <Dialog title={language.t("settings.agentBehaviour.addMcpDialog.title")} fit>
+          <div style={{ display: "flex", "flex-direction": "column", gap: "12px", padding: "8px 0" }}>
+            <div>
+              <div data-slot="settings-row-label-title" style={{ "margin-bottom": "4px" }}>
+                {language.t("settings.agentBehaviour.addMcpDialog.name")}
+              </div>
+              <TextField
+                value={name()}
+                placeholder={language.t("settings.agentBehaviour.addMcpDialog.name.placeholder")}
+                onChange={(val) => {
+                  setAddMcpName(val)
+                  setAddMcpError("")
+                }}
+                onKeyDown={(e: KeyboardEvent) => {
+                  if (e.key === "Enter") doAdd()
+                }}
+              />
+              <Show when={error()}>
+                <div style={{ "font-size": "12px", color: "var(--vscode-errorForeground)", "margin-top": "4px" }}>
+                  {error()}
+                </div>
+              </Show>
+            </div>
+          </div>
+          <div class="dialog-confirm-actions">
+            <Button variant="ghost" size="large" onClick={() => dialog.close()}>
+              {language.t("common.cancel")}
+            </Button>
+            <Button variant="primary" size="large" onClick={doAdd}>
+              {language.t("common.submit")}
+            </Button>
+          </div>
+        </Dialog>
+      )
+    })
   }
 
   const renderMcpSubtab = () => {
@@ -708,9 +786,9 @@ const AgentBehaviourTab: Component = () => {
             "margin-bottom": "8px",
           }}
         >
-          {/* <Button variant="secondary" size="small" onClick={browse}>
-            {language.t("settings.agentBehaviour.mcpBrowseMarketplace")}
-          </Button> */}
+          <Button variant="secondary" size="small" onClick={showAddMcpDialog}>
+            {language.t("settings.agentBehaviour.addMcpButton")}
+          </Button>
         </div>
         <Show
           when={mcpEntries().length > 0}

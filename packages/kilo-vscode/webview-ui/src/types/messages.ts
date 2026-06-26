@@ -415,6 +415,7 @@ export interface McpConfig {
   environment?: Record<string, string>
   url?: string
   headers?: Record<string, string>
+  timeout?: number
   enabled?: boolean
 }
 

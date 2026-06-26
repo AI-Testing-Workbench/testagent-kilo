@@ -1,4 +1,4 @@
-import { Component, Show, createMemo, createSignal, For } from "solid-js"
+import { Component, Show, createMemo, createSignal, createEffect, For, onCleanup } from "solid-js"
 import { TextField } from "@kilocode/kilo-ui/text-field"
 import { Card } from "@kilocode/kilo-ui/card"
 import { Button } from "@kilocode/kilo-ui/button"
@@ -15,6 +15,8 @@ interface Props {
   onRemove: (name: string) => void
 }
 
+const DEBOUNCE_MS = 400
+
 const McpEditView: Component<Props> = (props) => {
   const language = useLanguage()
   const { config, updateConfig } = useConfig()
@@ -23,6 +25,26 @@ const McpEditView: Component<Props> = (props) => {
 
   const [envKey, setEnvKey] = createSignal("")
   const [envVal, setEnvVal] = createSignal("")
+  const [headerKey, setHeaderKey] = createSignal("")
+  const [headerVal, setHeaderVal] = createSignal("")
+
+  // Local signals for debounced fields — updates config only after user stops typing
+  const [timeoutText, setTimeoutText] = createSignal(String(cfg().timeout ?? ""))
+
+  createEffect(() => {
+    const text = timeoutText()
+    const currentVal = cfg().timeout
+    const textAsNum = Number(text)
+    const newVal = Number.isFinite(textAsNum) && textAsNum > 0 ? textAsNum : undefined
+
+    // Skip if the value hasn't changed from what's already in config
+    if (newVal === currentVal || (newVal === undefined && currentVal === undefined)) return
+
+    const timer = setTimeout(() => {
+      update({ timeout: newVal })
+    }, DEBOUNCE_MS)
+    onCleanup(() => clearTimeout(timer))
+  })
 
   const update = (partial: Partial<McpConfig>) => {
     const existing = config().mcp ?? {}
@@ -32,7 +54,7 @@ const McpEditView: Component<Props> = (props) => {
     })
   }
 
-  const transport = () => cfg().type ?? (cfg().url ? "remote" : "local")
+  const transport = () => cfg().type ?? (cfg().url ? "remote" : cfg().command ? "local" : "remote")
 
   const cmd = () => {
     const c = cfg().command
@@ -47,6 +69,7 @@ const McpEditView: Component<Props> = (props) => {
   }
 
   const env = createMemo(() => Object.entries(cfg().environment ?? cfg().env ?? {}))
+  const headers = createMemo(() => Object.entries(cfg().headers ?? {}))
 
   const addEnv = () => {
     const key = envKey().trim()
@@ -62,6 +85,22 @@ const McpEditView: Component<Props> = (props) => {
     const existing = { ...(cfg().environment ?? cfg().env ?? {}) }
     delete existing[key]
     update({ environment: existing })
+  }
+
+  const addHeader = () => {
+    const key = headerKey().trim()
+    const val = headerVal().trim()
+    if (!key) return
+    const existing = cfg().headers ?? {}
+    update({ headers: { ...existing, [key]: val } })
+    setHeaderKey("")
+    setHeaderVal("")
+  }
+
+  const removeHeader = (key: string) => {
+    const existing = { ...(cfg().headers ?? {}) }
+    delete existing[key]
+    update({ headers: existing })
   }
 
   return (
@@ -130,6 +169,90 @@ const McpEditView: Component<Props> = (props) => {
               update({ command: [cmd(), ...parts] })
             }}
           />
+        </Card>
+        <Card style={{ "margin-bottom": "12px" }}>
+          <div data-slot="settings-row-label-title" style={{ "margin-bottom": "8px" }}>
+            {language.t("settings.agentBehaviour.editMcp.timeout")}
+          </div>
+          <TextField
+            value={timeoutText()}
+            placeholder={language.t("settings.agentBehaviour.editMcp.timeout.placeholder")}
+            onChange={(val) => setTimeoutText(val)}
+          />
+        </Card>
+      </Show>
+
+      {/* Timeout and Headers for remote */}
+      <Show when={transport() === "remote"}>
+        <Card style={{ "margin-bottom": "12px" }}>
+          <div data-slot="settings-row-label-title" style={{ "margin-bottom": "8px" }}>
+            {language.t("settings.agentBehaviour.editMcp.timeout")}
+          </div>
+          <TextField
+            value={timeoutText()}
+            placeholder={language.t("settings.agentBehaviour.editMcp.timeout.placeholder")}
+            onChange={(val) => setTimeoutText(val)}
+          />
+        </Card>
+
+        <Card style={{ "margin-bottom": "12px" }}>
+          <div data-slot="settings-row-label-title" style={{ "margin-bottom": "4px" }}>
+            {language.t("settings.agentBehaviour.editMcp.headers")}
+          </div>
+          <div data-slot="settings-row-label-subtitle" style={{ "margin-bottom": "8px" }}>
+            {language.t("settings.agentBehaviour.editMcp.headers.help")}
+          </div>
+
+          <div
+            style={{
+              display: "flex",
+              gap: "8px",
+              "align-items": "center",
+              padding: "8px 0",
+              "border-bottom": headers().length > 0 ? "1px solid var(--border-weak-base)" : "none",
+            }}
+          >
+            <div style={{ flex: 1 }}>
+              <TextField value={headerKey()} placeholder="Header-Name" onChange={(val) => setHeaderKey(val)} />
+            </div>
+            <div style={{ flex: 1 }}>
+              <TextField
+                value={headerVal()}
+                placeholder="value"
+                onChange={(val) => setHeaderVal(val)}
+                onKeyDown={(e: KeyboardEvent) => {
+                  if (e.key === "Enter") addHeader()
+                }}
+              />
+            </div>
+            <Button variant="secondary" onClick={addHeader}>
+              {language.t("common.add")}
+            </Button>
+          </div>
+
+          <For each={headers()}>
+            {([key, val], index) => (
+              <div
+                style={{
+                  display: "flex",
+                  "align-items": "center",
+                  "justify-content": "space-between",
+                  padding: "6px 0",
+                  "border-bottom": index() < headers().length - 1 ? "1px solid var(--border-weak-base)" : "none",
+                }}
+              >
+                <span
+                  style={{
+                    "font-family": "var(--vscode-editor-font-family, monospace)",
+                    "font-size": "12px",
+                  }}
+                >
+                  {key}: {val}
+                </span>
+                <IconButton size="small" variant="ghost" icon="close" onClick={() => removeHeader(key)} />
+              </div>
+            )}
+          </For>
         </Card>
       </Show>
 
