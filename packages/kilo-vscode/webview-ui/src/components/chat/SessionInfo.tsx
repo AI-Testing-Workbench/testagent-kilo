@@ -109,6 +109,7 @@ export const ContextRing: Component = () => {
       aria-label={`Context: ${pct()}% used`}
       disabled={!canCompact()}
       onClick={handleClick}
+      variant="ghost"
     >
       <svg width="18" height="18" viewBox="0 0 18 18">
         <circle cx="9" cy="9" r="7" fill="none" stroke="var(--vscode-input-border, rgba(128,128,128,0.25))" stroke-width="2" />
@@ -118,7 +119,7 @@ export const ContextRing: Component = () => {
           stroke={color()}
           stroke-width="2"
           stroke-linecap="round"
-          stroke-dasharray={CIRCUMFERENCE}
+          stroke-dasharray={String(CIRCUMFERENCE)}
           stroke-dashoffset={offset()}
           transform="rotate(-90 9 9)"
           style={{ transition: "stroke-dashoffset 0.3s ease-out, stroke 0.3s ease-out" }}
@@ -140,25 +141,11 @@ export const ContextRing: Component = () => {
 
 /** Rich tooltip content showing full context breakdown */
 export const SessionInfoContent: Component = () => {
-  const session = useSession()
   const usageData = useUsageData()
   const br = useBreakdown()
-
-  const canCompact = createMemo(() => {
-    if (session.status() === "busy") return false
-    if (session.messages().length === 0) return false
-    if (!session.selected()) return false
-    return true
-  })
-
-  const handleCompact = () => {
-    const messageID = Identifier.ascending("message")
-    const sessionID = session.currentSession()?.id
-    if (sessionID) {
-      session.addOptimistic(sessionID, messageID, "压缩会话", [])
-    }
-    session.compact()
-  }
+  const session = useSession()
+  const provider = useProvider()
+  const activeModel = () => provider.findModel(session.selected())
 
   return (
     <div class="session-info-tooltip">
@@ -167,7 +154,7 @@ export const SessionInfoContent: Component = () => {
       </div>
       <div class="session-info-tooltip-row">
         <span class="session-info-tooltip-sub">上下文窗口</span>
-        <span>{fmt(usageData()?.used ?? 0)} / {fmt(usageData()?.limit ?? 0)} tokens</span>
+        <span>{fmt(usageData()?.used ?? 0)} / {fmt(activeModel()?.limit?.context ?? 0)} tokens</span>
         <span>{(usageData()?.pctUsed ?? 0).toFixed(0)}%</span>
       </div>
       <div class="session-info-tooltip-bar-track">
