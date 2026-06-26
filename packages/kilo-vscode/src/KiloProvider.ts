@@ -1366,16 +1366,17 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
       // Subscribe to SSE events for this webview (filtered by tracked sessions)
       this.unsubscribeEvent = this.connectionService.onEventFiltered(
         (event) => {
+          const et = (event as any).type as string
           // Remote status events are global and should always pass through
-          if (event.type === "kilo-sessions.remote-status-changed") return true
+          if (et === "kilo-sessions.remote-status-changed") return true
           const sessionId = this.connectionService.resolveEventSessionId(event)
 
           // message.part.updated and message.part.delta are always session-scoped; drop if session unknown.
           if (!sessionId) {
-            return event.type !== "message.part.updated" && event.type !== "message.part.delta"
+            return et !== "message.part.updated" && et !== "message.part.delta"
           }
 
-          if (event.type === "session.created" && this.matchesPendingFollowup(event.properties.info)) {
+          if (et === "session.created" && (event as any).properties.info) {
             return true
           }
 
@@ -1383,10 +1384,15 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
           // KiloProvider instance. The Settings panel is a separate provider with no tracked
           // sessions, but it needs session.status to populate sessionStatusMap and allStatusMap
           // for the busy-session warning on Save.
-          if (event.type === "session.status") return true
+          if (et === "session.status") return true
 
           // testagent_change start - session.info events should pass through (global notifications)
-          if (event.type === "session.info") return true
+          if (et === "session.info") return true
+          // testagent_change end
+
+          // testagent_change start - Allow blocking events from potential child sessions
+          // through the filter so they aren't dropped before auto-adoption completes.
+          if (et === "permission.asked" || et === "question.asked" || et === "session.error") return true
           // testagent_change end
 
           return this.trackedSessionIds.has(sessionId)
@@ -2872,7 +2878,9 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
       settings: {
         notifyAgent: notifications.get<boolean>("agent", true),
         notifyPermissions: notifications.get<boolean>("permissions", true),
+        notifyQuestions: notifications.get<boolean>("questions", true),
         notifyErrors: notifications.get<boolean>("errors", true),
+        notifySubagent: notifications.get<boolean>("subagent", false),
         soundAgent: sounds.get<string>("agent", "default"),
         soundPermissions: sounds.get<string>("permissions", "default"),
         soundErrors: sounds.get<string>("errors", "default"),
@@ -3807,10 +3815,10 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
   private maybeShowAgentCompletionNotification(
     sessionID: string,
     prevStatus: SessionStatus["type"] | undefined,
-    newStatus: SessionStatus["type"],
+    reason: string | undefined,
   ): void {
-    // Only notify on busy → idle transition
-    if (prevStatus !== "busy" || newStatus !== "idle") {
+    // Only notify on busy → idle transition with reason "completed"
+    if (prevStatus !== "busy" || reason !== "completed") {
       return
     }
 
@@ -3875,7 +3883,7 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
 
     // Show system notification with task name
     this.systemNotification.notify({
-      title: "TestAgent",
+      title: this.currentSession?.title ?? "TestAgent",
       message: `${taskName}`,
       type: "info",
       onClick: () => this.revealWebview(),
@@ -3894,20 +3902,26 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
    * - Notification setting is enabled
    */
   private maybeShowPermissionNotification(sessionID: string, permission: string): void {
-    // Only notify if webview is hidden
-    // if (this.isWebviewVisible()) return
-
     // Check if notification is enabled
     const notifications = vscode.workspace.getConfiguration("testagent.new.notifications")
     const notifyPermissions = notifications.get<boolean>("permissions", true)
     if (!notifyPermissions) return
 
+    const isChild = this.syncedChildSessions.has(sessionID)
+    // Subagent notifications are opt-in (default off)
+    if (isChild) {
+      const notifySubagent = notifications.get<boolean>("subagent", false)
+      if (!notifySubagent) return
+    }
+
+    const prefix = isChild ? "[子任务] " : ""
+    const title = isChild ? "TestAgent" : (this.currentSession?.title ?? "TestAgent")
+
     console.log("[TestAgent] ✅ Showing permission notification")
 
-    // Show system notification with Chinese text
     this.systemNotification.notify({
-      title: "TestAgent",
-      message: `需要权限：${permission}`,
+      title,
+      message: `${prefix}需要权限：${permission}`,
       type: "warning",
       onClick: () => this.revealWebview(),
     })
@@ -3917,29 +3931,68 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
   }
 
   /**
+   * Show notification when the agent asks a question.
+   * Only shows if:
+   * - Webview is not visible
+   * - Notification setting is enabled
+   */
+  private maybeShowQuestionNotification(sessionID: string, question: string): void {
+    // Check if notification is enabled
+    const notifications = vscode.workspace.getConfiguration("testagent.new.notifications")
+    const notifyQuestions = notifications.get<boolean>("questions", true)
+    if (!notifyQuestions) return
+
+    const isChild = this.syncedChildSessions.has(sessionID)
+    if (isChild) {
+      const notifySubagent = notifications.get<boolean>("subagent", false)
+      if (!notifySubagent) return
+    }
+
+    const prefix = isChild ? "[子任务] " : ""
+    const title = isChild ? "TestAgent" : (this.currentSession?.title ?? "TestAgent")
+
+    console.log("[TestAgent] ✅ Showing question notification")
+
+    this.systemNotification.notify({
+      title,
+      message: `${prefix}需要选择：${question}`,
+      type: "info",
+      onClick: () => this.revealWebview(),
+    })
+
+    // Play sound if configured
+    this.playNotificationSound("questions")
+  }
+
+  /**
    * Show notification when an error occurs.
    * Only shows if:
    * - Webview is not visible
    * - Notification setting is enabled
    */
   private maybeShowErrorNotification(sessionID: string, error: string): void {
-    // Only notify if webview is hidden
-    // if (this.isWebviewVisible()) return
-
     // Check if notification is enabled
     const notifications = vscode.workspace.getConfiguration("testagent.new.notifications")
     const notifyErrors = notifications.get<boolean>("errors", true)
     if (!notifyErrors) return
 
+    const isChild = this.syncedChildSessions.has(sessionID)
+    if (isChild) {
+      const notifySubagent = notifications.get<boolean>("subagent", false)
+      if (!notifySubagent) return
+    }
+
     // Truncate long error messages
     const shortError = error.length > 50 ? error.substring(0, 50) + "..." : error
 
+    const prefix = isChild ? "[子任务] " : ""
+    const title = isChild ? "TestAgent" : (this.currentSession?.title ?? "TestAgent")
+
     console.log("[TestAgent] ✅ Showing error notification")
 
-    // Show system notification with Chinese text
     this.systemNotification.notify({
-      title: "TestAgent",
-      message: `发生错误：${shortError}`,
+      title,
+      message: `${prefix}发生错误：${shortError}`,
       type: "error",
       onClick: () => this.revealWebview(),
     })
@@ -3984,7 +4037,7 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
    * Play notification sound based on user settings.
    * Currently only logs - actual sound playback would require audio files.
    */
-  private playNotificationSound(type: "agent" | "permissions" | "errors"): void {
+  private playNotificationSound(type: "agent" | "permissions" | "questions" | "errors"): void {
     const sounds = vscode.workspace.getConfiguration("testagent.new.sounds")
     const sound = sounds.get<string>(type, "default")
 
@@ -4111,8 +4164,9 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
    * Filters events by project ID and tracked session IDs so each webview only sees its own sessions.
    */
   private handleEvent(event: Event): void {
-    if (event.type === "kilo-sessions.remote-status-changed") {
-      this.remoteService?.updateFromEvent({ enabled: event.properties.enabled, connected: event.properties.connected })
+    if ((event as any).type === "kilo-sessions.remote-status-changed") {
+      const ev = event as any
+      this.remoteService?.updateFromEvent({ enabled: ev.properties.enabled, connected: ev.properties.connected })
       return
     }
 
@@ -4141,14 +4195,18 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
         this.postMessage(msg)
       }
       // testagent_change start - show notification when agent completes
-      this.maybeShowAgentCompletionNotification(sid, prevStatus, newStatus)
+      if (newStatus === "idle") {
+        const reason = (event.properties.status as { reason?: string }).reason
+        this.maybeShowAgentCompletionNotification(sid, prevStatus, reason)
+      }
       // testagent_change end
       return
     }
 
     // testagent_change start - handle session.info events to show VS Code notifications
-    if (event.type === "session.info") {
-      const message = event.properties.message as string
+    if ((event as any).type === "session.info") {
+      const ev = event as any
+      const message = ev.properties.message as string
       // Show info notification for plugin loading messages
       if (message.includes("plugin") || message.includes("Plugin")) {
         if (message.includes("✓") || message.includes("Successfully")) {
@@ -4159,7 +4217,7 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
         }
       }
       // Forward to webview as well
-      const msg = mapSSEEventToWebviewMessage(event, event.properties.sessionID as string | undefined)
+      const msg = mapSSEEventToWebviewMessage(ev, ev.properties.sessionID as string | undefined)
       if (msg) this.postMessage(msg)
       return
     }
@@ -4172,6 +4230,19 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
       if (sid && this.trackedSessionIds.has(sid)) {
         this.maybeShowPermissionNotification(sid, permission)
       }
+      return
+    }
+    // testagent_change end
+
+    // testagent_change start - handle question.asked events for notifications
+    if (event.type === "question.asked") {
+      const sid = event.properties.sessionID
+      const qs = event.properties.questions
+      if (sid && qs && qs.length > 0 && this.trackedSessionIds.has(sid)) {
+        const header = qs[0].header || qs[0].question
+        this.maybeShowQuestionNotification(sid, header)
+      }
+      return
     }
     // testagent_change end
 
@@ -4196,6 +4267,7 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
               : "An error occurred"
         this.maybeShowErrorNotification(sid, errorMsg)
       }
+      return
     }
     // testagent_change end
 
@@ -4232,7 +4304,7 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
 
     // Config was updated without a full dispose (e.g. permission-only save).
     // Fetch and push the updated config so the Settings panel reflects the change.
-    if (event.type === "global.config.updated") {
+    if ((event as any).type === "global.config.updated") {
       void this.fetchAndSendConfigUpdated()
       return
     }
