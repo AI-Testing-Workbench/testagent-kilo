@@ -111,7 +111,7 @@ export const ContextRing: Component = () => {
       onClick={handleClick}
       variant="ghost"
     >
-      <svg width="18" height="18" viewBox="0 0 18 18">
+      <svg width="18" height="18" viewBox="0 0 18 18" style={{ "transform": "scale(1.3) " }}>
         <circle cx="9" cy="9" r="7" fill="none" stroke="var(--vscode-input-border, rgba(128,128,128,0.25))" stroke-width="2" />
         <circle
           cx="9" cy="9" r="7"

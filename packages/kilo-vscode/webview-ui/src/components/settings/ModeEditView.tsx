@@ -324,7 +324,7 @@ const ModeEditView: Component<Props> = (props) => {
           <Switch
             checked={cfg().hidden ?? false}
             onChange={(val) => {
-              update({ hidden: val || undefined })
+              update({ hidden: val })
               // Clear default_agent if hiding the current default
               if (val && config().default_agent === props.name) {
                 updateConfig({ default_agent: null })
@@ -344,7 +344,7 @@ const ModeEditView: Component<Props> = (props) => {
           <Switch
             checked={cfg().disable ?? false}
             onChange={(val) => {
-              update({ disable: val || undefined })
+              update({ disable: val })
               // Clear default_agent if disabling the current default
               if (val && config().default_agent === props.name) {
                 updateConfig({ default_agent: null })

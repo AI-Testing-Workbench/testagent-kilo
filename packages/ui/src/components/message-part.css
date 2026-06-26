@@ -8,6 +8,7 @@
 }
 
 [data-component="user-message"] {
+  margin:10px 0;
   font-family: var(--font-family-sans);
   font-size: var(--font-size-base);
   font-style: normal;
