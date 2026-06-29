@@ -1028,6 +1028,44 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
           this.webview?.postMessage({ type: "shellPathResolved", name, path })
           break
         }
+        // testagent_change start - npm registry
+        case "getNpmRegistry": {
+          try {
+            const npmrcPath = path.join(os.homedir(), ".npmrc")
+            const content = fs.readFileSync(npmrcPath, "utf-8")
+            const match = content.match(/^registry\s*=\s*(.+)$/m)
+            const registry = match ? match[1].trim() : "https://registry.npmjs.org/"
+            this.webview?.postMessage({ type: "npmRegistryResult", registry })
+          } catch (err) {
+            // .npmrc doesn't exist or can't be read — use default
+            this.webview?.postMessage({ type: "npmRegistryResult", registry: "https://registry.npmjs.org/" })
+          }
+          break
+        }
+        case "setNpmRegistry": {
+          const { registry } = message
+          try {
+            const npmrcPath = path.join(os.homedir(), ".npmrc")
+            let content = ""
+            try {
+              content = fs.readFileSync(npmrcPath, "utf-8")
+            } catch {
+              // file doesn't exist yet
+            }
+            if (content.match(/^registry\s*=/m)) {
+              content = content.replace(/^registry\s*=.*$/m, `registry=${registry}`)
+            } else {
+              content += (content ? "\n" : "") + `registry=${registry}`
+            }
+            fs.writeFileSync(npmrcPath, content, "utf-8")
+            this.webview?.postMessage({ type: "npmRegistryResult", registry })
+          } catch (err) {
+            console.error("[TestAgent] Failed to set npm registry:", err)
+            vscode.window.showErrorMessage(`设置 npm 源失败: ${err}`)
+          }
+          break
+        }
+        // testagent_change end
         // testagent_change start - runtime switching
         case "getRuntime": {
           if (!this.extensionContext) {

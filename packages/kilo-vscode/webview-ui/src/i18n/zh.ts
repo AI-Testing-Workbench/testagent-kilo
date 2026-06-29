@@ -1243,7 +1243,7 @@ export const dict = {
   "settings.context.autoCompaction.title": "自动压缩",
   "settings.context.autoCompaction.description": "在上下文达到限制前自动压缩",
   "settings.context.compactionLimit.title": "自动压缩限制",
-  "settings.context.compactionLimit.description": "当上下文达到模型窗口的此百分比时进行压缩。留空则仅使用安全缓冲区。",
+  "settings.context.compactionLimit.description": "当上下文达到模型窗口的此百分比时进行压缩。默认值为 80%。",
   "settings.context.prune.title": "修剪旧输出",
   "settings.context.prune.description": "压缩期间移除旧的工具输出",
   "settings.context.watcherPatterns": "文件监视器忽略模式",

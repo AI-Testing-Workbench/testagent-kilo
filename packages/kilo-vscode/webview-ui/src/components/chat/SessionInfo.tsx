@@ -65,7 +65,7 @@ function useBreakdown() {
 }
 
 /** Small SVG donut showing context usage percentage, to be placed in the action bar */
-export const ContextRing: Component = () => {
+export const ContextRing: Component<{ showToolTipClick?: () => void }> = (props) => {
   const session = useSession()
   const usageData = useUsageData()
 
@@ -93,23 +93,15 @@ export const ContextRing: Component = () => {
     return true
   })
 
-  const handleClick = () => {
-    if (!canCompact()) return
-    const messageID = Identifier.ascending("message")
-    const sessionID = session.currentSession()?.id
-    if (sessionID) {
-      session.addOptimistic(sessionID, messageID, "压缩会话", [])
-    }
-    session.compact()
-  }
+  
 
   return (
     <Button
       class="context-ring-btn"
       aria-label={`Context: ${pct()}% used`}
       disabled={!canCompact()}
-      onClick={handleClick}
       variant="ghost"
+      onClick={props.showToolTipClick}
     >
       <svg width="18" height="18" viewBox="0 0 18 18" style={{ "transform": "scale(1.3) " }}>
         <circle cx="9" cy="9" r="7" fill="none" stroke="var(--vscode-input-border, rgba(128,128,128,0.25))" stroke-width="2" />
@@ -146,7 +138,22 @@ export const SessionInfoContent: Component = () => {
   const session = useSession()
   const provider = useProvider()
   const activeModel = () => provider.findModel(session.selected())
+    const canCompact = createMemo(() => {
+    if (session.status() === "busy") return false
+    if (session.messages().length === 0) return false
+    if (!session.selected()) return false
+    return true
+  })
 
+  const handleClick = () => {
+    if (!canCompact()) return
+    const messageID = Identifier.ascending("message")
+    const sessionID = session.currentSession()?.id
+    if (sessionID) {
+      session.addOptimistic(sessionID, messageID, "压缩会话", [])
+    }
+    session.compact()
+  }
   return (
     <div class="session-info-tooltip">
       <div class="session-info-tooltip-header">
@@ -188,7 +195,7 @@ export const SessionInfoContent: Component = () => {
         }}
       </Show>
       <div class="session-info-tooltip-footer">
-        <span>点击圆环压缩上下文</span>
+       <Button onClick={handleClick}>压缩上下文</Button>
       </div>
     </div>
   )
