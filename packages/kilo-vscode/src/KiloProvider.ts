@@ -4262,17 +4262,20 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
     // testagent_change end
 
     // testagent_change start - handle permission.asked events for notifications
+    // Note: no early return here — the event must also be forwarded to the webview
+    // via the normal mapSSEEventToWebviewMessage flow below.
     if (event.type === "permission.asked") {
       const sid = event.properties.sessionID
       const permission = event.properties.permission
       if (sid && this.trackedSessionIds.has(sid)) {
         this.maybeShowPermissionNotification(sid, permission)
       }
-      return
     }
     // testagent_change end
 
     // testagent_change start - handle question.asked events for notifications
+    // Note: no early return here — the event must also be forwarded to the webview
+    // via the normal mapSSEEventToWebviewMessage flow below.
     if (event.type === "question.asked") {
       const sid = event.properties.sessionID
       const qs = event.properties.questions
@@ -4280,7 +4283,6 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
         const header = qs[0].header || qs[0].question
         this.maybeShowQuestionNotification(sid, header)
       }
-      return
     }
     // testagent_change end
 
