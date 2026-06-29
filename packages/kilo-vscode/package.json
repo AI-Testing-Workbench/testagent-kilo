@@ -577,6 +577,16 @@
           "default": true,
           "description": "Show notification on errors"
         },
+        "testagent.new.notifications.questions": {
+          "type": "boolean",
+          "default": true,
+          "description": "Show notification when the agent asks a question"
+        },
+        "testagent.new.notifications.subagent": {
+          "type": "boolean",
+          "default": false,
+          "description": "Show notifications for sub-agent tasks (permissions, questions, errors)"
+        },
         "testagent.new.sounds.agent": {
           "type": "string",
           "default": "default",
