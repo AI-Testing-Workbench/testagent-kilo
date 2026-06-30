@@ -904,7 +904,9 @@ export interface NotificationSettingsLoadedMessage {
   settings: {
     notifyAgent: boolean
     notifyPermissions: boolean
+    notifyQuestions: boolean
     notifyErrors: boolean
+    notifySubagent: boolean
     soundAgent: string
     soundPermissions: string
     soundErrors: string

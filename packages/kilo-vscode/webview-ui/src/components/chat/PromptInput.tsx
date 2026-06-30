@@ -126,7 +126,7 @@ export const PromptInput: Component<PromptInputProps> = (props) => {
   const [codeContexts, setCodeContexts] = createSignal<CodeContext[]>([])
   const [reviewComments, setReviewComments] = createSignal<ReviewComment[]>([])
   const [enhancing, setEnhancing] = createSignal(false)
-  const [showContextTooltip, setShowContextTooltip] = createSignal(false)
+ 
   let enhanceCounter = 0
   let preEnhanceText: string | null = null
 
@@ -990,9 +990,7 @@ export const PromptInput: Component<PromptInputProps> = (props) => {
           </Show>
         </div>
         <div class="prompt-input-hint-actions">
-          <Tooltip value={<SessionInfoContent />} placement="top" inactive={!showContextTooltip()}>
-            <ContextRing showToolTipClick={() => setShowContextTooltip(!showContextTooltip())} />
-          </Tooltip>
+            <ContextRing  />
           <Tooltip value={language.t("prompt.action.enhance")} placement="top">
             <Button
               variant="ghost"

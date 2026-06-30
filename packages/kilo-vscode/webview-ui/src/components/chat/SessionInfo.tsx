@@ -4,9 +4,11 @@
  * - SessionInfoContent: Rich tooltip panel with token breakdown.
  */
 
-import { type Component, Show, createMemo } from "solid-js"
+import { type Component, Show, createMemo ,createSignal} from "solid-js"
 import { Button } from "@kilocode/kilo-ui/button"
+import { Tooltip } from "@kilocode/kilo-ui/tooltip"
 import { useSession } from "../../context/session"
+
 import { useProvider } from "../../context/provider"
 import { Identifier } from "../../utils/id"
 
@@ -68,6 +70,7 @@ function useBreakdown() {
 export const ContextRing: Component<{ showToolTipClick?: () => void }> = (props) => {
   const session = useSession()
   const usageData = useUsageData()
+  const [showContextTooltip, setShowContextTooltip] = createSignal(false)
 
   const pct = createMemo(() => {
     const d = usageData()
@@ -96,12 +99,12 @@ export const ContextRing: Component<{ showToolTipClick?: () => void }> = (props)
   
 
   return (
-    <Button
+    <Tooltip value={<SessionInfoContent />} placement="top" open={showContextTooltip()} contentStyle={{ "z-index": 9999999, "pointer-events": "auto" }} >
+      <Button
       class="context-ring-btn"
       aria-label={`Context: ${pct()}% used`}
-      disabled={!canCompact()}
       variant="ghost"
-      onClick={props.showToolTipClick}
+      onClick={()=>setShowContextTooltip(pre=> !pre)}
     >
       <svg width="18" height="18" viewBox="0 0 18 18" style={{ "transform": "scale(1.3) " }}>
         <circle cx="9" cy="9" r="7" fill="none" stroke="var(--vscode-input-border, rgba(128,128,128,0.25))" stroke-width="2" />
@@ -117,9 +120,9 @@ export const ContextRing: Component<{ showToolTipClick?: () => void }> = (props)
           style={{ transition: "stroke-dashoffset 0.3s ease-out, stroke 0.3s ease-out" }}
         />
         <text
-          x="9" y="9"
+          x="9" y="11"
           text-anchor="middle"
-          dominant-baseline="central"
+          dominant-baseline="centravsl"
           font-size="5"
           font-weight="600"
           fill="currentColor"
@@ -128,6 +131,8 @@ export const ContextRing: Component<{ showToolTipClick?: () => void }> = (props)
         </text>
       </svg>
     </Button>
+    </Tooltip>
+  
   )
 }
 
@@ -157,7 +162,7 @@ export const SessionInfoContent: Component = () => {
   return (
     <div class="session-info-tooltip">
       <div class="session-info-tooltip-header">
-        <span>会话信息</span>
+        <span>上下文信息</span>
       </div>
       <div class="session-info-tooltip-row">
         <span class="session-info-tooltip-sub">上下文窗口</span>
@@ -195,7 +200,9 @@ export const SessionInfoContent: Component = () => {
         }}
       </Show>
       <div class="session-info-tooltip-footer">
-       <Button onClick={handleClick}>压缩上下文</Button>
+       <Button onClick={handleClick} 
+        disabled={!canCompact()}
+       >压缩会话</Button>
       </div>
     </div>
   )
