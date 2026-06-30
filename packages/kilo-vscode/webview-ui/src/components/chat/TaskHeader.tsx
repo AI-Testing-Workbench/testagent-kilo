@@ -201,7 +201,7 @@ export const TaskHeader: Component<TaskHeaderProps> = (props) => {
           <Show when={tokens()}>
             {(tk) => (
               <div class="task-header-tokens">
-                <span class="task-header-tokens-label" style={{"margin-right":'10px'}}>会话累计消耗tokens</span>
+                <span class="task-header-tokens-label" style={{"margin-right":'10px'}}>任务累计消耗tokens</span>
                 <Show when={tk().input > 0}>
                   <Tooltip
                     value={

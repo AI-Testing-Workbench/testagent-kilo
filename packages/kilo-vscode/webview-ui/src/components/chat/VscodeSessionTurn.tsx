@@ -138,6 +138,57 @@ export const VscodeSessionTurn: Component<VscodeSessionTurnProps> = (props) => {
     return String(n)
   }
 
+  const turnStats = createMemo(() => {
+    const userMsg = message()
+    const assistantMsgs = assistantMessages()
+    if (!userMsg || assistantMsgs.length === 0) return null
+
+    let totalTokens = 0
+    let inputTokens = 0
+    let outputTokens = 0
+    let reasoningTokens = 0
+    let cacheReadTokens = 0
+    let cacheWriteTokens = 0
+
+    for (const msg of assistantMsgs) {
+      if (msg.tokens) {
+        const t = msg.tokens
+        const entry =
+          (t.input ?? 0) + (t.output ?? 0) + (t.reasoning ?? 0) + (t.cache?.read ?? 0) + (t.cache?.write ?? 0)
+        totalTokens += entry
+        inputTokens += t.input ?? 0
+        outputTokens += t.output ?? 0
+        reasoningTokens += t.reasoning ?? 0
+        cacheReadTokens += t.cache?.read ?? 0
+        cacheWriteTokens += t.cache?.write ?? 0
+      }
+    }
+
+    const startTime = userMsg.time?.created
+    const lastAssistantMsg = assistantMsgs[assistantMsgs.length - 1]
+    const endTime = lastAssistantMsg?.time?.completed
+
+    let duration: string | null = null
+    if (startTime && endTime) {
+      const durationMs = endTime - startTime
+      const seconds = Math.floor(durationMs / 1000)
+      const minutes = Math.floor(seconds / 60)
+      const remainingSeconds = seconds % 60
+      if (minutes > 0) duration = `${minutes}分${remainingSeconds}秒`
+      else duration = `${seconds}秒`
+    }
+
+    return {
+      totalTokens,
+      inputTokens,
+      outputTokens,
+      reasoningTokens,
+      cacheReadTokens,
+      cacheWriteTokens,
+      duration,
+      completed: !!endTime,
+    }
+  })
 
   return (
     <Show when={message()}>
@@ -205,6 +256,29 @@ export const VscodeSessionTurn: Component<VscodeSessionTurnProps> = (props) => {
                   </>
                 )}
               </For>
+              <Show when={turnStats()?.completed}>
+                {() => {
+                  const stats = turnStats()!
+                  const tipParts = `本轮对话耗时从用户消息发送到agent响应完成的总花费时间。`
+                  return (
+                    <div
+                      style={{
+                        "font-size": "12px",
+                        color: "var(--vscode-descriptionForeground)",
+                        "margin-top": "-4px",
+                        padding: "2px 8px",
+                        opacity: "0.8",
+                      }}
+                    >
+                      <Tooltip placement="top-start" value={tipParts}>
+                        <span style={{ cursor: "pointer" }}>
+                          本轮对话耗时: {stats.duration ?? "未知"}
+                        </span>
+                      </Tooltip>
+                    </div>
+                  )
+                }}
+              </Show>
             </div>
           </Show>
 

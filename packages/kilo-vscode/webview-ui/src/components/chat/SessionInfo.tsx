@@ -99,7 +99,7 @@ export const ContextRing: Component = () => {
   
 
   return (
-    <Tooltip value={<SessionInfoContent />} placement="top" inactive={showContextTooltip()}>
+    <Tooltip value={<SessionInfoContent />} placement="top" open={showContextTooltip()} contentStyle={{ "z-index": 9999999, "pointer-events": "auto" }} >
       <Button
       class="context-ring-btn"
       aria-label={`Context: ${pct()}% used`}
@@ -120,7 +120,7 @@ export const ContextRing: Component = () => {
           style={{ transition: "stroke-dashoffset 0.3s ease-out, stroke 0.3s ease-out" }}
         />
         <text
-          x="9" y="9"
+          x="9" y="11"
           text-anchor="middle"
           dominant-baseline="centravsl"
           font-size="5"
@@ -162,7 +162,7 @@ export const SessionInfoContent: Component = () => {
   return (
     <div class="session-info-tooltip">
       <div class="session-info-tooltip-header">
-        <span>会话信息</span>
+        <span>上下文信息</span>
       </div>
       <div class="session-info-tooltip-row">
         <span class="session-info-tooltip-sub">上下文窗口</span>
