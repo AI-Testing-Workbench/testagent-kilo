@@ -316,6 +316,7 @@ export type Todo = {
 export type SessionStatus =
   | {
       type: "idle"
+      reason?: "completed" | "user_abort" | "error"
     }
   | {
       type: "retry"
@@ -453,6 +454,11 @@ export type AssistantMessage = {
     cache: {
       read: number
       write: number
+    }
+    breakdown?: {
+      system: number
+      messages: number
+      tools: number
     }
   }
   structured?: unknown
@@ -1191,6 +1197,7 @@ export type Config = {
       error: string
     }>
   }
+  langfuse?: boolean
   share?: "manual" | "auto" | "disabled"
   autoshare?: boolean
   /**
@@ -1201,6 +1208,11 @@ export type Config = {
   enabled_providers?: Array<string>
   model?: string
   small_model?: string
+  subagent_model?: string
+  subagent_variant?: string
+  subagent_variant_overrides?: {
+    [key: string]: string
+  }
   default_agent?: string
   username?: string
   mode?: {
@@ -1282,6 +1294,10 @@ export type Config = {
   }
   compaction?: {
     auto?: boolean
+    /**
+     * Percentage of the model input/context window that triggers automatic compaction. The reserved safety buffer still applies if it would compact sooner.
+     */
+    threshold_percent?: number | "NaN" | "Infinity" | "-Infinity" | "Infinity" | "-Infinity" | "NaN"
     prune?: boolean
     tail_turns?: number
     preserve_recent_tokens?: number
@@ -2511,6 +2527,7 @@ export type EventSessionIdle = {
   type: "session.idle"
   properties: {
     sessionID: string
+    reason?: "completed" | "user_abort" | "error"
   }
 }
 
@@ -3559,9 +3576,23 @@ export type GlobalUpgradeResponse = GlobalUpgradeResponses[keyof GlobalUpgradeRe
 
 export type TestagentUserSetData = {
   body?: {
-    id?: string
-    name?: string
     token?: string
+    userId?: string
+    userName?: string
+    employeeId?: string
+    enterpriseId?: string
+    enterpriseName?: string
+    idToken?: string
+    joinedEnterpriseIds?: string
+    netEnv?: string
+    openId?: string
+    originPathId?: string
+    pathId?: string
+    pathName?: string
+    refreshToken?: string
+    rtcId?: string
+    sapId?: string
+    ystId?: string
   }
   path?: never
   query?: {

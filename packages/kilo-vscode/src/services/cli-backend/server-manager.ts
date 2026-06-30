@@ -72,10 +72,19 @@ export class ServerManager {
     // testagent_change start - fetch user ID before spawning so it's available immediately
     let userId: string | undefined
     let userName: string | undefined
+    let sapId: string | undefined
+    let openId: string | undefined
+    let originPathId: string | undefined
+    let pathName: string | undefined
     try {
       const session = await vscode.authentication.getSession("tscode-oauth", [], { createIfNone: false })
       userId = session?.account.id
       userName = session?.account.label
+      const metadata = (session as any).metadata;
+      sapId = metadata?.sapId;
+      openId = metadata?.openId;
+      originPathId = metadata?.originPathId;
+      pathName = metadata?.pathName;
     } catch {
       // non-critical, ignore
     }
@@ -133,6 +142,10 @@ export class ServerManager {
           ...(!claudeCompat && { KILO_DISABLE_CLAUDE_CODE: "true" }),
           ...(userId && { TESTAGENT_USER_ID: userId }), // testagent_change
           ...(userName && { TESTAGENT_USER_NAME: userName }), // testagent_change
+          ...(sapId && { TESTAGENT_SAP_ID: sapId }), // testagent_change
+          ...(openId && { TESTAGENT_OPEN_ID: openId }), // testagent_change
+          ...(originPathId && { TESTAGENT_ORIGIN_PATH_ID: originPathId }), // testagent_change
+          ...(pathName && { TESTAGENT_PATH_NAME: pathName }), // testagent_change
         },
         stdio: ["ignore", "pipe", "pipe"],
         // testagent_change start - prevent CMD window on Windows
