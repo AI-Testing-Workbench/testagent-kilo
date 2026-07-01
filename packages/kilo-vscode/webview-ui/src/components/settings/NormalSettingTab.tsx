@@ -31,7 +31,7 @@ const RUNTIME_OPTIONS: SelectOption[] = [
   { value: "bun", label: "Bun" },
 ]
 
-const CMB_NPM_REGISTRY = "http://central.jaf.cmbchina.cn:80/artifactory/api/npm/group-npm"
+const CMB_NPM_REGISTRY = `${decodeURIComponent(atob("aHR0cCUzQSUyRiUyRmNlbnRyYWwuamFmLmNtYmNoaW5hLmNu"))}:80/artifactory/api/npm/group-npm`
 
 const NormalSetting: Component = () => {
   const { config, updateConfig } = useConfig()

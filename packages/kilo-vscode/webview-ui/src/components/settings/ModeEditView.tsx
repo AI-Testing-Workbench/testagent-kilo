@@ -415,6 +415,7 @@ const PermissionRuleset: Component<RulesetProps> = (props) => {
     "todowrite",
     "skill",
     "sandbox",
+    "toast",
   ]
 
   // Deduplicate by permission+pattern (last wins — matches backend findLast semantics).
