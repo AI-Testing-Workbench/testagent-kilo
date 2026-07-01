@@ -4257,7 +4257,10 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
       // testagent_change start - show notification when agent completes
       if (newStatus === "idle") {
         const reason = (event.properties.status as { reason?: string }).reason
-        this.maybeShowAgentCompletionNotification(sid, prevStatus, reason)
+        // Skip notifications for child/sub-agent sessions
+        if (!this.syncedChildSessions.has(sid)) {
+          this.maybeShowAgentCompletionNotification(sid, prevStatus, reason)
+        }
       }
       // testagent_change end
       return
