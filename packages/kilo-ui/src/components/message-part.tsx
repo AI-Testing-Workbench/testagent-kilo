@@ -1355,6 +1355,8 @@ PART_MAPPING["text"] = function TextPartDisplay(props) {
   const i18n = useI18n()
   const part = () => props.part as TextPart
 
+
+
   const displayText = () => (part().text ?? "").trim()
   const throttledText = createThrottledValue(displayText)
   const summary = createMemo(() => {
@@ -1407,8 +1409,11 @@ PART_MAPPING["text"] = function TextPartDisplay(props) {
     }
   }
 
+  const isCompaction = () => "mode" in props.message && props.message.mode === "compaction"
+
   return (
     <Show when={throttledText()}>
+      <Show when={!isCompaction()} fallback={<CompactionSummary text={displayText()} done={"finish" in props.message && props.message.finish === "stop"} />}>
       <div data-component="text-part">
         <div data-slot="text-part-body">
           <Markdown text={throttledText()} cacheKey={part().id} onClick={handleMarkdownClick} />
@@ -1439,6 +1444,7 @@ PART_MAPPING["text"] = function TextPartDisplay(props) {
           )}
         </Show>
       </div>
+      </Show>
     </Show>
   )
 }
@@ -1557,6 +1563,35 @@ PART_MAPPING["reasoning"] = function ReasoningPartDisplay(props: MessagePartProp
         </Collapsible>
       </div>
     </Show>
+  )
+}
+
+// Renders compaction summary in a collapsible block, similar to reasoning-part.
+// Triggered when the parent assistant message has mode === "compaction".
+function CompactionSummary(props: { text: string; done?: boolean }) {
+  const [open, setOpen] = createSignal(!props.done)
+
+  return (
+    <div data-component="compaction-summary-part">
+      <Collapsible open={open()} onOpenChange={setOpen} class="tool-collapsible">
+        <Collapsible.Trigger>
+          <div data-slot="compaction-summary-header">
+            <Icon name="checklist" size="small" />
+            <span data-slot="compaction-summary-label">压缩会话</span>
+          </div>
+          <Collapsible.Arrow />
+        </Collapsible.Trigger>
+        <Collapsible.Content>
+          <div data-slot="compaction-summary-content">
+            <Markdown text={props.text} />
+          </div>
+        </Collapsible.Content>
+      </Collapsible>
+      <Show when={props.done}>
+        {/* 分隔符  居中显示“压缩会话完成，请输入后续操作” */}
+        <div data-slot="compaction-summary-separator">压缩会话完成，等待后续操作</div>
+      </Show>
+    </div>
   )
 }
 

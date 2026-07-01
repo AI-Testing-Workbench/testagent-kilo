@@ -1078,8 +1078,12 @@ export const dict = {
   "settings.notifications.agent.description": "Show notification when agent completes a task",
   "settings.notifications.permissions.title": "Permission Requests",
   "settings.notifications.permissions.description": "Show notification on permission requests",
+  "settings.notifications.questions.title": "Questions",
+  "settings.notifications.questions.description": "Show notification when the agent asks a question",
   "settings.notifications.errors.title": "Errors",
   "settings.notifications.errors.description": "Show notification on errors",
+  "settings.notifications.subagent.title": "Sub-tasks",
+  "settings.notifications.subagent.description": "Show notifications for sub-agent tasks",
   "settings.notifications.sounds": "Sounds",
   "settings.notifications.agentSound.title": "Agent Completion Sound",
   "settings.notifications.agentSound.description": "Sound to play when agent completes",
@@ -1287,6 +1291,9 @@ export const dict = {
 
   "settings.context.autoCompaction.title": "Auto Compaction",
   "settings.context.autoCompaction.description": "Automatically compact context when it's full",
+  "settings.context.compactionLimit.title": "Auto Compaction Limit",
+  "settings.context.compactionLimit.description":
+    "Compact when context reaches this percentage of the model window. Leave blank to use the safety buffer only.",
   "settings.context.prune.title": "Prune Old Outputs",
   "settings.context.prune.description": "Remove old tool outputs during compaction",
   "settings.context.watcherPatterns": "File Watcher Ignore Patterns",
@@ -1314,6 +1321,9 @@ export const dict = {
   "settings.providers.smallModel.title": "Small Model",
   "settings.providers.smallModel.description":
     "Lightweight model for title generation, commit message generation, prompt enhancement, and other quick tasks",
+  "settings.providers.subagentModel.title": "Subagent Model",
+  "settings.providers.subagentModel.description":
+    "Default model and reasoning effort for task-tool subagents. Leave unset to inherit the calling agent's model.",
   "settings.providers.modeModels": "Model per Mode",
   "settings.providers.modeModels.description":
     "Override the default model for specific modes. If not set, the global default model is used.",

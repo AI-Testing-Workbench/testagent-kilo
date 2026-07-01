@@ -41,6 +41,7 @@ import {
   buildFamilyCosts,
   buildFamilyLabels,
   buildCostBreakdown,
+  buildFamilyTokens,
   childID,
 } from "./session-utils"
 import { Identifier } from "../utils/id"
@@ -161,6 +162,7 @@ interface SessionContextValue {
   // Cost and context usage for the current session
   costBreakdown: Accessor<Array<{ label: string; cost: number }>>
   contextUsage: Accessor<ContextUsage | undefined>
+  familyTokens: Accessor<FamilyTokens | undefined>
 
   // Skills loaded from the CLI backend
   skills: Accessor<SkillInfo[]>
@@ -2191,6 +2193,13 @@ export const SessionProvider: ParentComponent = (props) => {
     return buildCostBreakdown(id, costs, familyLabels(), language.t("context.stats.thisSession"))
   })
 
+  /** Accumulated tokens across the session family (self + subagents). */
+  const familyTokens = createMemo<FamilyTokens | undefined>(() => {
+    const id = currentSessionID()
+    if (!id) return undefined
+    return buildFamilyTokens(sessionFamily(id), store.messages as any)
+  })
+
   // Status text derived from last assistant message parts
   const statusText = createMemo<string | undefined>(() => {
     if (status() === "idle") return undefined
@@ -2266,6 +2275,7 @@ export const SessionProvider: ParentComponent = (props) => {
     clearModelOverride,
     costBreakdown,
     contextUsage,
+    familyTokens,
     agents,
     allAgents,
     skills,

@@ -490,6 +490,7 @@
   gap: 4px;
   margin-left: auto;
   flex-shrink: 0;
+  align-items: baseline;
 
   [data-component="button"] {
     background: transparent;
@@ -530,4 +531,105 @@
 
 .enhance-spinner {
   animation: enhance-spin 1s linear infinite;
+}
+
+/* ============================================
+   Context Ring (SVG donut in action bar)
+   ============================================ */
+
+.context-ring-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+  padding: 0;
+  border: none;
+  background: transparent;
+  cursor: pointer;
+  color: var(--vscode-descriptionForeground);
+  border-radius: 4px;
+}
+
+.context-ring-btn:hover {
+  background: var(--vscode-toolbar-hoverBackground, rgba(128, 128, 128, 0.1));
+}
+
+
+/* ============================================
+   Session Info Tooltip
+   ============================================ */
+
+.session-info-tooltip {
+  min-width: 220px;
+  font-size: 12px;
+  line-height: 1.5;
+}
+
+.session-info-tooltip-header {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  margin-bottom: 6px;
+  font-weight: 600;
+  font-size: 13px;
+  color: var(--vscode-editor-foreground);
+}
+
+.session-info-tooltip-sub {
+  font-weight: 400;
+  font-size: 11px;
+  color: var(--vscode-descriptionForeground);
+}
+
+.session-info-tooltip-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 4px;
+  font-variant-numeric: tabular-nums;
+  color: var(--vscode-editor-foreground);
+}
+
+.session-info-tooltip-bar-track {
+  height: 4px;
+  border-radius: 2px;
+  background: var(--vscode-input-border, rgba(128, 128, 128, 0.25));
+  overflow: hidden;
+  margin-bottom: 8px;
+}
+
+.session-info-tooltip-bar-fill {
+  height: 100%;
+  border-radius: 2px;
+  background: var(--vscode-progressBar-background, #0e639c);
+  transition: width 0.3s ease-out;
+}
+
+.session-info-tooltip-breakdown {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin-bottom: 8px;
+}
+
+.session-info-tooltip-section-title {
+  font-weight: 600;
+  font-size: 11px;
+  color: var(--vscode-editor-foreground);
+  margin-bottom: 2px;
+}
+
+.session-info-tooltip-item {
+  display: flex;
+  justify-content: space-between;
+  padding-left: 12px;
+  font-size: 11px;
+  color: var(--vscode-descriptionForeground);
+}
+
+.session-info-tooltip-footer {
+  display: flex;
+  justify-content: center;
+  margin:4px 0;
 }

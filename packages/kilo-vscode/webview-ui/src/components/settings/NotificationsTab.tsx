@@ -23,7 +23,9 @@ const NotificationsTab: Component = () => {
 
   const [agentNotify, setAgentNotify] = createSignal(true)
   const [permNotify, setPermNotify] = createSignal(true)
+  const [questionNotify, setQuestionNotify] = createSignal(true)
   const [errorNotify, setErrorNotify] = createSignal(true)
+  const [subagentNotify, setSubagentNotify] = createSignal(false)
   const [agentSound, setAgentSound] = createSignal("default")
   const [permSound, setPermSound] = createSignal("default")
   const [errorSound, setErrorSound] = createSignal("default")
@@ -35,7 +37,9 @@ const NotificationsTab: Component = () => {
     const s = message.settings
     setAgentNotify(s.notifyAgent)
     setPermNotify(s.notifyPermissions)
+    setQuestionNotify(s.notifyQuestions ?? true)
     setErrorNotify(s.notifyErrors)
+    setSubagentNotify(s.notifySubagent ?? false)
     setAgentSound(s.soundAgent)
     setPermSound(s.soundPermissions)
     setErrorSound(s.soundErrors)
@@ -82,9 +86,23 @@ const NotificationsTab: Component = () => {
           </Switch>
         </SettingsRow>
         <SettingsRow
+          title={language.t("settings.notifications.questions.title")}
+          description={language.t("settings.notifications.questions.description")}
+        >
+          <Switch
+            checked={questionNotify()}
+            onChange={(checked) => {
+              setQuestionNotify(checked)
+              save("notifications.questions", checked)
+            }}
+            hideLabel
+          >
+            {language.t("settings.notifications.questions.title")}
+          </Switch>
+        </SettingsRow>
+        <SettingsRow
           title={language.t("settings.notifications.errors.title")}
           description={language.t("settings.notifications.errors.description")}
-          last
         >
           <Switch
             checked={errorNotify()}
@@ -95,6 +113,22 @@ const NotificationsTab: Component = () => {
             hideLabel
           >
             {language.t("settings.notifications.errors.title")}
+          </Switch>
+        </SettingsRow>
+        <SettingsRow
+          title={language.t("settings.notifications.subagent.title")}
+          description={language.t("settings.notifications.subagent.description")}
+          last
+        >
+          <Switch
+            checked={subagentNotify()}
+            onChange={(checked) => {
+              setSubagentNotify(checked)
+              save("notifications.subagent", checked)
+            }}
+            hideLabel
+          >
+            {language.t("settings.notifications.subagent.title")}
           </Switch>
         </SettingsRow>
       </Card>

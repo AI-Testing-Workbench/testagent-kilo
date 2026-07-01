@@ -10,6 +10,8 @@ export interface TooltipProps extends ComponentProps<typeof KobalteTooltip> {
   contentStyle?: JSX.CSSProperties
   inactive?: boolean
   forceOpen?: boolean
+  /** 受控属性：手动控制 tooltip 显隐（优先级高于内部状态） */
+  open?: boolean
 }
 
 export interface TooltipKeybindProps extends Omit<TooltipProps, "value"> {
@@ -46,9 +48,13 @@ export function Tooltip(props: TooltipProps) {
     "contentStyle",
     "inactive",
     "forceOpen",
+    "open",
     "ignoreSafeArea",
     "value",
   ])
+
+  const isControlled = () => local.open !== undefined
+  const isOpen = () => isControlled() ? local.open : (local.forceOpen || state.open)
 
   const close = () => setState("open", false)
 
@@ -110,9 +116,10 @@ export function Tooltip(props: TooltipProps) {
           {...others}
           closeDelay={0}
           ignoreSafeArea={local.ignoreSafeArea ?? true}
-          open={local.forceOpen || state.open}
+          open={isOpen()}
           onOpenChange={(open) => {
             if (local.forceOpen) return
+            if (isControlled()) return // 受控模式下，由父组件控制显隐
             if (state.block && open) return
             if (justClickedTrigger) {
               justClickedTrigger = false

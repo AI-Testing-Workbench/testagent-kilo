@@ -33,6 +33,7 @@ import { fileName, dirName, buildHighlightSegments, atEnd, isPromptBusy } from "
 import type { CodeContext, ReviewComment, TextPart } from "../../types/messages"
 import { formatReviewCommentsMarkdown } from "../../utils/review-comment-markdown"
 import { pendingDraftKey, scopeDraftKey, sessionDraftKey } from "../../utils/prompt-drafts"
+import { ContextRing, SessionInfoContent } from "./SessionInfo"
 
 // Per-session input text storage (module-level so it survives remounts)
 const drafts = new Map<string, string>()
@@ -125,6 +126,7 @@ export const PromptInput: Component<PromptInputProps> = (props) => {
   const [codeContexts, setCodeContexts] = createSignal<CodeContext[]>([])
   const [reviewComments, setReviewComments] = createSignal<ReviewComment[]>([])
   const [enhancing, setEnhancing] = createSignal(false)
+ 
   let enhanceCounter = 0
   let preEnhanceText: string | null = null
 
@@ -988,6 +990,7 @@ export const PromptInput: Component<PromptInputProps> = (props) => {
           </Show>
         </div>
         <div class="prompt-input-hint-actions">
+            <ContextRing  />
           <Tooltip value={language.t("prompt.action.enhance")} placement="top">
             <Button
               variant="ghost"

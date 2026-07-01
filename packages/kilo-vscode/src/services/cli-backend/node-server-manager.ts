@@ -63,7 +63,7 @@ export class NodeServerManager {
     const entry = path.join(serverDir, "cli.mjs")
     if (!fs.existsSync(entry)) {
       throw new Error(
-        `OpenCode server not found at: ${entry}. Please ensure the nodejs-server is bundled with the extension.`,
+        `TestAgent server not found at: ${entry}. Please ensure the nodejs-server is bundled with the extension.`,
       )
     }
 
@@ -183,7 +183,7 @@ export class NodeServerManager {
 
   /**
    * Find Node.js binary. Priority:
-   * 1. VS Code's built-in Node.js (process.execPath)
+   * 1. TSCode's built-in Node.js (process.execPath)
    * 2. System PATH (which, where)
    * 3. Common installation paths
    *
@@ -192,75 +192,131 @@ export class NodeServerManager {
   private async resolveNodePath(): Promise<string> {
     const vscodeNode = this.tryVSCodeNode()
     if (vscodeNode) return vscodeNode
+    console.warn("[TestAgent] NodeServerManager: ⚠️ Falling back to system node")
 
     const systemNode = this.trySystemNode()
     if (systemNode) return systemNode
+    console.warn("[TestAgent] NodeServerManager: ⚠️ Falling back to common paths")
 
     const commonNode = this.tryCommonPaths()
     if (commonNode) return commonNode
 
     throw new Error(
       "Node.js >= 22.5.0 not found.\n\n" +
-      "OpenCode backend requires Node.js 22.5+ with node:sqlite support.\n\n" +
+      "TestAgent backend requires Node.js 22.5+ with node:sqlite support.\n\n" +
       "Options:\n" +
       "1. Install Node.js 22.5+ from https://nodejs.org/ and ensure it's in your PATH\n" +
-      "2. Update VS Code to a version that includes Node.js 22.5+ (check Help → About)\n\n" +
-      `Current VS Code Node.js: ${process.version}\n` +
+      "2. Update TSCode to a version that includes Node.js 22.5+ (check Help → About)\n\n" +
+      `Current TSCode Node.js: ${process.version}\n` +
       "Required: >= v22.5.0",
     )
   }
 
   private tryVSCodeNode(): string | null {
     const vscodeNode = process.execPath
-    console.log("[TestAgent] NodeServerManager: Checking VS Code built-in Node.js:", vscodeNode)
-    
-    try {
-      const { execSync } = require("child_process")
-      const version = execSync(`"${vscodeNode}" --version`, { encoding: "utf8", timeout: 5000 }).trim()
-      console.log("[TestAgent] NodeServerManager: VS Code Node.js version:", version)
-      
-      if (this.isVersionValid(version)) {
-        console.log("[TestAgent] NodeServerManager: ✅ Using VS Code built-in Node.js")
-        return vscodeNode
+    console.log("[TestAgent] NodeServerManager: Checking TSCode built-in Node.js:", vscodeNode)
+
+    // Use running process version (avoids child process unreliability on Windows)
+    const nodeVersion = process.versions.node
+    if (!nodeVersion) {
+      console.warn("[TestAgent] NodeServerManager: No process.versions.node available")
+      return null
+    }
+    console.log("[TestAgent] NodeServerManager: TSCode Node.js version:", `v${nodeVersion}`)
+
+    if (this.isVersionValid(`v${nodeVersion}`)) {
+      try {
+        const { execSync } = require("child_process")
+        // Validate that process.execPath is a real Node.js (not Electron app)
+        // that can run standalone. Uses --version which works reliably on Windows,
+        // unlike -e with inline code which has quoting issues.
+        const raw = execSync(`"${vscodeNode}" --version`, { encoding: "utf8", timeout: 60000, shell: true }).trim()
+        if (this.isVersionValid(raw)) {
+          console.log("[TestAgent] NodeServerManager: ✅ Using TSCode built-in Node.js")
+          return vscodeNode
+        }
+        console.warn("[TestAgent] NodeServerManager: TSCode built-in Node.js --version output not valid:", raw)
+      } catch (err) {
+        console.warn("[TestAgent] NodeServerManager: Failed to check TSCode Node.js:", err)
       }
-      console.warn(`[TestAgent] NodeServerManager: VS Code Node.js ${version} too old, need >= 22.5.0`)
-    } catch (err) {
-      console.warn("[TestAgent] NodeServerManager: Failed to check VS Code Node.js:", err)
+    } else {
+      console.warn(`[TestAgent] NodeServerManager: TSCode Node.js v${nodeVersion} too old, need >= 22.5.0`)
     }
     return null
   }
 
   private trySystemNode(): string | null {
-    const cmd = process.platform === "win32" ? "where" : "which"
+    const { execSync } = require("child_process")
     try {
-      const { execSync } = require("child_process")
-      const found = execSync(`${cmd} node`, { encoding: "utf8", timeout: 5000 }).trim().split("\n")[0]
-      if (!found) return null
+      if (process.platform === "win32") {
+        const found = this.findNodeOnPathWindows()
+        if (found) return found
+      } else {
+        const found = execSync("which node", { encoding: "utf8", timeout: 60000, shell: true }).trim().split("\n")[0]
+        if (!found) {
+          console.warn("[TestAgent] NodeServerManager: which node returned empty result")
+          return null
+        }
 
-      const version = execSync(`"${found}" --version`, { encoding: "utf8", timeout: 5000 }).trim()
-      console.log("[TestAgent] NodeServerManager: Found node:", found, version)
-      
-      if (this.isVersionValid(version)) {
-        return found
+        const version = execSync(`"${found}" --version`, { encoding: "utf8", timeout: 60000, shell: true }).trim()
+        console.log("[TestAgent] NodeServerManager: Found node:", found, version)
+        if (this.isVersionValid(version)) return found
+        console.warn(`[TestAgent] NodeServerManager: Node.js ${version} too old, need >= 22.5.0`)
       }
-      console.warn(`[TestAgent] NodeServerManager: Node.js ${version} too old, need >= 22.5.0`)
     } catch {
-      // which/where failed
+      console.warn("[TestAgent] NodeServerManager: Node.js not found in system PATH")
+    }
+    return null
+  }
+
+  private findNodeOnPathWindows(): string | null {
+    const { execSync } = require("child_process")
+    const pathDirs = (process.env.PATH || "").split(";")
+    const seen = new Set<string>()
+
+    for (const dir of pathDirs) {
+      const normalized = path.resolve(dir.trim())
+      if (!normalized || seen.has(normalized)) continue
+      seen.add(normalized)
+
+      const candidate = path.join(normalized, "node.exe")
+      if (!fs.existsSync(candidate)) continue
+
+      try {
+        const version = execSync(`"${candidate}" --version`, { encoding: "utf8", timeout: 60000, shell: true }).trim()
+        console.log("[TestAgent] NodeServerManager: Found node:", candidate, version)
+        if (this.isVersionValid(version)) return candidate
+        console.warn(`[TestAgent] NodeServerManager: Node.js ${version} too old, need >= 22.5.0`)
+      } catch {}
     }
     return null
   }
 
   private tryCommonPaths(): string | null {
-    const candidates = process.platform === "win32"
-      ? ["C:\\Program Files\\nodejs\\node.exe"]
-      : ["/usr/local/bin/node", "/opt/homebrew/bin/node", "/usr/bin/node"]
+    const candidates: string[] = []
+    if (process.platform === "win32") {
+      candidates.push("C:\\Program Files\\nodejs\\node.exe")
+      candidates.push(path.join(process.env.LOCALAPPDATA || "", "Programs\\nodejs\\node.exe"))
+
+      const nvmDir = path.join(process.env.USERPROFILE || "", "AppData\\Roaming\\nvm")
+      if (fs.existsSync(nvmDir)) {
+        try {
+          for (const entry of fs.readdirSync(nvmDir)) {
+            const nodeExe = path.join(nvmDir, entry, "node.exe")
+            if (fs.existsSync(nodeExe)) candidates.push(nodeExe)
+          }
+        } catch {}
+      }
+    } else {
+      candidates.push("/usr/local/bin/node", "/opt/homebrew/bin/node", "/usr/bin/node")
+    }
 
     for (const candidate of candidates) {
       if (!fs.existsSync(candidate)) continue
 
       try {
         const { execSync } = require("child_process")
-        const version = execSync(`"${candidate}" --version`, { encoding: "utf8", timeout: 5000 }).trim()
+        const version = execSync(`"${candidate}" --version`, { encoding: "utf8", timeout: 60000, shell: true }).trim()
         if (this.isVersionValid(version)) {
           return candidate
         }

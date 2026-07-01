@@ -242,7 +242,7 @@ import type {
 export type Options<TData extends TDataShape = TDataShape, ThrowOnError extends boolean = boolean> = Options2<
   TData,
   ThrowOnError
-  > & {
+> & {
   /**
    * You can provide a client instance returned by `createClient()` instead of
    * individual options. This might be also useful if you want to implement a
@@ -590,9 +590,23 @@ export class User extends HeyApiClient {
     parameters?: {
       directory?: string
       workspace?: string
-      id?: string
-      name?: string
       token?: string
+      userId?: string
+      userName?: string
+      employeeId?: string
+      enterpriseId?: string
+      enterpriseName?: string
+      idToken?: string
+      joinedEnterpriseIds?: string
+      netEnv?: string
+      openId?: string
+      originPathId?: string
+      pathId?: string
+      pathName?: string
+      refreshToken?: string
+      rtcId?: string
+      sapId?: string
+      ystId?: string
     },
     options?: Options<never, ThrowOnError>,
   ) {
@@ -603,9 +617,23 @@ export class User extends HeyApiClient {
           args: [
             { in: "query", key: "directory" },
             { in: "query", key: "workspace" },
-            { in: "body", key: "id" },
-            { in: "body", key: "name" },
             { in: "body", key: "token" },
+            { in: "body", key: "userId" },
+            { in: "body", key: "userName" },
+            { in: "body", key: "employeeId" },
+            { in: "body", key: "enterpriseId" },
+            { in: "body", key: "enterpriseName" },
+            { in: "body", key: "idToken" },
+            { in: "body", key: "joinedEnterpriseIds" },
+            { in: "body", key: "netEnv" },
+            { in: "body", key: "openId" },
+            { in: "body", key: "originPathId" },
+            { in: "body", key: "pathId" },
+            { in: "body", key: "pathName" },
+            { in: "body", key: "refreshToken" },
+            { in: "body", key: "rtcId" },
+            { in: "body", key: "sapId" },
+            { in: "body", key: "ystId" },
           ],
         },
       ],
@@ -789,7 +817,7 @@ export class Console extends HeyApiClient {
       ExperimentalConsoleGetResponses,
       ExperimentalConsoleGetErrors,
       ThrowOnError
-      >({
+    >({
       url: "/experimental/console",
       ...options,
       ...params,
@@ -823,7 +851,7 @@ export class Console extends HeyApiClient {
       ExperimentalConsoleListOrgsResponses,
       ExperimentalConsoleListOrgsErrors,
       ThrowOnError
-      >({
+    >({
       url: "/experimental/console/orgs",
       ...options,
       ...params,
@@ -1044,7 +1072,7 @@ export class Workspace extends HeyApiClient {
       ExperimentalWorkspaceCreateResponses,
       ExperimentalWorkspaceCreateErrors,
       ThrowOnError
-      >({
+    >({
       url: "/experimental/workspace",
       ...options,
       ...params,
@@ -1145,7 +1173,7 @@ export class Workspace extends HeyApiClient {
       ExperimentalWorkspaceRemoveResponses,
       ExperimentalWorkspaceRemoveErrors,
       ThrowOnError
-      >({
+    >({
       url: "/experimental/workspace/{id}",
       ...options,
       ...params,
@@ -1185,7 +1213,7 @@ export class Workspace extends HeyApiClient {
       ExperimentalWorkspaceWarpResponses,
       ExperimentalWorkspaceWarpErrors,
       ThrowOnError
-      >({
+    >({
       url: "/experimental/workspace/warp",
       ...options,
       ...params,
@@ -2395,7 +2423,7 @@ export class EnhancePrompt extends HeyApiClient {
       EnhancePromptEnhanceResponses,
       EnhancePromptEnhanceErrors,
       ThrowOnError
-      >({
+    >({
       url: "/enhance-prompt",
       ...options,
       ...params,
@@ -3041,7 +3069,7 @@ export class Permission extends HeyApiClient {
       PermissionSaveAlwaysRulesResponses,
       PermissionSaveAlwaysRulesErrors,
       ThrowOnError
-      >({
+    >({
       url: "/permission/{requestID}/always-rules",
       ...options,
       ...params,
@@ -3133,7 +3161,7 @@ export class Oauth extends HeyApiClient {
       ProviderOauthAuthorizeResponses,
       ProviderOauthAuthorizeErrors,
       ThrowOnError
-      >({
+    >({
       url: "/provider/{providerID}/oauth/authorize",
       ...options,
       ...params,
@@ -3178,7 +3206,7 @@ export class Oauth extends HeyApiClient {
       ProviderOauthCallbackResponses,
       ProviderOauthCallbackErrors,
       ThrowOnError
-      >({
+    >({
       url: "/provider/{providerID}/oauth/callback",
       ...options,
       ...params,
@@ -3718,7 +3746,7 @@ export class Session2 extends HeyApiClient {
       SessionDeleteMessageResponses,
       SessionDeleteMessageErrors,
       ThrowOnError
-      >({
+    >({
       url: "/session/{sessionID}/message/{messageID}",
       ...options,
       ...params,

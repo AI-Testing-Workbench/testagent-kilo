@@ -761,15 +761,13 @@ export class KiloConnectionService {
     if (!this.config) return
     try {
       const session = await vscode.authentication.getSession("tscode-oauth", [], { createIfNone: false })
-      const id = session?.account.id
-      const name = session?.account.label
-      const token = session?.accessToken
-      console.log("[testagent-vscode] syncUserId:", { hasSession: !!session, id, name, hasToken: !!token })
+      const metadata = (session as any).metadata;
+      const userId = metadata?.employeeId;
       const auth = `Basic ${Buffer.from(`opencode:${this.config.password}`).toString("base64")}`
       const response = await fetch(`${this.config.baseUrl}/testagent/user`, {
         method: "PUT",
         headers: { "Content-Type": "application/json", Authorization: auth },
-        body: JSON.stringify({ id, name, token }),
+        body: JSON.stringify({ ...metadata, userId }),
       })
       console.log("[testagent-vscode] syncUserId response:", response.status, response.statusText)
       if (!response.ok) {

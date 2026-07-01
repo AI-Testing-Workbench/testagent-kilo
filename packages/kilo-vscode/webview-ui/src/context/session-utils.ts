@@ -1,4 +1,4 @@
-import type { Part } from "../types/messages"
+import type { Part, TokenUsage } from "../types/messages"
 
 /** Minimal message shape for cost breakdown helpers. */
 export type CostMessage = { id: string; role: string; cost?: number }
@@ -98,6 +98,45 @@ export function buildFamilyCosts(
     if (cost > 0) costs.set(sid, cost)
   }
   return costs
+}
+
+export interface FamilyTokens {
+  input: number
+  output: number
+  reasoning: number
+  cache: { read: number; write: number }
+  breakdown?: { system: number; messages: number; tools: number }
+}
+
+/**
+* Accumulate tokens across all assistant messages in a session family.
+* Pure function — no store dependency.
+*/
+export function buildFamilyTokens(
+  family: Set<string>,
+  messages: Record<string, Array<{ role: string; tokens?: TokenUsage }>>,
+): FamilyTokens | undefined {
+  const total: FamilyTokens = { input: 0, output: 0, reasoning: 0, cache: { read: 0, write: 0 } }
+  let has = false
+  for (const sid of family) {
+    for (const m of messages[sid] ?? []) {
+      if (m.role !== "assistant" || !m.tokens) continue
+      total.input += m.tokens.input
+      total.output += m.tokens.output
+      total.reasoning += m.tokens.reasoning ?? 0
+      total.cache.read += m.tokens.cache?.read ?? 0
+      total.cache.write += m.tokens.cache?.write ?? 0
+      // Accumulate breakdown per message
+      if (m.tokens.breakdown) {
+        if (!total.breakdown) total.breakdown = { system: 0, messages: 0, tools: 0 }
+        total.breakdown.system += m.tokens.breakdown.system
+        total.breakdown.messages += m.tokens.breakdown.messages
+        total.breakdown.tools += m.tokens.breakdown.tools
+      }
+      has = true
+    }
+  }
+  return has ? total : undefined
 }
 
 const LABEL_CAP = 24

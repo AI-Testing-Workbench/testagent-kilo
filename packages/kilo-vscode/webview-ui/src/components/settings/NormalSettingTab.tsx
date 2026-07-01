@@ -12,35 +12,42 @@ interface SelectOption {
   label: string
 }
 
-const shellOptions: SelectOption[] = [
+const SHELL_OPTIONS: SelectOption[] = [
   { value: "", label: "Default (System)" },
   { value: "powershell", label: "powershell" },
   { value: "cmd", label: "cmd.exe" },
   { value: "bash", label: "Git Bash" },
 ]
 
-const logLevelOptions: SelectOption[] = [
+const LOG_LEVEL_OPTIONS: SelectOption[] = [
   { value: "DEBUG", label: "DEBUG" },
   { value: "INFO", label: "INFO" },
   { value: "WARN", label: "WARN" },
   { value: "ERROR", label: "ERROR" },
 ]
 
-const runtimeOptions: SelectOption[] = [
+const RUNTIME_OPTIONS: SelectOption[] = [
   { value: "nodejs", label: "Node.js (默认)" },
   { value: "bun", label: "Bun" },
 ]
+
+const CMB_NPM_REGISTRY = "http://central.jaf.cmbchina.cn:80/artifactory/api/npm/group-npm"
 
 const NormalSetting: Component = () => {
   const { config, updateConfig } = useConfig()
   const vscode = useVSCode()
   const [gitInstalled, setGitInstalled] = createSignal<boolean | null>(null)
   const [runtime, setRuntime] = createSignal<"bun" | "nodejs">("nodejs")
+  const [npmRegistry, setNpmRegistry] = createSignal("")
+  const [npmRegistryLoading, setNpmRegistryLoading] = createSignal(true)
+  const [defaultRegistry, setDefaultRegistry] = createSignal("") // 系统默认源的实际值
 
   onMount(() => {
     vscode.postMessage({ type: "checkGitInstalled" })
     // Load runtime from VS Code config
     vscode.postMessage({ type: "getRuntime" })
+    // Load current npm registry
+    vscode.postMessage({ type: "getNpmRegistry" })
   })
 
   const unsubMsg = vscode.onMessage((msg: ExtensionMessage) => {
@@ -64,20 +71,28 @@ const NormalSetting: Component = () => {
     if (msg.type === "runtimeResult") {
       setRuntime(msg.runtime)
     }
+    if (msg.type === "npmRegistryResult") {
+      setNpmRegistry(msg.registry)
+      // 首次收到时记录为系统默认值
+      if (!defaultRegistry()) {
+        setDefaultRegistry(msg.registry)
+      }
+      setNpmRegistryLoading(false)
+    }
   })
   onCleanup(unsubMsg)
 
   const currentShellOption = (): SelectOption | undefined => {
     const shell = config().shell ?? ""
-    if (!shell) return shellOptions[0]
-    const match = shellOptions.find((opt) => opt.value === shell)
+    if (!shell) return SHELL_OPTIONS[0]
+    const match = SHELL_OPTIONS.find((opt) => opt.value === shell)
     if (match) return match
     const base = shell
       .split(/[/\\]/)
       .pop()
       ?.replace(/\.[^.]+$/, "")
       .toLowerCase()
-    return shellOptions.find((opt) => base && opt.value === base)
+    return SHELL_OPTIONS.find((opt) => base && opt.value === base)
   }
 
   const handleShellChange = (option: SelectOption | undefined) => {
@@ -125,23 +140,9 @@ const NormalSetting: Component = () => {
     vscode.postMessage({ type: "resolveShellPath", name: value })
   }
 
-  const handleLogLevelChange = (option: SelectOption | undefined) => {
-    const value = option?.value as "DEBUG" | "INFO" | "WARN" | "ERROR" | undefined
-    if (!value) return
-    vscode.postMessage({ type: "restartServer", logLevel: value })
-    showToast({
-      variant: "success",
-      title: "日志级别已更新",
-      description: "正在重启 CLI 以使新日志级别生效...",
-    })
-  }
-
-  const currentLogLevel = (): SelectOption | undefined => {
-    return logLevelOptions.find((opt) => opt.value === "INFO")
-  }
 
   const currentRuntime = (): SelectOption | undefined => {
-    return runtimeOptions.find((opt) => opt.value === runtime())
+    return RUNTIME_OPTIONS.find((opt) => opt.value === runtime())
   }
 
   const handleRuntimeChange = (option: SelectOption | undefined) => {
@@ -159,15 +160,61 @@ const NormalSetting: Component = () => {
   const getShellOptions = () => {
     const hasGit = gitInstalled()
     if (hasGit === false) {
-      return shellOptions.filter((opt) => opt.value !== "bash")
+      return SHELL_OPTIONS.filter((opt) => opt.value !== "bash")
     }
-    return shellOptions
+    return SHELL_OPTIONS
+  }
+
+  // 动态构建选项列表：系统默认源 + 内网源（如果与默认源不同）
+  const registryList = () => {
+    const def = defaultRegistry()
+    if (def === CMB_NPM_REGISTRY) {
+      // 系统默认源本身就是招行内网源 → 只显示一个选项
+      return [{ value: def, label: "系统默认源（招行内网源）" }]
+    }
+    return [
+      { value: def, label: "系统默认源" },
+      { value: CMB_NPM_REGISTRY, label: "招行内网源" },
+    ]
+  }
+
+  const currentNpmOption = (): SelectOption | undefined => {
+    const registry = npmRegistry()
+    if (registry === CMB_NPM_REGISTRY && defaultRegistry() !== CMB_NPM_REGISTRY) return registryList()[1]
+    return registryList()[0]
+  }
+
+  const handleNpmChange = (option: SelectOption | undefined) => {
+    const value = option?.value ?? ""
+    const current = npmRegistry()
+
+    if (value === current) return
+
+    vscode.postMessage({ type: "setNpmRegistry", registry: value === defaultRegistry() ? "" : value })
+    showToast({
+      variant: "success",
+      title: "npm 源已更新",
+      description: value === defaultRegistry() ? "已恢复为系统默认源" : `已切换到 ${value}`,
+    })
   }
 
   return (
     <div>
-      {/* Shell 设置 */}
+      {/* npm 源设置 */}
       <Card style={{ "margin-bottom": "12px" }}>
+        <SettingsRow title="npm源" description="选择npm源">
+          <Select
+            options={registryList()}
+            current={currentNpmOption()}
+            value={(opt) => opt.value}
+            label={(opt) => opt.label}
+            onSelect={handleNpmChange}
+            variant="secondary"
+            size="small"
+            triggerVariant="settings"
+            disabled={npmRegistryLoading()}
+          />
+        </SettingsRow>
         <SettingsRow title="终端 Shell" description="选择 agent 使用的默认终端">
           <Select
             options={getShellOptions()}
@@ -185,7 +232,7 @@ const NormalSetting: Component = () => {
           description={`选择后端运行时 (当前: ${runtime() === "bun" ? "Bun" : "Node.js"})`}
         >
           <Select
-            options={runtimeOptions}
+            options={RUNTIME_OPTIONS}
             current={currentRuntime()}
             value={(opt) => opt.value}
             label={(opt) => opt.label}
