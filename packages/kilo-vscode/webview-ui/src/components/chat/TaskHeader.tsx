@@ -57,11 +57,23 @@ export const TaskHeader: Component<TaskHeaderProps> = (props) => {
           md += `${p.text}\n\n`
         } else if (p.type === "file") {
           md += `📎 文件: ${p.filename || "附件"} (${p.mime})\n\n`
-        } else if (p.type === "tool") {
-          md += `🔧 工具调用: ${p.tool}\n`
-          if (p.state.status === "completed") md += "```\n" + p.state.output + "\n```\n\n"
         } else if (p.type === "reasoning") {
           md += `💭 推理过程:\n${p.text}\n\n`
+        } else if (p.type === "step-finish") {
+          if (p.reason) md += `✅ 完成原因: ${p.reason}\n\n`
+        } else if (p.type === "tool") {
+          md += `🔧 工具调用: ${p.tool}\n`
+          const inputKeys = Object.keys(p.state.input)
+          if (inputKeys.length > 0) {
+            const inputStr = JSON.stringify(p.state.input, null, 2)
+            md += "```json\n" + inputStr + "\n```\n\n"
+          }
+          if (p.state.status === "completed") {
+            const out = p.state.output
+            if (out && out !== "(no output)") md += "```\n" + out + "\n```\n\n"
+          } else if (p.state.status === "error") {
+            md += `❌ 错误: ${p.state.error}\n\n`
+          }
         }
       }
 
