@@ -19,6 +19,10 @@ exporters:
     endpoint: http://elasticsearch:9200
     mapping:
       mode: otel
+    logs_dynamic_index:
+      enabled: true
+    metrics_dynamic_index:
+      enabled: true
     retry:
       enabled: true
       max_requests: 3
