@@ -306,7 +306,7 @@ export const PromptInput: Component<PromptInputProps> = (props) => {
   onCleanup(() => window.removeEventListener("compactSession", onCompact))
 
   const isBusy = () => isPromptBusy(session.status(), !!props.suggesting?.(), !!props.questioning?.())
-  const isDisabled = () => !server.isConnected()
+  const isDisabled = () => !server.isConnected() || isBusy()
   const hasInput = () =>
     text().trim().length > 0 ||
     codeContexts().length > 0 ||
@@ -324,6 +324,7 @@ export const PromptInput: Component<PromptInputProps> = (props) => {
     return paths
   }
   const placeholder = () => {
+    if (isBusy()) return language.t("prompt.placeholder.busy")
     switch (server.connectionState()) {
       case "connecting":
         return language.t("prompt.placeholder.connecting")
@@ -971,8 +972,12 @@ export const PromptInput: Component<PromptInputProps> = (props) => {
       </div>
       <div class="prompt-input-hint">
         <div class="prompt-input-hint-selectors">
-          <ModeSwitcher />
-          <ModelSelector />
+          <div style={isBusy() ? { opacity: 0.5, "pointer-events": "none" } : undefined}>
+            <ModeSwitcher />
+          </div>
+          <div style={isBusy() ? { opacity: 0.5, "pointer-events": "none" } : undefined}>
+            <ModelSelector />
+          </div>
           <ThinkingSelector />
           <Show when={session.hasModelOverride()}>
             <Tooltip value={language.t("prompt.action.resetModel")} placement="top">
