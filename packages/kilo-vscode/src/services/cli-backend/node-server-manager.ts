@@ -92,9 +92,9 @@ export class NodeServerManager {
           ...(process.platform === "win32" && {
             PYTHONIOENCODING: "utf-8",
           }),
-          KILO_CLIENT: "vscode",
-          KILOCODE_FEATURE: "vscode-extension",
-          KILO_PLATFORM: "vscode",
+          KILO_CLIENT: "tscode",
+          KILOCODE_FEATURE: "tscode-extension",
+          KILO_PLATFORM: "tscode",
           KILO_APP_NAME: "testagent",
           KILO_TELEMETRY_LEVEL: vscode.env.isTelemetryEnabled ? "all" : "off",
           KILO_EDITOR_NAME: vscode.env.appName,
