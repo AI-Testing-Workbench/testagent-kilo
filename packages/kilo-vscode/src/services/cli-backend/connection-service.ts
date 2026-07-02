@@ -99,7 +99,7 @@ export class KiloConnectionService {
     // testagent_change end
     
     // testagent_change start - sync user ID to CLI whenever auth session changes
-    if (isTestagentBun()) {
+    // if (isTestagentBun()) {
       context.subscriptions.push(
         vscode.authentication.onDidChangeSessions(async (e) => {
           if (e.provider.id === "tscode-oauth") {
@@ -107,7 +107,7 @@ export class KiloConnectionService {
           }
         }),
       )
-    }
+    // }
     // testagent_change end
   }
 
