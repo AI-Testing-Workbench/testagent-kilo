@@ -78,7 +78,7 @@ const ContextTab: Component = () => {
               max="100"
               step="1"
               value={limit()}
-              placeholder="80"
+              placeholder="请填写阈值"
               onChange={saveLimit}
               hideLabel
               label={language.t("settings.context.compactionLimit.title")}
