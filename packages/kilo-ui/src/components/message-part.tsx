@@ -1589,7 +1589,7 @@ function CompactionSummary(props: { text: string; done?: boolean }) {
       </Collapsible>
       <Show when={props.done}>
         {/* 分隔符  居中显示“压缩会话完成，请输入后续操作” */}
-        <div data-slot="compaction-summary-separator">压缩会话完成，等待后续操作</div>
+        <div data-slot="compaction-summary-separator">压缩会话完成</div>
       </Show>
     </div>
   )
