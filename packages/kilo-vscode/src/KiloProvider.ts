@@ -231,6 +231,7 @@ const mapAgent = (a: Agent) => ({
   description: a.description,
   mode: a.mode,
   native: a.native,
+  source: a.source, // testagent_change
   hidden: a.hidden,
   color: a.color,
   deprecated: a.deprecated,
@@ -1107,7 +1108,7 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
         }
         // testagent_change end
         case "updateConfig":
-          await this.handleUpdateConfig(message.config)
+          await this.handleUpdateConfig(message.config, message.projectConfig, message.globalUnset, message.projectUnset)
           break
         case "setLanguage":
           await vscode.workspace
@@ -2684,14 +2685,18 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
     try {
       const workspaceDir = this.getWorkspaceDirectory()
       console.log("[TestAgent]  🔍 Fetching config for directory:", workspaceDir) // testagent_change
-      const { data: config } = await retry(() =>
-        this.client!.config.get({ directory: workspaceDir }, { throwOnError: true }),
-      )
+      const [{ data: config }, { data: globalCfg }, { data: overlay }] = await Promise.all([
+        retry(() => this.client!.config.get({ directory: workspaceDir }, { throwOnError: true })),
+        this.client!.global.config.get({ throwOnError: true }).catch(() => ({ data: {} })),
+        this.client!.config.overlay({ directory: workspaceDir }).catch(() => ({ data: { project: {} } })),
+      ])
 
       console.log("[TestAgent]  ✅ Config fetched successfully, keys:", Object.keys(config || {}).length) // testagent_change
-      const message: { type: "configLoaded"; config: unknown; refresh?: boolean } = {
+      const message: { type: "configLoaded"; config: unknown; globalConfig?: unknown; projectConfig?: unknown; refresh?: boolean } = {
         type: "configLoaded",
         config,
+        globalConfig: globalCfg,
+        projectConfig: overlay?.project,
       }
       if (refresh) message.refresh = true
       this.cachedConfigMessage = message
@@ -2735,9 +2740,13 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
     if (!this.client || this.connectionState !== "connected") return
     try {
       const dir = this.getWorkspaceDirectory()
-      const { data: config } = await retry(() => this.client!.config.get({ directory: dir }, { throwOnError: true }))
-      this.cachedConfigMessage = { type: "configLoaded", config }
-      this.postMessage({ type: "configUpdated", config })
+      const [{ data: config }, { data: globalCfg }, { data: overlay }] = await Promise.all([
+        retry(() => this.client!.config.get({ directory: dir }, { throwOnError: true })),
+        this.client!.global.config.get({ throwOnError: true }).catch(() => ({ data: {} })),
+        this.client!.config.overlay({ directory: dir }).catch(() => ({ data: { project: {} } })),
+      ])
+      this.cachedConfigMessage = { type: "configLoaded", config, globalConfig: globalCfg, projectConfig: overlay?.project }
+      this.postMessage({ type: "configUpdated", config, globalConfig: globalCfg, projectConfig: overlay?.project })
     } catch (error) {
       console.error("[TestAgent]  Failed to fetch config after update:", error)
     }
@@ -2955,10 +2964,17 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
 
   /**
    * Handle config update request from the webview.
-   * Applies a partial config update via the global config endpoint, then pushes
-   * the full merged config back to the webview.
+   * Applies scope-aware partial config updates via the overlayUpdate API:
+   * - `partial` keys → scope: "global" via config.overlayUpdate
+   * - `project` keys → scope: "project" via config.overlayUpdate
+   * Then pushes the full merged config + global + overlay back to the webview.
    */
-  private async handleUpdateConfig(partial: ConfigPatch): Promise<void> {
+  private async handleUpdateConfig(
+    partial: ConfigPatch = {},
+    project: ConfigPatch = {},
+    globalUnset: string[][] = [],
+    projectUnset: string[][] = [],
+  ): Promise<void> {
     if (!this.client || this.connectionState !== "connected") {
       this.postMessage({ type: "configUpdateFailed", message: "Not connected to CLI backend" })
       return
@@ -2968,15 +2984,27 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
       partial.provider !== undefined ||
       partial.disabled_providers !== undefined ||
       partial.enabled_providers !== undefined
+    const hasGlobal = Object.keys(partial).length > 0 || globalUnset.length > 0
+    const hasProject = Object.keys(project).length > 0 || projectUnset.length > 0
 
     // Guard against fetchAndSendConfig pushing stale data while the write is in flight.
     this.pending++
 
-    // Phase 1: write. Errors here = real save failures the user can fix + retry.
+    // Phase 1: write scope-separated patches via overlayUpdate API.
     try {
-      // testagent_change: Skip drainPendingPrompts to speed up config save
-      // await this.connectionService.drainPendingPrompts()
-      await this.client.global.config.update({ config: partial }, { throwOnError: true })
+      const dir = this.getWorkspaceDirectory()
+      if (hasGlobal) {
+        await this.client.config.overlayUpdate(
+          { scope: "global", set: partial as any, unset: globalUnset, directory: dir },
+          { throwOnError: true },
+        )
+      }
+      if (hasProject) {
+        await this.client.config.overlayUpdate(
+          { scope: "project", set: project as any, unset: projectUnset, directory: dir },
+          { throwOnError: true },
+        )
+      }
     } catch (error) {
       console.error("[TestAgent]  Failed to update config:", error)
       this.postMessage({
@@ -2990,28 +3018,25 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
 
     // Phase 2: refresh. Config is already on disk — post-write errors are
     // transient, so send an optimistic configUpdated to clear the webview's
-    // saving/draft state. SSE global.config.updated pushes the real data next.
+    // saving/draft state. SSE pushes the real data next.
     try {
       const dir = this.getWorkspaceDirectory()
-      const { data: merged } = await retry(() => this.client!.config.get({ directory: dir }, { throwOnError: true }))
-      this.cachedConfigMessage = { type: "configLoaded", config: merged }
-      this.postMessage({ type: "configUpdated", config: merged })
+      const [{ data: merged }, { data: globalCfg }, { data: overlay }] = await Promise.all([
+        retry(() => this.client!.config.get({ directory: dir }, { throwOnError: true })),
+        this.client!.global.config.get({ throwOnError: true }).catch(() => ({ data: {} })),
+        this.client!.config.overlay({ directory: dir }).catch(() => ({ data: { project: {} } })),
+      ])
+      this.cachedConfigMessage = { type: "configLoaded", config: merged, globalConfig: globalCfg, projectConfig: overlay?.project }
+      this.postMessage({ type: "configUpdated", config: merged, globalConfig: globalCfg, projectConfig: overlay?.project })
       if (refreshProviders) await this.fetchAndSendProviders()
-
-      // testagent_change: Prompt user to reload window after config save  注释掉
-      // vscode.window
-      //   .showInformationMessage("配置已保存。是否重新加载窗口以应用更改？", "重新加载", "稍后")
-      //   .then((choice) => {
-      //     if (choice === "重新加载") {
-      //       vscode.commands.executeCommand("workbench.action.reloadWindow")
-      //     }
-      //   })
     } catch (error) {
       console.error("[TestAgent]  Config write succeeded but post-write refresh failed:", error)
-      const cached = (this.cachedConfigMessage as { config?: unknown } | null)?.config
+      const cached = (this.cachedConfigMessage as { config?: unknown; globalConfig?: unknown; projectConfig?: unknown } | null)?.config
+      const cachedGlobal = (this.cachedConfigMessage as { globalConfig?: unknown } | null)?.globalConfig
+      const cachedProject = (this.cachedConfigMessage as { projectConfig?: unknown } | null)?.projectConfig
       const optimistic =
-        cached && typeof cached === "object" ? { ...(cached as Record<string, unknown>), ...partial } : partial
-      this.postMessage({ type: "configUpdated", config: optimistic })
+        cached && typeof cached === "object" ? { ...(cached as Record<string, unknown>), ...partial, ...project } : { ...partial, ...project }
+      this.postMessage({ type: "configUpdated", config: optimistic, globalConfig: cachedGlobal, projectConfig: cachedProject })
     } finally {
       this.pending--
     }

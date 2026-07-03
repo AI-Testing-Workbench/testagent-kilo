@@ -521,6 +521,34 @@ const AgentBehaviourTab: Component = () => {
                     <div style={{ flex: 1, "min-width": 0 }}>
                       <div style={{ display: "flex", "align-items": "center", gap: "6px" }}>
                         <div style={{ "font-weight": "500", "font-size": "13px" }}>{name}</div>
+                        {/* 增加tag 展示agent 来源 */}
+                        <Show when={agent()?.source}>
+                          {(s) => {
+                            const tag = () => {
+                              switch (s()) {
+                                case "builtin": return "内置"
+                                case "project-json": return "项目配置"
+                                case "project-md": return "项目Agent"
+                                case "global-json": return "全局配置"
+                                case "global-md": return "全局Agent"
+                                default: return ""
+                              }
+                            }
+                            return tag() ? (
+                              <span
+                                style={{
+                                  "font-size": "10px",
+                                  padding: "1px 5px",
+                                  "border-radius": "3px",
+                                  background: "var(--bg-subtle-base, var(--vscode-badge-background))",
+                                  color: "var(--text-weak-base, var(--vscode-badge-foreground))",
+                                }}
+                              >
+                                {tag()}
+                              </span>
+                            ) : null
+                          }}
+                        </Show>
                         <Show when={isCustom()}>
                           <span
                             style={{

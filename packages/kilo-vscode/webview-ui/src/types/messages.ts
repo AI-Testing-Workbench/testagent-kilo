@@ -286,6 +286,7 @@ export interface AgentInfo {
   description?: string
   mode: "subagent" | "primary" | "all"
   native?: boolean
+  source?: "builtin" | "project-json" | "project-md" | "global-json" | "global-md"
   hidden?: boolean
   deprecated?: boolean
   color?: string
@@ -882,11 +883,19 @@ export interface ConfigLoadedMessage {
   config: Config
   /** If true, this is a full refresh from MCP reload - ignore any pending draft */
   refresh?: boolean
+  /** Raw global config (without project overlay) for scope-aware saving */
+  globalConfig?: Config
+  /** Raw project-level config overlay from the server */
+  projectConfig?: Config
 }
 
 export interface ConfigUpdatedMessage {
   type: "configUpdated"
   config: Config
+  /** Raw global config (without project overlay) for scope-aware saving */
+  globalConfig?: Config
+  /** Raw project-level config overlay from the server */
+  projectConfig?: Config
 }
 
 export interface ConfigUpdateFailedMessage {
@@ -2186,6 +2195,12 @@ export interface ShellPathResolvedMessage {
 export interface UpdateConfigMessage {
   type: "updateConfig"
   config: Partial<Config>
+  /** Project-scoped config patch written to the workspace's project config */
+  projectConfig?: Partial<Config>
+  /** Key paths to unset from global config (null values) */
+  globalUnset?: string[][]
+  /** Key paths to unset from project config (null values) */
+  projectUnset?: string[][]
 }
 
 export interface RequestNotificationSettingsMessage {

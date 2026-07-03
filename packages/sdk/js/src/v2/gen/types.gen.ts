@@ -1301,8 +1301,8 @@ export type Config = {
     prune?: boolean
     tail_turns?: number
     preserve_recent_tokens?: number
-    reserved?: number,
-    force?: boolean|undefined|null
+    reserved?: number
+    force?: boolean
   }
   experimental?: {
     disable_paste_summary?: boolean
@@ -1312,6 +1312,10 @@ export type Config = {
     continue_loop_on_deny?: boolean
     mcp_timeout?: number
   }
+}
+
+export type ConfigOverlayResponse = {
+  project: Config
 }
 
 export type Model = {
@@ -1608,6 +1612,7 @@ export type Agent = {
   description?: string
   mode: "subagent" | "primary" | "all"
   native?: boolean
+  source?: "builtin" | "project-json" | "project-md" | "global-json" | "global-md"
   hidden?: boolean
   topP?: number
   temperature?: number
@@ -3677,6 +3682,59 @@ export type ConfigUpdateResponses = {
 }
 
 export type ConfigUpdateResponse = ConfigUpdateResponses[keyof ConfigUpdateResponses]
+
+export type ConfigOverlayData = {
+  body?: never
+  path?: never
+  query?: {
+    directory?: string
+    workspace?: string
+  }
+  url: "/config/overlay"
+}
+
+export type ConfigOverlayResponses = {
+  /**
+   * Project config overlay
+   */
+  200: ConfigOverlayResponse
+}
+
+export type ConfigOverlayResponse2 = ConfigOverlayResponses[keyof ConfigOverlayResponses]
+
+export type ConfigOverlayUpdateData = {
+  body?: {
+    scope?: "global" | "project"
+    set?: {
+      [key: string]: unknown
+    }
+    unset?: Array<Array<string>>
+  }
+  path?: never
+  query?: {
+    directory?: string
+    workspace?: string
+  }
+  url: "/config/overlay"
+}
+
+export type ConfigOverlayUpdateErrors = {
+  /**
+   * Bad request
+   */
+  400: BadRequestError
+}
+
+export type ConfigOverlayUpdateError = ConfigOverlayUpdateErrors[keyof ConfigOverlayUpdateErrors]
+
+export type ConfigOverlayUpdateResponses = {
+  /**
+   * Effective configuration after patch
+   */
+  200: Config
+}
+
+export type ConfigOverlayUpdateResponse = ConfigOverlayUpdateResponses[keyof ConfigOverlayUpdateResponses]
 
 export type ConfigProvidersData = {
   body?: never

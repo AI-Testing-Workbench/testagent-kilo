@@ -17,6 +17,9 @@ import type {
   CommandListResponses,
   Config as Config3,
   ConfigGetResponses,
+  ConfigOverlayResponses,
+  ConfigOverlayUpdateErrors,
+  ConfigOverlayUpdateResponses,
   ConfigProvidersResponses,
   ConfigUpdateErrors,
   ConfigUpdateResponses,
@@ -748,6 +751,83 @@ export class Config2 extends HeyApiClient {
     )
     return (options?.client ?? this.client).patch<ConfigUpdateResponses, ConfigUpdateErrors, ThrowOnError>({
       url: "/config",
+      ...options,
+      ...params,
+      headers: {
+        "Content-Type": "application/json",
+        ...options?.headers,
+        ...params.headers,
+      },
+    })
+  }
+
+  /**
+   * Get config overlay
+   *
+   * Retrieve the raw project-level config overlay for scope-aware settings editing.
+   */
+  public overlay<ThrowOnError extends boolean = false>(
+    parameters?: {
+      directory?: string
+      workspace?: string
+    },
+    options?: Options<never, ThrowOnError>,
+  ) {
+    const params = buildClientParams(
+      [parameters],
+      [
+        {
+          args: [
+            { in: "query", key: "directory" },
+            { in: "query", key: "workspace" },
+          ],
+        },
+      ],
+    )
+    return (options?.client ?? this.client).get<ConfigOverlayResponses, unknown, ThrowOnError>({
+      url: "/config/overlay",
+      ...options,
+      ...params,
+    })
+  }
+
+  /**
+   * Patch config overlay
+   *
+   * Apply a minimal global or project config patch, including unset paths for reverting local overrides.
+   */
+  public overlayUpdate<ThrowOnError extends boolean = false>(
+    parameters?: {
+      directory?: string
+      workspace?: string
+      scope?: "global" | "project"
+      set?: {
+        [key: string]: unknown
+      }
+      unset?: Array<Array<string>>
+    },
+    options?: Options<never, ThrowOnError>,
+  ) {
+    const params = buildClientParams(
+      [parameters],
+      [
+        {
+          args: [
+            { in: "query", key: "directory" },
+            { in: "query", key: "workspace" },
+            { in: "body", key: "scope" },
+            { in: "body", key: "set" },
+            { in: "body", key: "unset" },
+          ],
+        },
+      ],
+    )
+    return (options?.client ?? this.client).patch<
+      ConfigOverlayUpdateResponses,
+      ConfigOverlayUpdateErrors,
+      ThrowOnError
+    >({
+      url: "/config/overlay",
       ...options,
       ...params,
       headers: {

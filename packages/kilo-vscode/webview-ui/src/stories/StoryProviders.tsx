@@ -246,6 +246,8 @@ const ConfigWrapper: ParentComponent<{ config?: Config }> = (props) => {
   if (props.config) {
     const value = {
       config: () => props.config!,
+      globalConfig: () => props.config!,
+      projectConfig: () => ({}),
       loading: () => false,
       isDirty: () => false,
       saving: () => false,

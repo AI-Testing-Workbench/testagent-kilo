@@ -196,7 +196,7 @@ export const dict = {
   "common.submit": "提交",
   "common.save": "保存",
   "common.saving": "保存中...",
-  "common.default": "默认",
+  "common.default": "未设置则为默认",
   "common.attachment": "附件",
 
   "prompt.placeholder.shell": "输入 shell 命令...",
