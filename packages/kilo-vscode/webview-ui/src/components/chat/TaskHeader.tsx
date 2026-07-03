@@ -159,6 +159,13 @@ export const TaskHeader: Component<TaskHeaderProps> = (props) => {
   })
 
   const [todosOpen, setTodosOpen] = createSignal(false)
+  const [copied, setCopied] = createSignal(false)
+
+  const copySid = (sid: string) => {
+    navigator.clipboard.writeText(sid)
+    setCopied(true)
+    setTimeout(() => setCopied(false), 2000)
+  }
 
   return (
     <Show when={hasMessages()}>
@@ -181,18 +188,33 @@ export const TaskHeader: Component<TaskHeaderProps> = (props) => {
         </div>
 
         <div data-slot="task-header-stats">
-          {/* <ContextProgress compact /> */}
-          {/* testagent_change start - export conversation button */}
-          <Show when={hasMessages() && !busy()}>
-            <Tooltip value="导出对话" placement="bottom">
-              <IconButton
-                icon="download"
-                size="small"
-                variant="ghost"
-                onClick={exportConversation}
-                aria-label="导出对话"
-              />
-            </Tooltip>
+          <Show when={hasMessages() && session.currentSessionID()}>
+            {(sid) => (
+              <Tooltip
+                value={copied() ? "已复制" : sid()}
+                placement="bottom"
+              >
+                <button
+                  data-slot="task-header-sessionid"
+                  onClick={() => copySid(sid())}
+                  title={sid()}
+                  style={{
+                    background: "none",
+                    border: "none",
+                    cursor: "pointer",
+                    color: "var(--vscode-descriptionForeground)",
+                    "font-size": "11px",
+                    padding: "0 4px",
+                    display: "inline-flex",
+                    "align-items": "center",
+                    gap: "2px",
+                  }}
+                >
+                  {sid().slice(0, 20)}...
+                  <Icon name={copied() ? "check" : "copy"} size="small" />
+                </button>
+              </Tooltip>
+            )}
           </Show>
           <Show when={hasMessages()}>
             <button

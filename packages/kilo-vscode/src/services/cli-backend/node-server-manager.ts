@@ -92,6 +92,16 @@ export class NodeServerManager {
           ...(process.platform === "win32" && {
             PYTHONIOENCODING: "utf-8",
           }),
+          KILO_CLIENT: "tscode",
+          KILOCODE_FEATURE: "tscode-extension",
+          KILO_PLATFORM: "tscode",
+          KILO_APP_NAME: "testagent",
+          KILO_TELEMETRY_LEVEL: vscode.env.isTelemetryEnabled ? "all" : "off",
+          KILO_EDITOR_NAME: vscode.env.appName,
+          KILO_MACHINE_ID: vscode.env.machineId,
+          KILO_APP_VERSION: this.context.extension.packageJSON.version,
+          KILO_VSCODE_VERSION: vscode.version,
+          KILOCODE_EDITOR_NAME: `${vscode.env.appName} ${vscode.version}`,
         },
         stdio: ["ignore", "pipe", "pipe"],
         // Note: detached is removed to prevent console window flash on Windows
