@@ -24,6 +24,7 @@ import { registerToggleAutoApprove } from "./commands/toggle-auto-approve"
 import { ensureCliInPath } from "./services/env-path"
 import { registerHeapSnapshot } from "./commands/heap-snapshot"
 import { RemoteStatusService } from "./services/RemoteStatusService"
+import { PythonInterpreterService } from "./services/python-interpreter" // testagent_change
 
 // Activated via "onStartupFinished" (package.json) so that commands, code actions, keybindings,
 // autocomplete, commit-message generation, and URI deep links all work immediately — without
@@ -31,6 +32,19 @@ import { RemoteStatusService } from "./services/RemoteStatusService"
 // it starts lazily when a webview connects or when ensureBackendForAutocomplete() triggers it.
 export function activate(context: vscode.ExtensionContext) {
   console.log("TestAgent extension is now active")
+
+  // testagent_change start - Initialize Python interpreter service
+  console.log("[TestAgent] Initializing Python interpreter service...")
+  const pythonInterpreterService = new PythonInterpreterService(context)
+  pythonInterpreterService.start()
+    .then(() => {
+      console.log("[TestAgent] Python interpreter service initialized successfully")
+    })
+    .catch((err) => {
+      console.error("[TestAgent] Failed to start Python interpreter service:", err)
+    })
+  context.subscriptions.push(pythonInterpreterService)
+  // testagent_change end
 
   // Add CLI to PATH on first activation (Windows only)
   // void ensureCliInPath(context)
