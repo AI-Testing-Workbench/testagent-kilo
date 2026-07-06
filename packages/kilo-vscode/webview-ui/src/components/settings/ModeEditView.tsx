@@ -281,7 +281,7 @@ const ModeEditView: Component<Props> = (props) => {
             onChange={(val) => {
               setTemp(val)
               const parsed = Number(val)
-              update({ temperature: val.trim() === "" || Number.isNaN(parsed) ? undefined : parsed })
+              update({ temperature: val.trim() === "" || Number.isNaN(parsed) ? null : parsed })
             }}
           />
         </SettingsRow>
@@ -298,7 +298,7 @@ const ModeEditView: Component<Props> = (props) => {
             onChange={(val) => {
               setTop(val)
               const parsed = Number(val)
-              update({ top_p: val.trim() === "" || Number.isNaN(parsed) ? undefined : parsed })
+              update({ top_p: val.trim() === "" || Number.isNaN(parsed) ? null : parsed })
             }}
           />
         </SettingsRow>
@@ -309,10 +309,9 @@ const ModeEditView: Component<Props> = (props) => {
         >
           <TextField
             value={cfg().steps?.toString() ?? ""}
-            placeholder={language.t("common.default")}
             onChange={(val) => {
               const parsed = parseInt(val, 10)
-              update({ steps: isNaN(parsed) ? undefined : parsed })
+              update({ steps: isNaN(parsed) ? null : parsed })
             }}
           />
         </SettingsRow>
