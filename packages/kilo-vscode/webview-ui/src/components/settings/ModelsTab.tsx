@@ -101,26 +101,19 @@ const ModelsTab: Component = () => {
           title={language.t("settings.providers.subagentModel.title")}
           description={language.t("settings.providers.subagentModel.description")}
         >
-          <div style={{ display: "flex", "flex-direction": "column", "align-items": "flex-end", gap: "8px" }}>
+          <div style={{ display: "flex", "flex-direction": "column",  gap: "8px" }}>
             <ModelSelectorBase
               value={subagentModel()}
               onSelect={handleSubagentModelSelect}
               placement="bottom-start"
               allowClear
               clearLabel={language.t("settings.providers.notSet")}
-              label={language.t("settings.providers.subagentModel.title")}
-              description={language.t("settings.providers.subagentModel.description")}
             />
             <Show when={subagentVariants().length > 0}>
               <ThinkingSelectorBase
                 variants={subagentVariants()}
                 value={subagentVariant()}
                 onSelect={(value) => updateSubagentVariant(value)}
-                onClear={() => updateSubagentVariant(null)}
-                allowClear
-                clearLabel={language.t("settings.providers.notSet")}
-                placement="bottom-start"
-                globalTrigger={false}
               />
             </Show>
           </div>

@@ -392,14 +392,14 @@ export type PermissionConfig = Partial<Record<string, PermissionRule>>
 
 export interface AgentConfig {
   model?: string | null
-  prompt?: string
-  description?: string
+  prompt?: string | null
+  description?: string | null
   mode?: "subagent" | "primary" | "all"
   hidden?: boolean
   disable?: boolean
-  temperature?: number
-  top_p?: number
-  steps?: number
+  temperature?: number | null
+  top_p?: number | null
+  steps?: number | null
   permission?: PermissionConfig
 }
 
@@ -1584,8 +1584,8 @@ export interface CustomProviderModelsFetchedMessage {
   models?: Array<{ id: string; name: string }>
   error?: string
   /** True when error was HTTP 401/403 — hints the user to check their API key */
-  auth?: boolean,
-  url?:string
+  auth?: boolean
+  url?: string
 }
 
 // testagent_change start - runtime switching messages
@@ -1784,10 +1784,10 @@ export type ExtensionMessage =
   | ExtensionDataReadyMessage
   | RemoteStatusMessage
   | ShellPathResolvedMessage
-  // testagent_change start - testflow messages
-  // (extension→webview dedicated message types are no longer used; testflow
-  //  renders via standard messageCreated / partUpdated events on the SSE pipeline)
-  // testagent_change end
+// testagent_change start - testflow messages
+// (extension→webview dedicated message types are no longer used; testflow
+//  renders via standard messageCreated / partUpdated events on the SSE pipeline)
+// testagent_change end
 
 // ============================================
 // Messages FROM webview TO extension
@@ -2940,7 +2940,7 @@ export type WebviewMessage =
   | UpdateMemorySettingsMessage // testagent_change
   // testagent_change start - testflow messages
   | TestflowSyncChildSessionMessage
-  // testagent_change end
+// testagent_change end
 
 // ============================================
 // testflow messages (webview → extension)
