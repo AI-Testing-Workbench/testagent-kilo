@@ -85,183 +85,123 @@ export class SystemNotificationService {
   }
 
   /**
-   * Show notification on Windows using PowerShell Toast.
-   * This is more reliable than node-notifier in VS Code extension context.
+   * Show notification on Windows using non-blocking PowerShell Toast (fire-and-forget).
+   * Spawns the process with stdio: "ignore" so it doesn't block the extension host event loop.
    */
   private showWindowsNotification(title: string, message: string, onClick?: () => void): void {
     this.ensureWindowsAppIDRegistered()
-      .then(() => this.showPowerShellToast(title, message, onClick))
-      .catch((err) => {
-        this.showVSCodeFallback(title, message, "info", onClick)
-      })
+    this.showPowerShellToast(title, message, onClick)
   }
 
   /**
-   * Show Windows Toast notification using PowerShell with COM objects.
-   * This method uses COM interface which may have better permissions than subprocess.
+   * Show Windows Toast notification using PowerShell with COM objects — non-blocking.
+   * Uses spawn() with stdio: "ignore" and async file I/O to avoid blocking
+   * the extension host event loop (which was causing health check timeouts).
    */
   private async showPowerShellToast(title: string, message: string, onClick?: () => void): Promise<void> {
-    return new Promise((resolve, reject) => {
-      const { exec } = require("child_process")
-      const fs = require("fs")
-      const os = require("os")
+    const { spawn } = require("child_process") as { spawn: typeof import("child_process").spawn }
+    const fs = require("fs") as typeof import("fs")
+    const os = require("os") as typeof import("os")
 
-      const appID = "TestAgent"
+    const appID = "TestAgent"
 
-      // Escape XML special characters
-      const xmlEscape = (str: string) =>
-        str
-          .replace(/&/g, "&amp;")
-          .replace(/</g, "&lt;")
-          .replace(/>/g, "&gt;")
-          .replace(/"/g, "&quot;")
-          .replace(/'/g, "&apos;")
+    // Escape XML special characters
+    const xmlEscape = (str: string) =>
+      str
+        .replace(/&/g, "&amp;")
+        .replace(/</g, "&lt;")
+        .replace(/>/g, "&gt;")
+        .replace(/"/g, "&quot;")
+        .replace(/'/g, "&apos;")
 
-      const escapedTitle = xmlEscape(title)
-      const escapedMessage = xmlEscape(message)
+    const escapedMessage = xmlEscape(message)
 
-      // Create Toast XML - simple version without image first
-      const toastXml = `<toast><visual><binding template="ToastText02"><text id="2">${escapedMessage}</text></binding></visual><audio src="ms-winsoundevent:Notification.Default" /></toast>`
+    const toastXml = `<toast><visual><binding template="ToastText02"><text id="2">${escapedMessage}</text></binding></visual><audio src="ms-winsoundevent:Notification.Default" /></toast>`
 
-      console.log("[TestAgent] 📦 Creating PowerShell script with COM objects...")
-      console.log("[TestAgent] 📝 Toast XML:", toastXml)
+    console.log("[TestAgent] 📝 Toast XML:", toastXml)
 
-      // Create a temporary PowerShell script file
-      const tempDir = os.tmpdir()
-      const scriptPath = path.join(tempDir, `testagent-toast-${Date.now()}.ps1`)
+    const tempDir = os.tmpdir()
+    const scriptPath = path.join(tempDir, `testagent-toast-${Date.now()}.ps1`)
 
-      // PowerShell script using COM with better error handling
-      const psScript = `
-# Load Windows Runtime assemblies
+    const psScript = `
 Add-Type -AssemblyName System.Runtime.WindowsRuntime
 $null = [Windows.UI.Notifications.ToastNotificationManager, Windows.UI.Notifications, ContentType = WindowsRuntime]
 $null = [Windows.Data.Xml.Dom.XmlDocument, Windows.Data.Xml.Dom.XmlDocument, ContentType = WindowsRuntime]
 
-# Toast XML
 $toastXml = @"
 ${toastXml}
 "@
 
 try {
-    Write-Host "Creating XML document..."
     $xml = New-Object Windows.Data.Xml.Dom.XmlDocument
     $xml.LoadXml($toastXml)
-    Write-Host "XML loaded successfully"
-    
-    Write-Host "Creating toast notification..."
     $toast = New-Object Windows.UI.Notifications.ToastNotification($xml)
-    Write-Host "Toast created successfully"
-    
-    Write-Host "Creating notifier with AppID: ${appID}"
     $notifier = [Windows.UI.Notifications.ToastNotificationManager]::CreateToastNotifier('${appID}')
-    Write-Host "Notifier created successfully"
-    
-    Write-Host "Showing toast..."
     $notifier.Show($toast)
-    Write-Host "SUCCESS: Toast notification displayed"
-    exit 0
 } catch {
-    Write-Error "FAILED: $($_.Exception.Message)"
-    Write-Error "Type: $($_.Exception.GetType().FullName)"
-    Write-Error "Stack: $($_.ScriptStackTrace)"
     exit 1
 }
 `.trim()
 
-      try {
-        // Write script to temp file with UTF-8 BOM encoding
-        fs.writeFileSync(scriptPath, "\ufeff" + psScript, "utf8")
-        console.log("[TestAgent] ✅ PowerShell script created at:", scriptPath)
+    try {
+      await fs.promises.writeFile(scriptPath, "\ufeff" + psScript, "utf8")
 
-        // Execute PowerShell script with COM support
-        const command = `powershell -Sta -NoProfile -ExecutionPolicy Bypass -WindowStyle Hidden -File "${scriptPath}"`
+      // Spawn with stdio: "ignore" — completely detached from the event loop.
+      // No callbacks, no stdout/stderr buffering, no blocking.
+      const child = spawn("powershell", [
+        "-Sta", "-NoProfile", "-ExecutionPolicy", "Bypass",
+        "-WindowStyle", "Hidden",
+        "-File", scriptPath,
+      ], {
+        stdio: "ignore",
+        timeout: 10000,
+      })
 
-        console.log("[TestAgent] 🚀 Executing PowerShell with COM objects...")
+      child.on("close", () => {
+        fs.promises.unlink(scriptPath).catch(() => {})
+      })
 
-        exec(command, { encoding: "utf8", timeout: 10000 }, (error: any, stdout: any, stderr: any) => {
-          // Clean up temp file
-          try {
-            fs.unlinkSync(scriptPath)
-            console.log("[TestAgent] 🗑️ Temp script deleted")
-          } catch (cleanupError) {
-            console.warn("[TestAgent] ⚠️ Failed to delete temp script:", cleanupError)
-          }
-
-          console.log("[TestAgent] 📊 PowerShell execution completed")
-          console.log("[TestAgent] 📤 stdout:", stdout || "(empty)")
-          console.log("[TestAgent] 📤 stderr:", stderr || "(empty)")
-          console.log("[TestAgent] ❓ error:", error ? error.message : "(none)")
-
-          if (error) {
-            console.error("[TestAgent] ❌ PowerShell COM Toast error:", error.message)
-            reject(error)
-            return
-          }
-
-          console.log("[TestAgent] ✅ PowerShell COM Toast executed successfully")
-          resolve()
-        })
-      } catch (fileError) {
-        console.error("[TestAgent] ❌ Failed to create temp script:", fileError)
-        reject(fileError)
-      }
-    })
+      child.on("error", (err: Error) => {
+        console.warn("[TestAgent] ⚠️ PowerShell spawn failed:", err.message)
+      })
+    } catch (err) {
+      console.warn("[TestAgent] ⚠️ Failed to create PowerShell toast:", err)
+    }
   }
 
   /**
-   * Ensure Windows AppID is registered in registry for Toast notifications.
+   * Ensure Windows AppID is registered in registry for Toast notifications — non-blocking.
    * Required for Windows 10 Fall Creators Update and above.
+   * Fire-and-forget: runs once, never blocks the event loop.
    */
-  private async ensureWindowsAppIDRegistered(): Promise<void> {
-    // Check if already registered (cache the result)
-    if ((this as any)._appIDRegistered) {
-      return Promise.resolve()
-    }
+  private ensureWindowsAppIDRegistered(): void {
+    if ((this as any)._appIDRegistered) return
 
-    return new Promise((resolve, reject) => {
-      const { exec } = require("child_process")
-      const appID = "TestAgent"
-      const displayName = "TestAgent"
-      const iconPath = path.join(this.extensionUri.fsPath, "resources", "icon.png").replace(/\\/g, "\\\\")
-
-      console.log("[TestAgent] 📝 Registering Windows AppID:", appID)
-      console.log("[TestAgent] 📁 Icon path:", iconPath)
-
-      const psScript = `
+    const { spawn } = require("child_process") as { spawn: typeof import("child_process").spawn }
+    const appID = "TestAgent"
+    const iconPath = path.join(this.extensionUri.fsPath, "resources", "icon.png").replace(/\\/g, "\\\\")
+    ;(this as any)._appIDRegistered = true
+    const psScript = `
 $AppID = '${appID}';
 $RegPath = "HKCU:\\SOFTWARE\\Classes\\AppUserModelId\\$AppID";
 try {
   if (-not (Test-Path $RegPath)) {
     New-Item -Path $RegPath -Force | Out-Null;
   }
-  Set-ItemProperty -Path $RegPath -Name 'DisplayName' -Value '${displayName}' -Type String;
+  Set-ItemProperty -Path $RegPath -Name 'DisplayName' -Value 'TestAgent' -Type String;
   if (Test-Path '${iconPath}') {
     Set-ItemProperty -Path $RegPath -Name 'IconUri' -Value '${iconPath}' -Type String;
   }
-  Write-Host 'SUCCESS';
-  exit 0;
-} catch {
-  Write-Error $_;
-  exit 1;
-}
+} catch {}
 `.trim()
 
-      const command = `powershell -NoProfile -ExecutionPolicy Bypass -Command "${psScript.replace(/"/g, '\\"')}"`
-
-      exec(command, { encoding: "utf8", timeout: 5000 }, (error: any, stdout: any, stderr: any) => {
-        if (error) {
-          console.warn("[TestAgent] ⚠️ Failed to register AppID:", error.message)
-          if (stdout) console.log("[TestAgent] stdout:", stdout)
-          if (stderr) console.log("[TestAgent] stderr:", stderr)
-          reject(error)
-          return
-        }
-
-        console.log("[TestAgent] ✅ Windows AppID registered successfully")
-        if (stdout) console.log("[TestAgent] stdout:", stdout)
-        ;(this as any)._appIDRegistered = true
-        resolve()
-      })
+    // Spawn with stdio: "ignore" — fire and forget, never blocks.
+    spawn("powershell", [
+      "-NoProfile", "-ExecutionPolicy", "Bypass",
+      "-Command", psScript,
+    ], {
+      stdio: "ignore",
+      timeout: 5000,
     })
   }
 
@@ -274,17 +214,13 @@ try {
 
     const fs = require("fs")
     if (fs.existsSync(customIconPath)) {
-      console.log("[TestAgent] ✅ Using custom icon:", customIconPath)
       return customIconPath
     }
 
     const fallbackPath = path.join(this.extensionUri.fsPath, "resources", "icon.png")
     if (fs.existsSync(fallbackPath)) {
-      console.log("[TestAgent] ✅ Using fallback icon:", fallbackPath)
       return fallbackPath
     }
-
-    console.log("[TestAgent] ⚠️ No icon found, using undefined")
     return undefined as any
   }
 
