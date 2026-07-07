@@ -977,7 +977,9 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
           )
           break
         case "removeMode":
-          this.handleRemoveMode(message.name).catch((e) => console.error("[TestAgent] handleRemoveMode failed:", e))
+          this.handleRemoveMode(message.name, message.source).catch((e) =>
+            console.error("[TestAgent] handleRemoveMode failed:", e),
+          )
           break
         case "removeMcp":
           this.handleRemoveMcp(message.name).catch((e) => console.error("[TestAgent] handleRemoveMcp failed:", e))
@@ -1055,9 +1057,14 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
 
             if (!registry) {
               // 选择"系统默认源" → 删除 ~/.npmrc 中的 registry= 行
-              content = content.replace(/^registry\s*=.*$/m, "").replace(/\n{2,}/g, "\n").trim()
+              content = content
+                .replace(/^registry\s*=.*$/m, "")
+                .replace(/\n{2,}/g, "\n")
+                .trim()
               if (!content) {
-                try { fs.unlinkSync(npmrcPath) } catch {}
+                try {
+                  fs.unlinkSync(npmrcPath)
+                } catch {}
               } else {
                 fs.writeFileSync(npmrcPath, content + "\n", "utf-8")
               }
@@ -1108,7 +1115,12 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
         }
         // testagent_change end
         case "updateConfig":
-          await this.handleUpdateConfig(message.config, message.projectConfig, message.globalUnset, message.projectUnset)
+          await this.handleUpdateConfig(
+            message.config,
+            message.projectConfig,
+            message.globalUnset,
+            message.projectUnset,
+          )
           break
         case "setLanguage":
           await vscode.workspace
@@ -2135,7 +2147,7 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
     await this.fetchAndSendSkills()
     await this.fetchAndSendCommands()
     // testagent_change end
-     vscode.window.showInformationMessage("skills已重新加载")
+    vscode.window.showInformationMessage("skills已重新加载")
     console.log("[TestAgent] Skills and commands reloaded successfully")
   }
 
@@ -2392,17 +2404,47 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
    * Remove a custom mode via the CLI backend (deletes from disk + refreshes state).
    * The webview optimistically removes the mode from its list before this runs.
    * On failure, re-fetches agents so the webview reverts to the authoritative state.
+   *
+   * Uses the agent's source scope to determine the correct removal strategy:
+   * - project-md: deletes the .md file in project scope
+   * - global-md: deletes the .md file in global scope
+   * - project-json: unsets the agent from project config overlay
+   * - global-json: unsets the agent from global config overlay
    */
-  private async handleRemoveMode(name: string): Promise<void> {
-    console.log("[TestAgent]  handleRemoveMode called for:", name) // testagent_change
+  private async handleRemoveMode(name: string, source?: string): Promise<void> {
+    console.log("[TestAgent]  handleRemoveMode called for:", name, "source:", source) // testagent_change
     if (!this.client) {
       console.log("[TestAgent]  handleRemoveMode: no client") // testagent_change
       return
     }
 
+    const dir = this.getWorkspaceDirectory()
+
+    // testagent_change start - use overlayUpdate API based on source scope
+    if (source && ["project-json", "project-md", "global-json", "global-md"].includes(source)) {
+      const isProject = source.startsWith("project")
+      try {
+        await this.client.config.overlayUpdate(
+          {
+            scope: isProject ? "project" : "global",
+            unset: [["agent", name]],
+            directory: dir,
+          },
+          { throwOnError: true },
+        )
+        console.log("[TestAgent]  handleRemoveMode: overlayUpdate successful, scope:", isProject ? "project" : "global") // testagent_change
+        this.cachedAgentsMessage = null
+        await this.fetchAndSendAgents()
+        return
+      } catch (err) {
+        console.error("[TestAgent]  handleRemoveMode: overlayUpdate failed:", err) // testagent_change
+        // Fall through to legacy fallback
+      }
+    }
+    // testagent_change end
+
     // 1. Try CLI removal (handles .md files and legacy .kilocodemodes)
     try {
-      const dir = this.getWorkspaceDirectory()
       console.log("[TestAgent]  handleRemoveMode: trying CLI removal, dir:", dir) // testagent_change
       // opencode 没有这个api
       const result = await this.client.kilocode.removeAgent({ name, directory: dir })
@@ -2692,7 +2734,13 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
       ])
 
       console.log("[TestAgent]  ✅ Config fetched successfully, keys:", Object.keys(config || {}).length) // testagent_change
-      const message: { type: "configLoaded"; config: unknown; globalConfig?: unknown; projectConfig?: unknown; refresh?: boolean } = {
+      const message: {
+        type: "configLoaded"
+        config: unknown
+        globalConfig?: unknown
+        projectConfig?: unknown
+        refresh?: boolean
+      } = {
         type: "configLoaded",
         config,
         globalConfig: globalCfg,
@@ -2745,7 +2793,12 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
         this.client!.global.config.get({ throwOnError: true }).catch(() => ({ data: {} })),
         this.client!.config.overlay({ directory: dir }).catch(() => ({ data: { project: {} } })),
       ])
-      this.cachedConfigMessage = { type: "configLoaded", config, globalConfig: globalCfg, projectConfig: overlay?.project }
+      this.cachedConfigMessage = {
+        type: "configLoaded",
+        config,
+        globalConfig: globalCfg,
+        projectConfig: overlay?.project,
+      }
       this.postMessage({ type: "configUpdated", config, globalConfig: globalCfg, projectConfig: overlay?.project })
     } catch (error) {
       console.error("[TestAgent]  Failed to fetch config after update:", error)
@@ -3026,17 +3079,36 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
         this.client!.global.config.get({ throwOnError: true }).catch(() => ({ data: {} })),
         this.client!.config.overlay({ directory: dir }).catch(() => ({ data: { project: {} } })),
       ])
-      this.cachedConfigMessage = { type: "configLoaded", config: merged, globalConfig: globalCfg, projectConfig: overlay?.project }
-      this.postMessage({ type: "configUpdated", config: merged, globalConfig: globalCfg, projectConfig: overlay?.project })
+      this.cachedConfigMessage = {
+        type: "configLoaded",
+        config: merged,
+        globalConfig: globalCfg,
+        projectConfig: overlay?.project,
+      }
+      this.postMessage({
+        type: "configUpdated",
+        config: merged,
+        globalConfig: globalCfg,
+        projectConfig: overlay?.project,
+      })
       if (refreshProviders) await this.fetchAndSendProviders()
     } catch (error) {
       console.error("[TestAgent]  Config write succeeded but post-write refresh failed:", error)
-      const cached = (this.cachedConfigMessage as { config?: unknown; globalConfig?: unknown; projectConfig?: unknown } | null)?.config
+      const cached = (
+        this.cachedConfigMessage as { config?: unknown; globalConfig?: unknown; projectConfig?: unknown } | null
+      )?.config
       const cachedGlobal = (this.cachedConfigMessage as { globalConfig?: unknown } | null)?.globalConfig
       const cachedProject = (this.cachedConfigMessage as { projectConfig?: unknown } | null)?.projectConfig
       const optimistic =
-        cached && typeof cached === "object" ? { ...(cached as Record<string, unknown>), ...partial, ...project } : { ...partial, ...project }
-      this.postMessage({ type: "configUpdated", config: optimistic, globalConfig: cachedGlobal, projectConfig: cachedProject })
+        cached && typeof cached === "object"
+          ? { ...(cached as Record<string, unknown>), ...partial, ...project }
+          : { ...partial, ...project }
+      this.postMessage({
+        type: "configUpdated",
+        config: optimistic,
+        globalConfig: cachedGlobal,
+        projectConfig: cachedProject,
+      })
     } finally {
       this.pending--
     }

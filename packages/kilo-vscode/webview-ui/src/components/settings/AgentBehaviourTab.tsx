@@ -81,7 +81,7 @@ const AgentBehaviourTab: Component = () => {
 
   // Agent view state
   const [agentView, setAgentView] = createSignal<AgentView>("list")
-  const [editingAgent, setEditingAgent] = createSignal<string>("")
+  const [editingAgent, setEditingAgent] = createSignal<{name: string, source: string}>({name: "", source: ""})
 
   // MCP view state
   const [editingMcp, setEditingMcp] = createSignal<string>("")
@@ -346,11 +346,11 @@ const AgentBehaviourTab: Component = () => {
                 // to prevent the reactive list re-render from firing click handlers
                 // on shifted list items while the dialog overlay is still present.
                 setTimeout(() => {
-                  session.removeMode(agent.name)
+                  session.removeMode(agent.name, agent.source)
                   // If we were editing this mode, go back to list
-                  if (editingAgent() === agent.name) {
+                  if (editingAgent().name === agent.name) {
                     setAgentView("list")
-                    setEditingAgent("")
+                    setEditingAgent({name: "", source: ""})
                   }
                 }, 150)
               }}
@@ -363,14 +363,14 @@ const AgentBehaviourTab: Component = () => {
     ))
   }
 
-  const startEdit = (name: string) => {
-    setEditingAgent(name)
+  const startEdit = (name: string,source:string) => {
+    setEditingAgent({name, source})
     setAgentView("edit")
   }
 
   const back = () => {
     setAgentView("list")
-    setEditingAgent("")
+    setEditingAgent({name: "", source: ""})
   }
 
   const [importError, setImportError] = createSignal("")
@@ -411,7 +411,7 @@ const AgentBehaviourTab: Component = () => {
   const renderAgentsSubtab = () => {
     const view = agentView()
     if (view === "create") return <ModeCreateView taken={agentNames()} onBack={back} />
-    if (view === "edit") return <ModeEditView name={editingAgent()} onBack={back} onRemove={confirmRemoveMode} />
+    if (view === "edit") return <ModeEditView name={editingAgent().name} onBack={back} onRemove={confirmRemoveMode} source={editingAgent().source}/>
 
     return (
       <div>
@@ -510,7 +510,7 @@ const AgentBehaviourTab: Component = () => {
                       cursor: "pointer",
                       opacity: disabled() ? "0.5" : "1",
                     }}
-                    onClick={() => startEdit(name)}
+                    onClick={() => startEdit(name,agent()?.source || "")}
                     onMouseEnter={(e) => {
                       e.currentTarget.style.background = "var(--bg-hover-base, var(--vscode-list-hoverBackground))"
                     }}
@@ -526,12 +526,18 @@ const AgentBehaviourTab: Component = () => {
                           {(s) => {
                             const tag = () => {
                               switch (s()) {
-                                case "builtin": return "内置"
-                                case "project-json": return "项目配置"
-                                case "project-md": return "项目Agent"
-                                case "global-json": return "全局配置"
-                                case "global-md": return "全局Agent"
-                                default: return ""
+                                case "builtin":
+                                  return "内置"
+                                case "project-json":
+                                  return "项目配置"
+                                case "project-md":
+                                  return "项目Agent"
+                                case "global-json":
+                                  return "全局配置"
+                                case "global-md":
+                                  return "全局Agent"
+                                default:
+                                  return ""
                               }
                             }
                             return tag() ? (
@@ -1367,7 +1373,7 @@ const AgentBehaviourTab: Component = () => {
                 // Reset views when switching subtabs
                 if (subtab.id === "agents") {
                   setAgentView("list")
-                  setEditingAgent("")
+                  setEditingAgent({name: "", source: ""})
                 }
                 setEditingMcp("")
               }}

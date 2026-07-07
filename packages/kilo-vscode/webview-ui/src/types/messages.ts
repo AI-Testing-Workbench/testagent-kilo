@@ -2015,6 +2015,8 @@ export interface RemovePluginMessage {
 export interface RemoveModeMessage {
   type: "removeMode"
   name: string
+  /** Source scope of the agent being removed - determines where to remove from */
+  source?: "builtin" | "project-json" | "project-md" | "global-json" | "global-md"
 }
 
 export interface RemoveMcpMessage {

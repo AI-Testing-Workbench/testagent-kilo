@@ -33,6 +33,7 @@ import type {
   SendMessageFailedMessage,
   McpStatusEntry,
   MessageLoadMode,
+  
 } from "../types/messages"
 import { removeSessionPermissions, upsertPermission } from "./permission-queue"
 import {
@@ -43,6 +44,7 @@ import {
   buildCostBreakdown,
   buildFamilyTokens,
   childID,
+  FamilyTokens
 } from "./session-utils"
 import { Identifier } from "../utils/id"
 import { resolveModelSelection } from "./model-selection"
@@ -172,7 +174,7 @@ interface SessionContextValue {
   // Agent/mode selection (per-session)
   agents: Accessor<AgentInfo[]>
   allAgents: Accessor<AgentInfo[]>
-  removeMode: (name: string) => void
+  removeMode: (name: string, source?: "builtin" | "project-json" | "project-md" | "global-json" | "global-md") => void
   removeMcp: (name: string) => void
 
   // MCP server status (runtime connect/disconnect)
@@ -219,7 +221,7 @@ interface SessionContextValue {
     draftID?: string,
     goal?: string,
   ) => void
-  continueTask: () => void  // testagent_change - 添加继续任务方法
+  continueTask: () => void // testagent_change - 添加继续任务方法
   abort: (sessionID?: string) => void
   compact: () => void
   respondToPermission: (
@@ -315,7 +317,10 @@ export const SessionProvider: ParentComponent = (props) => {
   // Skills loaded from the CLI backend
   const [skills, setSkills] = createSignal<SkillInfo[]>([])
 
-  const removeMode = (name: string) => {
+  const removeMode = (
+    name: string,
+    source?: "builtin" | "project-json" | "project-md" | "global-json" | "global-md",
+  ) => {
     setAgents((prev) => prev.filter((a) => a.name !== name))
     // setAllAgents((prev) => prev.filter((a) => a.name !== name))
 
@@ -332,7 +337,7 @@ export const SessionProvider: ParentComponent = (props) => {
       }),
     )
 
-    vscode.postMessage({ type: "removeMode", name })
+    vscode.postMessage({ type: "removeMode", name, source })
   }
 
   const removeMcp = (name: string) => {
@@ -2326,7 +2331,7 @@ export const SessionProvider: ParentComponent = (props) => {
     unrevertSession,
     sendMessage,
     sendCommand,
-    continueTask,  // testagent_change - 添加继续任务方法
+    continueTask, // testagent_change - 添加继续任务方法
     abort,
     compact,
     respondToPermission,

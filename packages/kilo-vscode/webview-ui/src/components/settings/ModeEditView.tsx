@@ -24,6 +24,7 @@ interface Props {
   name: string
   onBack: () => void
   onRemove: (agent: AgentInfo) => void
+  source: string
 }
 
 type Mode = "primary" | "subagent" | "all"
@@ -128,6 +129,19 @@ const ModeEditView: Component<Props> = (props) => {
           <IconButton size="small" variant="ghost" icon="arrow-left" onClick={props.onBack} />
           <span style={{ "font-weight": "600", "font-size": "14px", "margin-left": "8px" }}>
             {language.t("settings.agentBehaviour.editMode")} — {props.name}
+            <Show when={props.source}>
+              <span
+                style={{
+                  "font-size": "10px",
+                  padding: "1px 5px",
+                  "border-radius": "3px",
+                  background: "var(--bg-subtle-base, var(--vscode-badge-background))",
+                  color: "var(--text-weak-base, var(--vscode-badge-foreground))",
+                }}
+              >
+                {props.source}
+              </span>
+            </Show>
           </span>
         </div>
         <Show when={!native()}>
@@ -184,21 +198,21 @@ const ModeEditView: Component<Props> = (props) => {
             />
           </SettingsRow>
           <div
-              style={{
-                "text-align": "end",
-                "font-size": "12px",
-                color: "var(--vscode-descriptionForeground)",
-                "margin-top": "6px",
-                "line-height": "1.4",
-                "align-self":'end'
-              }}
-            >
-              {
-                modeDescriptions[
-                  (modes as readonly string[]).includes(cfg().mode ?? "") ? (cfg().mode as Mode) : "primary"
-                ]
-              }
-            </div>
+            style={{
+              "text-align": "end",
+              "font-size": "12px",
+              color: "var(--vscode-descriptionForeground)",
+              "margin-top": "6px",
+              "line-height": "1.4",
+              "align-self": 'end'
+            }}
+          >
+            {
+              modeDescriptions[
+              (modes as readonly string[]).includes(cfg().mode ?? "") ? (cfg().mode as Mode) : "primary"
+              ]
+            }
+          </div>
         </Card>
       </Show>
 
