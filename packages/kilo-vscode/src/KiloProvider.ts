@@ -3037,6 +3037,11 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
       partial.provider !== undefined ||
       partial.disabled_providers !== undefined ||
       partial.enabled_providers !== undefined
+    const refreshAgents =
+      partial.default_agent !== undefined ||
+      partial.agent !== undefined ||
+      project.default_agent !== undefined ||
+      project.agent !== undefined
     const hasGlobal = Object.keys(partial).length > 0 || globalUnset.length > 0
     const hasProject = Object.keys(project).length > 0 || projectUnset.length > 0
 
@@ -3091,7 +3096,10 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
         globalConfig: globalCfg,
         projectConfig: overlay?.project,
       })
-      if (refreshProviders) await this.fetchAndSendProviders()
+        await Promise.all([
+        refreshProviders ? this.fetchAndSendProviders() : Promise.resolve(),
+        refreshAgents ? this.fetchAndSendAgents() : Promise.resolve(),
+      ])
     } catch (error) {
       console.error("[TestAgent]  Config write succeeded but post-write refresh failed:", error)
       const cached = (

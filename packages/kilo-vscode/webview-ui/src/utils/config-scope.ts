@@ -16,21 +16,37 @@ import { isRecord } from "./config-utils"
 // rather than the global one.
 const PROJECT_SCOPED_KEYS: ReadonlySet<string> = new Set(["agent", "commit_message"])
 
+export type ScopeOverride = "global" | "project"
+export type ScopeOverrides = Record<string, ScopeOverride>
+
 /**
  * Split a draft of config changes into global and project scopes.
  *
- * For top-level keys: use PROJECT_SCOPED_KEYS set.
- * For nested keys (e.g. agent.foo): check against the real project config
- * to determine if the sub-key exists in project scope.
+ * For top-level keys: use PROJECT_SCOPED_KEYS set unless an explicit override
+ * exists. For nested keys (e.g. agent.foo): check against the real project
+ * config to determine if the sub-key exists in project scope.
+ *
+ * @param overrides Explicit scope assignments per top-level key. When set,
+ *   the automatic routing (PROJECT_SCOPED_KEYS / project config check) is
+ *   bypassed for that key.
  */
 export function splitConfigByScope(
   draft: Partial<Config>,
   projectCfg: Record<string, unknown> = {},
+  overrides?: ScopeOverrides,
 ): { global: Partial<Config>; project: Partial<Config> } {
   const global: Record<string, unknown> = {}
   const project: Record<string, unknown> = {}
 
   for (const [key, value] of Object.entries(draft)) {
+    const override = overrides?.[key]
+    if (override) {
+      // Explicit override — put the entire value in the specified scope
+      if (override === "project") project[key] = value
+      else global[key] = value
+      continue
+    }
+
     // Key is explicitly project-scoped
     if (PROJECT_SCOPED_KEYS.has(key)) {
       // For nested objects (like agent), split sub-keys by what exists in project config

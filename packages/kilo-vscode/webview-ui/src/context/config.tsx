@@ -17,7 +17,7 @@ import type { ParentComponent, Accessor } from "solid-js"
 import { useVSCode } from "./vscode"
 import type { Config, ExtensionMessage } from "../types/messages"
 import { deepMerge, stripNulls, resolveConfig } from "../utils/config-utils"
-import { splitConfigByScope, configUnsetPaths, pruneConfigSet } from "../utils/config-scope"
+import { splitConfigByScope, configUnsetPaths, pruneConfigSet, type ScopeOverrides } from "../utils/config-scope"
 
 export interface SaveError {
   message: string
@@ -32,7 +32,7 @@ interface ConfigContextValue {
   isDirty: Accessor<boolean>
   saving: Accessor<boolean>
   saveError: Accessor<SaveError | null>
-  updateConfig: (partial: Partial<Config>) => void
+  updateConfig: (partial: Partial<Config>, scopeOverrides?: ScopeOverrides) => void
   saveConfig: () => void
   discardConfig: () => void
 }
@@ -58,6 +58,9 @@ export const ConfigProvider: ParentComponent = (props) => {
   // Error from the most recent saveConfig() attempt, or null if no error.
   // Cleared when the user edits the draft again or starts a new save.
   const [saveError, setSaveError] = createSignal<SaveError | null>(null)
+  // Explicit scope overrides from UI (e.g. user picked "project" for a new agent).
+  // Maps top-level config keys to their forced scope, bypassing automatic routing.
+  const [scopeOverrides, setScopeOverrides] = createSignal<ScopeOverrides>({})
 
   // Register handler immediately (not in onMount) so we never miss
   // a configLoaded message that arrives before the DOM mount.
@@ -67,6 +70,7 @@ export const ConfigProvider: ParentComponent = (props) => {
 
       if (message.refresh) {
         setDraft({})
+        setScopeOverrides({})
         setIsDirty(false)
         setConfig(message.config)
         setSaved(message.config)
@@ -99,6 +103,7 @@ export const ConfigProvider: ParentComponent = (props) => {
       if (saving()) {
         setSaving(false)
         setDraft({})
+        setScopeOverrides({})
         setIsDirty(false)
         setSaveError(null)
         setConfig(message.config)
@@ -155,9 +160,12 @@ export const ConfigProvider: ParentComponent = (props) => {
     clearTimeout(fallback)
   })
 
-  function updateConfig(partial: Partial<Config>) {
+  function updateConfig(partial: Partial<Config>, overrides?: ScopeOverrides) {
     setConfig((prev) => stripNulls(deepMerge(prev, partial)))
     setDraft((prev) => deepMerge(prev as Config, partial))
+    if (overrides) {
+      setScopeOverrides((prev) => ({ ...prev, ...overrides }))
+    }
     setIsDirty(true)
     setSaveError(null)
   }
@@ -168,8 +176,8 @@ export const ConfigProvider: ParentComponent = (props) => {
     setSaving(true)
     setSaveError(null)
 
-    // Split changes by scope using key rules + real project config
-    const split = splitConfigByScope(changes, projectConfig() as Record<string, unknown>)
+    // Split changes by scope using key rules + explicit overrides
+    const split = splitConfigByScope(changes, projectConfig() as Record<string, unknown>, scopeOverrides())
 
     vscode.postMessage({
       type: "updateConfig",
@@ -187,6 +195,7 @@ export const ConfigProvider: ParentComponent = (props) => {
     setGlobalConfig(savedGlobal())
     setProjectConfig(savedProject())
     setDraft({})
+    setScopeOverrides({})
     setIsDirty(false)
     setSaveError(null)
   }

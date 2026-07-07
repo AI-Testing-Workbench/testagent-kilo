@@ -59,7 +59,7 @@ type AgentView = "list" | "create" | "edit"
 
 const AgentBehaviourTab: Component = () => {
   const language = useLanguage()
-  const { config, updateConfig } = useConfig()
+  const { config, projectConfig, globalConfig, updateConfig } = useConfig()
   const session = useSession()
   const dialog = useDialog()
   const vscode = useVSCode()
@@ -498,6 +498,13 @@ const AgentBehaviourTab: Component = () => {
                 const disabled = () => agentCfg().disable ?? false
                 const hidden = () => agentCfg().hidden ?? false
                 const deprecated = () => agent()?.deprecated ?? false
+                // Determine source: prefer server registry, fall back to config scope
+                const source = () => {
+                  if (agent()?.source) return agent()!.source
+                  if (projectConfig().agent?.[name]) return "project-json"
+                  if (globalConfig().agent?.[name]) return "global-json"
+                  return undefined
+                }
                 return (
                   <div
                     style={{
@@ -510,7 +517,7 @@ const AgentBehaviourTab: Component = () => {
                       cursor: "pointer",
                       opacity: disabled() ? "0.5" : "1",
                     }}
-                    onClick={() => startEdit(name,agent()?.source || "")}
+                    onClick={() => startEdit(name, source() ?? "")}
                     onMouseEnter={(e) => {
                       e.currentTarget.style.background = "var(--bg-hover-base, var(--vscode-list-hoverBackground))"
                     }}
@@ -522,7 +529,7 @@ const AgentBehaviourTab: Component = () => {
                       <div style={{ display: "flex", "align-items": "center", gap: "6px" }}>
                         <div style={{ "font-weight": "500", "font-size": "13px" }}>{name}</div>
                         {/* 增加tag 展示agent 来源 */}
-                        <Show when={agent()?.source}>
+                        <Show when={source()}>
                           {(s) => {
                             const tag = () => {
                               switch (s()) {
@@ -621,7 +628,7 @@ const AgentBehaviourTab: Component = () => {
                           </span>
                         </Show>
                       </div>
-                      <Show when={agent()?.description}>
+                      <Show when={agent()?.description || agentCfg().description}>
                         <div
                           style={{
                             "font-size": "11px",
@@ -632,7 +639,7 @@ const AgentBehaviourTab: Component = () => {
                             "white-space": "nowrap",
                           }}
                         >
-                          {agent()!.description}
+                          {agent()?.description ?? agentCfg().description}
                         </div>
                       </Show>
                     </div>

@@ -129,19 +129,38 @@ const ModeEditView: Component<Props> = (props) => {
           <IconButton size="small" variant="ghost" icon="arrow-left" onClick={props.onBack} />
           <span style={{ "font-weight": "600", "font-size": "14px", "margin-left": "8px" }}>
             {language.t("settings.agentBehaviour.editMode")} — {props.name}
-            <Show when={props.source}>
-              <span
-                style={{
-                  "font-size": "10px",
-                  padding: "1px 5px",
-                  "border-radius": "3px",
-                  background: "var(--bg-subtle-base, var(--vscode-badge-background))",
-                  color: "var(--text-weak-base, var(--vscode-badge-foreground))",
-                }}
-              >
-                {props.source}
-              </span>
-            </Show>
+            {() => {
+              const tag = () => {
+                switch (props.source) {
+                  case "builtin":
+                    return "内置"
+                  case "project-json":
+                    return "项目配置"
+                  case "project-md":
+                    return "项目Agent"
+                  case "global-json":
+                    return "全局配置"
+                  case "global-md":
+                    return "全局Agent"
+                  default:
+                    return ""
+                }
+              }
+              return tag() ? (
+                <span
+                  style={{
+                    "margin-left": "4px",
+                    "font-size": "10px",
+                    padding: "1px 5px",
+                    "border-radius": "3px",
+                    background: "var(--bg-subtle-base, var(--vscode-badge-background))",
+                    color: "var(--text-weak-base, var(--vscode-badge-foreground))",
+                  }}
+                >
+                  {tag()}
+                </span>
+              ) : null
+            }}
           </span>
         </div>
         <Show when={!native()}>
