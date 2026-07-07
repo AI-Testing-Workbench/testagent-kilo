@@ -439,7 +439,7 @@ export interface CompactionConfig {
   auto?: boolean
   threshold_percent?: number | null
   prune?: boolean
-  force?: boolean // testagent_change
+
 }
 
 export interface WatcherConfig {

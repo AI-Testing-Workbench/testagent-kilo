@@ -1302,7 +1302,7 @@ export type Config = {
     tail_turns?: number
     preserve_recent_tokens?: number
     reserved?: number,
-    force?: boolean|undefined|null
+
   }
   experimental?: {
     disable_paste_summary?: boolean

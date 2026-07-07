@@ -1247,8 +1247,7 @@ export const dict = {
   "settings.context.compactionLimit.description": "当上下文达到模型窗口的此百分比时进行压缩。",
   "settings.context.prune.title": "修剪旧输出",
   "settings.context.prune.description": "压缩期间移除旧的工具输出",
-  "settings.context.forceCompaction.title": "强制压缩",
-  "settings.context.forceCompaction.description": "自动压缩未开启时，上下文满了时仍强制执行压缩",
+
   "settings.context.watcherPatterns": "文件监视器忽略模式",
   "settings.context.watcherPatterns.description": "监视器应忽略的文件的 glob 模式",
 

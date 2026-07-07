@@ -89,6 +89,7 @@ const ContextTab: Component = () => {
         <SettingsRow
           title={language.t("settings.context.prune.title")}
           description={language.t("settings.context.prune.description")}
+          last
         >
           <Switch
             checked={config().compaction?.prune ?? false}
@@ -98,20 +99,6 @@ const ContextTab: Component = () => {
             {language.t("settings.context.prune.title")}
           </Switch>
         </SettingsRow>
-        <SettingsRow
-          title={language.t("settings.context.forceCompaction.title")}
-          description={language.t("settings.context.forceCompaction.description")}
-          last
-        >
-          <Switch
-            checked={config().compaction?.force ?? false}
-            onChange={(checked) => updateConfig({ compaction: { ...config().compaction, force: checked } })}
-            hideLabel
-          >
-            {language.t("settings.context.forceCompaction.title")}
-          </Switch>
-        </SettingsRow>
-        {/* 上下文满了强制压缩 */}
       </Card>
 
       <h4 style={{ "margin-top": "16px", "margin-bottom": "8px" }}>{language.t("settings.context.watcherPatterns")}</h4>
