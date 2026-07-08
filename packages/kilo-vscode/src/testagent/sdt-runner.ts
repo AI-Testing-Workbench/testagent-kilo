@@ -14,7 +14,7 @@ const stripAnsi = (s: string) => s.replace(ANSI_RE, "")
  * 而是发 `result` 事件（一个），由 bridge 渲染成结果卡。对应的
  * stdout/stderr 实时日志会被丢弃，避免和卡片内容重复。
  */
-const ONE_SHOT_COMMANDS = new Set(["init", "new", "list", "switch", "validate"])
+const ONE_SHOT_COMMANDS = new Set(["init", "new", "list", "switch", "validate", "stages"])
 
 export interface SdtRunnerOpts {
   cmd: string
@@ -37,7 +37,7 @@ export class SdtRunner {
 
   run(opts: SdtRunnerOpts): void {
     console.log('[TestAgent] SdtRunner.run called:', { cmd: opts.cmd, args: opts.args, cwd: opts.cwd, sessionID: opts.sessionID })
-    
+
     if (this.running) {
       console.log('[TestAgent] SdtRunner already running, aborting')
       return
@@ -50,8 +50,6 @@ export class SdtRunner {
     // Use bundled testflow binary from extension's bin/ directory
     const extDir = path.resolve(__dirname, '..')
     const testflowBin = path.join(extDir, 'bin', process.platform === 'win32' ? 'testflow.exe' : 'testflow')
-    // console.log('[TestAgent] Using bundled testflow binary:', testflowBin)
-    // console.log('[TestAgent] Spawning testflow:', { cmd: testflowBin, args: [opts.cmd, ...opts.args], cwd: opts.cwd })
 
     const testflowResDir = path.join(extDir, 'bin', 'testflow-res')
     this.proc = spawn(testflowBin, [opts.cmd, ...opts.args], {
@@ -63,11 +61,9 @@ export class SdtRunner {
     const isOneShot = ONE_SHOT_COMMANDS.has(opts.cmd)
     const rl = readline.createInterface({ input: this.proc.stdout!, terminal: false })
     rl.on("line", (line) => {
-      // console.log('[TestAgent] testflow stdout:', line)
       if (!line.trim()) return
       try {
         const event = JSON.parse(line) as JsonLine
-        // console.log('[TestAgent] testflow event:', event.type)
         this.dispatch(event)
       } catch {
         // 一锤子命令的实时日志丢进卡片反而是噪声，忽略；其他命令照旧回流到 chat
@@ -81,8 +77,6 @@ export class SdtRunner {
     this.proc.stderr?.on("data", (chunk: Buffer) => {
       const text = stripAnsi(chunk.toString().trim())
       if (isOneShot) {
-        // 一锤子命令的 stderr 由 cli-entry.ts 的错误路径转成 result 事件，
-        // 这里只打 console.log 留痕，不进 chat
         if (text) console.log('[TestAgent] testflow stderr (one-shot):', text)
         return
       }
@@ -101,6 +95,56 @@ export class SdtRunner {
       this.bridge.onError(err.message)
       this.bridge.onDone(1)
       this.cleanup()
+    })
+  }
+
+  /**
+   * 执行一锤子查询命令并等待 result 事件返回。
+   * 不启动 bridge，不创建用户/助手消息，仅返回解析后的 result payload。
+   *
+   * 与 run() 不同，queryOnce() 不检查 this.running 状态，是一个独立的、静默的查询工具。
+   * 适用于在交互式流程中先查询再执行的多步场景。
+   */
+  async queryOnce(opts: SdtRunnerOpts): Promise<Record<string, unknown>> {
+    const extDir = path.resolve(__dirname, '..')
+    const testflowBin = path.join(extDir, 'bin', process.platform === 'win32' ? 'testflow.exe' : 'testflow')
+    const testflowResDir = path.join(extDir, 'bin', 'testflow-res')
+
+    return new Promise((resolve, reject) => {
+      const proc = spawn(testflowBin, [opts.cmd, ...opts.args], {
+        cwd: opts.cwd,
+        env: { ...process.env, ...opts.env, KILO_INTEGRATION: "1", _TESTFLOW_RESOURCES_DIR: testflowResDir },
+        stdio: ["pipe", "pipe", "pipe"],
+      })
+
+      let result: Record<string, unknown> | null = null
+      const rl = readline.createInterface({ input: proc.stdout!, terminal: false })
+
+      rl.on("line", (line) => {
+        if (!line.trim()) return
+        try {
+          const event = JSON.parse(line) as JsonLine
+          if (event.type === "result") {
+            const { type: _t, ...payload } = event
+            void _t
+            result = payload
+          }
+        } catch {
+          // ignore non-JSON lines (e.g., spinner output)
+        }
+      })
+
+      proc.on("close", (code) => {
+        if (result) {
+          resolve(result)
+        } else {
+          reject(new Error(`testflow ${opts.cmd} exited with code ${code} and no result event`))
+        }
+      })
+
+      proc.on("error", (err) => {
+        reject(err)
+      })
     })
   }
 
@@ -147,7 +191,6 @@ export class SdtRunner {
         } else if (event.level === 'error') {
           console.error('[TestAgent] testflow error:', event.msg as string)
         }
-        // this.bridge.onLog(event.level as string, event.message as string)
         break
       case "error":
         this.bridge.onError(event.error as string)

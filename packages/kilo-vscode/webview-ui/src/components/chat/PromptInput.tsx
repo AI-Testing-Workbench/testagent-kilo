@@ -21,6 +21,9 @@ import { ModelSelector } from "../shared/ModelSelector"
 import { ModeSwitcher } from "../shared/ModeSwitcher"
 import { ThinkingSelector } from "../shared/ThinkingSelector"
 import { useFileMention } from "../../hooks/useFileMention"
+// testagent_change start - /sdt-run 交互式阶段选择
+import { useSdtStages } from "../../hooks/useSdtStages"
+// testagent_change end
 import { useTerminalContext } from "../../hooks/useTerminalContext"
 import { hasTerminalMention } from "../../hooks/terminal-context-utils"
 import { useSlashCommand } from "../../hooks/useSlashCommand"
@@ -75,6 +78,12 @@ export const PromptInput: Component<PromptInputProps> = (props) => {
     vscode,
     () => session.currentSessionID() ?? props.pendingSessionID ?? session.draftSessionID(),
   )
+  // testagent_change start - /sdt-run 阶段选择下拉框
+  const sdtStages = useSdtStages(
+    vscode,
+    () => session.currentSessionID() ?? props.pendingSessionID ?? session.draftSessionID(),
+  )
+  // testagent_change end
   const terminal = useTerminalContext(vscode)
   const slash = useSlashCommand(vscode)
   const imageAttach = useImageAttachments()
@@ -530,6 +539,9 @@ export const PromptInput: Component<PromptInputProps> = (props) => {
 
     slash.onInput(val, target.selectionStart ?? val.length)
     mention.onInput(val, target.selectionStart ?? val.length)
+    // testagent_change - /sdt-run 输入检测
+    sdtStages.onInput(val, target.selectionStart ?? val.length)
+    // testagent_change end
     ghost.setMentionOpen(slash.show() || mention.showMention())
     ghost.scheduleRequest(val, textareaRef)
   }
@@ -551,6 +563,11 @@ export const PromptInput: Component<PromptInputProps> = (props) => {
     if (slash.onKeyDown(e, textareaRef, setText, adjustHeight)) {
       ghost.setMentionOpen(slash.show())
       queueMicrotask(scrollToActiveSlashItem)
+      // testagent_change - 用户选择 /sdt-run 后触发阶段查询
+      if (textareaRef) {
+        sdtStages.onInput(textareaRef.value, textareaRef.selectionStart ?? textareaRef.value.length)
+      }
+      // testagent_change end
       return
     }
 
@@ -559,6 +576,13 @@ export const PromptInput: Component<PromptInputProps> = (props) => {
       queueMicrotask(scrollToActiveItem)
       return
     }
+
+    // testagent_change start - /sdt-run 阶段选择键盘处理
+    if (sdtStages.onKeyDown(e, textareaRef, setText, adjustHeight)) {
+      e.preventDefault()
+      return
+    }
+    // testagent_change end
 
     // Prompt history: ArrowUp/ArrowDown at cursor boundaries cycles through sent prompts
     if ((e.key === "ArrowUp" || e.key === "ArrowDown") && !e.altKey && !e.ctrlKey && !e.metaKey && !e.shiftKey) {
@@ -651,6 +675,9 @@ export const PromptInput: Component<PromptInputProps> = (props) => {
       clearReviewComments()
       imageAttach.clear()
       mention.closeMention()
+      // testagent_change start - /sdt-run 关闭阶段下拉框
+      sdtStages.cancelPending()
+      // testagent_change end
       slash.close()
       drafts.delete(draftKey())
       codeDrafts.delete(draftKey())
@@ -701,6 +728,9 @@ export const PromptInput: Component<PromptInputProps> = (props) => {
     clearReviewComments()
     imageAttach.clear()
     mention.closeMention()
+    // testagent_change start - /sdt-run 关闭阶段下拉框
+    sdtStages.cancelPending()
+    // testagent_change end
     slash.close()
     drafts.delete(key)
     codeDrafts.delete(key)
@@ -849,6 +879,43 @@ export const PromptInput: Component<PromptInputProps> = (props) => {
           </Show>
         </div>
       </Show>
+      { /* testagent_change start - /sdt-run 阶段选择下拉框 */ }
+      <Show when={sdtStages.showStages()}>
+        <div class="stages-dropdown">
+          <Show
+            when={sdtStages.loading() && sdtStages.stagesResults().length === 0}
+            fallback={
+              <Show
+                when={sdtStages.stagesResults().length > 0}
+                fallback={<div class="stages-empty">未找到阶段列表</div>}
+              >
+                <For each={sdtStages.stagesResults()}>
+                  {(stage, index) => (
+                    <div
+                      class="stages-item"
+                      classList={{ "stages-item--active": index() === sdtStages.stagesIndex() }}
+                      onMouseDown={(e) => {
+                        e.preventDefault()
+                        if (textareaRef) sdtStages.selectStage(stage, textareaRef, setText, adjustHeight)
+                      }}
+                      onMouseEnter={() => sdtStages.setStagesIndex(index())}
+                    >
+                      <span class="stages-item-name">{stage.stage_name}</span>
+                      <span class="stages-item-id">{stage.stage_id}</span>
+                      <Show when={stage.description}>
+                        <span class="stages-item-desc">{stage.description}</span>
+                      </Show>
+                    </div>
+                  )}
+                </For>
+              </Show>
+            }
+          >
+            <div class="stages-empty">查询阶段中…</div>
+          </Show>
+        </div>
+      </Show>
+      {/* testagent_change end */}
       <Show when={slash.show()}>
         <div class="slash-command-dropdown" ref={slashDropdownRef}>
           <Show when={slash.results().length > 0} fallback={<div class="slash-command-empty">No commands found</div>}>
@@ -868,7 +935,12 @@ export const PromptInput: Component<PromptInputProps> = (props) => {
                           classList={{ "slash-command-item--active": idx() === slash.index() }}
                           onMouseDown={(e) => {
                             e.preventDefault()
-                            if (textareaRef) slash.select(cmd, textareaRef, setText, adjustHeight)
+                            if (textareaRef) {
+                              slash.select(cmd, textareaRef, setText, adjustHeight)
+                              // testagent_change - /sdt-run 阶段选择触发
+                              sdtStages.onInput(textareaRef.value, textareaRef.selectionStart ?? textareaRef.value.length)
+                              // testagent_change end
+                            }
                           }}
                           onMouseEnter={() => slash.setIndex(idx())}
                         >
@@ -892,7 +964,12 @@ export const PromptInput: Component<PromptInputProps> = (props) => {
                           classList={{ "slash-command-item--active": idx() + offset === slash.index() }}
                           onMouseDown={(e) => {
                             e.preventDefault()
-                            if (textareaRef) slash.select(cmd, textareaRef, setText, adjustHeight)
+                            if (textareaRef) {
+                              slash.select(cmd, textareaRef, setText, adjustHeight)
+                              // testagent_change - /sdt-run 阶段选择触发
+                              sdtStages.onInput(textareaRef.value, textareaRef.selectionStart ?? textareaRef.value.length)
+                              // testagent_change end
+                            }
                           }}
                           onMouseEnter={() => slash.setIndex(idx() + offset)}
                         >

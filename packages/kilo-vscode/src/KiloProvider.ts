@@ -68,6 +68,8 @@ import { exec } from "./util/process"
 // testagent_change start - testflow integration
 import { SdtRunner } from "./testagent/sdt-runner"
 import { runTaskCommand } from "./testagent/task-runner"
+import { handleInteractiveRun } from "./testagent/sdt-interactive-runner"
+import { handleRequestStages } from "./testagent/sdt-stages-handler"
 // testagent_change end
 // legacy-migration start
 import {
@@ -319,6 +321,11 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
   private webviewMessageDisposable: vscode.Disposable | null = null
   // testagent_change start - testflow integration
   private readonly sdtRunner = new SdtRunner()
+  /** 本地 question 的 deferred 映射表（用于 /sdt-run 交互式阶段选择） */
+  private readonly localQuestionMap = new Map<string, {
+    deferred: { resolve: (value: string) => void; reject: (reason?: any) => void }
+    timeout: NodeJS.Timeout
+  }>()
   // testagent_change end
   private viewStateDisposable: vscode.Disposable | null = null
   private visibilityDisposable: vscode.Disposable | null = null
@@ -994,12 +1001,35 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
           break
 
         case "questionReply":
+          // testagent_change start - 本地 question（sdt-local: 前缀）不走 server
+          if (typeof message.requestID === 'string' && message.requestID.startsWith('sdt-local:')) {
+            const entry = this.localQuestionMap.get(message.requestID)
+            if (entry) {
+              const label = message.answers?.[0]?.[0]
+              if (label) {
+                entry.deferred.resolve(label)
+              } else {
+                entry.deferred.reject(new Error('未选择阶段'))
+              }
+            }
+            break
+          }
+          // testagent_change end
           this.noteFollowup(message.answers, message.sessionID)
           if (!(await handleQuestionReply(this.questionCtx, message.requestID, message.answers, message.sessionID))) {
             this.pendingFollowup = null
           }
           break
         case "questionReject":
+          // testagent_change start - 本地 question（sdt-local: 前缀）不走 server
+          if (typeof message.requestID === 'string' && message.requestID.startsWith('sdt-local:')) {
+            const entry = this.localQuestionMap.get(message.requestID)
+            if (entry) {
+              entry.deferred.reject(new Error('用户取消了选择'))
+            }
+            break
+          }
+          // testagent_change end
           this.pendingFollowup = null
           await handleQuestionReject(this.questionCtx, message.requestID, message.sessionID)
           break
@@ -1156,6 +1186,17 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
             post: (msg) => this.postMessage(msg),
           })
           break
+        // testagent_change start - /sdt-run 阶段列表查询
+        case "requestStages":
+          await handleRequestStages(
+            {
+              getWorkspaceDirectory: (id) => this.getWorkspaceDirectory(id),
+              postMessage: (msg) => this.postMessage(msg),
+            },
+            message,
+          )
+          break
+        // testagent_change end
         case "requestTerminalContext":
           void this.handleTerminalContext(message.requestId)
           break
@@ -3149,6 +3190,23 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
       void vscode.window.showErrorMessage("TestAgent: Not connected to CLI backend")
       return
     }
+    // testagent_change start
+    // ===== 交互式分支：/sdt-run 无 stage_id 参数，弹出阶段选择面板 =====
+    if (cmd === "run" && args.length === 0) {
+      await handleInteractiveRun(
+        {
+          sdtRunner: this.sdtRunner,
+          localQuestionMap: this.localQuestionMap,
+          postMessage: (msg) => this.postMessage(msg),
+          showErrorMessage: (msg) => void vscode.window.showErrorMessage(msg),
+        },
+        resolved,
+        serverConfig,
+        { providerID, modelID, agent, messageID, sessionID },
+      )
+      return
+    }
+    // testagent_change end
 
     this.sdtRunner.run({
       cmd,

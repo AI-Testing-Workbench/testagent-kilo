@@ -823,6 +823,16 @@ export interface FileSearchResultMessage {
   requestId: string
 }
 
+// testagent_change start - /sdt-run 阶段列表查询消息类型
+/** 阶段列表查询结果（extension → webview） */
+export interface StagesResultMessage {
+  type: "stagesResult"
+  stages: { stage_id: string; stage_name: string; description: string }[]
+  taskName: string
+  requestId: string
+}
+// testagent_change end
+
 export interface TerminalContextResultMessage {
   type: "terminalContextResult"
   requestId: string
@@ -1686,6 +1696,7 @@ export type ExtensionMessage =
   | AutocompleteSettingsLoadedMessage
   | ChatCompletionResultMessage
   | FileSearchResultMessage
+  | StagesResultMessage  // testagent_change  - /sdt-run 阶段列表查询消息类型
   | TerminalContextResultMessage
   | TerminalContextErrorMessage
   | QuestionRequestMessage
@@ -2101,6 +2112,15 @@ export interface RequestFileSearchMessage {
   requestId: string
   sessionID?: string
 }
+
+// testagent_change start - /sdt-run 阶段列表查询请求消息类型
+/** 查询阶段列表（webview → extension） */
+export interface RequestStagesMessage {
+  type: "requestStages"
+  requestId: string
+  sessionID?: string
+}
+// testagent_change end
 
 export interface RequestTerminalContextMessage {
   type: "requestTerminalContext"
@@ -2804,6 +2824,7 @@ export type WebviewMessage =
   | UpdateAutocompleteSettingMessage
   | RequestChatCompletionMessage
   | RequestFileSearchMessage
+  | RequestStagesMessage
   | RequestTerminalContextMessage
   | ChatCompletionAcceptedMessage
   | UpdateSettingRequest
