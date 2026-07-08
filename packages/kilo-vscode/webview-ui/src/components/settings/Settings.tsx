@@ -33,6 +33,10 @@ const Settings: Component<SettingsProps> = (props) => {
   const session = useSession()
   const [active, setActive] = createSignal(props.tab ?? "models")
   const [errorExpanded, setErrorExpanded] = createSignal(false)
+  // memory 配置的独立保存状态
+  const [memoryDirty, setMemoryDirty] = createSignal(false)
+  let memSave: (() => void) | null = null
+  let memDiscard: (() => void) | null = null
 
   const busyCount = () => Object.values(session.allStatusMap()).filter((s) => s.type === "busy").length
 
@@ -52,6 +56,18 @@ const Settings: Component<SettingsProps> = (props) => {
         { label: language.t("settings.saveBar.cancel"), onClick: "dismiss" },
       ],
     })
+  }
+
+  // 统一保存：settings 和 memory 各自走自己的保存逻辑
+  const handleSaveAll = () => {
+    if (isDirty()) handleSave()
+    if (memoryDirty() && memSave) memSave()
+  }
+
+  // 统一丢弃：两边各自丢弃未保存更改
+  const handleDiscardAll = () => {
+    if (isDirty()) discardConfig()
+    if (memoryDirty() && memDiscard) memDiscard()
   }
 
   // Sync when the parent changes the tab prop (e.g. via navigate message)
@@ -77,6 +93,7 @@ const Settings: Component<SettingsProps> = (props) => {
 
   return (
     <div style={{ display: "flex", "flex-direction": "column", height: "100%", "min-height": 0 }}>
+
       {/* Header */}
       <div
         style={{
@@ -128,14 +145,6 @@ const Settings: Component<SettingsProps> = (props) => {
             <Icon name="window-cursor" />
             <span class="label">{language.t("settings.browser.title")}</span>
           </Tabs.Trigger>
-          <Tabs.Trigger value="checkpoints">
-            <Icon name="branch" />
-            <span class="label">{language.t("settings.checkpoints.title")}</span>
-          </Tabs.Trigger>
-          <Tabs.Trigger value="display">
-            <Icon name="eye" />
-            <span class="label">{language.t("settings.display.title")}</span>
-          </Tabs.Trigger>
           <Tabs.Trigger value="autocomplete">
             <Icon name="code-lines" />
             <span class="label">{language.t("settings.autocomplete.title")}</span>
@@ -156,19 +165,6 @@ const Settings: Component<SettingsProps> = (props) => {
             <Icon name="settings-gear" />
             <span class="label">通用设置</span>
           </Tabs.Trigger>
-          {/* testagent_change 注释实验性功能 、语言、关于*/}
-          {/* <Tabs.Trigger value="experimental">
-            <Icon name="settings-gear" />
-            <span class="label">{language.t("settings.experimental.title")}</span>
-          </Tabs.Trigger> 
-          <Tabs.Trigger value="language">
-            <Icon name="speech-bubble" />
-            <span class="label">{language.t("settings.language.title")}</span>
-          </Tabs.Trigger>
-          <Tabs.Trigger value="aboutKiloCode">
-            <Icon name="help" />
-            <span class="label">{language.t("settings.aboutKiloCode.title")}</span>
-          </Tabs.Trigger> */}
         </Tabs.List>
 
         <Tabs.Content value="models">
@@ -191,14 +187,6 @@ const Settings: Component<SettingsProps> = (props) => {
           <h3>{language.t("settings.browser.title")}</h3>
           <BrowserTab />
         </Tabs.Content>
-        <Tabs.Content value="checkpoints">
-          <h3>{language.t("settings.checkpoints.title")}</h3>
-          <CheckpointsTab />
-        </Tabs.Content>
-        <Tabs.Content value="display">
-          <h3>{language.t("settings.display.title")}</h3>
-          <DisplayTab />
-        </Tabs.Content>
         <Tabs.Content value="autocomplete">
           <h3>{language.t("settings.autocomplete.title")}</h3>
           <AutocompleteTab />
@@ -213,34 +201,20 @@ const Settings: Component<SettingsProps> = (props) => {
         </Tabs.Content>
         <Tabs.Content value="memorySettings">
           <h3>记忆设置</h3>
-          <MemorySettingTab />
+          <MemorySettingTab
+            onDirtyChange={setMemoryDirty}
+            onSaveReady={(fn) => { memSave = fn }}
+            onDiscardReady={(fn) => { memDiscard = fn }}
+          />
         </Tabs.Content>
         <Tabs.Content value="normalSetting">
           <h3>通用设置</h3>
           <NormalSettingTab />
         </Tabs.Content>
-        {/* testagent_content 注释关于内容 */}
-        {/* <Tabs.Content value="experimental">
-          <h3>{language.t("settings.experimental.title")}</h3>
-          <ExperimentalTab />
-        </Tabs.Content>
-       <Tabs.Content value="language">
-          <h3>{language.t("settings.language.title")}</h3>
-          <LanguageTab />
-        </Tabs.Content> */}
-        {/* <Tabs.Content value="aboutKiloCode">
-          <h3>{language.t("settings.aboutKiloCode.title")}</h3>
-          <AboutKiloCodeTab
-            port={server.serverInfo()?.port ?? null}
-            connectionState={server.connectionState()}
-            extensionVersion={server.extensionVersion()}
-            onMigrateClick={props.onMigrateClick}
-          />
-        </Tabs.Content> */}
       </Tabs>
 
-      {/* Save bar — slides in when there are unsaved config changes */}
-      <Show when={isDirty()}>
+      {/* Save bar — slides in when there are unsaved config or memory changes */}
+      <Show when={isDirty() || memoryDirty()}>
         <div class="settings-save-bar-wrap">
           <Show when={saveError()}>
             {(err) => (
@@ -252,9 +226,8 @@ const Settings: Component<SettingsProps> = (props) => {
                   aria-expanded={errorExpanded()}
                 >
                   <span
-                    class={`settings-save-bar-error-chevron${
-                      errorExpanded() ? " settings-save-bar-error-chevron-expanded" : ""
-                    }`}
+                    class={`settings-save-bar-error-chevron${errorExpanded() ? " settings-save-bar-error-chevron-expanded" : ""
+                      }`}
                   >
                     <Icon name="chevron-right" size="small" />
                   </span>
@@ -271,10 +244,10 @@ const Settings: Component<SettingsProps> = (props) => {
           </Show>
           <div class="settings-save-bar">
             <span class="settings-save-bar-label">{language.t("settings.saveBar.unsavedChanges")}</span>
-            <Button variant="ghost" size="small" onClick={discardConfig} disabled={saving()}>
+            <Button variant="ghost" size="small" onClick={handleDiscardAll} disabled={saving()}>
               {language.t("settings.saveBar.discard")}
             </Button>
-            <Button variant="primary" size="small" onClick={handleSave} disabled={saving()}>
+            <Button variant="primary" size="small" onClick={handleSaveAll} disabled={saving()}>
               {saving() ? language.t("settings.saveBar.saving") : language.t("settings.saveBar.save")}
             </Button>
           </div>

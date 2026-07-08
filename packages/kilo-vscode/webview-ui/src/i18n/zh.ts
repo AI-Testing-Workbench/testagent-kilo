@@ -1244,7 +1244,7 @@ export const dict = {
   "settings.context.autoCompaction.title": "自动压缩",
   "settings.context.autoCompaction.description": "在上下文达到限制前自动压缩",
   "settings.context.compactionLimit.title": "自动压缩限制",
-  "settings.context.compactionLimit.description": "当上下文达到模型窗口的此百分比时进行压缩。",
+  "settings.context.compactionLimit.description": "自动压缩开启后，当上下文达到模型窗口的此百分比时进行压缩，未填写则按上下文-20k的逻辑计算",
   "settings.context.prune.title": "修剪旧输出",
   "settings.context.prune.description": "压缩期间移除旧的工具输出",
 
