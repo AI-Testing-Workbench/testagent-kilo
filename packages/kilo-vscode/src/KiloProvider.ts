@@ -3044,8 +3044,11 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
       const src = existing && typeof existing === "object" && !Array.isArray(existing) ? (existing as Record<string, unknown>) : {}
       const projectPart: Record<string, unknown> = {}
       const globalPart: Record<string, unknown> = {}
+      // testagent_change start - route all mcp entries to project when mcp key already exists in a project file
+      const isMcp = key === "mcp"
+      // testagent_change end
       for (const [nested, nestedVal] of Object.entries(value as Record<string, unknown>)) {
-        if (nested in src) {
+        if (nested in src || isMcp) { // testagent_change
           projectPart[nested] = nestedVal
         } else {
           globalPart[nested] = nestedVal

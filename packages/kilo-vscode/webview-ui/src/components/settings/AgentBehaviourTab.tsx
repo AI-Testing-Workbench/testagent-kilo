@@ -832,6 +832,7 @@ const AgentBehaviourTab: Component = () => {
                         cursor: "pointer",
                       }}
                       onClick={() => toggle(name)}
+                      title={config().mcp_origins?.[name] ?? undefined}
                     >
                       <div style={{ display: "flex", "align-items": "center", gap: "6px", flex: 1, "min-width": 0 }}>
                         <IconButton

@@ -491,6 +491,7 @@ export interface Config {
   command?: Record<string, CommandConfig>
   plugin?: PluginSpec[]
   plugin_origins?: PluginOrigin[]
+  mcp_origins?: Record<string, string>
   plugin_status?: PluginStatus
   instructions?: string[]
   skills?: SkillsConfig

@@ -17,6 +17,17 @@ interface Props {
 
 const DEBOUNCE_MS = 400
 
+const formatTimeoutSeconds = (value: number | undefined) => {
+  if (value == null) return ""
+  return String(value)
+}
+
+const parseTimeoutSeconds = (value: string) => {
+  const num = Number(value)
+  if (!Number.isFinite(num) || num <= 0) return undefined
+  return Math.round(num)
+}
+
 const McpEditView: Component<Props> = (props) => {
   const language = useLanguage()
   const { config, updateConfig } = useConfig()
@@ -29,13 +40,12 @@ const McpEditView: Component<Props> = (props) => {
   const [headerVal, setHeaderVal] = createSignal("")
 
   // Local signals for debounced fields — updates config only after user stops typing
-  const [timeoutText, setTimeoutText] = createSignal(String(cfg().timeout ?? ""))
+  const [timeoutText, setTimeoutText] = createSignal(formatTimeoutSeconds(cfg().timeout))
 
   createEffect(() => {
     const text = timeoutText()
     const currentVal = cfg().timeout
-    const textAsNum = Number(text)
-    const newVal = Number.isFinite(textAsNum) && textAsNum > 0 ? textAsNum : undefined
+    const newVal = parseTimeoutSeconds(text)
 
     // Skip if the value hasn't changed from what's already in config
     if (newVal === currentVal || (newVal === undefined && currentVal === undefined)) return
@@ -56,6 +66,8 @@ const McpEditView: Component<Props> = (props) => {
 
   const transport = () => cfg().type ?? (cfg().url ? "remote" : cfg().command ? "local" : "remote")
 
+  const urlEmpty = () => transport() === "remote" && !cfg().url?.trim()
+
   const cmd = () => {
     const c = cfg().command
     if (Array.isArray(c)) return c[0] ?? ""
@@ -68,8 +80,8 @@ const McpEditView: Component<Props> = (props) => {
     return ""
   }
 
-  const env = createMemo(() => Object.entries(cfg().environment ?? cfg().env ?? {}))
-  const headers = createMemo(() => Object.entries(cfg().headers ?? {}))
+  const env = createMemo(() => Object.entries(cfg().environment ?? cfg().env ?? {}).filter(([, v]) => v != null))
+  const headers = createMemo(() => Object.entries(cfg().headers ?? {}).filter(([, v]) => v != null))
 
   const addEnv = () => {
     const key = envKey().trim()
@@ -83,7 +95,7 @@ const McpEditView: Component<Props> = (props) => {
 
   const removeEnv = (key: string) => {
     const existing = { ...(cfg().environment ?? cfg().env ?? {}) }
-    delete existing[key]
+    existing[key] = null as unknown as string
     update({ environment: existing })
   }
 
@@ -99,7 +111,7 @@ const McpEditView: Component<Props> = (props) => {
 
   const removeHeader = (key: string) => {
     const existing = { ...(cfg().headers ?? {}) }
-    delete existing[key]
+    existing[key] = null as unknown as string
     update({ headers: existing })
   }
 
@@ -266,6 +278,11 @@ const McpEditView: Component<Props> = (props) => {
             placeholder={language.t("settings.agentBehaviour.addMcp.url.placeholder")}
             onChange={(val) => update({ url: val.trim() || undefined })}
           />
+          <Show when={urlEmpty()}>
+            <div style={{ "font-size": "12px", color: "var(--vscode-errorForeground)", "margin-top": "4px" }}>
+              {language.t("settings.agentBehaviour.addMcp.url.required")}
+            </div>
+          </Show>
         </Card>
       </Show>
 
@@ -333,7 +350,7 @@ const McpEditView: Component<Props> = (props) => {
       </Show>
 
       <div style={{ display: "flex", "justify-content": "flex-end" }}>
-        <Button variant="ghost" onClick={props.onBack}>
+        <Button variant="ghost" onClick={props.onBack} disabled={urlEmpty()}>
           {language.t("settings.agentBehaviour.editMode.back")}
         </Button>
       </div>
