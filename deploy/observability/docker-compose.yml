@@ -19,6 +19,23 @@ services:
       interval: 30s
       retries: 3
 
+  # Applies custom ES component templates for telemetry search optimization.
+  # Runs once after ES is healthy, then exits. Use: docker compose run --rm es-init
+  # For manual use in other environments: deploy/observability/init-es.sh <es-url>
+  es-init:
+    image: swr.cn-north-4.myhuaweicloud.com/ddn-k8s/docker.io/arm64v8/elasticsearch:8.18.8-linuxarm64
+    container_name: observability-es-init
+    entrypoint: ["/bin/bash", "/tmp/init-es.sh", "http://elasticsearch:9200"]
+    depends_on:
+      elasticsearch:
+        condition: service_healthy
+    networks:
+      - observability
+    volumes:
+      - ./init-es.sh:/tmp/init-es.sh:ro
+    profiles:
+      - init
+
   kibana:
     image: swr.cn-north-4.myhuaweicloud.com/ddn-k8s/docker.elastic.co/kibana/kibana:8.18.8-linuxarm64
     container_name: observability-kibana
