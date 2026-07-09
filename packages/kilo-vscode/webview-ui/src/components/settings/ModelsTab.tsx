@@ -101,7 +101,7 @@ const ModelsTab: Component = () => {
           title={language.t("settings.providers.subagentModel.title")}
           description={language.t("settings.providers.subagentModel.description")}
         >
-          <div style={{ display: "flex", "flex-direction": "column", "align-items": "flex-end", gap: "8px" }}>
+          <div style={{ display: "flex", "flex-direction": "column", gap: "8px" }}>
             <ModelSelectorBase
               value={subagentModel()}
               onSelect={handleSubagentModelSelect}

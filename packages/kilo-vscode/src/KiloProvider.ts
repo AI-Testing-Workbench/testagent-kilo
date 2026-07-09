@@ -3308,6 +3308,7 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
     providerID?: string,
     modelID?: string,
     messageID?: string,
+    agent?: string,
   ): Promise<void> {
     const parts = text.trim().split(/\s+/)
     const cmd = parts[0].slice(5) // strip "/sdt-"
@@ -3335,6 +3336,7 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
         OPENCODE_SESSION_ID: resolved.sid,
         OPENCODE_PROVIDER_ID: providerID || "",
         OPENCODE_MODEL_ID: modelID || "",
+        OPENCODE_AGENT: agent,
         SDT_USER_TEXT: text,
       },
       sessionID: resolved.sid,
@@ -3386,7 +3388,7 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
   ): Promise<void> {
     // testagent_change start - intercept /sdt-* commands for testflow
     if (text.startsWith("/sdt-")) {
-      await this.handleSdtCommand(text, sessionID, providerID, modelID, messageID)
+      await this.handleSdtCommand(text, sessionID, providerID, modelID, messageID, agent)
       return
     }
     // testagent_change end
@@ -3477,7 +3479,7 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
   ): Promise<void> {
     // testagent_change start - intercept sdt-* commands for testflow
     if (command.startsWith("sdt-")) {
-      await this.handleSdtCommand(`/${command} ${args}`.trim(), sessionID, providerID, modelID, messageID)
+      await this.handleSdtCommand(`/${command} ${args}`.trim(), sessionID, providerID, modelID, messageID, agent)
       return
     }
     // testagent_change end
@@ -4433,7 +4435,10 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
       // testagent_change start - show notification when agent completes
       if (newStatus === "idle") {
         const reason = (event.properties.status as { reason?: string }).reason
-        this.maybeShowAgentCompletionNotification(sid, prevStatus, reason)
+        // Skip notifications for child/sub-agent sessions
+        if (!this.syncedChildSessions.has(sid)) {
+          this.maybeShowAgentCompletionNotification(sid, prevStatus, reason)
+        }
       }
       // testagent_change end
       return

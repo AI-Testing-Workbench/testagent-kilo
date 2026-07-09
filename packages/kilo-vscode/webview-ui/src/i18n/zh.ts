@@ -976,6 +976,7 @@ export const dict = {
   "dialog.model.noProviders": "无供应商",
 
   "prompt.placeholder.connecting": "正在连接服务器...",
+  "prompt.placeholder.busy": "等待当前任务完成后可继续输入",
   "prompt.placeholder.error": "连接失败。请检查输出面板或重启扩展。",
   "prompt.placeholder.default": "输入消息... (Enter 发送，Shift+Enter 换行)",
 
@@ -1253,9 +1254,10 @@ export const dict = {
   "settings.context.autoCompaction.title": "自动压缩",
   "settings.context.autoCompaction.description": "在上下文达到限制前自动压缩",
   "settings.context.compactionLimit.title": "自动压缩限制",
-  "settings.context.compactionLimit.description": "当上下文达到模型窗口的此百分比时进行压缩。默认值为 80%。",
+  "settings.context.compactionLimit.description": "自动压缩开启后，当上下文达到模型窗口的此百分比时进行压缩，未填写则按上下文-20k的逻辑计算",
   "settings.context.prune.title": "修剪旧输出",
   "settings.context.prune.description": "压缩期间移除旧的工具输出",
+
   "settings.context.watcherPatterns": "文件监视器忽略模式",
   "settings.context.watcherPatterns.description": "监视器应忽略的文件的 glob 模式",
 
@@ -1390,9 +1392,9 @@ export const dict = {
   "settings.saveBar.unsavedChanges": "未保存的更改",
   "settings.saveBar.discard": "放弃",
   "settings.saveBar.save": "保存",
-  "settings.saveBar.warning.one": "一个会话正在运行，将被中断",
-  "settings.saveBar.warning.many": "多个会话正在运行，将被中断",
-  "settings.saveBar.saveAnyway": "仍然保存",
+  "settings.saveBar.warning.one": "一个会话正在运行，请勿修改保存",
+  "settings.saveBar.warning.many": "多个会话正在运行，请勿修改保存",
+  "settings.saveBar.saveAnyway": "确定",
   "settings.saveBar.saving": "保存中…",
   "settings.saveBar.saveFailed": "无法保存设置",
   "settings.saveBar.cancel": "取消",

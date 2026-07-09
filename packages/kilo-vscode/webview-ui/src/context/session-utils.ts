@@ -104,6 +104,7 @@ export interface FamilyTokens {
   input: number
   output: number
   reasoning: number
+  total?: number
   cache: { read: number; write: number }
   breakdown?: { system: number; messages: number; tools: number }
 }
@@ -118,6 +119,7 @@ export function buildFamilyTokens(
 ): FamilyTokens | undefined {
   const total: FamilyTokens = { input: 0, output: 0, reasoning: 0, cache: { read: 0, write: 0 } }
   let has = false
+  let hasTotal = false
   for (const sid of family) {
     for (const m of messages[sid] ?? []) {
       if (m.role !== "assistant" || !m.tokens) continue
@@ -126,6 +128,10 @@ export function buildFamilyTokens(
       total.reasoning += m.tokens.reasoning ?? 0
       total.cache.read += m.tokens.cache?.read ?? 0
       total.cache.write += m.tokens.cache?.write ?? 0
+      if (m.tokens.total != null) {
+        total.total = (total.total ?? 0) + m.tokens.total
+        hasTotal = true
+      }
       // Accumulate breakdown per message
       if (m.tokens.breakdown) {
         if (!total.breakdown) total.breakdown = { system: 0, messages: 0, tools: 0 }
@@ -136,6 +142,7 @@ export function buildFamilyTokens(
       has = true
     }
   }
+  if (!hasTotal) total.total = undefined
   return has ? total : undefined
 }
 

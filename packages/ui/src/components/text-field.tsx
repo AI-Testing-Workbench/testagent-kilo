@@ -52,6 +52,7 @@ export function TextField(props: TextFieldProps) {
     "copyable",
     "copyKind",
     "multiline",
+    "placeholder",
   ])
   const [copied, setCopied] = createSignal(false)
 

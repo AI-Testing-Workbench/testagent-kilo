@@ -64,6 +64,16 @@ export type PluginInput = {
   }
   serverUrl: URL
   $: BunShell
+  /**
+   * Report a metric to the core's OpenTelemetry pipeline.
+   * Counter metrics are exported every 10s to the OTLP collector at localhost:4318.
+   */
+  metric?: (name: string, value: number, attributes?: Record<string, string>) => void
+  /**
+   * Log a structured message through the core's file-based logging system.
+   * Writes to the same log files as internal components (not stdout/stderr).
+   */
+  log?: (level: "info" | "debug" | "warn" | "error", message: string, data?: Record<string, unknown>) => void
 }
 
 export type PluginOptions = Record<string, unknown>

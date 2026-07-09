@@ -1,5 +1,4 @@
-import { Component, Show, createMemo, createSignal, onCleanup, onMount } from "solid-js"
-import { Button } from "@kilocode/kilo-ui/button"
+import { Component, createEffect, createMemo, createSignal, onCleanup, onMount } from "solid-js"
 import { Card } from "@kilocode/kilo-ui/card"
 import { Switch } from "@kilocode/kilo-ui/switch"
 import { TextField } from "@kilocode/kilo-ui/text-field"
@@ -7,6 +6,12 @@ import { showToast } from "@kilocode/kilo-ui/toast"
 import { useVSCode } from "../../context/vscode"
 import SettingsRow from "./SettingsRow"
 import type { ExtensionMessage, MemorySettingsConfig } from "../../types/messages"
+
+interface MemorySettingsProps {
+  onDirtyChange?: (dirty: boolean) => void
+  onSaveReady?: (fn: () => void) => void
+  onDiscardReady?: (fn: () => void) => void
+}
 
 const defaults: MemorySettingsConfig = {
   enable: false,
@@ -41,7 +46,7 @@ const num = (value: string, fallback: number) => {
   return Math.max(0, Math.floor(parsed))
 }
 
-const MemorySettings: Component = () => {
+const MemorySettings: Component<MemorySettingsProps> = (props) => {
   const vscode = useVSCode()
   const [cfg, setCfg] = createSignal<MemorySettingsConfig>(clone(defaults))
   const [saved, setSaved] = createSignal<MemorySettingsConfig>(clone(defaults))
@@ -50,6 +55,15 @@ const MemorySettings: Component = () => {
   const [saving, setSaving] = createSignal(false)
 
   const dirty = createMemo(() => !same(cfg(), saved()))
+
+  // 向上报告 dirty 状态
+  createEffect(() => props.onDirtyChange?.(dirty()))
+
+  // 向上注册 save / discard 方法
+  onMount(() => {
+    props.onSaveReady?.(save)
+    props.onDiscardReady?.(discard)
+  })
 
   onMount(() => {
     vscode.postMessage({ type: "requestMemorySettings" })
@@ -104,8 +118,9 @@ const MemorySettings: Component = () => {
     vscode.postMessage({ type: "updateMemorySettings", settings: cfg() })
   }
 
-  const reset = () => {
-    setCfg(clone(defaults))
+  // 丢弃更改回到上次保存的状态（而非硬编码 defaults）
+  const discard = () => {
+    setCfg(clone(saved()))
   }
 
   return (
@@ -199,29 +214,6 @@ const MemorySettings: Component = () => {
         </SettingsRow>
       </Card>
 
-      <div
-        style={{
-          display: "flex",
-          "align-items": "center",
-          "justify-content": "space-between",
-          gap: "8px",
-          "flex-wrap": "wrap",
-        }}
-      >
-        <div style={{ color: "var(--text-weak-base, var(--vscode-descriptionForeground))", "font-size": "12px" }}>
-          <Show when={file()} fallback={loading() ? "正在读取记忆配置..." : "尚未创建配置文件"}>
-            {(path) => path()}
-          </Show>
-        </div>
-        <div style={{ display: "flex", gap: "8px" }}>
-          <Button variant="ghost" size="small" onClick={reset} disabled={saving()}>
-            恢复默认
-          </Button>
-          <Button variant="primary" size="small" onClick={save} disabled={!dirty() || saving()}>
-            {saving() ? "保存中..." : "保存"}
-          </Button>
-        </div>
-      </div>
     </div>
   )
 }

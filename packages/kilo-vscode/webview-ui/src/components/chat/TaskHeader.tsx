@@ -33,50 +33,7 @@ export const TaskHeader: Component<TaskHeaderProps> = (props) => {
   const busy = createMemo(() => session.status() === "busy")
   const stop = () => session.abort()
 
-  // testagent_change start - export conversation to markdown
-  const exportConversation = () => {
-    const messages = session.messages()
-    const sessionTitle = title()
 
-    if (messages.length === 0) return
-
-    let md = `# ${sessionTitle}\n\n`
-    md += `导出时间: ${new Date().toLocaleString("zh-CN")}\n\n`
-    md += `---\n\n`
-
-    for (const msg of messages) {
-      const role = msg.role === "user" ? "👤 用户" : "🤖 助手"
-      const ts = msg.createdAt ? new Date(msg.createdAt).toLocaleString("zh-CN") : ""
-
-      md += `## ${role}\n`
-      if (ts) md += `*${ts}*\n\n`
-      if (msg.content) md += `${msg.content}\n\n`
-
-      for (const p of session.getParts(msg.id)) {
-        if (p.type === "text") {
-          md += `${p.text}\n\n`
-        } else if (p.type === "file") {
-          md += `📎 文件: ${p.filename || "附件"} (${p.mime})\n\n`
-        } else if (p.type === "tool") {
-          md += `🔧 工具调用: ${p.tool}\n`
-          if (p.state.status === "completed") md += "```\n" + p.state.output + "\n```\n\n"
-        } else if (p.type === "reasoning") {
-          md += `💭 推理过程:\n${p.text}\n\n`
-        }
-      }
-
-      if (msg.tokens) {
-        md += `*Token 使用: 输入 ${msg.tokens.input}, 输出 ${msg.tokens.output}`
-        if (msg.tokens.reasoning) md += `, 推理 ${msg.tokens.reasoning}`
-        md += `*\n\n`
-      }
-
-      md += `---\n\n`
-    }
-
-    vscode.postMessage({ type: "exportConversation", markdown: md, title: sessionTitle })
-  }
-  // testagent_change end
 
   const fmt = (n: number) => new Intl.NumberFormat(language.locale(), { style: "currency", currency: "USD" }).format(n)
 
@@ -147,6 +104,13 @@ export const TaskHeader: Component<TaskHeaderProps> = (props) => {
   })
 
   const [todosOpen, setTodosOpen] = createSignal(false)
+  const [copied, setCopied] = createSignal(false)
+
+  const copySid = (sid: string) => {
+    navigator.clipboard.writeText(sid)
+    setCopied(true)
+    setTimeout(() => setCopied(false), 2000)
+  }
 
   return (
     <Show when={hasMessages()}>
@@ -169,18 +133,33 @@ export const TaskHeader: Component<TaskHeaderProps> = (props) => {
         </div>
 
         <div data-slot="task-header-stats">
-          {/* <ContextProgress compact /> */}
-          {/* testagent_change start - export conversation button */}
-          <Show when={hasMessages() && !busy()}>
-            <Tooltip value="导出对话" placement="bottom">
-              <IconButton
-                icon="download"
-                size="small"
-                variant="ghost"
-                onClick={exportConversation}
-                aria-label="导出对话"
-              />
-            </Tooltip>
+          <Show when={hasMessages() && session.currentSessionID()}>
+            {(sid) => (
+              <Tooltip
+                value={copied() ? "已复制" : sid()}
+                placement="bottom"
+              >
+                <button
+                  data-slot="task-header-sessionid"
+                  onClick={() => copySid(sid())}
+                  title={sid()}
+                  style={{
+                    background: "none",
+                    border: "none",
+                    cursor: "pointer",
+                    color: "var(--vscode-descriptionForeground)",
+                    "font-size": "11px",
+                    padding: "0 4px",
+                    display: "inline-flex",
+                    "align-items": "center",
+                    gap: "2px",
+                  }}
+                >
+                  {sid().slice(0, 20)}...
+                  <Icon name={copied() ? "check" : "copy"} size="small" />
+                </button>
+              </Tooltip>
+            )}
           </Show>
           <Show when={hasMessages()}>
             <button
@@ -201,7 +180,7 @@ export const TaskHeader: Component<TaskHeaderProps> = (props) => {
           <Show when={tokens()}>
             {(tk) => (
               <div class="task-header-tokens">
-                <span class="task-header-tokens-label" style={{"margin-right":'10px'}}>任务累计消耗tokens</span>
+                <span class="task-header-tokens-label" style={{ "margin-right": '10px' }}>任务累计消耗tokens</span>
                 <Show when={tk().input > 0}>
                   <Tooltip
                     value={
@@ -245,6 +224,10 @@ export const TaskHeader: Component<TaskHeaderProps> = (props) => {
                     读取缓存: {fmtNum(tk().cache!.read)}
                   </span>
                 </Show>
+                <span style={{ "margin-left": "4px", opacity: 0.5 }}>|</span>
+                <span class="task-header-tokens-value" style={{ "font-weight": 600 }}>
+                  总计: {fmtNum(tk().total ?? (tk().input + tk().output + (tk().cache?.read ?? 0) + (tk().cache?.write ?? 0)))}
+                </span>
               </div>
             )}
           </Show>

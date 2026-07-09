@@ -989,6 +989,7 @@ export const dict = {
   "dialog.model.noProviders": "No providers",
 
   "prompt.placeholder.connecting": "Connecting to server...",
+  "prompt.placeholder.busy": "Waiting for the current task to complete",
   "prompt.placeholder.default": "Type a message... (Enter to send, Shift+Enter for new line)",
   "prompt.placeholder.error": "Connection failed. Check the output panel or restart the extension.",
 
@@ -1296,6 +1297,7 @@ export const dict = {
     "Compact when context reaches this percentage of the model window. Leave blank to use the safety buffer only.",
   "settings.context.prune.title": "Prune Old Outputs",
   "settings.context.prune.description": "Remove old tool outputs during compaction",
+
   "settings.context.watcherPatterns": "File Watcher Ignore Patterns",
   "settings.context.watcherPatterns.description": "Glob patterns for files the watcher should ignore",
 

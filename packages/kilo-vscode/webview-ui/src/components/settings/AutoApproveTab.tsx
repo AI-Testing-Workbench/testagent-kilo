@@ -377,7 +377,7 @@ const GranularToolRow: Component<{
         }}
       >
         <div style={{ flex: 1, "min-width": 0 }}>
-          <div style={{ "font-size": "12px", color: "var(--text-base, #ccc)" }}>
+          <div style={{ "font-size": "12px", color: "var(--text-base)" }}>
             {language.t(props.tool.granular.wildcardKey)}
           </div>
         </div>
@@ -442,25 +442,28 @@ const GranularToolRow: Component<{
       <Show
         when={adding()}
         fallback={
-          <button
-            style={{
-              display: "flex",
-              gap: "4px",
-              "align-items": "center",
-              padding: "4px 0",
-              background: "none",
-              border: "none",
-              cursor: "pointer",
-              "font-size": "12px",
-              color: "var(--text-link-base, #3794ff)",
-              "font-family": "inherit",
-              "margin-top": "4px",
-            }}
-            onClick={() => setAdding(true)}
-          >
-            <span style={{ "font-size": "14px" }}>+</span>
-            {language.t(props.tool.granular.addKey)}
-          </button>
+          <div style={{ display: 'flex', "align-items": "baseline" }}>
+            <button
+              style={{
+                display: "flex",
+                gap: "4px",
+                "align-items": "center",
+                padding: "4px 0",
+                background: "none",
+                border: "none",
+                cursor: "pointer",
+                "font-size": "12px",
+                color: "var(--text-link-base, #3794ff)",
+                "font-family": "inherit",
+                "margin-top": "4px",
+              }}
+              onClick={() => setAdding(true)}
+            >
+              <span style={{ "font-size": "14px" }}>+</span>
+              {language.t(props.tool.granular.addKey)}
+            </button>
+            <span style={{ "margin-left": "4px", "font-size": "11px", "color": "var(--text-weak-base, var(--vscode-descriptionForeground))" }}>回车后点击保存</span>
+          </div>
         }
       >
         <div style={{ display: "flex", gap: "8px", "align-items": "center", "margin-top": "4px" }}>
@@ -480,7 +483,7 @@ const GranularToolRow: Component<{
             style={{
               flex: 1,
               "min-width": 0,
-              background: "var(--surface-strong-base, #252526)",
+              background: "var(--input-background, var(--vscode-inputBackground))",
               border: "1px solid var(--border-base, #434443)",
               "border-radius": "2px",
               color: "var(--text-base, #ccc)",

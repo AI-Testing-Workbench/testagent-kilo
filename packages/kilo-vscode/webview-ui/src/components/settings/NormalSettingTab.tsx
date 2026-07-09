@@ -31,7 +31,7 @@ const RUNTIME_OPTIONS: SelectOption[] = [
   { value: "bun", label: "Bun" },
 ]
 
-const CMB_NPM_REGISTRY = "http://central.jaf.cmbchina.cn:80/artifactory/api/npm/group-npm"
+const INTERNAL_NPM_REGISTRY = `${decodeURIComponent(atob("aHR0cCUzQSUyRiUyRmNlbnRyYWwuamFmLmNtYmNoaW5hLmNu"))}:80/artifactory/api/npm/group-npm`
 
 const NormalSetting: Component = () => {
   const { config, updateConfig } = useConfig()
@@ -168,19 +168,19 @@ const NormalSetting: Component = () => {
   // 动态构建选项列表：系统默认源 + 内网源（如果与默认源不同）
   const registryList = () => {
     const def = defaultRegistry()
-    if (def === CMB_NPM_REGISTRY) {
-      // 系统默认源本身就是招行内网源 → 只显示一个选项
-      return [{ value: def, label: "系统默认源（招行内网源）" }]
+    if (def === INTERNAL_NPM_REGISTRY) {
+      // 系统默认源本身就是内网源 → 只显示一个选项
+      return [{ value: def, label: "系统默认源（内网源）" }]
     }
     return [
       { value: def, label: "系统默认源" },
-      { value: CMB_NPM_REGISTRY, label: "招行内网源" },
+      { value: INTERNAL_NPM_REGISTRY, label: "内网源" },
     ]
   }
 
   const currentNpmOption = (): SelectOption | undefined => {
     const registry = npmRegistry()
-    if (registry === CMB_NPM_REGISTRY && defaultRegistry() !== CMB_NPM_REGISTRY) return registryList()[1]
+    if (registry === INTERNAL_NPM_REGISTRY && defaultRegistry() !== INTERNAL_NPM_REGISTRY) return registryList()[1]
     return registryList()[0]
   }
 

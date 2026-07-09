@@ -1301,7 +1301,8 @@ export type Config = {
     prune?: boolean
     tail_turns?: number
     preserve_recent_tokens?: number
-    reserved?: number
+    reserved?: number,
+
   }
   experimental?: {
     disable_paste_summary?: boolean
