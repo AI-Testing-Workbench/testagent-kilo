@@ -1194,6 +1194,8 @@ export const dict = {
   "settings.agentBehaviour.editMcp.timeout.placeholder": "e.g. 5",
   "settings.agentBehaviour.editMcp.headers": "Headers",
   "settings.agentBehaviour.editMcp.headers.help": "Headers to send with MCP requests (remote servers).",
+  "settings.agentBehaviour.editMcp.scopeLocal": "Project",
+  "settings.agentBehaviour.editMcp.scopeGlobal": "Global",
   "settings.agentBehaviour.addMcpButton": "Add MCP Server",
   "settings.agentBehaviour.addMcpDialog.title": "Add MCP Server",
   "settings.agentBehaviour.addMcpDialog.name": "Server Name",

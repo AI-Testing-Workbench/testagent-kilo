@@ -1191,6 +1191,8 @@ export const dict = {
   "settings.agentBehaviour.editMcp.timeout.placeholder": "e.g. 5",
   "settings.agentBehaviour.editMcp.headers": "请求头",
   "settings.agentBehaviour.editMcp.headers.help": "随请求发送到 MCP 服务器的请求头（仅远程服务器）。",
+  "settings.agentBehaviour.editMcp.scopeLocal": "项目配置",
+  "settings.agentBehaviour.editMcp.scopeGlobal": "全局配置",
   "settings.agentBehaviour.skillPaths": "技能文件夹路径",
   "settings.agentBehaviour.skillUrls": "技能 URL",
   "settings.agentBehaviour.removeSkill.title": "移除技能",

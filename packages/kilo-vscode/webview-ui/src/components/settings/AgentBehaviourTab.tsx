@@ -731,7 +731,17 @@ const AgentBehaviourTab: Component = () => {
   }
 
   const renderMcpSubtab = () => {
-    const mcpEntries = createMemo(() => Object.entries(config().mcp ?? {}))
+    const mcpEntries = createMemo(() => {
+      const entries = Object.entries(config().mcp ?? {})
+      entries.sort((a, b) => {
+        const scopeA = config().mcp_scopes?.[a[0]]
+        const scopeB = config().mcp_scopes?.[b[0]]
+        if (scopeA === "local" && scopeB !== "local") return -1
+        if (scopeA !== "local" && scopeB === "local") return 1
+        return 0
+      })
+      return entries
+    })
     const [expanded, setExpanded] = createSignal<Record<string, boolean>>({})
 
     const toggle = (name: string) => {
@@ -832,7 +842,6 @@ const AgentBehaviourTab: Component = () => {
                         cursor: "pointer",
                       }}
                       onClick={() => toggle(name)}
-                      title={config().mcp_origins?.[name] ?? undefined}
                     >
                       <div style={{ display: "flex", "align-items": "center", gap: "6px", flex: 1, "min-width": 0 }}>
                         <IconButton
@@ -855,6 +864,21 @@ const AgentBehaviourTab: Component = () => {
                           }}
                         />
                         <div style={{ "font-weight": "500" }}>{name}</div>
+                        <span
+                          title={config().mcp_origins?.[name] ?? undefined}
+                          style={{
+                            "font-size": "10px",
+                            padding: "1px 5px",
+                            "border-radius": "3px",
+                            "background-color": "var(--bg-subtle-base, var(--vscode-badge-background))",
+                            color: "var(--text-weak-base, var(--vscode-badge-foreground))",
+                            "flex-shrink": "0",
+                          }}
+                        >
+                          {config().mcp_scopes?.[name] === "local"
+                            ? t("settings.agentBehaviour.editMcp.scopeLocal")
+                            : t("settings.agentBehaviour.editMcp.scopeGlobal")}
+                        </span>
                         <span
                           style={{
                             "font-size": "10px",
