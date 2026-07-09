@@ -74,6 +74,19 @@ const TaskToolRenderer: Component<ToolProps> = (props) => {
     return typeof val === "string" ? val : undefined
   })
 
+  // Model info from the child session's first assistant message
+  const childModel = createMemo(() => {
+    const id = childSessionId()
+    if (!id) return undefined
+    const msgs = (data.store.message as Record<string, SDKMessage[]> | undefined)?.[id]
+    if (!msgs) return undefined
+    const first = msgs.find((m) => m.role === "assistant")
+    if (!first?.modelID) return undefined
+    const pid = first.providerID ?? ""
+    const short = pid.replace(/^sensenova\//, "")
+    return short ? `${short}/${first.modelID}` : first.modelID
+  })
+
   // All tool parts from the child session — the compact summary list
   const childToolParts = createMemo(() => {
     const id = childSessionId()
@@ -110,6 +123,11 @@ const TaskToolRenderer: Component<ToolProps> = (props) => {
             {description()}
             <Show when={childToolParts().length > 0}>
               {description() ? " " : ""}({childToolParts().length})
+            </Show>
+            <Show when={childModel()}>
+              <span style={{ "margin-left": "8px", opacity: 0.55, "font-size": "11px" }}>
+                {childModel()}
+              </span>
             </Show>
           </span>
         </Show>

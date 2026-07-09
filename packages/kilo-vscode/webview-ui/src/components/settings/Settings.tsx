@@ -52,7 +52,7 @@ const Settings: Component<SettingsProps> = (props) => {
       title: msg,
       persistent: true,
       actions: [
-        { label: language.t("settings.saveBar.saveAnyway"), onClick: saveConfig },
+        // { label: language.t("settings.saveBar.saveAnyway"), onClick: "dismiss" },
         { label: language.t("settings.saveBar.cancel"), onClick: "dismiss" },
       ],
     })

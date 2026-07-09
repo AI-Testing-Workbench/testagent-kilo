@@ -97,6 +97,7 @@ export interface TokenUsage {
   input: number
   output: number
   reasoning?: number
+  total?: number
   cache?: { read: number; write: number }
   breakdown?: {
     system: number

@@ -81,6 +81,7 @@ const ContextTab: Component = () => {
               placeholder="请填写阈值"
               onChange={saveLimit}
               hideLabel
+              disabled={config().compaction?.auto === false}
               label={language.t("settings.context.compactionLimit.title")}
             />
             <span style={{ color: "var(--text-weak-base, var(--vscode-descriptionForeground))" }}>%</span>
