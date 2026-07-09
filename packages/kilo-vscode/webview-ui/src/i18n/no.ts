@@ -1267,7 +1267,7 @@ export const dict = {
   "settings.checkpoints.enable.title": "Aktiver øyeblikksbilder",
   "settings.checkpoints.enable.description": "Opprett kontrollpunkter før filredigeringer",
   "settings.context.autoCompaction.title": "Automatisk komprimering",
-  "settings.context.autoCompaction.description": "Komprimer automatisk kontekst når den er full",
+  "settings.context.autoCompaction.description": "Når konteksten nærmer seg kapasitetsgrensen, sender eldre historikk (uten verktøy, uten systemprompter, media erstattet med plassholdere, verktøyutdata avkortet til 2000 tegn) til en dedikert komprimeringsagent for strukturert oppsummering, beholder de siste 2 samtalene og fortsetter automatisk økten",
   "settings.context.prune.title": "Fjern gamle utdata",
   "settings.context.prune.description": "Fjern gamle verktøyutdata under komprimering",
   "settings.context.watcherPatterns": "Filvakt-ignormønstre",

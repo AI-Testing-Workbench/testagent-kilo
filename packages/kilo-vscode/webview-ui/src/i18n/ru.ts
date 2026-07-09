@@ -1274,7 +1274,7 @@ export const dict = {
   "settings.checkpoints.enable.title": "Включить снимки",
   "settings.checkpoints.enable.description": "Создавать контрольные точки перед редактированием файлов",
   "settings.context.autoCompaction.title": "Автоматическое сжатие",
-  "settings.context.autoCompaction.description": "Автоматически сжимать контекст при заполнении",
+  "settings.context.autoCompaction.description": "Когда контекст приближается к лимиту, отправляет старую историю (без инструментов, без системных подсказок, медиа заменены плейсхолдерами, вывод инструментов сокращён до 2000 символов) специальному агенту сжатия для структурированного обобщения, сохраняет последние 2 оборота и автоматически продолжает сессию",
   "settings.context.prune.title": "Очистить старые выходные данные",
   "settings.context.prune.description": "Удалить старые выходные данные инструментов при сжатии",
   "settings.context.watcherPatterns": "Шаблоны игнорирования наблюдателя файлов",

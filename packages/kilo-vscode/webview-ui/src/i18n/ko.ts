@@ -1253,7 +1253,7 @@ export const dict = {
   "settings.checkpoints.enable.title": "스냅샷 활성화",
   "settings.checkpoints.enable.description": "파일 편집 전 체크포인트를 생성하여 이전 상태를 복원할 수 있습니다",
   "settings.context.autoCompaction.title": "자동 압축",
-  "settings.context.autoCompaction.description": "컨텍스트가 가득 차면 자동으로 압축",
+  "settings.context.autoCompaction.description": "컨텍스트가 한도에 가까워지면 이전 기록(도구 없음, 시스템 프롬프트 없음, 미디어는 플레이스홀더로 대체, 도구 출력은 2000자로 제한)을 전용 압축 에이전트에 보내 구조화된 요약을 생성하고 최근 2턴을 유지한 후 자동으로 대화를 계속합니다",
   "settings.context.prune.title": "이전 출력 정리",
   "settings.context.prune.description": "압축 중 이전 도구 출력 제거",
   "settings.context.watcherPatterns": "파일 감시자 무시 패턴",

@@ -1291,7 +1291,7 @@ export const dict = {
   "settings.checkpoints.enable.description":
     "Prüfpunkte vor Dateibearbeitungen erstellen, um vorherige Zustände wiederherstellen zu können",
   "settings.context.autoCompaction.title": "Automatische Komprimierung",
-  "settings.context.autoCompaction.description": "Kontext automatisch komprimieren, wenn er voll ist",
+  "settings.context.autoCompaction.description": "Wenn der Kontext sich der Kapazitätsgrenze nähert, sendet den älteren Verlauf (keine Tools, keine System-Prompts, Medien durch Platzhalter ersetzt, Tool-Ausgaben auf 2000 Zeichen gekürzt) an einen speziellen Komprimierungsagenten zur strukturierten Zusammenfassung, behält die letzten 2 Gesprächsrunden und setzt die Sitzung automatisch fort",
   "settings.context.prune.title": "Alte Ausgaben bereinigen",
   "settings.context.prune.description": "Alte Werkzeugausgaben während der Komprimierung entfernen",
   "settings.context.watcherPatterns": "Datei-Watcher-Ignorierungsmuster",

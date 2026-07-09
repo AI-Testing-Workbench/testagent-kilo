@@ -1248,7 +1248,7 @@ export const dict = {
     "Maak checkpoints aan voor het bewerken van bestanden zodat je eerdere staten kunt herstellen",
 
   "settings.context.autoCompaction.title": "Automatische Compactie",
-  "settings.context.autoCompaction.description": "Context automatisch compacteren wanneer deze vol is",
+  "settings.context.autoCompaction.description": "Wanneer de context bijna vol is, stuurt oudere geschiedenis (geen tools, geen systeemprompts, media vervangen door placeholders, tooluitvoer ingekort tot 2000 tekens) naar een speciale compressie-agent voor gestructureerde samenvatting, behoudt de laatste 2 gespreksrondes en zet de sessie automatisch voort",
   "settings.context.prune.title": "Oude Uitvoer Opschonen",
   "settings.context.prune.description": "Verwijder oude tool uitvoer tijdens compactie",
   "settings.context.watcherPatterns": "File Watcher Negeer Patronen",
