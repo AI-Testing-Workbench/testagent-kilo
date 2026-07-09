@@ -1233,15 +1233,11 @@ export const dict = {
   "settings.checkpoints.enable.title": "啟用快照",
   "settings.checkpoints.enable.description": "在檔案編輯前建立檢查點，以便恢復之前的狀態",
   "settings.context.autoCompaction.title": "自動壓縮",
-  "settings.context.autoCompaction.description":
-    "當上下文接近容量上限時，將較早的對話歷史（不含工具呼叫、不含系統提示詞、媒體附件替換為佔位文字、工具輸出截斷至 2000 字元）發給專用壓縮 agent 進行結構化摘要，保留最近 2 輪對話完整不變，並自動繼續當前對話",
+  "settings.context.autoCompaction.description": "上下文滿時自動壓縮",
   "settings.context.prune.title": "修剪舊輸出",
   "settings.context.prune.description": "壓縮期間移除舊的工具輸出",
   "settings.context.watcherPatterns": "檔案監視器忽略模式",
   "settings.context.watcherPatterns.description": "監視器應忽略的檔案的 glob 模式",
-  "settings.context.defaultIgnoredPatterns": "內置預設忽略規則",
-  "settings.context.defaultIgnoredPatterns.description": "以下目錄和檔案預設始終被監視器忽略：",
-  "settings.context.defaultFilePatterns": "檔案模式",
 
   "settings.commitMessage.title": "Commit Message",
   "settings.commitMessage.override.title": "使用自訂 prompt",

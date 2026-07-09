@@ -1275,7 +1275,7 @@ export const dict = {
   "settings.checkpoints.enable.title": "Omogući snimke",
   "settings.checkpoints.enable.description": "Kreiraj kontrolne točke prije uređivanja datoteka",
   "settings.context.autoCompaction.title": "Automatska kompresija",
-  "settings.context.autoCompaction.description": "Kada se kontekst približi kapacitetu, šalje stariju povijest (bez alata, bez sistemskih upita, mediji zamijenjeni placeholderima, izlazi alata skraćeni na 2000 znakova) namjenskom agentu za kompresiju radi strukturiranog sažimanja, zadržava posljednje 2 runde i automatski nastavlja sesiju",
+  "settings.context.autoCompaction.description": "Automatski komprimiraj kontekst kada je pun",
   "settings.context.prune.title": "Očisti stare izlaze",
   "settings.context.prune.description": "Ukloni stare izlaze alata tokom kompresije",
   "settings.context.watcherPatterns": "Uzorci ignoriranja za promatrač datoteka",

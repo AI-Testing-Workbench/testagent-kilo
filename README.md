@@ -104,11 +104,6 @@ testagent-kilo/
 
 ## 常见问题
 
-版本问题： 目前vscode插件、CLI 统一版本为`1.3.0`
-testagent插件版本依据`kilo-vscode`文件夹内`package.json`的`version`字段
-
-CLI testagentVersion 依据`packages/testagent-core/packages/opencode/script/build-node.ts` 和`packages/testagent-core/packages/opencode/script/build.ts`的define内`TESTAGENT_VERSION`字段
-
 ### Q: 如何更新子模块？
 ```bash
 git submodule update --remote --merge

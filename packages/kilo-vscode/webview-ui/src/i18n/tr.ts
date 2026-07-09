@@ -1241,7 +1241,7 @@ export const dict = {
     "Dosya düzenlemelerinden önce kontrol noktaları oluştur, böylece önceki durumları geri yükleyebilirsiniz",
 
   "settings.context.autoCompaction.title": "Otomatik Sıkıştırma",
-  "settings.context.autoCompaction.description": "Bağlam kapasiteye yaklaştığında, eski geçmişi (araçlar olmadan, sistem komutları olmadan, medya yer tutucularla değiştirilmiş, araç çıktıları 2000 karaktere kısaltılmış) özel bir sıkıştırma aracısına yapılandırılmış özet için gönderir, son 2 konuşma turunu korur ve oturumu otomatik olarak sürdürür",
+  "settings.context.autoCompaction.description": "Bağlam dolduğunda otomatik olarak sıkıştır",
   "settings.context.prune.title": "Eski Çıktıları Temizle",
   "settings.context.prune.description": "Sıkıştırma sırasında eski araç çıktılarını kaldır",
   "settings.context.watcherPatterns": "Dosya İzleyici Yok Sayma Kalıpları",

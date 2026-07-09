@@ -1265,7 +1265,7 @@ export const dict = {
   "settings.checkpoints.enable.title": "Aktiver snapshots",
   "settings.checkpoints.enable.description": "Opret kontrolpunkter før filredigeringer",
   "settings.context.autoCompaction.title": "Automatisk komprimering",
-  "settings.context.autoCompaction.description": "Når konteksten nærmer sig kapacitetsgrænsen, sender ældre historik (uden værktøjer, uden systemprompter, medier erstattet af pladsholdere, værktøjsoutput afkortet til 2000 tegn) til en dedikeret komprimeringsagent til struktureret opsummering, bevarer de sidste 2 samtalerunder og fortsætter automatisk sessionen",
+  "settings.context.autoCompaction.description": "Komprimér automatisk kontekst, når den er fuld",
   "settings.context.prune.title": "Fjern gamle output",
   "settings.context.prune.description": "Fjern gamle værktøjsoutput under komprimering",
   "settings.context.watcherPatterns": "Filvagt-ignormønstre",

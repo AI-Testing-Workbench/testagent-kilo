@@ -1283,7 +1283,7 @@ export const dict = {
   "settings.checkpoints.enable.title": "Habilitar instantáneas",
   "settings.checkpoints.enable.description": "Crear puntos de control antes de editar archivos",
   "settings.context.autoCompaction.title": "Compactación automática",
-  "settings.context.autoCompaction.description": "Cuando el contexto se acerca al límite, envía el historial anterior (sin herramientas, sin prompts del sistema, medios reemplazados por marcadores de posición, salidas de herramientas truncadas a 2000 caracteres) a un agente de compresión para resumir estructuradamente, conserva las últimas 2 rondas y continúa automáticamente la sesión",
+  "settings.context.autoCompaction.description": "Compactar automáticamente el contexto cuando está lleno",
   "settings.context.prune.title": "Eliminar salidas antiguas",
   "settings.context.prune.description": "Eliminar salidas de herramientas antiguas durante la compactación",
   "settings.context.watcherPatterns": "Patrones de ignorar del observador",

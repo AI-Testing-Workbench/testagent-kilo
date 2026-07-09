@@ -377,7 +377,7 @@ const GranularToolRow: Component<{
         }}
       >
         <div style={{ flex: 1, "min-width": 0 }}>
-          <div style={{ "font-size": "12px" }}>
+          <div style={{ "font-size": "12px", color: "var(--text-base)" }}>
             {language.t(props.tool.granular.wildcardKey)}
           </div>
         </div>

@@ -4326,15 +4326,12 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
         }
 
         // Extract error message from the error object
-        // SDK error types: { name: "...", data: { message: "..." } }
         const errorMsg =
           typeof error === "string"
             ? error
-            : typeof error === "object" && error !== null && "data" in error
-              ? typeof error.data === "object" && error.data !== null && "message" in error.data && typeof error.data.message === "string"
-                ? error.data.message
-                : "发生错误"
-              : "发生错误"
+            : "message" in error && typeof error.message === "string"
+              ? error.message
+              : "An error occurred"
         this.maybeShowErrorNotification(sid, errorMsg)
       }
       return

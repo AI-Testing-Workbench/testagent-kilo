@@ -1281,8 +1281,7 @@ export const dict = {
   "settings.checkpoints.enable.description": "Create checkpoints before file edits so you can restore previous states",
 
   "settings.context.autoCompaction.title": "Auto Compaction",
-  "settings.context.autoCompaction.description":
-    "When context nears capacity, sends older history (no tools, no system prompts, media replaced with text placeholders, tool output truncated to 2000 chars) to a dedicated compaction agent for structured summarization, preserves the last 2 conversation rounds, and auto-continues the session",
+  "settings.context.autoCompaction.description": "Automatically compact context when it's full",
   "settings.context.compactionLimit.title": "Auto Compaction Limit",
   "settings.context.compactionLimit.description":
     "Compact when context reaches this percentage of the model window. Leave blank to use the safety buffer only.",
@@ -1291,10 +1290,6 @@ export const dict = {
 
   "settings.context.watcherPatterns": "File Watcher Ignore Patterns",
   "settings.context.watcherPatterns.description": "Glob patterns for files the watcher should ignore",
-  "settings.context.defaultIgnoredPatterns": "Default Ignored Patterns (built-in)",
-  "settings.context.defaultIgnoredPatterns.description":
-    "These directories and files are always ignored by the watcher:",
-  "settings.context.defaultFilePatterns": "File Patterns",
 
   "settings.commitMessage.title": "Commit Message",
   "settings.commitMessage.override.title": "Use Custom Prompt",

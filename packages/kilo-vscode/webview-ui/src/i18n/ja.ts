@@ -1265,7 +1265,7 @@ export const dict = {
   "settings.checkpoints.enable.title": "スナップショットを有効にする",
   "settings.checkpoints.enable.description": "ファイル編集前にチェックポイントを作成して以前の状態を復元可能にする",
   "settings.context.autoCompaction.title": "自動圧縮",
-  "settings.context.autoCompaction.description": "コンテキストが容量に近づくと、古い履歴（ツールなし、システムプロンプトなし、メディアはプレースホルダーに置換、ツール出力は2000文字に切り捨て）を専用の圧縮エージェントに送り構造化要約し、最新2ターンを保持して自動的に会話を続行します",
+  "settings.context.autoCompaction.description": "コンテキストが満杯のとき自動的に圧縮",
   "settings.context.prune.title": "古い出力を削除",
   "settings.context.prune.description": "圧縮時に古いツール出力を削除",
   "settings.context.watcherPatterns": "ファイルウォッチャー無視パターン",
