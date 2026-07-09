@@ -1279,7 +1279,7 @@ export const dict = {
   "settings.checkpoints.enable.title": "Ativar snapshots",
   "settings.checkpoints.enable.description": "Criar pontos de verificação antes de editar arquivos",
   "settings.context.autoCompaction.title": "Compactação automática",
-  "settings.context.autoCompaction.description": "Compactar automaticamente o contexto quando estiver cheio",
+  "settings.context.autoCompaction.description": "Quando o contexto se aproxima do limite, envia o histórico anterior (sem ferramentas, sem prompts de sistema, mídia substituída por placeholders, saídas de ferramentas truncadas para 2000 caracteres) para um agente de compactação para resumo estruturado, mantém as últimas 2 rodadas e continua automaticamente a sessão",
   "settings.context.prune.title": "Remover saídas antigas",
   "settings.context.prune.description": "Remover saídas antigas de ferramentas durante a compactação",
   "settings.context.watcherPatterns": "Padrões de ignorar do observador",

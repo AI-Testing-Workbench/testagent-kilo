@@ -9,6 +9,50 @@ import { useConfig } from "../../context/config"
 import { useLanguage } from "../../context/language"
 import SettingsRow from "./SettingsRow"
 
+const DEFAULT_DIRS = [
+  "node_modules",
+  "bower_components",
+  ".pnpm-store",
+  "vendor",
+  ".npm",
+  "dist",
+  "build",
+  "out",
+  ".next",
+  "target",
+  "bin",
+  "obj",
+  ".git",
+  ".svn",
+  ".hg",
+  ".vscode",
+  ".idea",
+  ".turbo",
+  ".output",
+  ".sst",
+  ".cache",
+  ".webkit-cache",
+  "__pycache__",
+  ".pytest_cache",
+  "mypy_cache",
+  ".history",
+  ".gradle",
+]
+
+const DEFAULT_FILES = [
+  "**/*.swp",
+  "**/*.swo",
+  "**/*.pyc",
+  "**/.DS_Store",
+  "**/Thumbs.db",
+  "**/logs/**",
+  "**/tmp/**",
+  "**/temp/**",
+  "**/*.log",
+  "**/coverage/**",
+  "**/.nyc_output/**",
+]
+
 const ContextTab: Component = () => {
   const { config, updateConfig } = useConfig()
   const language = useLanguage()
@@ -165,6 +209,94 @@ const ContextTab: Component = () => {
             </div>
           )}
         </For>
+      </Card>
+
+      {/* Built-in default ignore patterns (read-only) */}
+      <h4 style={{ "margin-top": "16px", "margin-bottom": "8px" }}>
+        {language.t("settings.context.defaultIgnoredPatterns")}
+      </h4>
+
+      <Card>
+        <div
+          style={{
+            "font-size": "12px",
+            color: "var(--text-weak-base, var(--vscode-descriptionForeground))",
+            "padding-bottom": "8px",
+          }}
+        >
+          {language.t("settings.context.defaultIgnoredPatterns.description")}
+        </div>
+
+        {/* Default directories */}
+        <div
+          style={{
+            "max-height": "200px",
+            "overflow-y": "auto",
+          }}
+        >
+          <For each={DEFAULT_DIRS}>
+            {(dir) => (
+              <div
+                style={{
+                  display: "flex",
+                  "align-items": "center",
+                  padding: "6px 0",
+                }}
+              >
+                <span
+                  style={{
+                    "font-family": "var(--vscode-editor-font-family, monospace)",
+                    "font-size": "12px",
+                    color: "var(--text-weak-base, var(--vscode-descriptionForeground))",
+                  }}
+                >
+                  {dir}
+                </span>
+              </div>
+            )}
+          </For>
+        </div>
+
+        <div
+          style={{
+            "border-top": "1px solid var(--border-weak-base)",
+            "margin-top": "4px",
+            "padding-top": "8px",
+            "font-size": "12px",
+            color: "var(--text-weak-base, var(--vscode-descriptionForeground))",
+          }}
+        >
+          {language.t("settings.context.defaultFilePatterns")}
+        </div>
+
+        <div
+          style={{
+            "max-height": "160px",
+            "overflow-y": "auto",
+          }}
+        >
+          <For each={DEFAULT_FILES}>
+            {(pat) => (
+              <div
+                style={{
+                  display: "flex",
+                  "align-items": "center",
+                  padding: "6px 0",
+                }}
+              >
+                <span
+                  style={{
+                    "font-family": "var(--vscode-editor-font-family, monospace)",
+                    "font-size": "12px",
+                    color: "var(--text-weak-base, var(--vscode-descriptionForeground))",
+                  }}
+                >
+                  {pat}
+                </span>
+              </div>
+            )}
+          </For>
+        </div>
       </Card>
     </div>
   )

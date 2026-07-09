@@ -1275,7 +1275,7 @@ export const dict = {
   "settings.checkpoints.enable.title": "Włącz migawki",
   "settings.checkpoints.enable.description": "Twórz punkty kontrolne przed edycją plików",
   "settings.context.autoCompaction.title": "Automatyczna kompakcja",
-  "settings.context.autoCompaction.description": "Automatycznie kompaktuj kontekst, gdy jest pełny",
+  "settings.context.autoCompaction.description": "Gdy kontekst zbliża się do limitu, wysyła starszą historię (bez narzędzi, bez podpowiedzi systemowych, multimedia zastąpione placeholderami, wyniki narzędzi przycięte do 2000 znaków) do dedykowanego agenta kompresji w celu strukturyzowanego podsumowania, zachowuje ostatnie 2 rundy rozmowy i automatycznie kontynuuje sesję",
   "settings.context.prune.title": "Przytnij stare wyjścia",
   "settings.context.prune.description": "Usuń stare wyjścia narzędzi podczas kompakcji",
   "settings.context.watcherPatterns": "Wzorce ignorowania obserwatora plików",

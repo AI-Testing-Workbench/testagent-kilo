@@ -1249,7 +1249,7 @@ export const dict = {
   "settings.checkpoints.enable.title": "تمكين اللقطات",
   "settings.checkpoints.enable.description": "إنشاء نقاط فحص قبل تحرير الملفات",
   "settings.context.autoCompaction.title": "ضغط تلقائي",
-  "settings.context.autoCompaction.description": "ضغط السياق تلقائياً عند امتلائه",
+  "settings.context.autoCompaction.description": "عند اقتراب السياق من الحد الأقصى، يرسل التاريخ الأقدم (بدون أدوات، بدون مطالبات النظام، الوسائط مستبدلة بنصوص placeholder، مخرجات الأدوات مقتطعة إلى 2000 حرف) إلى وكيل ضغط مخصص للتلخيص المنظم، ويحتفظ بآخر جولتين، ويواصل الجلسة تلقائياً",
   "settings.context.prune.title": "تقليم المخرجات القديمة",
   "settings.context.prune.description": "إزالة مخرجات الأدوات القديمة أثناء الضغط",
   "settings.context.watcherPatterns": "أنماط تجاهل مراقب الملفات",

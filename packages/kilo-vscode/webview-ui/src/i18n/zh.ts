@@ -1242,14 +1242,19 @@ export const dict = {
   "settings.checkpoints.enable.title": "启用快照",
   "settings.checkpoints.enable.description": "在文件编辑前创建检查点，以便恢复之前的状态",
   "settings.context.autoCompaction.title": "自动压缩",
-  "settings.context.autoCompaction.description": "在上下文达到限制前自动压缩",
+  "settings.context.autoCompaction.description":
+    "当上下文接近容量上限时，将较早的对话历史（不含工具调用、不含系统提示词等）发给专用压缩 agent 进行压缩，保留最近 2 轮对话完整不变，并自动继续当前对话",
   "settings.context.compactionLimit.title": "自动压缩限制",
-  "settings.context.compactionLimit.description": "自动压缩开启后，当上下文达到模型窗口的此百分比时进行压缩，未填写则按上下文-20k的逻辑计算",
+  "settings.context.compactionLimit.description":
+    "自动压缩开启后，当上下文达到模型窗口的此百分比时进行压缩，未填写则按上下文-20k的逻辑计算",
   "settings.context.prune.title": "修剪旧输出",
   "settings.context.prune.description": "压缩期间移除旧的工具输出",
 
   "settings.context.watcherPatterns": "文件监视器忽略模式",
   "settings.context.watcherPatterns.description": "监视器应忽略的文件的 glob 模式",
+  "settings.context.defaultIgnoredPatterns": "内置默认忽略规则",
+  "settings.context.defaultIgnoredPatterns.description": "以下目录和文件默认始终被监视器忽略：",
+  "settings.context.defaultFilePatterns": "文件模式",
 
   "settings.providers.subagentModel.title": "子代理模型",
   "settings.providers.subagentModel.description": "任务工具子代理的默认模型和推理强度。留空则继承调用方 agent 的模型。",
