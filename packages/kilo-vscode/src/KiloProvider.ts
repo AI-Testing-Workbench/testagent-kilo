@@ -1157,7 +1157,7 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
           if (allowedKeys.has(message.key)) {
             await vscode.workspace
               .getConfiguration("testagent.new.autocomplete")
-              .update(message.key, message.value, vscode.ConfigurationTarget.Global)
+              .update(message.key, false, vscode.ConfigurationTarget.Global)
             this.sendAutocompleteSettings()
           }
           break
@@ -4489,9 +4489,9 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
     this.postMessage({
       type: "autocompleteSettingsLoaded",
       settings: {
-        enableAutoTrigger: config.get<boolean>("enableAutoTrigger", true),
-        enableSmartInlineTaskKeybinding: config.get<boolean>("enableSmartInlineTaskKeybinding", false),
-        enableChatAutocomplete: config.get<boolean>("enableChatAutocomplete", false),
+        enableAutoTrigger: false,
+        enableSmartInlineTaskKeybinding: false,
+        enableChatAutocomplete: false,
       },
     })
   }

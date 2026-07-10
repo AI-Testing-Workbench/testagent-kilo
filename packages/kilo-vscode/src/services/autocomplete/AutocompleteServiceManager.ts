@@ -23,9 +23,9 @@ export interface AutocompleteServiceSettings {
 function readSettings(): AutocompleteServiceSettings {
   const config = vscode.workspace.getConfiguration(CONFIG_SECTION)
   return {
-    enableAutoTrigger: config.get<boolean>("enableAutoTrigger") ?? true,
-    enableSmartInlineTaskKeybinding: config.get<boolean>("enableSmartInlineTaskKeybinding") ?? true,
-    enableChatAutocomplete: config.get<boolean>("enableChatAutocomplete") ?? true,
+    enableAutoTrigger: false,
+    enableSmartInlineTaskKeybinding: false,
+    enableChatAutocomplete: false,
     snoozeUntil: config.get<number>("snoozeUntil"),
   }
 }
@@ -298,7 +298,7 @@ export class AutocompleteServiceManager {
     await vscode.commands.executeCommand(
       "setContext",
       "kilocode.autocomplete.enableSmartInlineTaskKeybinding",
-      this.settings?.enableSmartInlineTaskKeybinding || false,
+      false,
     )
   }
 

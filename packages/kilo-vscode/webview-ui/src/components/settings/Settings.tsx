@@ -145,10 +145,10 @@ const Settings: Component<SettingsProps> = (props) => {
             <Icon name="window-cursor" />
             <span class="label">{language.t("settings.browser.title")}</span>
           </Tabs.Trigger>
-          <Tabs.Trigger value="autocomplete">
+          {/* <Tabs.Trigger value="autocomplete">
             <Icon name="code-lines" />
             <span class="label">{language.t("settings.autocomplete.title")}</span>
-          </Tabs.Trigger>
+          </Tabs.Trigger> */}
           <Tabs.Trigger value="notifications">
             <Icon name="circle-check" />
             <span class="label">{language.t("settings.notifications.title")}</span>
@@ -187,10 +187,10 @@ const Settings: Component<SettingsProps> = (props) => {
           <h3>{language.t("settings.browser.title")}</h3>
           <BrowserTab />
         </Tabs.Content>
-        <Tabs.Content value="autocomplete">
+        {/* <Tabs.Content value="autocomplete">
           <h3>{language.t("settings.autocomplete.title")}</h3>
           <AutocompleteTab />
-        </Tabs.Content>
+        </Tabs.Content> */}
         <Tabs.Content value="notifications">
           <h3>{language.t("settings.notifications.title")}</h3>
           <NotificationsTab />

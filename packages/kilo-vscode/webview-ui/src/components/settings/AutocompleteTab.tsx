@@ -10,7 +10,7 @@ const AutocompleteTab: Component = () => {
   const vscode = useVSCode()
   const language = useLanguage()
 
-  const [enableAutoTrigger, setEnableAutoTrigger] = createSignal(true)
+  const [enableAutoTrigger, setEnableAutoTrigger] = createSignal(false)
   const [enableSmartInlineTaskKeybinding, setEnableSmartInlineTaskKeybinding] = createSignal(false)
   const [enableChatAutocomplete, setEnableChatAutocomplete] = createSignal(false)
 

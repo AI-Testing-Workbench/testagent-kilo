@@ -527,21 +527,6 @@
           "default": "内置model",
           "description": "内置model"
         },
-        "testagent.new.autocomplete.enableAutoTrigger": {
-          "type": "boolean",
-          "default": true,
-          "description": "Enable automatic inline completion suggestions"
-        },
-        "testagent.new.autocomplete.enableSmartInlineTaskKeybinding": {
-          "type": "boolean",
-          "default": false,
-          "description": "Enable smart inline task keybinding"
-        },
-        "testagent.new.autocomplete.enableChatAutocomplete": {
-          "type": "boolean",
-          "default": false,
-          "description": "Enable chat textarea autocomplete"
-        },
         "testagent.new.claudeCodeCompat": {
           "type": "boolean",
           "default": false,

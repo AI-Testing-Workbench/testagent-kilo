@@ -6,8 +6,7 @@ import type { KiloConnectionService } from "../cli-backend"
  * Idempotent — connectionService.connect() deduplicates concurrent calls.
  */
 export function ensureBackendForAutocomplete(connection: KiloConnectionService): void {
-  const enabled =
-    vscode.workspace.getConfiguration("testagent.new.autocomplete").get<boolean>("enableAutoTrigger") ?? true
+  const enabled = false
   const dir = vscode.workspace.workspaceFolders?.[0]?.uri.fsPath
   if (!enabled || !dir) return
   connection.connect(dir).catch((err) => {

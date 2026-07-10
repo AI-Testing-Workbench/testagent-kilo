@@ -725,22 +725,16 @@ async function migrateAutoApproval(
   return results
 }
 
-async function migrateAutocomplete(settings: LegacyAutocompleteSettings): Promise<MigrationResultItem> {
+async function migrateAutocomplete(): Promise<MigrationResultItem> {
   try {
     const config = vscode.workspace.getConfiguration("testagent.new.autocomplete")
-    if (settings.enableAutoTrigger !== undefined) {
-      await config.update("enableAutoTrigger", settings.enableAutoTrigger, vscode.ConfigurationTarget.Global)
-    }
-    if (settings.enableSmartInlineTaskKeybinding !== undefined) {
-      await config.update(
-        "enableSmartInlineTaskKeybinding",
-        settings.enableSmartInlineTaskKeybinding,
-        vscode.ConfigurationTarget.Global,
-      )
-    }
-    if (settings.enableChatAutocomplete !== undefined) {
-      await config.update("enableChatAutocomplete", settings.enableChatAutocomplete, vscode.ConfigurationTarget.Global)
-    }
+    await config.update("enableAutoTrigger", false, vscode.ConfigurationTarget.Global)
+    await config.update(
+      "enableSmartInlineTaskKeybinding",
+      false,
+      vscode.ConfigurationTarget.Global,
+    )
+    await config.update("enableChatAutocomplete", false, vscode.ConfigurationTarget.Global)
     return { item: "Autocomplete settings", category: "settings", status: "success" }
   } catch (err) {
     return {
