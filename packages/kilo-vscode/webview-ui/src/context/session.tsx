@@ -100,6 +100,7 @@ interface SessionContextValue {
   statusInfo: Accessor<SessionStatusInfo>
   statusText: Accessor<string | undefined>
   busySince: Accessor<number | undefined>
+  anyBusy: Accessor<boolean>
   loading: Accessor<boolean>
   loadingOlderMessages: Accessor<boolean>
   hasOlderMessages: Accessor<boolean>
@@ -277,6 +278,14 @@ export const SessionProvider: ParentComponent = (props) => {
     const id = currentSessionID()
     return id ? busySinceMap[id] : undefined
   }
+
+  // True when any tracked session is in "busy" state
+  const anyBusy = createMemo(() => {
+    for (const info of Object.values(statusMap)) {
+      if (info.type === "busy") return true
+    }
+    return false
+  })
 
   const [loading, setLoading] = createSignal(false)
   const [loaded, setLoaded] = createSignal<Set<string>>(new Set())
@@ -2250,6 +2259,7 @@ export const SessionProvider: ParentComponent = (props) => {
     statusInfo,
     statusText,
     busySince,
+    anyBusy,
     loading,
     loadingOlderMessages,
     hasOlderMessages,

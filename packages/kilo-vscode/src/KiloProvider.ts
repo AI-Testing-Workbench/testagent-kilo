@@ -3,6 +3,7 @@ import * as path from "path"
 import * as fs from "fs"
 import * as os from "os"
 import * as vscode from "vscode"
+import * as jsonc from "jsonc-parser"
 import { fileURLToPath } from "url"
 import { buildPreviewPath, getPreviewCommand, getPreviewDir, parseImage, trimEntries } from "./image-preview"
 import { isAbsolutePath, isManagedPluginLocation, isManagedSkillLocation } from "./path-utils"
@@ -239,6 +240,38 @@ const mapAgent = (a: Agent) => ({
   permission: a.permission,
   model: a.model,
 })
+
+// testagent_change: Deep merge for config patches. null in source deletes the key.
+function deepMerge(target: Record<string, unknown>, source: Record<string, unknown>): Record<string, unknown> {
+  const result = { ...target }
+  for (const [key, val] of Object.entries(source)) {
+    if (val === null) { delete result[key]; continue }
+    if (typeof val === "object" && !Array.isArray(val) && val !== null &&
+        typeof result[key] === "object" && !Array.isArray(result[key]) && result[key] !== null) {
+      result[key] = deepMerge(result[key] as Record<string, unknown>, val as Record<string, unknown>)
+    } else {
+      result[key] = val
+    }
+  }
+  return result
+}
+
+// testagent_change: Strip null/undefined values recursively (null = delete sentinel).
+function removeNulls(obj: Record<string, unknown>): Record<string, unknown> {
+  const result: Record<string, unknown> = {}
+  for (const [key, value] of Object.entries(obj)) {
+    if (value === null || value === undefined) continue
+    if (typeof value === "object" && !Array.isArray(value) && value !== null) {
+      result[key] = removeNulls(value as Record<string, unknown>)
+    } else {
+      result[key] = value
+    }
+  }
+  return result
+}
+
+// // testagent_change: Structured log channel for config write operations
+// const configLog = vscode.window.createOutputChannel("TestAgent Config", { log: true })
 
 export class KiloProvider implements vscode.WebviewViewProvider, TelemetryPropertiesProvider {
   public static readonly viewType = "testagent.SidebarProvider" // testagent_change
@@ -2201,6 +2234,11 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
       return
     }
 
+    if (this.getBusySessionCount() > 0) {
+      vscode.window.showWarningMessage("无法在任务运行期间重新加载 MCP 服务器")
+      return
+    }
+
     try {
       // Get the underlying SDK client to access its request method
       const sdkClient = (this.client as any).client
@@ -2476,6 +2514,11 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
   }
 
   private async handleRemoveMcp(name: string): Promise<void> {
+    if (this.getBusySessionCount() > 0) {
+      vscode.window.showWarningMessage("无法在任务运行期间删除 MCP 服务器")
+      return
+    }
+
     // Remove from legacy files first so that the subsequent invalidation
     // causes the CLI to re-read config without the legacy entry.
     await this.removeLegacyMcp(name)
@@ -2557,6 +2600,10 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
 
   private async handleConnectMcp(name: string): Promise<void> {
     if (!this.client) return
+    if (this.getBusySessionCount() > 0) {
+      vscode.window.showWarningMessage("无法在任务运行期间连接 MCP 服务器")
+      return
+    }
     try {
       const directory = this.getWorkspaceDirectory()
       await this.client.mcp.connect({ name, directory })
@@ -2569,6 +2616,10 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
 
   private async handleDisconnectMcp(name: string): Promise<void> {
     if (!this.client) return
+    if (this.getBusySessionCount() > 0) {
+      vscode.window.showWarningMessage("无法在任务运行期间断开 MCP 服务器")
+      return
+    }
     try {
       const directory = this.getWorkspaceDirectory()
       await this.client.mcp.disconnect({ name, directory })
@@ -2989,6 +3040,112 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
     })
   }
 
+  // testagent_change: Route config writes to project files when keys originate there.
+  // For nested objects (like "mcp"), split entries so global-only entries stay in global.
+  private async routeConfigToSource(
+    partial: Record<string, unknown>,
+    dir: string,
+  ): Promise<{ project: Record<string, Record<string, unknown>>; global: Record<string, unknown> }> {
+    const project: Record<string, Record<string, unknown>> = {}
+    const global: Record<string, unknown> = {}
+    console.info("[TestAgent] routeConfigToSource start", { dir, keys: Object.keys(partial) })
+
+    // Walk up from dir to find project config files.
+    type FileContent = { file: string; parsed: Record<string, unknown> }
+    const found: FileContent[] = []
+    for (const subdir of [".testagent", ".opencode"]) {
+      const names = subdir === ".testagent" ? ["testagent.jsonc", "testagent.json"] : ["opencode.jsonc", "opencode.json"]
+      let current = dir
+      while (true) {
+        for (const name of names) {
+          const f = path.join(current, subdir, name)
+          try {
+            const raw = fs.readFileSync(f, "utf-8")
+            const parsed = jsonc.parse(raw)
+            if (parsed && typeof parsed === "object" && !Array.isArray(parsed)) {
+              found.push({ file: f, parsed: parsed as Record<string, unknown> })
+              console.info("[TestAgent] routeConfigToSource found file", { file: f, keys: Object.keys(parsed) })
+            }
+          } catch (e) {
+            const err = e as NodeJS.ErrnoException
+            if (err.code !== "ENOENT") {
+              console.warn("[TestAgent] routeConfigToSource parse error", { file: f, error: String(e) })
+            }
+          }
+        }
+        const parent = path.dirname(current)
+        if (parent === current) break
+        current = parent
+      }
+    }
+
+    // Route each top-level key. For nested objects, split entries between project/global.
+    for (const [key, value] of Object.entries(partial)) {
+      // Find the highest-priority project file that has this key.
+      const match = found.find((f) => key in f.parsed)
+      if (!match) {
+        global[key] = value
+        continue
+      }
+
+      const existing = match.parsed[key]
+      const file = match.file
+      project[file] = project[file] ?? {}
+
+      // Non-object values: route entirely to project.
+      if (typeof value !== "object" || value === null || Array.isArray(value)) {
+        project[file]![key] = value
+        console.info("[TestAgent] routeConfigToSource routed to project", { file, key })
+        continue
+      }
+
+      // Nested object: split entries by whether they exist in the project file.
+      const src = existing && typeof existing === "object" && !Array.isArray(existing) ? (existing as Record<string, unknown>) : {}
+      const projectPart: Record<string, unknown> = {}
+      const globalPart: Record<string, unknown> = {}
+      // testagent_change start - route all mcp entries to project when mcp key already exists in a project file
+      const isMcp = key === "mcp"
+      // testagent_change end
+      for (const [nested, nestedVal] of Object.entries(value as Record<string, unknown>)) {
+        if (nested in src || isMcp) { // testagent_change
+          projectPart[nested] = nestedVal
+        } else {
+          globalPart[nested] = nestedVal
+        }
+      }
+
+      if (Object.keys(projectPart).length > 0) {
+        project[file]![key] = projectPart
+        console.info("[TestAgent] routeConfigToSource routed to project (nested)", { file, key, entries: Object.keys(projectPart) })
+      }
+      if (Object.keys(globalPart).length > 0) {
+        global[key] = { ...((global[key] as Record<string, unknown>) ?? {}), ...globalPart }
+        console.info("[TestAgent] routeConfigToSource kept in global (nested)", { key, entries: Object.keys(globalPart) })
+      }
+    }
+
+    console.info("[TestAgent] routeConfigToSource result", {
+      projectFiles: Object.keys(project),
+      globalKeys: Object.keys(global),
+    })
+    return { project, global }
+  }
+
+  // testagent_change: Read a project config file, deep-merge the patch, and write back.
+  private async writeConfigFile(file: string, patch: Record<string, unknown>): Promise<void> {
+    const raw = await fs.promises.readFile(file, "utf-8")
+    let existing: Record<string, unknown> = {}
+    try { existing = (jsonc.parse(raw) ?? {}) as Record<string, unknown> } catch (e) {
+      console.warn("[TestAgent] writeConfigFile parse failed", { file, error: String(e) })
+    } 
+    console.info("[TestAgent] writeConfigFile writing", { file, patchKeys: Object.keys(patch) })
+    if (typeof existing !== "object" || Array.isArray(existing)) existing = {}
+    const merged = deepMerge(existing, patch)
+    const cleaned = removeNulls(merged)
+    await fs.promises.writeFile(file, JSON.stringify(cleaned, null, 2) + "\n", "utf-8")
+    console.info("[TestAgent] writeConfigFile done", { file })
+  }
+
   /** Returns the number of sessions currently in "busy" state. */
   private getBusySessionCount(): number {
     return getBusySessionCount(this.sessionStatusMap)
@@ -2996,10 +3153,12 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
 
   /**
    * Handle config update request from the webview.
-   * Applies a partial config update via the global config endpoint, then pushes
-   * the full merged config back to the webview.
+   * Routes writes to project config files when keys originate from there,
+   * and to global config for the rest. Then pushes the merged config back.
    */
   private async handleUpdateConfig(partial: ConfigPatch): Promise<void> {
+    console.info("[TestAgent] === handleUpdateConfig CALLED ===", { keys: Object.keys(partial), hasMcp: partial.mcp !== undefined })
+
     if (!this.client || this.connectionState !== "connected") {
       this.postMessage({ type: "configUpdateFailed", message: "Not connected to CLI backend" })
       return
@@ -3010,14 +3169,34 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
       partial.disabled_providers !== undefined ||
       partial.enabled_providers !== undefined
 
-    // Guard against fetchAndSendConfig pushing stale data while the write is in flight.
+    const isMcpOnly = partial.mcp !== undefined && Object.keys(partial).length === 1
+
+    if (isMcpOnly && this.getBusySessionCount() > 0) {
+      this.postMessage({
+        type: "configUpdateFailed",
+        message: "无法在任务运行期间修改 MCP 配置",
+        details: "Task is currently running. MCP configuration changes are not allowed during task execution.",
+      })
+      return
+    }
+
     this.pending++
 
-    // Phase 1: write. Errors here = real save failures the user can fix + retry.
+    // Phase 1: write. Route keys to project or global based on where they live.
     try {
-      // testagent_change: Skip drainPendingPrompts to speed up config save
-      // await this.connectionService.drainPendingPrompts()
-      await this.client.global.config.update({ config: partial }, { throwOnError: true })
+      const dir = this.getWorkspaceDirectory()
+      console.info("[TestAgent] handleUpdateConfig routing writes", { dir, keys: Object.keys(partial as Record<string, unknown>) })
+      const { project, global } = await this.routeConfigToSource(partial as Record<string, unknown>, dir)
+
+      for (const [file, patch] of Object.entries(project)) {
+        console.info("[TestAgent] handleUpdateConfig writing to project file", { file })
+        await this.writeConfigFile(file, patch)
+      }
+
+      if (Object.keys(global).length > 0) {
+        console.info("[TestAgent] handleUpdateConfig writing to global", { keys: Object.keys(global) })
+        await this.client.global.config.update({ config: global }, { throwOnError: true })
+      }
     } catch (error) {
       console.error("[TestAgent]  Failed to update config:", error)
       this.postMessage({
@@ -3029,24 +3208,51 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
       return
     }
 
-    // Phase 2: refresh. Config is already on disk — post-write errors are
-    // transient, so send an optimistic configUpdated to clear the webview's
-    // saving/draft state. SSE global.config.updated pushes the real data next.
-    try {
-      const dir = this.getWorkspaceDirectory()
-      const { data: merged } = await retry(() => this.client!.config.get({ directory: dir }, { throwOnError: true }))
-      this.cachedConfigMessage = { type: "configLoaded", config: merged }
-      this.postMessage({ type: "configUpdated", config: merged })
-      if (refreshProviders) await this.fetchAndSendProviders()
+    // testagent_change: For MCP-only changes, reload MCP servers via /mcp/reload
+    if (isMcpOnly) {
+      try {
+        this.cachedMcpStatusMessage = null
+        const sdkClient = (this.client as any).client
+        if (sdkClient && typeof sdkClient.post === "function") {
+          await sdkClient.post({ url: "/mcp/reload", body: {} })
+        }
+      } catch (e) {
+        console.warn("[TestAgent] MCP reload after config update failed:", e)
+      }
+    }
 
-      // testagent_change: Prompt user to reload window after config save  注释掉
-      // vscode.window
-      //   .showInformationMessage("配置已保存。是否重新加载窗口以应用更改？", "重新加载", "稍后")
-      //   .then((choice) => {
-      //     if (choice === "重新加载") {
-      //       vscode.commands.executeCommand("workbench.action.reloadWindow")
-      //     }
-      //   })
+    // Phase 2: refresh. Send the updated config to the webview.
+    try {
+      if (isMcpOnly) {
+        const cached = (this.cachedConfigMessage as { config?: Record<string, unknown> } | null)?.config
+        if (cached && typeof cached === "object") {
+          const base = { ...cached }
+          if (partial.mcp) {
+            base.mcp = { ...((base.mcp as Record<string, unknown>) ?? {}) }
+            for (const [name, value] of Object.entries(partial.mcp)) {
+              if (value === null) {
+                delete (base.mcp as Record<string, unknown>)[name]
+              } else {
+                ;(base.mcp as Record<string, unknown>)[name] = value
+              }
+            }
+          }
+          this.cachedConfigMessage = { type: "configLoaded", config: base }
+          this.postMessage({ type: "configUpdated", config: base })
+        } else {
+          const dir = this.getWorkspaceDirectory()
+          const { data: merged } = await retry(() => this.client!.config.get({ directory: dir }, { throwOnError: true }))
+          this.cachedConfigMessage = { type: "configLoaded", config: merged }
+          this.postMessage({ type: "configUpdated", config: merged })
+        }
+        await this.fetchAndSendMcpStatus()
+      } else {
+        const dir = this.getWorkspaceDirectory()
+        const { data: merged } = await retry(() => this.client!.config.get({ directory: dir }, { throwOnError: true }))
+        this.cachedConfigMessage = { type: "configLoaded", config: merged }
+        this.postMessage({ type: "configUpdated", config: merged })
+        if (refreshProviders) await this.fetchAndSendProviders()
+      }
     } catch (error) {
       console.error("[TestAgent]  Config write succeeded but post-write refresh failed:", error)
       const cached = (this.cachedConfigMessage as { config?: unknown } | null)?.config

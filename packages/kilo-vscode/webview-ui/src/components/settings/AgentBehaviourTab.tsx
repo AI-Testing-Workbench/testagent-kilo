@@ -59,7 +59,7 @@ type AgentView = "list" | "create" | "edit"
 
 const AgentBehaviourTab: Component = () => {
   const language = useLanguage()
-  const { config, updateConfig } = useConfig()
+  const { config, updateConfig, saveConfig } = useConfig()
   const session = useSession()
   const dialog = useDialog()
   const vscode = useVSCode()
@@ -85,6 +85,7 @@ const AgentBehaviourTab: Component = () => {
 
   // MCP view state
   const [editingMcp, setEditingMcp] = createSignal<string>("")
+  const [creatingMcp, setCreatingMcp] = createSignal(false)
 
   // Fetch skills whenever the skills subtab becomes active
   createEffect(() => {
@@ -628,6 +629,7 @@ const AgentBehaviourTab: Component = () => {
   }
 
   const confirmRemoveMcp = (name: string) => {
+    if (session.anyBusy()) return
     dialog.show(() => (
       <Dialog title={language.t("settings.agentBehaviour.removeMcp.title")} fit>
         <div class="dialog-confirm-body">
@@ -641,7 +643,12 @@ const AgentBehaviourTab: Component = () => {
               size="large"
               onClick={() => {
                 dialog.close()
-                setTimeout(() => session.removeMcp(name), 150)
+                // Clean up legacy files (kilo/mcp.json, marketplace, etc.)
+                session.removeMcp(name)
+                // Remove from main config via null sentinel,
+                // so deepMerge overrides the draft entry and stripNulls cleans it up.
+                updateConfig({ mcp: { ...config().mcp, [name]: null } as any })
+                saveConfig()
               }}
             >
               {language.t("settings.agentBehaviour.removeMcp.button")}
@@ -653,8 +660,34 @@ const AgentBehaviourTab: Component = () => {
   }
 
   const renderMcpSubtab = () => {
-    const mcpEntries = createMemo(() => Object.entries(config().mcp ?? {}))
+    const mcpEntries = createMemo(() => {
+      const entries = Object.entries(config().mcp ?? {})
+      entries.sort((a, b) => {
+        const scopeA = config().mcp_scopes?.[a[0]]
+        const scopeB = config().mcp_scopes?.[b[0]]
+        if (scopeA === "local" && scopeB !== "local") return -1
+        if (scopeA !== "local" && scopeB === "local") return 1
+        return 0
+      })
+      return entries
+    })
     const [expanded, setExpanded] = createSignal<Record<string, boolean>>({})
+
+    // Create mode — delegate to McpEditView
+    if (creatingMcp()) {
+      return (
+        <McpEditView
+          isNew
+          name=""
+          onBack={() => setCreatingMcp(false)}
+          onRemove={() => {}}
+          onCreated={(name) => {
+            setCreatingMcp(false)
+            setEditingMcp(name)
+          }}
+        />
+      )
+    }
 
     const toggle = (name: string) => {
       setExpanded((prev) => ({ ...prev, [name]: !prev[name] }))
@@ -684,6 +717,7 @@ const AgentBehaviourTab: Component = () => {
     }
 
     const isConnected = (name: string) => session.mcpStatus()[name]?.status === "connected"
+    const busy = () => session.anyBusy()
 
     if (editingMcp()) {
       return (
@@ -700,6 +734,21 @@ const AgentBehaviourTab: Component = () => {
 
     return (
       <div>
+        <Show when={busy()}>
+          <div
+            style={{
+              "font-size": "12px",
+              color: "var(--vscode-editorWarning-foreground, #ff9800)",
+              "margin-bottom": "8px",
+              padding: "6px 10px",
+              "border-radius": "4px",
+              "background-color": "var(--vscode-editorWarning-background, rgba(255, 152, 0, 0.1))",
+              "border": "1px solid var(--vscode-editorWarning-foreground, #ff9800)",
+            }}
+          >
+            {language.t("settings.saveBar.warning.one")}
+          </div>
+        </Show>
         <div
           style={{
             display: "flex",
@@ -708,9 +757,9 @@ const AgentBehaviourTab: Component = () => {
             "margin-bottom": "8px",
           }}
         >
-          {/* <Button variant="secondary" size="small" onClick={browse}>
-            {language.t("settings.agentBehaviour.mcpBrowseMarketplace")}
-          </Button> */}
+          <Button variant="secondary" size="small" onClick={() => setCreatingMcp(true)} disabled={busy()}>
+            {language.t("settings.agentBehaviour.addMcpButton")}
+          </Button>
         </div>
         <Show
           when={mcpEntries().length > 0}
@@ -751,9 +800,13 @@ const AgentBehaviourTab: Component = () => {
                         "align-items": "center",
                         "justify-content": "space-between",
                         padding: "8px 0",
-                        cursor: "pointer",
+                        cursor: busy() ? "default" : "pointer",
+                        opacity: busy() ? "0.6" : "1",
                       }}
-                      onClick={() => toggle(name)}
+                      onClick={() => {
+                        if (busy()) return
+                        toggle(name)
+                      }}
                     >
                       <div style={{ display: "flex", "align-items": "center", gap: "6px", flex: 1, "min-width": 0 }}>
                         <IconButton
@@ -777,6 +830,21 @@ const AgentBehaviourTab: Component = () => {
                         />
                         <div style={{ "font-weight": "500" }}>{name}</div>
                         <span
+                          title={config().mcp_origins?.[name] ?? undefined}
+                          style={{
+                            "font-size": "10px",
+                            padding: "1px 5px",
+                            "border-radius": "3px",
+                            "background-color": "var(--bg-subtle-base, var(--vscode-badge-background))",
+                            color: "var(--text-weak-base, var(--vscode-badge-foreground))",
+                            "flex-shrink": "0",
+                          }}
+                        >
+                          {config().mcp_scopes?.[name] === "local"
+                            ? language.t("settings.agentBehaviour.editMcp.scopeLocal")
+                            : language.t("settings.agentBehaviour.editMcp.scopeGlobal")}
+                        </span>
+                        <span
                           style={{
                             "font-size": "10px",
                             color: "var(--text-weak-base, var(--vscode-descriptionForeground))",
@@ -789,8 +857,9 @@ const AgentBehaviourTab: Component = () => {
                         <div onClick={(e: MouseEvent) => e.stopPropagation()}>
                           <Switch
                             checked={isConnected(name)}
-                            disabled={session.mcpLoading() === name}
+                            disabled={busy() || session.mcpLoading() === name}
                             onChange={() => {
+                              if (busy()) return
                               if (isConnected(name)) {
                                 session.disconnectMcp(name)
                               } else {
@@ -806,8 +875,10 @@ const AgentBehaviourTab: Component = () => {
                           size="small"
                           variant="ghost"
                           icon="close"
+                          disabled={busy()}
                           onClick={(e: MouseEvent) => {
                             e.stopPropagation()
+                            if (busy()) return
                             confirmRemoveMcp(name)
                           }}
                         />
@@ -815,8 +886,10 @@ const AgentBehaviourTab: Component = () => {
                           size="small"
                           variant="ghost"
                           icon="chevron-right"
+                          disabled={busy()}
                           onClick={(e: MouseEvent) => {
                             e.stopPropagation()
+                            if (busy()) return
                             setEditingMcp(name)
                           }}
                         />

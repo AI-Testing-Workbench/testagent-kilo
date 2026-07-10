@@ -20,6 +20,17 @@ const SHARE_OPTIONS: ShareOption[] = [
   { value: "disabled", labelKey: "settings.experimental.share.disabled" },
 ]
 
+const formatTimeoutSeconds = (value: number | undefined) => {
+  if (value == null) return ""
+  return String(value)
+}
+
+const parseTimeoutSeconds = (value: string) => {
+  const num = Number(value)
+  if (!Number.isFinite(num) || num <= 0) return undefined
+  return Math.round(num)
+}
+
 const ExperimentalTab: Component = () => {
   const { config, updateConfig } = useConfig()
   const language = useLanguage()
@@ -187,10 +198,10 @@ const ExperimentalTab: Component = () => {
           last
         >
           <TextField
-            value={String(experimental().mcp_timeout ?? 60000)}
+            value={formatTimeoutSeconds(experimental().mcp_timeout ?? 60)}
             onChange={(val) => {
-              const num = parseInt(val, 10)
-              if (!isNaN(num) && num > 0) {
+              const num = parseTimeoutSeconds(val)
+              if (num !== undefined) {
                 updateExperimental("mcp_timeout", num)
               }
             }}

@@ -421,6 +421,7 @@ export interface McpConfig {
   environment?: Record<string, string>
   url?: string
   headers?: Record<string, string>
+  timeout?: number
   enabled?: boolean
 }
 
@@ -490,6 +491,8 @@ export interface Config {
   command?: Record<string, CommandConfig>
   plugin?: PluginSpec[]
   plugin_origins?: PluginOrigin[]
+  mcp_origins?: Record<string, string>
+  mcp_scopes?: Record<string, "local" | "global">
   plugin_status?: PluginStatus
   instructions?: string[]
   skills?: SkillsConfig
