@@ -2193,6 +2193,11 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
       return
     }
 
+    if (this.getBusySessionCount() > 0) {
+      vscode.window.showWarningMessage("无法在任务运行期间重新加载 MCP 服务器")
+      return
+    }
+
     try {
       // Get the underlying SDK client to access its request method
       const sdkClient = (this.client as any).client
@@ -2468,6 +2473,11 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
   }
 
   private async handleRemoveMcp(name: string): Promise<void> {
+    if (this.getBusySessionCount() > 0) {
+      vscode.window.showWarningMessage("无法在任务运行期间删除 MCP 服务器")
+      return
+    }
+
     // Remove from legacy files first so that the subsequent invalidation
     // causes the CLI to re-read config without the legacy entry.
     await this.removeLegacyMcp(name)
@@ -2549,6 +2559,10 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
 
   private async handleConnectMcp(name: string): Promise<void> {
     if (!this.client) return
+    if (this.getBusySessionCount() > 0) {
+      vscode.window.showWarningMessage("无法在任务运行期间连接 MCP 服务器")
+      return
+    }
     try {
       const directory = this.getWorkspaceDirectory()
       await this.client.mcp.connect({ name, directory })
@@ -2561,6 +2575,10 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
 
   private async handleDisconnectMcp(name: string): Promise<void> {
     if (!this.client) return
+    if (this.getBusySessionCount() > 0) {
+      vscode.window.showWarningMessage("无法在任务运行期间断开 MCP 服务器")
+      return
+    }
     try {
       const directory = this.getWorkspaceDirectory()
       await this.client.mcp.disconnect({ name, directory })
@@ -3111,6 +3129,15 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
       partial.enabled_providers !== undefined
 
     const isMcpOnly = partial.mcp !== undefined && Object.keys(partial).length === 1
+
+    if (isMcpOnly && this.getBusySessionCount() > 0) {
+      this.postMessage({
+        type: "configUpdateFailed",
+        message: "无法在任务运行期间修改 MCP 配置",
+        details: "Task is currently running. MCP configuration changes are not allowed during task execution.",
+      })
+      return
+    }
 
     this.pending++
 

@@ -1190,7 +1190,7 @@ export const dict = {
   "settings.agentBehaviour.editMcp.timeout": "超时（秒）",
   "settings.agentBehaviour.editMcp.timeout.placeholder": "e.g. 5",
   "settings.agentBehaviour.editMcp.headers": "请求头",
-  "settings.agentBehaviour.editMcp.headers.help": "随请求发送到 MCP 服务器的请求头（仅远程服务器）。",
+  "settings.agentBehaviour.editMcp.headers.help": "随请求发送到 MCP 服务器的请求头（仅远程服务器）。会读取配置发送sap_id和yst_id_token，不要使用这两个key",
   "settings.agentBehaviour.editMcp.scopeLocal": "项目配置",
   "settings.agentBehaviour.editMcp.scopeGlobal": "全局配置",
   "settings.agentBehaviour.skillPaths": "技能文件夹路径",

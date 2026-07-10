@@ -6,13 +6,16 @@ import { IconButton } from "@kilocode/kilo-ui/icon-button"
 
 import { useConfig } from "../../context/config"
 import { useLanguage } from "../../context/language"
+import { useSession } from "../../context/session"
 import type { McpConfig } from "../../types/messages"
 import SettingsRow from "./SettingsRow"
 
 interface Props {
   name: string
+  isNew?: boolean
   onBack: () => void
   onRemove: (name: string) => void
+  onCreated?: (name: string) => void
 }
 
 const DEBOUNCE_MS = 400
@@ -30,7 +33,32 @@ const parseTimeoutSeconds = (value: string) => {
 
 const McpEditView: Component<Props> = (props) => {
   const language = useLanguage()
+  const t = language.t
   const { config, updateConfig } = useConfig()
+  const session = useSession()
+  const busy = () => session.anyBusy()
+
+  // Create-mode state
+  const [newName, setNewName] = createSignal("")
+  const [createErr, setCreateErr] = createSignal("")
+
+  const existingNames = createMemo(() => Object.keys(config().mcp ?? {}))
+
+  const doCreate = () => {
+    if (busy()) return
+    const n = newName().trim()
+    if (!n) {
+      setCreateErr(t("settings.agentBehaviour.addMcpDialog.nameRequired"))
+      return
+    }
+    if (existingNames().includes(n)) {
+      setCreateErr(t("settings.agentBehaviour.addMcpDialog.nameTaken"))
+      return
+    }
+    const existing = config().mcp ?? {}
+    updateConfig({ mcp: { ...existing, [n]: { type: "remote", url: "" } } })
+    props.onCreated?.(n)
+  }
 
   const cfg = createMemo<McpConfig>(() => config().mcp?.[props.name] ?? {})
 
@@ -57,6 +85,7 @@ const McpEditView: Component<Props> = (props) => {
   })
 
   const update = (partial: Partial<McpConfig>) => {
+    if (busy()) return
     const existing = config().mcp ?? {}
     const current = existing[props.name] ?? {}
     updateConfig({
@@ -117,24 +146,88 @@ const McpEditView: Component<Props> = (props) => {
 
   return (
     <div>
-      <div
-        style={{
-          display: "flex",
-          "align-items": "center",
-          "justify-content": "space-between",
-          "margin-bottom": "16px",
-        }}
-      >
-        <div style={{ display: "flex", "align-items": "center" }}>
+      <Show when={busy()}>
+        <div
+          style={{
+            "font-size": "12px",
+            color: "var(--vscode-editorWarning-foreground, #ff9800)",
+            "margin-bottom": "12px",
+            padding: "6px 10px",
+            "border-radius": "4px",
+            "background-color": "var(--vscode-editorWarning-background, rgba(255, 152, 0, 0.1))",
+            "border": "1px solid var(--vscode-editorWarning-foreground, #ff9800)",
+          }}
+        >
+          {language.t("settings.agentBehaviour.mcpBusyWarning")}
+        </div>
+      </Show>
+      {/* Create mode: name input + create button */}
+      <Show when={props.isNew}>
+        <div
+          style={{
+            display: "flex",
+            "align-items": "center",
+            "margin-bottom": "16px",
+          }}
+        >
           <IconButton size="small" variant="ghost" icon="arrow-left" onClick={props.onBack} />
           <span style={{ "font-weight": "600", "font-size": "14px", "margin-left": "8px" }}>
-            {language.t("settings.agentBehaviour.editMcp")} — {props.name}
+            {t("settings.agentBehaviour.addMcpDialog.title")}
           </span>
         </div>
-        <IconButton size="small" variant="ghost" icon="close" onClick={() => props.onRemove(props.name)} />
-      </div>
 
-      {/* Transport info */}
+        <Card style={{ "margin-bottom": "12px" }}>
+          <div data-slot="settings-row-label-title" style={{ "margin-bottom": "8px" }}>
+            {t("settings.agentBehaviour.addMcpDialog.name")}
+          </div>
+          <TextField
+            value={newName()}
+            placeholder={t("settings.agentBehaviour.addMcpDialog.name.placeholder")}
+            onChange={(val) => {
+              setNewName(val)
+              setCreateErr("")
+            }}
+            onKeyDown={(e: KeyboardEvent) => {
+              if (e.key === "Enter") doCreate()
+            }}
+          />
+          <Show when={createErr()}>
+            <div style={{ "font-size": "12px", color: "var(--vscode-errorForeground)", "margin-top": "4px" }}>
+              {createErr()}
+            </div>
+          </Show>
+        </Card>
+
+        <div style={{ display: "flex", "justify-content": "flex-end", gap: "8px" }}>
+          <Button variant="ghost" onClick={props.onBack}>
+            {t("common.cancel")}
+          </Button>
+          <Button variant="primary" onClick={doCreate}>
+            {t("common.submit")}
+          </Button>
+        </div>
+      </Show>
+
+      {/* Edit mode: normal header + config form */}
+      <Show when={!props.isNew}>
+        <div
+          style={{
+            display: "flex",
+            "align-items": "center",
+            "justify-content": "space-between",
+            "margin-bottom": "16px",
+          }}
+        >
+          <div style={{ display: "flex", "align-items": "center" }}>
+            <IconButton size="small" variant="ghost" icon="arrow-left" onClick={props.onBack} />
+            <span style={{ "font-weight": "600", "font-size": "14px", "margin-left": "8px" }}>
+              {t("settings.agentBehaviour.editMcp")} — {props.name}
+            </span>
+          </div>
+          <IconButton size="small" variant="ghost" icon="close" disabled={busy()} onClick={() => props.onRemove(props.name)} />
+        </div>
+
+        {/* Transport info */}
       <Card style={{ "margin-bottom": "12px" }}>
         <div
           style={{
@@ -349,11 +442,12 @@ const McpEditView: Component<Props> = (props) => {
         </Card>
       </Show>
 
-      <div style={{ display: "flex", "justify-content": "flex-end" }}>
-        <Button variant="ghost" onClick={props.onBack} disabled={urlEmpty()}>
-          {language.t("settings.agentBehaviour.editMode.back")}
-        </Button>
-      </div>
+        <div style={{ display: "flex", "justify-content": "flex-end" }}>
+          <Button variant="ghost" onClick={props.onBack} disabled={urlEmpty()}>
+            {t("settings.agentBehaviour.editMode.back")}
+          </Button>
+        </div>
+      </Show>
     </div>
   )
 }
