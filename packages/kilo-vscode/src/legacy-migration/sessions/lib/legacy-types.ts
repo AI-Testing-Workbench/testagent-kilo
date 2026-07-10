@@ -1,5 +1,3 @@
-import type { Anthropic } from "@anthropic-ai/sdk"
-
 export interface LegacyHistoryItem {
   id: string
   rootTaskId?: string
@@ -10,7 +8,12 @@ export interface LegacyHistoryItem {
   mode?: string
 }
 
-export type LegacyApiMessage = Anthropic.MessageParam & {
+interface LegacyMessageParam {
+  role: string
+  content: string | unknown[]
+}
+
+export type LegacyApiMessage = LegacyMessageParam & {
   ts?: number
   isSummary?: boolean
   id?: string

@@ -669,7 +669,6 @@
     "vite-plugin-solid": "2.11.10"
   },
   "dependencies": {
-    "@anthropic-ai/sdk": "^0.39.0",
     "@kilocode/kilo-i18n": "workspace:*",
     "@kilocode/kilo-ui": "workspace:*",
     "@kilocode/sdk": "workspace:*",

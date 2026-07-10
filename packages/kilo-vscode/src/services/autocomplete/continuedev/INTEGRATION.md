@@ -105,7 +105,7 @@ All tests run via Kilocode's vitest configuration from the `src/` directory.
 
 All dependencies required by continuedev are specified in Kilocode's root `package.json`. Key dependencies include:
 
-- LLM SDKs: `openai`, `@anthropic-ai/sdk`, `@google/generative-ai`, `@aws-sdk/*`
+- LLM SDKs: `openai`, `@google/generative-ai`, `@aws-sdk/*`
 - Tree-sitter: `web-tree-sitter` and language grammars
 - Utilities: `diff`, `cross-fetch`, `lru-cache`
 - Testing: `vitest`, `@types/node`
