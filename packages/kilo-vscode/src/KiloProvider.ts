@@ -3084,6 +3084,15 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
       // Find the highest-priority project file that has this key.
       const match = found.find((f) => key in f.parsed)
       if (!match) {
+        // testagent_change start - route new mcp entries to first project config file
+        if (key === "mcp" && found.length > 0) {
+          const first = found[0]!
+          project[first.file] = project[first.file] ?? {}
+          project[first.file]![key] = value
+          console.info("[TestAgent] routeConfigToSource routed new mcp to project", { file: first.file })
+          continue
+        }
+        // testagent_change end
         global[key] = value
         continue
       }
