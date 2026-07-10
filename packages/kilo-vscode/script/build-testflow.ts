@@ -26,9 +26,8 @@ await $`bun build src/cli-entry.ts --compile --target=${target} --outfile ${test
 // 3. copy resource files (templates + config) next to the binary
 log("Copying testflow resources...")
 if (existsSync(testflowResDir)) rmSync(testflowResDir, { recursive: true })
-mkdirSync(join(testflowResDir, "config"), { recursive: true })
-mkdirSync(join(testflowResDir, "templates"), { recursive: true })
-cpSync(join(testflowDir, "dist", "config", "index.yaml"), join(testflowResDir, "config", "index.yaml"))
-cpSync(join(testflowDir, "dist", "templates"), join(testflowResDir,"templates"), { recursive: true })
+mkdirSync(testflowResDir, { recursive: true })
+cpSync(join(testflowDir, "dist", "config"), join(testflowResDir, "config"), { recursive: true })
+cpSync(join(testflowDir, "dist", "templates"), join(testflowResDir, "templates"), { recursive: true })
 
 log(`Done. Binary: ${testflowBin}`)
