@@ -301,7 +301,6 @@ const SimpleToolRow: Component<{
         <div
           style={{
             "font-size": "12px",
-            color: "var(--text-weak-base, var(--vscode-descriptionForeground))",
             "margin-top": "6px",
           }}
         >
@@ -357,7 +356,6 @@ const GranularToolRow: Component<{
           <div
             style={{
               "font-size": "12px",
-              color: "var(--text-weak-base, var(--vscode-descriptionForeground))",
               "margin-top": "6px",
             }}
           >
