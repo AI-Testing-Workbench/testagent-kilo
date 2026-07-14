@@ -1549,6 +1549,11 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
             this.postMessage({ type: "profileData", data: null })
             // testagent_change end
             await this.syncWebviewState("sse-connected")
+            // testagent_change start - force session status reconcile after SSE
+            // reconnect. Without this, idle events lost during the disconnect
+            // window leave the webview thinking the session is still busy.
+            await this.reconcileSessionStatusesOnReconnect()
+            // testagent_change end
             await this.flushPendingSessionRefresh("sse-connected")
             this.recoverPendingPrompts()
           } catch (error) {
@@ -2819,6 +2824,40 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
     await seedSessionStatuses(this.client, dir, this.sessionStatusMap, (msg) => this.postMessage(msg), reconcile)
   }
 
+  // testagent_change start - on SSE reconnect, the local session status map may
+  // be stale because session.status/idle events can be lost when the stream
+  // drops during a heartbeat/reconnect window. Force-reconcile against the
+  // backend so the webview stops showing a stuck busy state / running timer.
+  private async reconcileSessionStatusesOnReconnect(): Promise<void> {
+    if (!this.client || this.connectionState !== "connected") return
+    const dir = this.getWorkspaceDirectory()
+    try {
+      const result = await this.client.session.status({ directory: dir })
+      if (!result.data) return
+      const active = result.data
+      const changed: string[] = []
+      for (const [sid, info] of Object.entries(active)) {
+        const prev = this.sessionStatusMap.get(sid)
+        if (prev !== info.type) {
+          this.sessionStatusMap.set(sid, info.type)
+          changed.push(sid)
+        }
+      }
+      for (const sid of changed) {
+        this.postMessage({ type: "sessionStatus", sessionID: sid, status: this.sessionStatusMap.get(sid)! })
+      }
+      for (const [sid, status] of this.sessionStatusMap) {
+        if (status !== "idle" && !active[sid]) {
+          this.sessionStatusMap.set(sid, "idle")
+          this.postMessage({ type: "sessionStatus", sessionID: sid, status: "idle" })
+        }
+      }
+    } catch (error) {
+      console.error("[TestAgent]  Failed to reconcile session statuses on reconnect:", error)
+    }
+  }
+  // testagent_change end
+
   /**
    * Fetch the latest merged config and push it as configUpdated.
    * Called when global.config.updated SSE fires (config changed without a full dispose).
@@ -3742,6 +3781,7 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
     }
 
     try {
+      console.log('触发了abort  掉后端接口')
       await abortSession({
         client: this.client,
         sessionID: targetSessionID,

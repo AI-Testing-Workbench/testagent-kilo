@@ -66,6 +66,12 @@ export class KiloConnectionService {
   private connectPromise: Promise<void> | null = null
   private healthPollTimer: ReturnType<typeof setInterval> | null = null
   private remoteService: import("../RemoteStatusService").RemoteStatusService | null = null
+  // testagent_change start - track health check failures on the instance so SSE
+  // reconnect can reset them (the original closure-local counter could only be
+  // reset from within the poll callback, causing false-positive "forcing SSE
+  // reconnect" after the SSE had already self-healed).
+  private healthFailures = 0
+  // testagent_change end
 
   private readonly eventListeners: Set<SSEEventListener> = new Set()
   private readonly stateListeners: Set<StateListener> = new Set()
@@ -620,30 +626,42 @@ export class KiloConnectionService {
    * If the health check fails while we believe we are connected, the SSE client is
    * disconnected so its reconnect loop kicks in immediately.
    */
+  // testagent_change start - reset health failure counter from outside the
+  // poll callback (called by SSE onStateChange when the stream reconnects).
+  // Without this, the counter accumulates across an SSE self-heal and triggers
+  // a spurious "forcing SSE reconnect" right after the SSE already recovered.
+  private resetHealthFailures(): void {
+    this.healthFailures = 0
+  }
+  // testagent_change end
+
   private startHealthPoll(baseUrl: string, password: string): void {
     this.stopHealthPoll()
-    let consecutiveFailures = 0
+    this.healthFailures = 0
 
     this.healthPollTimer = setInterval(async () => {
       if (this.state !== "connected") {
-        consecutiveFailures = 0
+        this.healthFailures = 0
         return
       }
       const healthy = await this.checkHealth(baseUrl, password)
       if (!healthy && this.state === "connected") {
-        consecutiveFailures++
-        if (consecutiveFailures >= HEALTH_CHECK_FAIL_THRESHOLD) {
+        this.healthFailures++
+        if (this.healthFailures >= HEALTH_CHECK_FAIL_THRESHOLD) {
           console.warn(
-            `[TestAgent] ConnectionService: ❤️‍🩹 Health check failed ${consecutiveFailures} times — forcing SSE reconnect`,
+            `[TestAgent] ConnectionService: ❤️‍🩹 Health check failed ${this.healthFailures} times — forcing SSE reconnect`,
           )
+          // Reset so we don't immediately re-trigger on the next tick while
+          // the SSE reconnect is in flight.
+          this.healthFailures = 0
           this.sseClient?.reconnect()
         } else {
           console.warn(
-            `[TestAgent] ConnectionService: ❤️‍🩹 Health check failed (${consecutiveFailures}/${HEALTH_CHECK_FAIL_THRESHOLD})`,
+            `[TestAgent] ConnectionService: ❤️‍🩹 Health check failed (${this.healthFailures}/${HEALTH_CHECK_FAIL_THRESHOLD})`,
           )
         }
       } else {
-        consecutiveFailures = 0
+        this.healthFailures = 0
       }
     }, HEALTH_POLL_INTERVAL_MS)
 
@@ -729,6 +747,12 @@ export class KiloConnectionService {
 
       if (sseState === "connected") {
         didConnect = true
+        // testagent_change start - SSE just (re)connected, so any health
+        // failures accumulated while the stream was down are now stale.
+        // Without this reset the health poll keeps its counter and forces
+        // another SSE reconnect shortly after a successful self-heal.
+        this.resetHealthFailures()
+        // testagent_change end
         resolveConnected?.()
         resolveConnected = null
         rejectConnected = null
