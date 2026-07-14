@@ -134,32 +134,32 @@ export const TaskHeader: Component<TaskHeaderProps> = (props) => {
 
         <div data-slot="task-header-stats">
           <Show when={hasMessages() && session.currentSessionID()}>
-            {(sid) => (
-              <Tooltip
-                value={copied() ? "已复制" : sid()}
-                placement="bottom"
+            <Tooltip
+              value={copied() ? "已复制" : session.currentSessionID() ?? ""}
+              placement="bottom"
+            >
+              <button
+                data-slot="task-header-sessionid"
+                onClick={() => {
+                  const sid = session.currentSessionID()
+                  if (sid) copySid(sid)
+                }}
+                style={{
+                  background: "none",
+                  border: "none",
+                  cursor: "pointer",
+                  color: "var(--vscode-descriptionForeground)",
+                  "font-size": "11px",
+                  padding: "0 4px",
+                  display: "inline-flex",
+                  "align-items": "center",
+                  gap: "2px",
+                }}
               >
-                <button
-                  data-slot="task-header-sessionid"
-                  onClick={() => copySid(sid())}
-                  title={sid()}
-                  style={{
-                    background: "none",
-                    border: "none",
-                    cursor: "pointer",
-                    color: "var(--vscode-descriptionForeground)",
-                    "font-size": "11px",
-                    padding: "0 4px",
-                    display: "inline-flex",
-                    "align-items": "center",
-                    gap: "2px",
-                  }}
-                >
-                  {sid().slice(0, 20)}...
-                  <Icon name={copied() ? "check" : "copy"} size="small" />
-                </button>
-              </Tooltip>
-            )}
+                {(session.currentSessionID() ?? "").slice(0, 20)}...
+                <Icon name={copied() ? "check" : "copy"} size="small" />
+              </button>
+            </Tooltip>
           </Show>
           <Show when={hasMessages()}>
             <button
