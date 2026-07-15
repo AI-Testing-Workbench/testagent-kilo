@@ -3836,6 +3836,7 @@ export class Session2 extends HeyApiClient {
       sessionID: string
       directory?: string
       workspace?: string
+      reason?: "completed" | "user_abort" | "error"
     },
     options?: Options<never, ThrowOnError>,
   ) {
@@ -3847,6 +3848,7 @@ export class Session2 extends HeyApiClient {
             { in: "path", key: "sessionID" },
             { in: "query", key: "directory" },
             { in: "query", key: "workspace" },
+            { in: "body", key: "reason" },
           ],
         },
       ],
@@ -3855,6 +3857,11 @@ export class Session2 extends HeyApiClient {
       url: "/session/{sessionID}/abort",
       ...options,
       ...params,
+      headers: {
+        "Content-Type": "application/json",
+        ...options?.headers,
+        ...params.headers,
+      },
     })
   }
 

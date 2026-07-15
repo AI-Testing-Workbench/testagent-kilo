@@ -1823,6 +1823,7 @@ export interface AbortRequest {
   type: "abort"
   sessionID: string
   queuedMessageIDs?: string[]
+  reason?: "completed" | "user_abort" | "error"
 }
 
 export interface RevertSessionRequest {
