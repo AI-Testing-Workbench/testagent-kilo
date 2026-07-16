@@ -31,7 +31,7 @@ const RUNTIME_OPTIONS: SelectOption[] = [
   { value: "bun", label: "Bun" },
 ]
 
-const INTERNAL_NPM_REGISTRY = `${decodeURIComponent(atob("aHR0cCUzQSUyRiUyRmNlbnRyYWwuamFmLmNtYmNoaW5hLmNu"))}:80/artifactory/api/npm/group-npm`
+const INTERNAL_NPM_REGISTRY = `${decodeURIComponent(atob("aHR0cCUzQSUyRiUyRmNlbnRyYWwuamFmLmNtYmNoaW5hLmNu"))}/artifactory/api/npm/group-npm`
 
 const NormalSetting: Component = () => {
   const { config, updateConfig } = useConfig()
@@ -40,7 +40,6 @@ const NormalSetting: Component = () => {
   const [runtime, setRuntime] = createSignal<"bun" | "nodejs">("nodejs")
   const [npmRegistry, setNpmRegistry] = createSignal("")
   const [npmRegistryLoading, setNpmRegistryLoading] = createSignal(true)
-  const [defaultRegistry, setDefaultRegistry] = createSignal("") // 系统默认源的实际值
 
   onMount(() => {
     vscode.postMessage({ type: "checkGitInstalled" })
@@ -73,10 +72,6 @@ const NormalSetting: Component = () => {
     }
     if (msg.type === "npmRegistryResult") {
       setNpmRegistry(msg.registry)
-      // 首次收到时记录为系统默认值
-      if (!defaultRegistry()) {
-        setDefaultRegistry(msg.registry)
-      }
       setNpmRegistryLoading(false)
     }
   })
@@ -165,23 +160,10 @@ const NormalSetting: Component = () => {
     return SHELL_OPTIONS
   }
 
-  // 动态构建选项列表：系统默认源 + 内网源（如果与默认源不同）
-  const registryList = () => {
-    const def = defaultRegistry()
-    if (def === INTERNAL_NPM_REGISTRY) {
-      // 系统默认源本身就是内网源 → 只显示一个选项
-      return [{ value: def, label: "系统默认源（内网源）" }]
-    }
-    return [
-      { value: def, label: "系统默认源" },
-      { value: INTERNAL_NPM_REGISTRY, label: "内网源" },
-    ]
-  }
-
   const currentNpmOption = (): SelectOption | undefined => {
-    const registry = npmRegistry()
-    if (registry === INTERNAL_NPM_REGISTRY && defaultRegistry() !== INTERNAL_NPM_REGISTRY) return registryList()[1]
-    return registryList()[0]
+    return npmRegistry() === INTERNAL_NPM_REGISTRY
+      ? { value: INTERNAL_NPM_REGISTRY, label: "内网源" }
+      : undefined
   }
 
   const handleNpmChange = (option: SelectOption | undefined) => {
@@ -190,11 +172,11 @@ const NormalSetting: Component = () => {
 
     if (value === current) return
 
-    vscode.postMessage({ type: "setNpmRegistry", registry: value === defaultRegistry() ? "" : value })
+    vscode.postMessage({ type: "setNpmRegistry", registry: value })
     showToast({
       variant: "success",
       title: "npm 源已更新",
-      description: value === defaultRegistry() ? "已恢复为系统默认源" : `已切换到 ${value}`,
+      description: "已切换到内网源",
     })
   }
 
@@ -204,7 +186,7 @@ const NormalSetting: Component = () => {
       <Card style={{ "margin-bottom": "12px" }}>
         <SettingsRow title="npm源" description="选择npm源">
           <Select
-            options={registryList()}
+            options={[{ value: INTERNAL_NPM_REGISTRY, label: "内网源" }]}
             current={currentNpmOption()}
             value={(opt) => opt.value}
             label={(opt) => opt.label}

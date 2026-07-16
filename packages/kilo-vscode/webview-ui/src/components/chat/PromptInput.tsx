@@ -14,6 +14,7 @@ import { showToast } from "@kilocode/kilo-ui/toast"
 import { useDialog } from "@kilocode/kilo-ui/context/dialog"
 import { useSession } from "../../context/session"
 import { useServer } from "../../context/server"
+import { useProvider } from "../../context/provider"
 import { useLanguage } from "../../context/language"
 import { useVSCode } from "../../context/vscode"
 import { useWorktreeMode } from "../../context/worktree-mode"
@@ -70,6 +71,7 @@ interface PromptInputProps {
 export const PromptInput: Component<PromptInputProps> = (props) => {
   const session = useSession()
   const server = useServer()
+  const provider = useProvider()
   const language = useLanguage()
   const vscode = useVSCode()
   const worktree = useWorktreeMode()
@@ -323,7 +325,7 @@ export const PromptInput: Component<PromptInputProps> = (props) => {
     reviewComments().length > 0
   const clean = () =>
     !text().trim() && codeContexts().length === 0 && reviewComments().length === 0 && imageAttach.images().length === 0
-  const canSend = () => hasInput() && !isDisabled() && !terminal.pending() && !props.blocked?.()
+  const canSend = () => hasInput() && !isDisabled() && !terminal.pending() && !props.blocked?.() && provider.models().length > 0
   const showStop = () => isBusy() && !hasInput()
   const isAtEnd = () =>
     textareaRef ? atEnd(textareaRef.selectionStart, textareaRef.selectionEnd, textareaRef.value.length) : false
@@ -387,7 +389,8 @@ export const PromptInput: Component<PromptInputProps> = (props) => {
 
     if (message.type === "triggerTask") {
       if (isDisabled()) return
-      const sel = session.selected()
+const sel = session.selected()
+    if (!sel) return
       session.sendMessage(message.text, sel?.providerID, sel?.modelID)
     }
 
@@ -635,7 +638,7 @@ export const PromptInput: Component<PromptInputProps> = (props) => {
     }
   }
 
-  const canEnhance = () => !isBusy() && !isDisabled() && !enhancing()
+  const canEnhance = () => !isBusy() && !isDisabled() && !enhancing() && provider.models().length > 0
 
   const handleEnhance = () => {
     if (isDisabled() || enhancing() || isBusy()) return
@@ -694,7 +697,7 @@ export const PromptInput: Component<PromptInputProps> = (props) => {
     const ctx = code.length > 0 ? code.map(formatCodeContext).join("\n\n") : ""
     const review = pending.length > 0 ? formatReviewCommentsMarkdown(pending) : ""
     const message = [ctx, review, draft].filter(Boolean).join("\n\n")
-    if ((!message && imgs.length === 0) || isDisabled() || terminal.pending() || props.blocked?.()) return
+    if ((!message && imgs.length === 0) || isDisabled() || terminal.pending() || props.blocked?.() || provider.models().length === 0) return
 
     const mentionFiles = mention.parseFileAttachments(draft)
     const imgFiles = imgs.map((img) => ({ mime: img.mime, url: img.dataUrl, filename: img.filename }))

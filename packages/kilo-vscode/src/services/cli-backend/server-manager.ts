@@ -20,7 +20,10 @@ export class ServerManager {
   private startupPromise: Promise<ServerInstance> | null = null
   private logLevel: string | undefined
 
-  constructor(private readonly context: vscode.ExtensionContext) {}
+  constructor(
+    private readonly context: vscode.ExtensionContext,
+    private readonly onEnableAutoCompaction?: () => void,
+  ) {}
 
   setLogLevel(level: string | undefined) {
     this.logLevel = level
@@ -52,13 +55,46 @@ export class ServerManager {
     }
   }
 
+  private handleNotification(message: string) {
+    const match = message.match(/\[TESTAGENT_NOTIFICATION\] (.+)/)
+    if (!match) return
+
+    try {
+      const notification = JSON.parse(match[1])
+      if (notification.type !== "plugin-notification") return
+
+      const actions = Array.isArray(notification.actions) ? notification.actions : []
+      const list = actions
+        .map((item: unknown) => {
+          if (!item || typeof item !== "object" || !("label" in item)) return undefined
+          return typeof item.label === "string" ? item : undefined
+        })
+        .filter((item: unknown): item is { id?: string; label: string } => Boolean(item))
+      const action = list[0]
+      const label = action?.label
+      const show =
+        notification.level === "error"
+          ? vscode.window.showErrorMessage(`TestAgent: ${notification.message}`, ...list.map((item) => item.label))
+          : vscode.window.showInformationMessage(
+              `TestAgent: ${notification.message}`,
+              ...list.map((item) => item.label),
+            )
+      void show.then((selected) => {
+        if (!action || selected !== label) return
+        console.log("[TestAgent] 用户点击了确定", action.id ? { actionID: action.id } : undefined)
+        this.onEnableAutoCompaction?.()
+      })
+    } catch (err) {
+      console.error("[TestAgent] ServerManager: Failed to parse notification:", err)
+    }
+  }
+
   private async startServer(): Promise<ServerInstance> {
     const password = crypto.randomBytes(32).toString("hex")
     const cliPath = this.getCliPath()
     console.log("[TestAgent] ServerManager: 📍 CLI path:", cliPath)
     console.log("[TestAgent] ServerManager: 🔐 Generated password (length):", password.length)
 
-    // Verify the CLI binary exists
     if (!fs.existsSync(cliPath)) {
       throw new Error(
         `CLI binary not found at expected path: ${cliPath}. Please ensure the CLI is built and bundled with the extension.`,
@@ -69,137 +105,117 @@ export class ServerManager {
     console.log("[TestAgent] ServerManager: 📄 CLI isFile:", stat.isFile())
     console.log("[TestAgent] ServerManager: 📄 CLI mode (octal):", (stat.mode & 0o777).toString(8))
 
-    // testagent_change start - fetch user ID before spawning so it's available immediately
-    let userId: string | undefined
-    let userName: string | undefined
-    let sapId: string | undefined
-    let openId: string | undefined
-    let originPathId: string | undefined
-    let pathName: string | undefined
+    const meta = await this.getUserMeta()
+    const claudeCompat = vscode.workspace.getConfiguration("testagent.new").get<boolean>("claudeCodeCompat", false)
+    const spawnCwd = vscode.workspace.workspaceFolders?.[0]?.uri.fsPath ?? process.env.HOME ?? require("os").homedir()
+    const args = ["serve", "--port", "0"]
+    if (this.logLevel) args.push("--log-level", this.logLevel)
+
+    return this.runServer({ cliPath, password, spawnCwd, args, claudeCompat, meta })
+  }
+
+  private async getUserMeta() {
     try {
       const session = await vscode.authentication.getSession("tscode-oauth", [], { createIfNone: false })
-      userId = session?.account.id
-      userName = session?.account.label
-      const metadata = (session as any).metadata;
-      sapId = metadata?.sapId;
-      openId = metadata?.openId;
-      originPathId = metadata?.originPathId;
-      pathName = metadata?.pathName;
+      const meta = (session as any).metadata
+      return {
+        userId: session?.account.id,
+        userName: session?.account.label,
+        sapId: meta?.sapId,
+        openId: meta?.openId,
+        originPathId: meta?.originPathId,
+        pathName: meta?.pathName,
+      }
     } catch {
-      // non-critical, ignore
+      return undefined
     }
-    // testagent_change end
+  }
+
+  private runServer(input: {
+    cliPath: string
+    password: string
+    spawnCwd: string
+    args: string[]
+    claudeCompat: boolean
+    meta:
+      | {
+          userId?: string
+          userName?: string
+          sapId?: string
+          openId?: string
+          originPathId?: string
+          pathName?: string
+        }
+      | undefined
+  }): Promise<ServerInstance> {
+    console.log("[TestAagent New] ServerManager: 🎬 Spawning CLI process:", input.cliPath, input.args)
+    console.log("[TestAgent] ServerManager: 🌐 Extension host LANG:", process.env.LANG)
+    console.log("[TestAgent] ServerManager: 🌐 Extension host LC_ALL:", process.env.LC_ALL)
+    console.log("[TestAgent] ServerManager: 🌐 Will set LANG to:", process.env.LANG || "en_US.UTF-8")
+    console.log("[TestAgent] ServerManager: 🌐 Platform:", process.platform)
+
+    const serverProcess = spawn(input.cliPath, input.args, {
+      cwd: input.spawnCwd,
+      env: {
+        ...process.env,
+        LANG: process.env.LANG || "en_US.UTF-8",
+        LC_ALL: process.env.LC_ALL || "en_US.UTF-8",
+        ...(process.platform === "win32" && {
+          PYTHONIOENCODING: "utf-8",
+        }),
+        OPENCODE_SERVER_PASSWORD: input.password,
+        OPENCODE_SERVER_USERNAME: "opencode",
+        MIMALLOC_PURGE_DELAY: "0",
+        KILO_CLIENT: "vscode",
+        KILO_ENABLE_QUESTION_TOOL: "true",
+        KILOCODE_FEATURE: "vscode-extension",
+        KILO_TELEMETRY_LEVEL: vscode.env.isTelemetryEnabled ? "all" : "off",
+        KILO_APP_NAME: "testagent",
+        KILO_EDITOR_NAME: vscode.env.appName,
+        KILO_PLATFORM: "vscode",
+        KILO_MACHINE_ID: vscode.env.machineId,
+        KILO_APP_VERSION: this.context.extension.packageJSON.version,
+        KILO_VSCODE_VERSION: vscode.version,
+        KILOCODE_EDITOR_NAME: `${vscode.env.appName} ${vscode.version}`,
+        ...(!input.claudeCompat && { KILO_DISABLE_CLAUDE_CODE: "true" }),
+        ...(input.meta?.userId && { TESTAGENT_USER_ID: input.meta.userId }),
+        ...(input.meta?.userName && { TESTAGENT_USER_NAME: input.meta.userName }),
+        ...(input.meta?.sapId && { TESTAGENT_SAP_ID: input.meta.sapId }),
+        ...(input.meta?.openId && { TESTAGENT_OPEN_ID: input.meta.openId }),
+        ...(input.meta?.originPathId && { TESTAGENT_ORIGIN_PATH_ID: input.meta.originPathId }),
+        ...(input.meta?.pathName && { TESTAGENT_PATH_NAME: input.meta.pathName }),
+      },
+      stdio: ["ignore", "pipe", "pipe"],
+      ...(process.platform !== "win32" && { detached: true }),
+    })
+    console.log("[TestAgent] ServerManager: 📦 Process spawned with PID:", serverProcess.pid)
+
+    const stderrLines: string[] = []
+    let resolved = false
 
     return new Promise((resolve, reject) => {
-      console.log("[TestAagent New] ServerManager: 🎬 Spawning CLI process:", cliPath, ["serve", "--port", "0"])
-      // testagent_change: Log LANG env var for debugging
-      console.log("[TestAgent] ServerManager: 🌐 Extension host LANG:", process.env.LANG)
-      console.log("[TestAgent] ServerManager: 🌐 Extension host LC_ALL:", process.env.LC_ALL)
-      console.log("[TestAgent] ServerManager: 🌐 Will set LANG to:", process.env.LANG || "en_US.UTF-8")
-      console.log("[TestAgent] ServerManager: 🌐 Platform:", process.platform)
-      const claudeCompat = vscode.workspace.getConfiguration("testagent.new").get<boolean>("claudeCodeCompat", false)
-      // Pin cwd so the CLI doesn't inherit the extension host's cwd ("/" under F5 debug)
-      const spawnCwd = vscode.workspace.workspaceFolders?.[0]?.uri.fsPath ?? process.env.HOME ?? require("os").homedir()
-      const args = ["serve", "--port", "0"]
-      if (this.logLevel) args.push("--log-level", this.logLevel)
-      const serverProcess = spawn(cliPath, args, {
-        cwd: spawnCwd,
-        env: {
-          ...process.env,
-          // testagent_change start: Ensure UTF-8 encoding for shell commands
-          // Without LANG, shell commands may output in system default encoding (e.g., GBK on Chinese Windows)
-          // which causes mojibake when decoded as UTF-8 by Stream.decodeText in bash.ts
-          LANG: process.env.LANG || "en_US.UTF-8",
-          LC_ALL: process.env.LC_ALL || "en_US.UTF-8",
-          // Windows-specific: Set console code page to UTF-8 (65001)
-          // This ensures PowerShell/cmd outputs UTF-8 instead of GBK/GB2312
-          ...(process.platform === "win32" && {
-            PYTHONIOENCODING: "utf-8",
-            // Note: We can't set chcp directly here, but LANG should be enough for most tools
-          }),
-          // testagent_change end
-          OPENCODE_SERVER_PASSWORD: password,
-          OPENCODE_SERVER_USERNAME: "opencode", // testagent_change - explicitly set username for consistency
-          // Force mimalloc (the allocator Bun ships with) to return freed pages
-          // to the OS immediately instead of retaining them in its arenas.
-          // Without this, Bun.spawn's piped stdio accumulates ~2 MB of native
-          // RSS per call on Windows, causing the Agent Manager (which polls git
-          // once per second per worktree) to reach multi-GB RSS in minutes.
-          // See oven-sh/bun#18265 and Jarred's workaround note in #21560.
-          MIMALLOC_PURGE_DELAY: "0",
-          // KILO_SERVER_PASSWORD: password,
-          KILO_CLIENT: "vscode",
-          KILO_ENABLE_QUESTION_TOOL: "true",
-          KILOCODE_FEATURE: "vscode-extension",
-          KILO_TELEMETRY_LEVEL: vscode.env.isTelemetryEnabled ? "all" : "off",
-          KILO_APP_NAME: "testagent",
-          KILO_EDITOR_NAME: vscode.env.appName,
-          KILO_PLATFORM: "vscode",
-          KILO_MACHINE_ID: vscode.env.machineId,
-          KILO_APP_VERSION: this.context.extension.packageJSON.version,
-          KILO_VSCODE_VERSION: vscode.version,
-          KILOCODE_EDITOR_NAME: `${vscode.env.appName} ${vscode.version}`,
-          ...(!claudeCompat && { KILO_DISABLE_CLAUDE_CODE: "true" }),
-          ...(userId && { TESTAGENT_USER_ID: userId }), // testagent_change
-          ...(userName && { TESTAGENT_USER_NAME: userName }), // testagent_change
-          ...(sapId && { TESTAGENT_SAP_ID: sapId }), // testagent_change
-          ...(openId && { TESTAGENT_OPEN_ID: openId }), // testagent_change
-          ...(originPathId && { TESTAGENT_ORIGIN_PATH_ID: originPathId }), // testagent_change
-          ...(pathName && { TESTAGENT_PATH_NAME: pathName }), // testagent_change
-        },
-        stdio: ["ignore", "pipe", "pipe"],
-        // testagent_change start - prevent CMD window on Windows
-        // detached: true causes a console window to appear on Windows.
-        // Only use detached on Unix platforms for proper process group handling.
-        ...(process.platform !== "win32" && { detached: true }),
-        // testagent_change end
-      })
-      console.log("[TestAgent] ServerManager: 📦 Process spawned with PID:", serverProcess.pid)
-
-      let resolved = false
-      const stderrLines: string[] = []
-
       serverProcess.stdout?.on("data", (data: Buffer) => {
         const output = data.toString()
         console.log("[TestAgent] ServerManager: 📥 CLI Server stdout:", output)
 
         const port = parseServerPort(output)
-        if (port !== null && !resolved) {
-          resolved = true
-          console.log("[TestAgent] ServerManager: 🎯 Port detected:", port)
-          resolve({ port, password, process: serverProcess })
-        }
+        if (port === null || resolved) return
+
+        resolved = true
+        console.log("[TestAgent] ServerManager: 🎯 Port detected:", port)
+        resolve({ port, password: input.password, process: serverProcess })
       })
 
       serverProcess.stderr?.on("data", (data: Buffer) => {
         const errorOutput = data.toString()
         console.error("[TestAgent] ServerManager: ⚠️ CLI Server stderr:", errorOutput)
         stderrLines.push(errorOutput)
-
-        // testagent_change start - parse plugin notifications from stderr
-        const notificationMatch = errorOutput.match(/\[TESTAGENT_NOTIFICATION\] (.+)/)
-        if (notificationMatch) {
-          try {
-            const notification = JSON.parse(notificationMatch[1])
-            if (notification.type === "plugin-notification") {
-              if (notification.level === "info") {
-                vscode.window.showInformationMessage(`TestAgent: ${notification.message}`)
-              } else if (notification.level === "error") {
-                vscode.window.showErrorMessage(`TestAgent: ${notification.message}`)
-              }
-            }
-          } catch (err) {
-            console.error("[TestAgent] ServerManager: Failed to parse notification:", err)
-          }
-        }
-        // testagent_change end
+        this.handleNotification(errorOutput)
       })
 
       serverProcess.on("error", (error) => {
         console.error("[TestAgent] ServerManager: ❌ Process error:", error)
-        if (!resolved) {
-          reject(error)
-        }
+        if (!resolved) reject(error)
       })
 
       serverProcess.on("exit", (code) => {
@@ -207,27 +223,25 @@ export class ServerManager {
         if (this.instance?.process === serverProcess) {
           this.instance = null
         }
-        if (!resolved) {
-          const { userMessage, userDetails } = toErrorMessage(
-            t("server.processExited", { code: code ?? "null" }),
-            stderrLines,
-            cliPath,
-          )
-          reject(new ServerStartupError(userMessage, userDetails))
-        }
+        if (resolved) return
+        const { userMessage, userDetails } = toErrorMessage(
+          t("server.processExited", { code: code ?? "null" }),
+          stderrLines,
+          input.cliPath,
+        )
+        reject(new ServerStartupError(userMessage, userDetails))
       })
 
       setTimeout(() => {
-        if (!resolved) {
-          console.error(`[TestAgent] ServerManager: ⏰ Server startup timeout (${STARTUP_TIMEOUT_SECONDS}s)`)
-          ServerManager.killProcess(serverProcess)
-          const { userMessage, userDetails } = toErrorMessage(
-            t("server.startupTimeout", { seconds: STARTUP_TIMEOUT_SECONDS }),
-            stderrLines,
-            cliPath,
-          )
-          reject(new ServerStartupError(userMessage, userDetails))
-        }
+        if (resolved) return
+        console.error(`[TestAgent] ServerManager: ⏰ Server startup timeout (${STARTUP_TIMEOUT_SECONDS}s)`)
+        ServerManager.killProcess(serverProcess)
+        const { userMessage, userDetails } = toErrorMessage(
+          t("server.startupTimeout", { seconds: STARTUP_TIMEOUT_SECONDS }),
+          stderrLines,
+          input.cliPath,
+        )
+        reject(new ServerStartupError(userMessage, userDetails))
       }, STARTUP_TIMEOUT_SECONDS * 1000)
     })
   }

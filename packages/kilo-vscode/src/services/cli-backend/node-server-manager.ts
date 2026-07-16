@@ -23,7 +23,10 @@ export class NodeServerManager {
   private startupPromise: Promise<ServerInstance> | null = null
   private logLevel: string | undefined
 
-  constructor(private readonly context: vscode.ExtensionContext) {}
+  constructor(
+    private readonly context: vscode.ExtensionContext,
+    private readonly onEnableAutoCompaction?: () => void,
+  ) {}
 
   setLogLevel(level: string | undefined) {
     this.logLevel = level
@@ -52,6 +55,40 @@ export class NodeServerManager {
     }
   }
 
+  private handleNotification(message: string) {
+    const match = message.match(/\[TESTAGENT_NOTIFICATION\] (.+)/)
+    if (!match) return
+
+    try {
+      const notification = JSON.parse(match[1])
+      if (notification.type !== "plugin-notification") return
+
+      const actions = Array.isArray(notification.actions) ? notification.actions : []
+      const list = actions
+        .map((item: unknown) => {
+          if (!item || typeof item !== "object" || !("label" in item)) return undefined
+          return typeof item.label === "string" ? item : undefined
+        })
+        .filter((item: unknown): item is { id?: string; label: string } => Boolean(item))
+      const action = list[0]
+      const label = action?.label
+      const show =
+        notification.level === "error"
+          ? vscode.window.showErrorMessage(`TestAgent: ${notification.message}`, ...list.map((item) => item.label))
+          : vscode.window.showInformationMessage(
+              `TestAgent: ${notification.message}`,
+              ...list.map((item) => item.label),
+            )
+      void show.then((selected) => {
+        if (!action || selected !== label) return
+        console.log("[TestAgent] 用户点击了确定", action.id ? { actionID: action.id } : undefined)
+        this.onEnableAutoCompaction?.()
+      })
+    } catch (err) {
+      console.error("[TestAgent] NodeServerManager: Failed to parse notification:", err)
+    }
+  }
+
   private async startServer(): Promise<ServerInstance> {
     const password = crypto.randomBytes(32).toString("hex")
     const nodePath = await this.resolveNodePath()
@@ -72,14 +109,7 @@ export class NodeServerManager {
     return new Promise((resolve, reject) => {
       console.log("[TestAgent] NodeServerManager: 🎬 Spawning Node.js server")
 
-      const args = [
-        "--experimental-sqlite",
-        entry,
-        "--port", "0",
-        "--password", password,
-        "--hostname", "127.0.0.1",
-      ]
-      
+      const args = ["--experimental-sqlite", entry, "--port", "0", "--password", password, "--hostname", "127.0.0.1"]
 
       const proc = spawn(nodePath, args, {
         cwd: spawnCwd,
@@ -136,21 +166,7 @@ export class NodeServerManager {
         stderrLines.push(output)
 
         // testagent_change start - parse plugin notifications from stderr
-        const notificationMatch = output.match(/\[TESTAGENT_NOTIFICATION\] (.+)/)
-        if (notificationMatch) {
-          try {
-            const notification = JSON.parse(notificationMatch[1])
-            if (notification.type === "plugin-notification") {
-              if (notification.level === "info") {
-                vscode.window.showInformationMessage(`TestAgent: ${notification.message}`)
-              } else if (notification.level === "error") {
-                vscode.window.showErrorMessage(`TestAgent: ${notification.message}`)
-              }
-            }
-          } catch (err) {
-            console.error("[TestAgent] NodeServerManager: Failed to parse notification:", err)
-          }
-        }
+        this.handleNotification(output)
         // testagent_change end
       })
 
@@ -213,12 +229,12 @@ export class NodeServerManager {
 
     throw new Error(
       "Node.js >= 22.5.0 not found.\n\n" +
-      "TestAgent backend requires Node.js 22.5+ with node:sqlite support.\n\n" +
-      "Options:\n" +
-      "1. Install Node.js 22.5+ from https://nodejs.org/ and ensure it's in your PATH\n" +
-      "2. Update TSCode to a version that includes Node.js 22.5+ (check Help → About)\n\n" +
-      `Current TSCode Node.js: ${process.version}\n` +
-      "Required: >= v22.5.0",
+        "TestAgent backend requires Node.js 22.5+ with node:sqlite support.\n\n" +
+        "Options:\n" +
+        "1. Install Node.js 22.5+ from https://nodejs.org/ and ensure it's in your PATH\n" +
+        "2. Update TSCode to a version that includes Node.js 22.5+ (check Help → About)\n\n" +
+        `Current TSCode Node.js: ${process.version}\n` +
+        "Required: >= v22.5.0",
     )
   }
 
@@ -340,7 +356,7 @@ export class NodeServerManager {
   private isVersionValid(version: string): boolean {
     const match = version.match(/^v(\d+)\.(\d+)/)
     if (!match) return false
-    
+
     const major = parseInt(match[1])
     const minor = parseInt(match[2])
     return major > 22 || (major === 22 && minor >= 5)

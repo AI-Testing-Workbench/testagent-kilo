@@ -215,9 +215,9 @@ export const VscodeSessionTurn: Component<VscodeSessionTurnProps> = (props) => {
               onRevert={
                 assistantMessages().length > 0 && !session.revert()
                   ? () => {
-                      if (session.status() !== "idle") return
-                      session.revertSession(msg().id)
-                    }
+                    if (session.status() !== "idle") return
+                    session.revertSession(msg().id)
+                  }
                   : undefined
               }
             />
@@ -259,7 +259,7 @@ export const VscodeSessionTurn: Component<VscodeSessionTurnProps> = (props) => {
               <Show when={turnStats()?.completed}>
                 {() => {
                   const stats = turnStats()!
-                  const tipParts = `本轮对话耗时从用户消息发送到agent响应完成的总花费时间。`
+                  const tipParts = `本轮对话耗时从用户消息发送到agent响应完成的总花费时间，消耗tokens: ${fmt(stats.totalTokens)}`
                   return (
                     <div
                       style={{

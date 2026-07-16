@@ -22,7 +22,7 @@ type DirectoryProvider = () => string[]
 
 // Poll /global/health at the same interval as packages/app/src/context/server.tsx.
 // This provides a second detection channel for server death independent of the SSE heartbeat.
-const HEALTH_POLL_INTERVAL_MS = 10_000
+const HEALTH_POLL_INTERVAL_MS = 20_000
 
 // How many consecutive health-check failures before forcing an SSE reconnect.
 // This guards against spurious reconnects when the extension host event loop
@@ -101,18 +101,21 @@ export class KiloConnectionService {
     // testagent_change start - support runtime switching
     const savedRuntime = context.globalState.get<"bun" | "nodejs">("testagent.runtime")
     const currentRuntime = savedRuntime || (isTestagentBun() ? "bun" : "nodejs")
-    this.serverManager = currentRuntime === "bun" ? new ServerManager(context) : new NodeServerManager(context)
+    this.serverManager =
+      currentRuntime === "bun"
+        ? new ServerManager(context, () => this.enableAutoCompaction())
+        : new NodeServerManager(context, () => this.enableAutoCompaction())
     // testagent_change end
-    
+
     // testagent_change start - sync user ID to CLI whenever auth session changes
     // if (isTestagentBun()) {
-      context.subscriptions.push(
-        vscode.authentication.onDidChangeSessions(async (e) => {
-          if (e.provider.id === "tscode-oauth") {
-            await this.syncUserId()
-          }
-        }),
-      )
+    context.subscriptions.push(
+      vscode.authentication.onDidChangeSessions(async (e) => {
+        if (e.provider.id === "tscode-oauth") {
+          await this.syncUserId()
+        }
+      }),
+    )
     // }
     // testagent_change end
   }
@@ -552,10 +555,10 @@ export class KiloConnectionService {
    */
   async switchRuntime(context: vscode.ExtensionContext, runtime: "bun" | "nodejs"): Promise<void> {
     console.log(`[TestAgent] Switching runtime to: ${runtime}`)
-    
+
     // Save the runtime preference
     await context.globalState.update("testagent.runtime", runtime)
-    
+
     // Dispose current server
     this.stopHealthPoll()
     this.sseClient?.dispose()
@@ -565,10 +568,13 @@ export class KiloConnectionService {
     this.config = null
     this.info = null
     this.connectPromise = null
-    
+
     // Create new server manager based on runtime
-    this.serverManager = runtime === "bun" ? new ServerManager(context) : new NodeServerManager(context)
-    
+    this.serverManager =
+      runtime === "bun"
+        ? new ServerManager(context, () => this.enableAutoCompaction())
+        : new NodeServerManager(context, () => this.enableAutoCompaction())
+
     // Reconnect - use workspace dir if available, otherwise use temp dir
     const workspaceDir = vscode.workspace.workspaceFolders?.[0]?.uri.fsPath ?? require("os").tmpdir()
     this.setState("connecting")
@@ -581,6 +587,18 @@ export class KiloConnectionService {
   getCurrentRuntime(context: vscode.ExtensionContext): "bun" | "nodejs" {
     const saved = context.globalState.get<"bun" | "nodejs">("testagent.runtime")
     return saved || (isTestagentBun() ? "bun" : "nodejs")
+  }
+  // testagent_change end
+
+  // testagent_change start - enable auto compaction on user confirmation
+  private async enableAutoCompaction(): Promise<void> {
+    if (!this.client) return
+    try {
+      await this.client.global.config.update({ config: { compaction: { auto: true } } })
+      console.log("[TestAgent] 自动压缩已开启")
+    } catch (err) {
+      console.error("[TestAgent] 开启自动压缩失败:", err)
+    }
   }
   // testagent_change end
 
@@ -775,7 +793,7 @@ export class KiloConnectionService {
 
     // testagent_change start - push current user ID to CLI after connection
     // if (isTestagentBun()) {
-      await this.syncUserId()
+    await this.syncUserId()
     // }
     // testagent_change end
   }
@@ -785,8 +803,8 @@ export class KiloConnectionService {
     if (!this.config) return
     try {
       const session = await vscode.authentication.getSession("tscode-oauth", [], { createIfNone: false })
-      const metadata = (session as any).metadata;
-      const userId = metadata?.employeeId;
+      const metadata = (session as any).metadata
+      const userId = metadata?.employeeId
       const auth = `Basic ${Buffer.from(`opencode:${this.config.password}`).toString("base64")}`
       const response = await fetch(`${this.config.baseUrl}/testagent/user`, {
         method: "PUT",
