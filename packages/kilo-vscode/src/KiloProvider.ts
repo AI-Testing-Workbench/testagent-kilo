@@ -806,7 +806,6 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
             message.agent,
             message.variant,
             files,
-            message.goal,
           )
           break
         }
@@ -823,7 +822,6 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
             message.agent,
             message.variant,
             files,
-            message.goal,
           )
           break
         }
@@ -1303,7 +1301,6 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
             files,
             typeof message.command === "string" ? message.command : undefined,
             typeof message.commandArgs === "string" ? message.commandArgs : undefined,
-            message.goal,
           )
           break
         }
@@ -3481,7 +3478,6 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
     agent?: string,
     variant?: string,
     files?: MessageFile[],
-    goal?: string,
   ): Promise<void> {
     // testagent_change start - intercept /sdt-* commands for testflow
     if (text.startsWith("/sdt-")) {
@@ -3572,7 +3568,6 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
     agent?: string,
     variant?: string,
     files?: MessageFile[],
-    goal?: string,
   ): Promise<void> {
     // testagent_change start - intercept sdt-* commands for testflow
     if (command.startsWith("sdt-")) {
@@ -3634,7 +3629,6 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
               directory: dir,
               command,
               arguments: args,
-              goal,
               messageID,
               model: providerID && modelID ? `${providerID}/${modelID}` : undefined,
               agent,

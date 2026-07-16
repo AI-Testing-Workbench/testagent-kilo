@@ -1112,6 +1112,8 @@ export const dict = {
   "settings.experimental.codebaseSearch.description": "Enable AI-powered natural language search across your codebase",
   "settings.experimental.continueOnDeny.title": "Continue on Deny",
   "settings.experimental.continueOnDeny.description": "Continue the agent loop when a permission is denied",
+  "settings.experimental.goal.title": "Goal Tracking",
+  "settings.experimental.goal.description": "Enable long-running goal tracking (requires restart)",
   "settings.experimental.mcpTimeout.title": "MCP Timeout (s)",
   "settings.experimental.mcpTimeout.description": "Timeout for MCP server requests in seconds",
   "settings.experimental.remote.title": "Remote Control",

@@ -1093,6 +1093,9 @@ export const dict = {
   "settings.experimental.codebaseSearch.description": "启用 AI 驱动的自然语言代码库搜索",
   "settings.experimental.continueOnDeny.title": "拒绝后继续",
   "settings.experimental.continueOnDeny.description": "权限被拒绝时继续智能体循环",
+  "settings.experimental.goal.title": "Goal 目标追踪",
+  "settings.experimental.goal.description": "启用长期目标追踪功能（需要重启）",
+
   "settings.experimental.mcpTimeout.title": "MCP 超时（秒）",
   "settings.experimental.mcpTimeout.description": "MCP 服务器请求的超时时间（秒）",
   "settings.experimental.remote.title": "Remote 控制",

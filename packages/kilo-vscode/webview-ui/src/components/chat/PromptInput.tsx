@@ -14,6 +14,7 @@ import { showToast } from "@kilocode/kilo-ui/toast"
 import { useDialog } from "@kilocode/kilo-ui/context/dialog"
 import { useSession } from "../../context/session"
 import { useServer } from "../../context/server"
+import { useConfig } from "../../context/config"
 import { useLanguage } from "../../context/language"
 import { useVSCode } from "../../context/vscode"
 import { useWorktreeMode } from "../../context/worktree-mode"
@@ -31,12 +32,13 @@ import { useGhostText } from "../../hooks/useGhostText"
 import { useImageAttachments, type ImageAttachment } from "../../hooks/useImageAttachments"
 import { convertToMentionPath } from "../../utils/path-mentions"
 import { usePromptHistory } from "../../hooks/usePromptHistory"
-import { WandSparkles } from "@kilocode/kilo-ui/lucide"
+import { Target, WandSparkles } from "@kilocode/kilo-ui/lucide"
 import { fileName, dirName, buildHighlightSegments, atEnd, isPromptBusy } from "./prompt-input-utils"
 import type { CodeContext, ReviewComment, TextPart } from "../../types/messages"
 import { formatReviewCommentsMarkdown } from "../../utils/review-comment-markdown"
 import { pendingDraftKey, scopeDraftKey, sessionDraftKey } from "../../utils/prompt-drafts"
 import { ContextRing, SessionInfoContent } from "./SessionInfo"
+import { GoalDialog } from "./GoalDialog"
 
 // Per-session input text storage (module-level so it survives remounts)
 const drafts = new Map<string, string>()
@@ -70,6 +72,7 @@ interface PromptInputProps {
 export const PromptInput: Component<PromptInputProps> = (props) => {
   const session = useSession()
   const server = useServer()
+  const { config } = useConfig()
   const language = useLanguage()
   const vscode = useVSCode()
   const worktree = useWorktreeMode()
@@ -86,6 +89,7 @@ export const PromptInput: Component<PromptInputProps> = (props) => {
   // testagent_change end
   const terminal = useTerminalContext(vscode)
   const slash = useSlashCommand(vscode)
+  const goal = () => config().goal?.enabled === true && slash.commands().some((cmd) => cmd.name === "goal")
   const imageAttach = useImageAttachments()
   imageAttach.setFilePathDropHandler((paths) => {
     const cwd = server.workspaceDirectory()
@@ -656,6 +660,10 @@ export const PromptInput: Component<PromptInputProps> = (props) => {
     vscode.postMessage({ type: "enhancePrompt", text: draft, requestId: `enhance-${draftKey()}-${enhanceCounter}` })
   }
 
+  const openGoal = () => {
+    dialog.show(() => <GoalDialog onClose={() => dialog.close()} pendingSessionID={props.pendingSessionID} />)
+  }
+
   const handleSend = async () => {
     const draft = text().trim()
 
@@ -1072,7 +1080,20 @@ export const PromptInput: Component<PromptInputProps> = (props) => {
           </Show>
         </div>
         <div class="prompt-input-hint-actions">
-            <ContextRing  />
+          <ContextRing />
+          <Show when={goal()}>
+            <Tooltip value="Goal 控制" placement="top">
+              <Button
+                variant="ghost"
+                size="small"
+                onClick={openGoal}
+                disabled={!server.isConnected()}
+                aria-label="Goal 控制"
+              >
+                <Target size={16} />
+              </Button>
+            </Tooltip>
+          </Show>
           <Tooltip value={language.t("prompt.action.enhance")} placement="top">
             <Button
               variant="ghost"

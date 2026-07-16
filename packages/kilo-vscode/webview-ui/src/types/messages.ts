@@ -461,6 +461,10 @@ export interface CommitMessageConfig {
   prompt?: string
 }
 
+export interface GoalConfig {
+  enabled?: boolean
+}
+
 export type PluginOptions = Record<string, unknown>
 export type PluginSpec = string | [string, PluginOptions]
 
@@ -505,6 +509,7 @@ export interface Config {
   lsp?: false | Record<string, unknown>
   compaction?: CompactionConfig
   commit_message?: CommitMessageConfig
+  goal?: GoalConfig
   tools?: Record<string, boolean>
   layout?: "auto" | "stretch"
   experimental?: ExperimentalConfig
@@ -1893,7 +1898,6 @@ export interface ImportAndSendMessage {
   files?: FileAttachment[]
   command?: string
   commandArgs?: string
-  goal?: string
 }
 
 export interface LoginRequest {
@@ -1987,7 +1991,6 @@ export interface SendCommandRequest {
   type: "sendCommand"
   command: string
   arguments: string
-  goal?: string
   messageID?: string
   sessionID?: string
   draftID?: string
