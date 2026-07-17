@@ -406,6 +406,22 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
     // testagent_change start - Initialize system notification service
     this.systemNotification = new SystemNotificationService(extensionUri)
     // testagent_change end
+
+    // testagent_change start - provide current session ID for auto-compaction retry abort
+    this.connectionService.setCurrentSessionIdGetter(() => this.currentSession?.id)
+    // 当用户点击"确定"开启自动压缩时，走统一 abort 流程
+    this.connectionService.onAutoCompaction(() => {
+      const sid = this.currentSession?.id
+      if (sid) {
+        // 直接通知前端 UI 更新状态（cancelRetry 内部依赖 retryAbortControllers，可能没有注册）
+        this.postMessage({ type: "sessionStatus", sessionID: sid, status: "idle" })
+        // 仍然尝试取消本地 retry（如果有的话）
+        this.cancelRetry(sid)
+        // 不阻塞后续流程，异步执行后端 abort
+        this.handleAbort(sid).catch((e) => console.warn("[TestAgent] auto-compaction handleAbort 失败:", e))
+      }
+    })
+    // testagent_change end
   }
 
   setRemoteService(service: RemoteStatusService): void {
@@ -1093,6 +1109,13 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
           this.webview?.postMessage({ type: "shellPathResolved", name, path })
           break
         }
+        // testagent_change start - available terminals
+        case "getAvailableTerminals": {
+          const terminals = await this.getAvailableTerminals()
+          this.webview?.postMessage({ type: "availableTerminalsResult", terminals })
+          break
+        }
+        // testagent_change end
         // testagent_change start - npm registry
         case "getNpmRegistry": {
           try {
@@ -4357,9 +4380,6 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
       if (!notifySubagent) return
     }
 
-    // Truncate long error messages
-    const shortError = error.length > 50 ? error.substring(0, 50) + "..." : error
-
     const prefix = isChild ? "[子任务] " : ""
     const title = isChild ? "TestAgent" : (this.currentSession?.title ?? "TestAgent")
 
@@ -4367,7 +4387,7 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
 
     this.systemNotification.notify({
       title,
-      message: `${prefix}发生错误：${shortError}`,
+      message: `${prefix}发生错误：${error}`,
       type: "error",
       onClick: () => this.revealWebview(),
     })
@@ -5124,4 +5144,101 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
       return false
     }
   }
+
+  // testagent_change start - detect available terminals on the current system
+  private async getAvailableTerminals(): Promise<Array<{ name: string; path: string; description?: string }>> {
+    const result: Array<{ name: string; path: string; description?: string }> = []
+    const platform = process.platform
+
+    if (platform === "win32") {
+      // PowerShell
+      const psPaths = [
+        "C:/Windows/System32/WindowsPowerShell/v1.0/powershell.exe",
+        "C:/Windows/System32/powershell.exe",
+      ]
+      for (const p of psPaths) {
+        if (fs.existsSync(p)) {
+          result.push({ name: "PowerShell", path: p, description: "Windows PowerShell" })
+          break
+        }
+      }
+
+      // PowerShell 7+
+      const ps7Paths = [
+        "C:/Program Files/PowerShell/7/pwsh.exe",
+        "C:/Program Files (x86)/PowerShell/7/pwsh.exe",
+      ]
+      for (const p of ps7Paths) {
+        if (fs.existsSync(p)) {
+          result.push({ name: "PowerShell 7", path: p, description: "PowerShell Core 7+" })
+          break
+        }
+      }
+
+      // CMD
+      const cmdPath = "C:/Windows/System32/cmd.exe"
+      if (fs.existsSync(cmdPath)) {
+        result.push({ name: "CMD", path: cmdPath, description: "Windows Command Prompt" })
+      }
+
+      // Git Bash
+      const gitBashPaths = [
+        "C:/Program Files/Git/bin/bash.exe",
+        "C:/Program Files (x86)/Git/bin/bash.exe",
+        "C:/Program Files/Git/usr/bin/bash.exe",
+      ]
+      for (const p of gitBashPaths) {
+        if (fs.existsSync(p)) {
+          result.push({ name: "Git Bash", path: p, description: "Git for Windows Bash" })
+          break
+        }
+      }
+
+      // WSL
+      const wslPath = "C:/Windows/System32/wsl.exe"
+      if (fs.existsSync(wslPath)) {
+        result.push({ name: "WSL", path: wslPath, description: "Windows Subsystem for Linux" })
+      }
+    } else {
+      // macOS / Linux — read available shells from /etc/shells
+      try {
+        const content = fs.readFileSync("/etc/shells", "utf-8")
+        const shells = content
+          .split("\n")
+          .map((line) => line.trim())
+          .filter((line) => line && !line.startsWith("#"))
+        for (const shellPath of shells) {
+          if (fs.existsSync(shellPath)) {
+            const name = shellPath.split("/").pop() || shellPath
+            result.push({ name, path: shellPath, description: `System shell (${shellPath})` })
+          }
+        }
+      } catch {
+        // Fallback: common shells
+        const common = ["/bin/bash", "/bin/zsh", "/bin/sh", "/bin/tcsh", "/bin/ksh"]
+        for (const shellPath of common) {
+          if (fs.existsSync(shellPath)) {
+            const name = shellPath.split("/").pop() || shellPath
+            result.push({ name, path: shellPath })
+          }
+        }
+      }
+
+      // macOS terminal apps
+      if (platform === "darwin") {
+        const terminalApps = [
+          { name: "Terminal.app", path: "/System/Applications/Utilities/Terminal.app/Contents/MacOS/Terminal" },
+          { name: "iTerm2", path: "/Applications/iTerm.app/Contents/MacOS/iTerm2" },
+        ]
+        for (const app of terminalApps) {
+          if (fs.existsSync(app.path)) {
+            result.push({ ...app, description: "macOS terminal emulator" })
+          }
+        }
+      }
+    }
+
+    return result
+  }
+  // testagent_change end
 }

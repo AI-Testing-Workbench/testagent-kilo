@@ -102,7 +102,7 @@
 
   [data-slot="settings-row-input"] {
     flex: 0 0 auto;
-    max-width: 160px;
+    max-width: 400px;
 
     & > * {
       max-width: 100%;

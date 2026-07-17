@@ -1,23 +1,16 @@
-import { Component, createSignal, onMount, onCleanup } from "solid-js"
+import { Component, createSignal, onMount, onCleanup, createMemo, Show, For } from "solid-js"
 import { Card } from "@kilocode/kilo-ui/card"
 import { Select } from "@kilocode/kilo-ui/select"
 import { showToast } from "@kilocode/kilo-ui/toast"
 import { useConfig } from "../../context/config"
 import { useVSCode } from "../../context/vscode"
 import SettingsRow from "./SettingsRow"
-import type { ExtensionMessage } from "../../types/messages"
+import type { ExtensionMessage, AvailableTerminalInfo } from "../../types/messages"
 
 interface SelectOption {
   value: string
   label: string
 }
-
-const SHELL_OPTIONS: SelectOption[] = [
-  { value: "", label: "Default (System)" },
-  { value: "powershell", label: "powershell" },
-  { value: "cmd", label: "cmd.exe" },
-  { value: "bash", label: "Git Bash" },
-]
 
 const LOG_LEVEL_OPTIONS: SelectOption[] = [
   { value: "DEBUG", label: "DEBUG" },
@@ -40,6 +33,7 @@ const NormalSetting: Component = () => {
   const [runtime, setRuntime] = createSignal<"bun" | "nodejs">("nodejs")
   const [npmRegistry, setNpmRegistry] = createSignal("")
   const [npmRegistryLoading, setNpmRegistryLoading] = createSignal(true)
+  const [availableTerminals, setAvailableTerminals] = createSignal<AvailableTerminalInfo[]>([])
 
   onMount(() => {
     vscode.postMessage({ type: "checkGitInstalled" })
@@ -47,6 +41,8 @@ const NormalSetting: Component = () => {
     vscode.postMessage({ type: "getRuntime" })
     // Load current npm registry
     vscode.postMessage({ type: "getNpmRegistry" })
+    // Load available terminals
+    vscode.postMessage({ type: "getAvailableTerminals" })
   })
 
   const unsubMsg = vscode.onMessage((msg: ExtensionMessage) => {
@@ -74,65 +70,22 @@ const NormalSetting: Component = () => {
       setNpmRegistry(msg.registry)
       setNpmRegistryLoading(false)
     }
+    if (msg.type === "availableTerminalsResult") {
+      setAvailableTerminals(msg.terminals)
+    }
   })
   onCleanup(unsubMsg)
 
-  const currentShellOption = (): SelectOption | undefined => {
-    const shell = config().shell ?? ""
-    if (!shell) return SHELL_OPTIONS[0]
-    const match = SHELL_OPTIONS.find((opt) => opt.value === shell)
-    if (match) return match
-    const base = shell
-      .split(/[/\\]/)
-      .pop()
-      ?.replace(/\.[^.]+$/, "")
-      .toLowerCase()
-    return SHELL_OPTIONS.find((opt) => base && opt.value === base)
+  const currentShell = createMemo(() => config().shell ?? "")
+
+  const handleShellInput = (e: Event) => {
+    const target = e.target as HTMLInputElement
+    const value = target.value.trim()
+    updateConfig({ shell: value || undefined })
   }
 
-  const handleShellChange = (option: SelectOption | undefined) => {
-    const value = option?.value ?? ""
-    const current = config().shell ?? ""
-
-    // Guard: selecting empty value but shell is already unset → no-op
-    if (!value && !current) return
-
-    // Guard: short name → skip if config already has this as the basename
-    if (value && !value.includes("/")) {
-      const configBase = current.split(/[/\\]/).pop()?.replace(/\.[^.]+$/, "").toLowerCase()
-      if (configBase === value.toLowerCase()) return
-    }
-
-    if (value === "bash") {
-      if (gitInstalled() === false) {
-        showToast({
-          variant: "error",
-          title: "Git 未安装",
-          description: "请先安装 Git 才能选择 Git Bash",
-        })
-        return
-      }
-      if (gitInstalled() === null) {
-        showToast({
-          variant: "error",
-          title: "正在检查 Git 安装状态...",
-        })
-        return
-      }
-    }
-
-    if (!value) {
-      updateConfig({ shell: undefined })
-      return
-    }
-
-    if (value.includes("/")) {
-      if (value === current) return
-      updateConfig({ shell: value })
-      return
-    }
-
-    vscode.postMessage({ type: "resolveShellPath", name: value })
+  const handleTerminalClick = (term: AvailableTerminalInfo) => {
+    updateConfig({ shell: term.path })
   }
 
 
@@ -152,16 +105,8 @@ const NormalSetting: Component = () => {
     })
   }
 
-  const getShellOptions = () => {
-    const hasGit = gitInstalled()
-    if (hasGit === false) {
-      return SHELL_OPTIONS.filter((opt) => opt.value !== "bash")
-    }
-    return SHELL_OPTIONS
-  }
-
   const currentNpmOption = (): SelectOption | undefined => {
-    return npmRegistry() === INTERNAL_NPM_REGISTRY
+    return npmRegistry().includes('')
       ? { value: INTERNAL_NPM_REGISTRY, label: "内网源" }
       : undefined
   }
@@ -197,17 +142,26 @@ const NormalSetting: Component = () => {
             disabled={npmRegistryLoading()}
           />
         </SettingsRow>
-        <SettingsRow title="终端 Shell" description="选择 agent 使用的默认终端">
-          <Select
-            options={getShellOptions()}
-            current={currentShellOption()}
-            value={(opt) => opt.value}
-            label={(opt) => opt.label}
-            onSelect={handleShellChange}
-            variant="secondary"
-            size="small"
-            triggerVariant="settings"
-          />
+        <SettingsRow title="终端 Shell" description="输入 agent 使用的默认终端路径，或点击下方列表中的项快速填入">
+          <div style={{ display: "flex", "flex-direction": "column", gap: "6px", width: "100%" }}>
+            <input
+              type="text"
+              value={currentShell()}
+              onInput={handleShellInput}
+              placeholder="例如: /bin/bash 或 C:/Windows/System32/cmd.exe"
+              style={{
+                width: "100%",
+                padding: "6px 10px",
+                border: "1px solid var(--vscode-input-border, #ccc)",
+                "border-radius": "4px",
+                background: "var(--vscode-input-background, #fff)",
+                color: "var(--vscode-input-foreground, #000)",
+                "font-size": "13px",
+                "box-sizing": "border-box",
+              }}
+            />
+
+          </div>
         </SettingsRow>
         <SettingsRow
           title="后端服务运行时"
@@ -224,6 +178,50 @@ const NormalSetting: Component = () => {
             triggerVariant="settings"
           />
         </SettingsRow>
+        <Show when={availableTerminals().length > 0}>
+          <div style={{ "margin": "10px 10px" }}>
+            <div style={{ "font-size": "12px", color: "var(--vscode-descriptionForeground, #888)", "margin-bottom": "4px" }}>
+              系统可用终端（点击行填入路径）:
+            </div>
+            <div style={{
+              border: "1px solid var(--vscode-editorWidget-border, #ccc)",
+              "border-radius": "4px",
+              "overflow": "hidden",
+            }}>
+              <For each={availableTerminals()}>
+                {(term, index) => (
+                  <div
+                    onClick={() => handleTerminalClick(term)}
+                    style={{
+                      display: "flex",
+                      "align-items": "center",
+                      padding: "6px 10px",
+                      "font-size": "12px",
+                      cursor: "pointer",
+                      background: index() % 2 === 0
+                        ? "var(--vscode-list-hoverBackground, transparent)"
+                        : "transparent",
+                      "border-bottom": index() < availableTerminals().length - 1
+                        ? "1px solid var(--vscode-editorWidget-border, #eee)"
+                        : "none",
+                    }}
+                    onMouseEnter={(e) => {
+                      (e.currentTarget as HTMLElement).style.background = "var(--vscode-list-hoverBackground, #e8e8e8)"
+                    }}
+                    onMouseLeave={(e) => {
+                      (e.currentTarget as HTMLElement).style.background = index() % 2 === 0
+                        ? "var(--vscode-list-hoverBackground, transparent)"
+                        : "transparent"
+                    }}
+                  >
+                    <span style={{ "font-weight": "600", "min-width": "80px", "margin-right": "8px" }}>{term.name}</span>
+                    <span style={{ color: "var(--vscode-textLink-foreground, #06c)", "word-break": "break-all" }}>{term.path}</span>
+                  </div>
+                )}
+              </For>
+            </div>
+          </div>
+        </Show>
       </Card>
     </div>
   )

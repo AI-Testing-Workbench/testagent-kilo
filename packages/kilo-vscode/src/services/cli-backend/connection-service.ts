@@ -83,6 +83,19 @@ export class KiloConnectionService {
   private readonly clearPendingPromptsListeners: Set<ClearPendingPromptsListener> = new Set()
   private readonly agentsChangeListeners: Set<AgentsChangeListener> = new Set() // testagent_change
   private readonly directoryProviders: Set<DirectoryProvider> = new Set()
+  // testagent_change start - track current session ID for aborting retry on auto-compaction
+  private getCurrentSessionId: (() => string | undefined) | null = null
+  private autoCompactionListeners: Set<() => void> = new Set()
+
+  setCurrentSessionIdGetter(getter: () => string | undefined) {
+    this.getCurrentSessionId = getter
+  }
+
+  onAutoCompaction(listener: () => void) {
+    this.autoCompactionListeners.add(listener)
+    return () => this.autoCompactionListeners.delete(listener)
+  }
+  // testagent_change end
 
   /**
    * Shared mapping used to resolve session scope for events that don't reliably include a sessionID.
@@ -594,6 +607,18 @@ export class KiloConnectionService {
   private async enableAutoCompaction(): Promise<void> {
     if (!this.client) return
     try {
+      // 通知监听器（KiloProvider），走统一 abort 流程（cancelRetry + handleAbort）
+       this.autoCompactionListeners.forEach((fn) => fn())
+
+      // 清理后端实例缓存，停止正在进行的 retry
+      const workspaceFolders = vscode.workspace.workspaceFolders
+      const dir = workspaceFolders?.[0]?.uri.fsPath
+      if (dir) {
+        await this.client.instance.dispose({ directory: dir })
+        console.log("[TestAgent] 后端实例已清理")
+      }
+
+      // 最后更新配置，下次请求时新实例会加载新配置
       await this.client.global.config.update({ config: { compaction: { auto: true } } })
       console.log("[TestAgent] 自动压缩已开启")
     } catch (err) {
