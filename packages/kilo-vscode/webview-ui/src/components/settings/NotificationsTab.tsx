@@ -25,7 +25,7 @@ const NotificationsTab: Component = () => {
   const [permNotify, setPermNotify] = createSignal(true)
   const [questionNotify, setQuestionNotify] = createSignal(true)
   const [errorNotify, setErrorNotify] = createSignal(true)
-  const [subagentNotify, setSubagentNotify] = createSignal(false)
+  const [subagentNotify, setSubagentNotify] = createSignal(true)
   const [agentSound, setAgentSound] = createSignal("default")
   const [permSound, setPermSound] = createSignal("default")
   const [errorSound, setErrorSound] = createSignal("default")
