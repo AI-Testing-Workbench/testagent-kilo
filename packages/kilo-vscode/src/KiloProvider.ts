@@ -353,7 +353,7 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
   private initConnectionPromise: Promise<void> | null = null
   private webviewMessageDisposable: vscode.Disposable | null = null
   // testagent_change start - testflow integration
-  private readonly sdtRunner = new SdtRunner()
+  private readonly sdtRunners = new Map<string, SdtRunner>()
   /** 本地 question 的 deferred 映射表（用于 /sdt-run 交互式阶段选择） */
   private readonly localQuestionMap = new Map<string, {
     deferred: { resolve: (value: string) => void; reject: (reason?: any) => void }
@@ -2010,6 +2010,7 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
       this.syncedChildSessions.delete(sessionID)
       this.sessionDirectories.delete(sessionID)
       this.lastReconciledAt.delete(sessionID)
+      this.sdtRunners.delete(sessionID)
       this.connectionService.pruneSession(sessionID)
       if (this.currentSession?.id === sessionID) {
         this.currentSession = null
@@ -3443,6 +3444,16 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
     }
   }
 
+  // testagent_change start
+  private getSdtRunner(sid: string): SdtRunner {
+    const runner = this.sdtRunners.get(sid)
+    if (runner) return runner
+    const next = new SdtRunner()
+    this.sdtRunners.set(sid, next)
+    return next
+  }
+  // testagent_change end
+
   // testagent_change start - testflow command handler
   private async handleSdtCommand(
     text: string,
@@ -3467,12 +3478,14 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
       void vscode.window.showErrorMessage("TestAgent: Not connected to CLI backend")
       return
     }
+    const runner = this.getSdtRunner(resolved.sid)
+
     // testagent_change start
     // ===== 交互式分支：/sdt-run 无 stage_id 参数，弹出阶段选择面板 =====
     if (cmd === "run" && args.length === 0) {
       await handleInteractiveRun(
         {
-          sdtRunner: this.sdtRunner,
+          sdtRunner: runner,
           localQuestionMap: this.localQuestionMap,
           postMessage: (msg) => this.postMessage(msg),
           showErrorMessage: (msg) => void vscode.window.showErrorMessage(msg),
@@ -3485,7 +3498,7 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
     }
     // testagent_change end
 
-    this.sdtRunner.run({
+    runner.run({
       cmd,
       args,
       cwd: resolved.dir,
@@ -3757,6 +3770,8 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
       console.error("[TestAgent] ❌ Cannot continue task: no message ID")
       return
     }
+
+    this.sdtRunners.get(targetSessionID)?.abort()
 
     try {
       const dir = this.getWorkspaceDirectory(sessionID)
@@ -5099,6 +5114,7 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
     this.visibilityDisposable?.dispose()
     this.webviewMessageDisposable?.dispose()
     this.streams.dispose()
+    this.sdtRunners.clear()
     this.isWebviewReady = false
     this.promptRecoveryQueued = false
     clearNetworkWaits(this.trackedSessionIds)

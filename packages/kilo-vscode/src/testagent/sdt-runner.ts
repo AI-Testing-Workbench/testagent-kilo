@@ -34,6 +34,7 @@ export class SdtRunner {
   private proc: ChildProcess | null = null
   private bridge = new TestflowMessageBridge()
   private running = false
+  private note: string | undefined
 
   run(opts: SdtRunnerOpts): void {
     console.log('[TestAgent] SdtRunner.run called:', { cmd: opts.cmd, args: opts.args, cwd: opts.cwd, sessionID: opts.sessionID })
@@ -45,6 +46,7 @@ export class SdtRunner {
 
     console.log('[TestAgent] Starting testflow process...')
     this.running = true
+    this.note = undefined
     this.bridge.start({ sessionID: opts.sessionID, userText: opts.userText, userMessageID: opts.userMessageID, post: opts.post })
 
     // Use bundled testflow binary from extension's bin/ directory
@@ -86,7 +88,7 @@ export class SdtRunner {
 
     this.proc.on("close", (code) => {
       console.log('[TestAgent] testflow process closed:', code)
-      this.bridge.onDone(code ?? 0)
+      this.bridge.onDone(code ?? 0, this.note)
       this.cleanup()
     })
 
@@ -150,13 +152,13 @@ export class SdtRunner {
 
   abort(): void {
     if (!this.proc) return
+    this.note = "Aborted by user"
     try {
       this.proc.kill("SIGTERM")
     } catch {
-      // process may have already exited
+      this.bridge.onDone(1, this.note)
+      this.cleanup()
     }
-    this.bridge.onDone(1, "Aborted by user")
-    this.cleanup()
   }
 
   private dispatch(event: JsonLine): void {
@@ -217,5 +219,6 @@ export class SdtRunner {
   private cleanup(): void {
     this.running = false
     this.proc = null
+    this.note = undefined
   }
 }
