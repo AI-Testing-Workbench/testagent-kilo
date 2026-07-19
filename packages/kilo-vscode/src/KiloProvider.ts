@@ -3771,8 +3771,6 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
       return
     }
 
-    this.sdtRunners.get(targetSessionID)?.abort()
-
     try {
       const dir = this.getWorkspaceDirectory(sessionID)
 
