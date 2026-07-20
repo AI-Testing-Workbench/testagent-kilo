@@ -106,7 +106,7 @@ const NormalSetting: Component = () => {
   }
 
   const currentNpmOption = (): SelectOption | undefined => {
-    return npmRegistry().includes('')
+    return npmRegistry().includes('artifactory/api/npm/group-npm')
       ? { value: INTERNAL_NPM_REGISTRY, label: "内网源" }
       : undefined
   }
@@ -143,7 +143,7 @@ const NormalSetting: Component = () => {
           />
         </SettingsRow>
         <SettingsRow title="终端 Shell" description="输入 agent 使用的默认终端路径，或点击下方列表中的项快速填入">
-          <div style={{ display: "flex", "flex-direction": "column", gap: "6px", width: "100%" }}>
+          <div style={{ display: "flex", "flex-direction": "column", gap: "6px", "min-width": "360px", "width": "100%" }}>
             <input
               type="text"
               value={currentShell()}

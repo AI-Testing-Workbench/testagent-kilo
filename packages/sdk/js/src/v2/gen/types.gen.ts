@@ -1190,6 +1190,18 @@ export type Config = {
     source: string
     scope: "global" | "local"
   }>
+  /**
+   * Runtime source file paths for each MCP server entry
+   */
+  mcp_origins?: {
+    [key: string]: string
+  }
+  /**
+   * Scope (local/global) for each MCP server entry. local = project config, global = user config.
+   */
+  mcp_scopes?: {
+    [key: string]: "local" | "global"
+  }
   plugin_status?: {
     success: Array<string>
     failed: Array<{
@@ -1301,8 +1313,7 @@ export type Config = {
     prune?: boolean
     tail_turns?: number
     preserve_recent_tokens?: number
-    reserved?: number,
-
+    reserved?: number
   }
   experimental?: {
     disable_paste_summary?: boolean
@@ -5889,7 +5900,9 @@ export type SessionForkResponses = {
 export type SessionForkResponse = SessionForkResponses[keyof SessionForkResponses]
 
 export type SessionAbortData = {
-  body?: never
+  body?: {
+    reason?: "completed" | "user_abort" | "error"
+  }
   path: {
     sessionID: string
   }
@@ -6327,6 +6340,40 @@ export type SessionResumeResponses = {
 }
 
 export type SessionResumeResponse = SessionResumeResponses[keyof SessionResumeResponses]
+
+export type SessionClearContextData = {
+  body?: never
+  path: {
+    sessionID: string
+  }
+  query?: {
+    directory?: string
+    workspace?: string
+  }
+  url: "/session/{sessionID}/context-clear"
+}
+
+export type SessionClearContextErrors = {
+  /**
+   * Bad request
+   */
+  400: BadRequestError
+  /**
+   * NotFoundError
+   */
+  404: NotFoundError
+}
+
+export type SessionClearContextError = SessionClearContextErrors[keyof SessionClearContextErrors]
+
+export type SessionClearContextResponses = {
+  /**
+   * Context cleared
+   */
+  200: boolean
+}
+
+export type SessionClearContextResponse = SessionClearContextResponses[keyof SessionClearContextResponses]
 
 export type PermissionRespondData = {
   body?: {

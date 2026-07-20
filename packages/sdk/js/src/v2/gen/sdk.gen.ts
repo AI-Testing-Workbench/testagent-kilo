@@ -131,6 +131,8 @@ import type {
   SessionAbortResponses,
   SessionChildrenErrors,
   SessionChildrenResponses,
+  SessionClearContextErrors,
+  SessionClearContextResponses,
   SessionCommandErrors,
   SessionCommandResponses,
   SessionCreateErrors,
@@ -3836,6 +3838,7 @@ export class Session2 extends HeyApiClient {
       sessionID: string
       directory?: string
       workspace?: string
+      reason?: "completed" | "user_abort" | "error"
     },
     options?: Options<never, ThrowOnError>,
   ) {
@@ -3847,6 +3850,7 @@ export class Session2 extends HeyApiClient {
             { in: "path", key: "sessionID" },
             { in: "query", key: "directory" },
             { in: "query", key: "workspace" },
+            { in: "body", key: "reason" },
           ],
         },
       ],
@@ -3855,6 +3859,11 @@ export class Session2 extends HeyApiClient {
       url: "/session/{sessionID}/abort",
       ...options,
       ...params,
+      headers: {
+        "Content-Type": "application/json",
+        ...options?.headers,
+        ...params.headers,
+      },
     })
   }
 
@@ -4293,6 +4302,40 @@ export class Session2 extends HeyApiClient {
         ...params.headers,
       },
     })
+  }
+
+  /**
+   * Clear session context
+   *
+   * Clear all LLM context while preserving conversation history in the UI.
+   */
+  public clearContext<ThrowOnError extends boolean = false>(
+    parameters: {
+      sessionID: string
+      directory?: string
+      workspace?: string
+    },
+    options?: Options<never, ThrowOnError>,
+  ) {
+    const params = buildClientParams(
+      [parameters],
+      [
+        {
+          args: [
+            { in: "path", key: "sessionID" },
+            { in: "query", key: "directory" },
+            { in: "query", key: "workspace" },
+          ],
+        },
+      ],
+    )
+    return (options?.client ?? this.client).post<SessionClearContextResponses, SessionClearContextErrors, ThrowOnError>(
+      {
+        url: "/session/{sessionID}/context-clear",
+        ...options,
+        ...params,
+      },
+    )
   }
 }
 
