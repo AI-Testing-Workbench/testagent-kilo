@@ -1571,7 +1571,7 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
         if (state === "connected") {
           // Fire config warnings independently so a failure in the
           // sequential await chain doesn't prevent warnings from being shown
-          // void this.checkConfigWarnings("state")
+          void this.checkConfigWarnings("state")
           try {
             // testagent_change start - disable profile API (not available in testagent backend)
             // Profile fetch is best-effort — returns 401 when user isn't logged into gateway.
@@ -1676,7 +1676,7 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
       // provider subscribes to onStateChange(). In that case the initial
       // connected callback is missed, so run the warning check here too.
       if (this.connectionState === "connected") {
-        // void this.checkConfigWarnings("init")
+        void this.checkConfigWarnings("init")
       }
 
       await this.syncWebviewState("initializeConnection")
