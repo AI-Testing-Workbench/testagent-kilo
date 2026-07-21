@@ -19,6 +19,7 @@ import NotificationsTab from "./NotificationsTab"
 import ContextTab from "./ContextTab"
 import NormalSettingTab from "./NormalSettingTab"
 import MemorySettingTab from "./MemorySettings"
+import GoalTab, { GoalIcon } from "./GoalTab" // testagent_change
 
 export interface SettingsProps {
   tab?: string
@@ -165,6 +166,12 @@ const Settings: Component<SettingsProps> = (props) => {
             <Icon name="settings-gear" />
             <span class="label">通用设置</span>
           </Tabs.Trigger>
+          {/* testagent_change start - expose experimental settings */}
+          <Tabs.Trigger value="experimental">
+            <GoalIcon />
+            <span class="label">{language.t("settings.experimental.title")}</span>
+          </Tabs.Trigger>
+          {/* testagent_change end */}
         </Tabs.List>
 
         <Tabs.Content value="models">
@@ -211,6 +218,12 @@ const Settings: Component<SettingsProps> = (props) => {
           <h3>通用设置</h3>
           <NormalSettingTab />
         </Tabs.Content>
+        {/* testagent_change start - expose experimental settings */}
+        <Tabs.Content value="experimental">
+          <h3>{language.t("settings.experimental.title")}</h3>
+          <GoalTab />
+        </Tabs.Content>
+        {/* testagent_change end */}
       </Tabs>
 
       {/* Save bar — slides in when there are unsaved config or memory changes */}

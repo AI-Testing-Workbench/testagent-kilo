@@ -1114,8 +1114,18 @@ export const dict = {
   "settings.experimental.continueOnDeny.description": "Continue the agent loop when a permission is denied",
   "settings.experimental.goal.title": "Goal Tracking",
   "settings.experimental.goal.description": "Enable long-running goal tracking (requires restart)",
+
   "settings.experimental.mcpTimeout.title": "MCP Timeout (s)",
   "settings.experimental.mcpTimeout.description": "Timeout for MCP server requests in seconds",
+
+  // testagent_change start - Goal tab translations
+  "settings.goal.goal.title": "Goal Tracking",
+  "settings.goal.goal.description": "Enable long-running goal tracking (requires restart)",
+  "settings.goal.agentManager.title": "Agent Manager",
+  "settings.goal.agentManager.description":
+    "Enable Agent Manager for multi-session orchestration with git worktree isolation (requires restart)",
+  // testagent_change end
+
   "settings.experimental.remote.title": "Remote Control",
   "settings.experimental.remote.description":
     "Enable remote control of sessions via Kilo Cloud. This will also affect CLIs on this machine.",

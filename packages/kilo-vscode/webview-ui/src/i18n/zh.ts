@@ -1098,6 +1098,14 @@ export const dict = {
 
   "settings.experimental.mcpTimeout.title": "MCP 超时（秒）",
   "settings.experimental.mcpTimeout.description": "MCP 服务器请求的超时时间（秒）",
+
+  // testagent_change start - Goal tab translations
+  "settings.goal.goal.title": "Goal 目标追踪",
+  "settings.goal.goal.description": "启用长期目标追踪功能（需要重启）",
+  "settings.goal.agentManager.title": "Agent Manager",
+  "settings.goal.agentManager.description": "启用 Agent Manager 进行多会话编排和 Git Worktree 隔离（需要重启）",
+  // testagent_change end
+
   "settings.experimental.remote.title": "Remote 控制",
   "settings.experimental.remote.description": "通过 Kilo Cloud 启用会话的 Remote 控制。这也会影响此计算机上的 CLI。",
   "settings.experimental.remote.current": "当前状态：",

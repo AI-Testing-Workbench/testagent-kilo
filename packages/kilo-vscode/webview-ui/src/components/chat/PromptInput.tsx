@@ -3,7 +3,7 @@
  * Text input with send/abort buttons, ghost-text autocomplete, and @ file mention support
  */
 
-import { createSignal, createEffect, on, For, Index, onCleanup, Show, untrack, type Component } from "solid-js"
+import { createSignal, createEffect, on, For, Index, onCleanup, onMount, Show, untrack, type Component } from "solid-js"
 import { Button } from "@kilocode/kilo-ui/button"
 import { Dialog } from "@kilocode/kilo-ui/dialog"
 import { IconButton } from "@kilocode/kilo-ui/icon-button"
@@ -39,6 +39,7 @@ import { formatReviewCommentsMarkdown } from "../../utils/review-comment-markdow
 import { pendingDraftKey, scopeDraftKey, sessionDraftKey } from "../../utils/prompt-drafts"
 import { ContextRing, SessionInfoContent } from "./SessionInfo"
 import { GoalDialog } from "./GoalDialog"
+import { GoalAbortDialog } from "./GoalAbortDialog"  // testagent_change
 
 // Per-session input text storage (module-level so it survives remounts)
 const drafts = new Map<string, string>()
@@ -663,6 +664,30 @@ export const PromptInput: Component<PromptInputProps> = (props) => {
   const openGoal = () => {
     dialog.show(() => <GoalDialog onClose={() => dialog.close()} pendingSessionID={props.pendingSessionID} />)
   }
+
+  // testagent_change start - Goal abort dialog handler
+  onMount(() => {
+    const handler = (e: CustomEvent<{ sessionID: string }>) => {
+      const sid = e.detail.sessionID
+      dialog.show(() => (
+        <GoalAbortDialog
+          sessionID={sid}
+          onClose={() => dialog.close()}
+          onConfirm={() => {
+            const queuedMessageIDs = []  // TODO: get from session state if needed
+            vscode.postMessage({
+              type: "abort",
+              sessionID: sid,
+              queuedMessageIDs,
+            })
+          }}
+        />
+      ))
+    }
+    window.addEventListener("showGoalAbortDialog", handler as EventListener)
+    onCleanup(() => window.removeEventListener("showGoalAbortDialog", handler as EventListener))
+  })
+  // testagent_change end
 
   const handleSend = async () => {
     const draft = text().trim()

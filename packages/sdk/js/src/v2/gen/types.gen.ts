@@ -1325,6 +1325,7 @@ export type Config = {
     primary_tools?: Array<string>
     continue_loop_on_deny?: boolean
     mcp_timeout?: number
+    agent_manager?: boolean
   }
 }
 
