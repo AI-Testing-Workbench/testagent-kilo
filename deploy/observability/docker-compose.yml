@@ -6,8 +6,10 @@ services:
     container_name: observability-elasticsearch
     environment:
       - discovery.type=single-node
-      - xpack.security.enabled=false
-      - ES_JAVA_OPTS=-Xms512m -Xmx512m
+      - ELASTIC_PASSWORD=changeme
+      - xpack.security.http.ssl.enabled=false
+      - xpack.security.enabled=true
+      - ES_JAVA_OPTS=-Xms2g -Xmx2g
     ports:
       - "9200:9200"
     volumes:
@@ -15,7 +17,7 @@ services:
     networks:
       - observability
     healthcheck:
-      test: curl -s http://localhost:9200 >/dev/null || exit 1
+      test: curl -s -u elastic:changeme http://localhost:9200 >/dev/null || exit 1
       interval: 30s
       retries: 3
 
@@ -25,7 +27,7 @@ services:
   es-init:
     image: swr.cn-north-4.myhuaweicloud.com/ddn-k8s/docker.io/arm64v8/elasticsearch:8.18.8-linuxarm64
     container_name: observability-es-init
-    entrypoint: ["/bin/bash", "/tmp/init-es.sh", "http://elasticsearch:9200"]
+    entrypoint: ["/bin/bash", "/tmp/init-es.sh", "http://elasticsearch:9200", "-u", "elastic:changeme"]
     depends_on:
       elasticsearch:
         condition: service_healthy
@@ -41,6 +43,11 @@ services:
     container_name: observability-kibana
     environment:
       - ELASTICSEARCH_HOSTS=http://elasticsearch:9200
+      - ELASTICSEARCH_SERVICEACCOUNTTOKEN=AAEAAWVsYXN0aWMva2liYW5hL3Rva2VuXzFBMmFhNThCZ3pxd0Z2RmI0blNrOlN4dHAwcWZyVE5Xd053cGRBcFNMekE
+      - XPACK_ENCRYPTEDSAVEDOBJECTS_ENCRYPTIONKEY=b8e7a9f4c1d23e5f6a7b8c9d0e1f2a3b4c5d6e7f8a9b0c1d2e3f4a5b6c7d8e9
+      - XPACK_SECURITY_ENCRYPTIONKEY=c9f0b1a2d3e4f5a6b7c8d9e0f1a2b3c4d5e6f7a8b9c0d1e2f3a4b5c6d7e8f9
+      - XPACK_REPORTING_ENCRYPTIONKEY=d0a1b2c3d4e5f6a7b8c9d0e1f2a3b4c5d6e7f8a9b0c1d2e3f4a5b6c7d8e9f0
+      - SERVER_PUBLICBASEURL=http://localhost:5601
     ports:
       - "5601:5601"
     depends_on:

@@ -78,6 +78,22 @@ export function getErrorMessage(error: unknown): string {
   return safeStringify(error) ?? String(error)
 }
 
+// testagent_change start
+/** Extract a user-friendly config error message with file path, matching Bun's error display. */
+export function getConfigErrorMessage(error: unknown): string {
+  if (!error || typeof error !== "object") return getErrorMessage(error)
+  const obj = error as Record<string, unknown>
+  // SDK throwOnError shape: { error: { data: { path, message } } }
+  const data = (obj as { error?: { data?: { path?: string; message?: string } } }).error?.data
+    ?? (obj.data as { path?: string; message?: string } | undefined)
+    ?? (obj as { data?: { path?: string; message?: string } }).data
+  if (data?.path && data?.message) {
+    return `Config file at ${data.path} is not valid JSON(C):\n${data.message}`
+  }
+  return getErrorMessage(error)
+}
+// testagent_change end
+
 /**
  * Format a full human-readable breakdown of a config save failure, including
  * the file path and every Zod issue. Used as the expandable details next to
