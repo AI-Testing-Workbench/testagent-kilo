@@ -4,7 +4,7 @@
  * - SessionInfoContent: Rich tooltip panel with token breakdown.
  */
 
-import { type Component, Show, createMemo ,createSignal} from "solid-js"
+import { type Component, Show, createMemo ,createSignal, createEffect, onCleanup} from "solid-js"
 import { Button } from "@kilocode/kilo-ui/button"
 import { Tooltip } from "@kilocode/kilo-ui/tooltip"
 import { useSession } from "../../context/session"
@@ -71,6 +71,21 @@ export const ContextRing: Component<{ showToolTipClick?: () => void }> = (props)
   const session = useSession()
   const usageData = useUsageData()
   const [showContextTooltip, setShowContextTooltip] = createSignal(false)
+  let btnRef: HTMLButtonElement | undefined
+
+  // 当 tooltip 打开时，点击外部区域关闭
+  createEffect(() => {
+    if (!showContextTooltip()) return
+    const handler = (e: MouseEvent) => {
+      const tooltip = document.querySelector('[data-component="tooltip"]')
+      if (tooltip && !tooltip.contains(e.target as Node) && btnRef && !btnRef.contains(e.target as Node)) {
+        setShowContextTooltip(false)
+      }
+    }
+    // 使用 pointerdown 优先于 click 事件，与 Kobalte 的 onPointerDownOutside 保持一致
+    document.addEventListener("pointerdown", handler)
+    onCleanup(() => document.removeEventListener("pointerdown", handler))
+  })
 
   const pct = createMemo(() => {
     const d = usageData()
@@ -101,6 +116,7 @@ export const ContextRing: Component<{ showToolTipClick?: () => void }> = (props)
   return (
     <Tooltip value={<SessionInfoContent />} placement="top" open={showContextTooltip()} contentStyle={{ "z-index": 9999999, "pointer-events": "auto" }} >
       <Button
+      ref={btnRef}
       class="context-ring-btn"
       aria-label={`Context: ${pct()}% used`}
       variant="ghost"

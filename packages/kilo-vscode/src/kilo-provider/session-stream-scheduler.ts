@@ -41,12 +41,12 @@ export type StreamSchedulerOptions = {
 // and the webview message loop, which applies updates through Solid `batch()` and
 // triggers DOM / style / layout work on the renderer main thread.
 //
-// - DEFAULT_ACTIVE_MS = 16
-//   One 60Hz animation frame. The focused session should feel indistinguishable
-//   from immediate streaming, so we coalesce within a single paint window but no
-//   longer. Raising this to 32ms visibly stutters live text; lowering below ~8ms
-//   stops coalescing meaningfully because SSE delta arrival is already ~10-20ms
-//   apart at typical model rates.
+// - DEFAULT_ACTIVE_MS = 32
+//   Two 60Hz animation frames. The focused session should still feel smooth while
+//   allowing more deltas to coalesce per emission. At typical model output rates
+//   (~10-20ms between deltas) a 32ms window captures 1-2 tokens before flushing,
+//   cutting the active emission rate roughly in half compared to 16ms.
+//   Raising above ~64ms starts to feel laggy for live text.
 //
 // - DEFAULT_BG_BASE_MS = 150
 //   Background (non-focused) sessions don't need frame-perfect updates — the user
@@ -70,7 +70,7 @@ export type StreamSchedulerOptions = {
 //   recognizably "live" and keeps the `drop()`-on-delete path timely. Above
 //   ~500ms the UI starts feeling disconnected; below 300ms the many-agent
 //   backoff stops providing meaningful throttling.
-const DEFAULT_ACTIVE_MS = 16
+const DEFAULT_ACTIVE_MS = 32
 const DEFAULT_BG_BASE_MS = 150
 const DEFAULT_BG_STEP_MS = 20
 const DEFAULT_BG_MAX_MS = 400

@@ -1865,6 +1865,7 @@ export const SessionProvider: ParentComponent = (props) => {
       type: "abort",
       sessionID: sid,
       queuedMessageIDs,
+      reason: "user_abort",
     })
   }
   // testagent_change end

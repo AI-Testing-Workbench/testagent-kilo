@@ -1795,6 +1795,7 @@ export type ExtensionMessage =
   | ExtensionDataReadyMessage
   | RemoteStatusMessage
   | ShellPathResolvedMessage
+  | AvailableTerminalsResultMessage // testagent_change
   // testagent_change start - testflow messages
   // (extension→webview dedicated message types are no longer used; testflow
   //  renders via standard messageCreated / partUpdated events on the SSE pipeline)
@@ -1828,6 +1829,7 @@ export interface AbortRequest {
   type: "abort"
   sessionID: string
   queuedMessageIDs?: string[]
+  reason?: "completed" | "user_abort" | "error"
 }
 
 export interface RevertSessionRequest {
@@ -2209,6 +2211,23 @@ export interface ShellPathResolvedMessage {
   name: string
   path: string | null
 }
+
+// testagent_change start - available terminals
+export interface AvailableTerminalInfo {
+  name: string
+  path: string
+  description?: string
+}
+
+export interface GetAvailableTerminalsMessage {
+  type: "getAvailableTerminals"
+}
+
+export interface AvailableTerminalsResultMessage {
+  type: "availableTerminalsResult"
+  terminals: AvailableTerminalInfo[]
+}
+// testagent_change end
 
 export interface UpdateConfigMessage {
   type: "updateConfig"
@@ -2945,6 +2964,7 @@ export type WebviewMessage =
   | ReloadSkillsRequest // testagent_change
   | ReloadMcpRequest // testagent_change
   | ResolveShellPathMessage
+  | GetAvailableTerminalsMessage // testagent_change
   | GetRuntimeRequest // testagent_change
   | ChangeRuntimeRequest // testagent_change
   | GetNpmRegistryMessage // testagent_change

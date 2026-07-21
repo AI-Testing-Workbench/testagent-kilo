@@ -12,6 +12,6 @@ type Part = {
 }
 
 export function childID(part: Part): string | undefined {
-  if (part.type !== "tool" || part.tool !== "task") return undefined
+  if (part.type !== "tool") return undefined
   return part.metadata?.sessionId ?? part.state?.metadata?.sessionId
 }

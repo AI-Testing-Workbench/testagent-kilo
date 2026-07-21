@@ -67,7 +67,7 @@ export const ServerProvider: ParentComponent = (props) => {
 
   onMount(() => {
     const unsubscribe = vscode.onMessage((message: ExtensionMessage) => {
-      console.log(`[testagent:${webviewIdentifier}] Webview received message:`, message.type, message) // testagent_change - include webview type
+      // console.log(`[testagent:${webviewIdentifier}] Webview received message:`, message.type, message) // testagent_change - include webview type
       switch (message.type) {
         case "ready":
           handleReady(message) // testagent_change
