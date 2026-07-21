@@ -673,6 +673,7 @@
     "@kilocode/kilo-ui": "workspace:*",
     "@kilocode/sdk": "workspace:*",
     "@opencode-ai/ui": "workspace:*",
+    "@pierre/diffs": "catalog:",
     "@thisbeyond/solid-dnd": "0.7.5",
     "diff": "8.0.4",
     "dotenv": "^16.4.7",
