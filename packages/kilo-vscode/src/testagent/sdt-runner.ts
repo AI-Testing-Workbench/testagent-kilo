@@ -14,7 +14,7 @@ const stripAnsi = (s: string) => s.replace(ANSI_RE, "")
  * 而是发 `result` 事件（一个），由 bridge 渲染成结果卡。对应的
  * stdout/stderr 实时日志会被丢弃，避免和卡片内容重复。
  */
-const ONE_SHOT_COMMANDS = new Set(["init", "new", "list", "switch", "validate", "stages"])
+const ONE_SHOT_COMMANDS = new Set(["init", "new", "list", "switch", "validate", "stages", "config"])
 
 export interface SdtRunnerOpts {
   cmd: string

@@ -185,11 +185,12 @@ function TestflowToolCard(props: { part: ToolPart }) {
 
 // ---------------------------------------------------------------------------
 // testflow-result
-// 一锤子命令（init/new/list/switch/validate）结果卡片
+// 一锤子命令（init/new/list/switch/validate/config-update）结果卡片
+// config-update 的 report 字段来自 printChangeReport 的树形报告输出
 // ---------------------------------------------------------------------------
 
 type TestflowResultInput = {
-  kind: "init" | "new" | "list" | "switch" | "validate" | "error"
+  kind: "init" | "new" | "list" | "switch" | "validate" | "config-update" | "error"
   [k: string]: unknown
 }
 
@@ -254,6 +255,19 @@ function buildResultMarkdown(kind: string, payload: Record<string, unknown>): st
       errors.map((e) => `- ${e}`).join("\n"),
     ].join("\n")
   }
+  if (kind === "config-update") {
+    const report = String(payload.report ?? "")
+    if (report.trim()) return report
+    // 没有树形报告时的兜底
+    const changed = Boolean(payload.changed)
+    if (!changed) return "所有配置已是最新，无需更新。"
+    const dirsCreated = Number(payload.dirsCreated ?? 0)
+    const filesUpdated = Number(payload.filesUpdated ?? 0)
+    const parts: string[] = []
+    if (dirsCreated > 0) parts.push(`📁 新增目录: ${dirsCreated} 个`)
+    if (filesUpdated > 0) parts.push(`📄 更新文件: ${filesUpdated} 个`)
+    return parts.join("\n")
+  }
   // kind === "error"
   return `❌ **${String(payload.command ?? "命令")} 执行失败**\n\n\`\`\`\n${String(payload.error ?? "")}\n\`\`\``
 }
@@ -273,6 +287,7 @@ const TestflowResultCard: Component<{ input: TestflowResultInput; output: string
       case "list": return "任务列表"
       case "switch": return "切换默认任务"
       case "validate": return "校验流程配置"
+      case "config-update": return "更新项目配置"
       case "error": return "命令执行失败"
       default: return "命令结果"
     }
