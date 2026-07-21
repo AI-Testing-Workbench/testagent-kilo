@@ -192,6 +192,11 @@ export function useSlashCommand(vscode: VSCodeContext, exclude?: Set<string>): S
       description: "查看当前的任务列表",
       hints: ["testflow", "list", "tasks"],
     },
+    {
+      name: "sdt-config",
+      description: "更新 SDT 项目配置（目录结构 + 配置文件SDTConfig字段级合并）",
+      hints: ["testflow", "config", "update", "profile"],
+    },
     // testagent_change end
   ]
 

@@ -199,6 +199,7 @@ export class TestflowMessageBridge {
       list: "任务列表",
       switch: "切换默认任务",
       validate: "校验流程配置",
+      "config-update": "更新项目配置",
       error: "命令执行失败",
     }
     const title = titles[kind] ?? "命令结果"
