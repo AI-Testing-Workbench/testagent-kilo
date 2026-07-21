@@ -218,7 +218,6 @@ interface SessionContextValue {
     modelID?: string,
     files?: FileAttachment[],
     draftID?: string,
-    goal?: string,
   ) => void
   continueTask: () => void  // testagent_change - 添加继续任务方法
   abort: (sessionID?: string) => void
@@ -1755,7 +1754,6 @@ export const SessionProvider: ParentComponent = (props) => {
     modelID?: string,
     files?: FileAttachment[],
     draftID?: string,
-    goal?: string,
   ) {
     if (!server.isConnected()) {
       console.warn("[testagent] Cannot send command: not connected")
@@ -1778,7 +1776,6 @@ export const SessionProvider: ParentComponent = (props) => {
         files,
         command,
         commandArgs: args,
-        goal,
       })
       return
     }
@@ -1799,7 +1796,6 @@ export const SessionProvider: ParentComponent = (props) => {
       type: "sendCommand",
       command,
       arguments: args,
-      goal,
       messageID,
       sessionID: sid,
       draftID,
@@ -1848,10 +1844,18 @@ export const SessionProvider: ParentComponent = (props) => {
   }
   // testagent_change end
 
-  function abort(sessionID?: string) {
+  // testagent_change start - Add goal status check before abort
+  function abort(sessionID?: string, skipGoalCheck?: boolean) {
     const sid = sessionID ?? currentSessionID()
     if (!sid) {
       console.warn("[testagent] Cannot abort: no current session")
+      return
+    }
+
+    // Check if goal feature is enabled and we should show confirmation dialog
+    if (!skipGoalCheck && cfg.config().goal?.enabled) {
+      // Show goal abort dialog
+      window.dispatchEvent(new CustomEvent("showGoalAbortDialog", { detail: { sessionID: sid } }))
       return
     }
 
@@ -1864,6 +1868,7 @@ export const SessionProvider: ParentComponent = (props) => {
       reason: "user_abort",
     })
   }
+  // testagent_change end
 
   function compact() {
     if (!server.isConnected()) {
