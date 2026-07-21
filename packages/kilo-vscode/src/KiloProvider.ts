@@ -30,6 +30,7 @@ import {
   buildSettingPath,
   mapSSEEventToWebviewMessage,
   getErrorMessage,
+  getConfigErrorMessage, // testagent_change
   getConfigErrorDetails,
   isEventFromForeignProject,
   MessageConfirmation,
@@ -2114,6 +2115,9 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
             continue
           }
           console.error("[TestAgent]  Failed to fetch providers:", error)
+          this.postMessage({ type: "error", message: `Failed to fetch providers: ${getConfigErrorMessage(error)}` }) // testagent_change
+          this.connectionState = "error" // testagent_change
+          this.postMessage({ type: "connectionState", state: "error", error: getConfigErrorMessage(error) }) // testagent_change
         }
         if (!this.providersQueued) return
         generation = this.providersGeneration
@@ -2214,6 +2218,9 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
       this.postMessage(message)
     } catch (error) {
       console.error("[TestAgent]  Failed to fetch agents:", error)
+      this.postMessage({ type: "error", message: `Failed to fetch agents: ${getConfigErrorMessage(error)}` }) // testagent_change
+      this.connectionState = "error" // testagent_change
+      this.postMessage({ type: "connectionState", state: "error", error: getConfigErrorMessage(error) }) // testagent_change
     }
   }
 
@@ -2831,6 +2838,9 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
       this.postMessage(message)
     } catch (error) {
       console.error("[TestAgent]  Failed to fetch config:", error)
+      this.postMessage({ type: "error", message: `Failed to fetch config: ${getConfigErrorMessage(error)}` }) // testagent_change
+      this.connectionState = "error" // testagent_change
+      this.postMessage({ type: "connectionState", state: "error", error: getConfigErrorMessage(error) }) // testagent_change
     }
   }
 
