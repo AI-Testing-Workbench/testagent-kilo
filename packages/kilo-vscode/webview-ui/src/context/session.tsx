@@ -1853,7 +1853,7 @@ export const SessionProvider: ParentComponent = (props) => {
     }
 
     // Check if goal feature is enabled and we should show confirmation dialog
-    if (!skipGoalCheck && cfg.config().goal?.enabled) {
+    if (!skipGoalCheck && config().goal?.enabled) {
       // Show goal abort dialog
       window.dispatchEvent(new CustomEvent("showGoalAbortDialog", { detail: { sessionID: sid } }))
       return
