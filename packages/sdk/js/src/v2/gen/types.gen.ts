@@ -1210,6 +1210,9 @@ export type Config = {
     }>
   }
   langfuse?: boolean
+  goal?: {
+    enabled?: boolean
+  }
   share?: "manual" | "auto" | "disabled"
   autoshare?: boolean
   /**
@@ -1322,6 +1325,7 @@ export type Config = {
     primary_tools?: Array<string>
     continue_loop_on_deny?: boolean
     mcp_timeout?: number
+    agent_manager?: boolean
   }
 }
 
@@ -6159,7 +6163,6 @@ export type SessionCommandData = {
     model?: string
     arguments: string
     command: string
-    goal?: string
     variant?: string
     parts?: Array<{
       id?: string

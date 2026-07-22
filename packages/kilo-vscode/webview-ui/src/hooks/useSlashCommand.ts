@@ -1,4 +1,4 @@
-import { createSignal, onCleanup } from "solid-js"
+import { createSignal, onCleanup, onMount, createEffect } from "solid-js"
 import type { Accessor } from "solid-js"
 import type { SlashCommandInfo, WebviewMessage, ExtensionMessage } from "../types/messages"
 import { useServer } from "../context/server"
@@ -46,6 +46,26 @@ export function useSlashCommand(vscode: VSCodeContext, exclude?: Set<string>): S
 
   const serverCtx = useServer()
   const sessionCtx = useSession()
+
+  // testagent_change start - proactively request commands on mount and session change
+  // This ensures commands are available for goal button visibility check
+  // Fixes bug where goal button disappears when switching to historical sessions
+  onMount(() => {
+    if (serverCtx.isConnected()) {
+      request()
+    }
+  })
+
+  createEffect(() => {
+    const sessionID = sessionCtx.currentSessionID()
+    const connected = serverCtx.isConnected()
+    if (sessionID && connected) {
+      // Reset and request commands when session changes
+      setRequested(false)
+      request()
+    }
+  })
+  // testagent_change end
 
   // testagent_change start - /log action triggers BeeEyes tracing extension
   const openBeeEyes = () => {
