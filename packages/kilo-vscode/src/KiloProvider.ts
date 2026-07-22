@@ -5220,11 +5220,11 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
         }
       }
 
-      // CMD
-      const cmdPath = "C:/Windows/System32/cmd.exe"
-      if (fs.existsSync(cmdPath)) {
-        result.push({ name: "CMD", path: cmdPath, description: "Windows Command Prompt" })
-      }
+      // // CMD
+      // const cmdPath = "C:/Windows/System32/cmd.exe"
+      // if (fs.existsSync(cmdPath)) {
+      //   result.push({ name: "CMD", path: cmdPath, description: "Windows Command Prompt" })
+      // }
 
       // Git Bash
       const gitBashPaths = [
@@ -5239,11 +5239,6 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
         }
       }
 
-      // WSL
-      const wslPath = "C:/Windows/System32/wsl.exe"
-      if (fs.existsSync(wslPath)) {
-        result.push({ name: "WSL", path: wslPath, description: "Windows Subsystem for Linux" })
-      }
     } else {
       // macOS / Linux — read available shells from /etc/shells
       try {
