@@ -134,12 +134,6 @@
         "category": "TestAgent"
       },
       {
-        "command": "testagent.new.agentManagerOpen",
-        "title": "打开 Agent Manager",
-        "category": "TestAgent",
-        "icon": "$(circuit-board)"
-      },
-      {
         "command": "testagent.new.agentManager.previousSession",
         "title": "Agent Manager: Previous Session",
         "category": "TestAgent"
@@ -347,11 +341,6 @@
           "when": "view == testagent.SidebarProvider"
         },
         {
-          "command": "testagent.new.agentManagerOpen",
-          "title": "Agent管理",
-          "icon": "$(circuit-board)"
-        },
-        {
           "command": "testagent.new.historyButtonClicked",
           "group": "navigation@1",
           "when": "view == testagent.SidebarProvider"
@@ -439,11 +428,6 @@
         "command": "testagent.new.generateTerminalCommand",
         "key": "ctrl+shift+g",
         "mac": "cmd+shift+g"
-      },
-      {
-        "command": "testagent.new.agentManagerOpen",
-        "key": "ctrl+shift+m",
-        "mac": "cmd+shift+m"
       },
       {
         "command": "testagent.new.addToContext",

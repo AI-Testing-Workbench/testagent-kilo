@@ -47,19 +47,19 @@ const GoalTab: Component = () => {
       </SettingsRow>
 
       {/* testagent_change start - Agent Manager toggle */}
-      <SettingsRow
-        title={language.t("settings.goal.agentManager.title")}
-        description={language.t("settings.goal.agentManager.description")}
-        last
-      >
-        <Switch
-          checked={experimental().agent_manager ?? false}
-          onChange={(checked) => updateExperimental("agent_manager", checked)}
-          hideLabel
-        >
-          {language.t("settings.goal.agentManager.title")}
-        </Switch>
-      </SettingsRow>
+      {/*<SettingsRow*/}
+      {/*  title={language.t("settings.goal.agentManager.title")}*/}
+      {/*  description={language.t("settings.goal.agentManager.description")}*/}
+      {/*  last*/}
+      {/*>*/}
+      {/*  <Switch*/}
+      {/*    checked={experimental().agent_manager ?? false}*/}
+      {/*    onChange={(checked) => updateExperimental("agent_manager", checked)}*/}
+      {/*    hideLabel*/}
+      {/*  >*/}
+      {/*    {language.t("settings.goal.agentManager.title")}*/}
+      {/*  </Switch>*/}
+      {/*</SettingsRow>*/}
       {/* testagent_change end */}
     </Card>
   )
