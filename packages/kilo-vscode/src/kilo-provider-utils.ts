@@ -88,7 +88,7 @@ export function getConfigErrorMessage(error: unknown): string {
     ?? (obj.data as { path?: string; message?: string } | undefined)
     ?? (obj as { data?: { path?: string; message?: string } }).data
   if (data?.path && data?.message) {
-    return `Config file at ${data.path} is not valid JSON(C):\n${data.message}`
+    return `配置文件 ${data.path} 不是有效的 JSON(C) 格式:\n${data.message}`
   }
   return getErrorMessage(error)
 }
@@ -258,7 +258,7 @@ export async function loadSessions(ctx: SessionRefreshContext): Promise<string |
   if (!list) {
     ctx.pendingSessionRefresh = true
     if (ctx.connectionState !== "connecting") {
-      ctx.postMessage({ type: "error", message: "Not connected to CLI backend" })
+      ctx.postMessage({ type: "error", message: "未连接到 CLI 后端" })
     }
     // testagent_change - debug logging
     console.log("[testagent] loadSessions: no listSessions, pending refresh")
@@ -343,7 +343,7 @@ export async function flushPendingSessionRefresh(ctx: SessionRefreshContext): Pr
 
   if (!ctx.listSessions) {
     if (ctx.connectionState === "connecting") return
-    ctx.postMessage({ type: "error", message: "Not connected to CLI backend" })
+    ctx.postMessage({ type: "error", message: "未连接到 CLI 后端" })
     return
   }
 

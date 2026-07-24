@@ -191,7 +191,7 @@ export class SdkSSEAdapter {
           const globalEvent = event as GlobalEvent
           const type = (globalEvent.payload as { type: string }).type
           if (type !== "server.heartbeat" && type !== "message.part.delta") {
-            console.log("[TestAgent New] SSE: 📨 Event:", type, globalEvent.payload)
+            // console.log("[TestAgent New] SSE: 📨 Event:", type, globalEvent.payload)
           }
           this.notifyEvent(globalEvent.payload as Event)
         }

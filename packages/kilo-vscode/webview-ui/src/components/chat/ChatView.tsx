@@ -14,6 +14,7 @@ import { MessageList } from "./MessageList"
 import { PromptInput } from "./PromptInput"
 import { PermissionDock } from "./PermissionDock"
 import { StartupErrorBanner } from "./StartupErrorBanner"
+import { ConfigWarningsBanner } from "./ConfigWarningsBanner"
 import { useSession } from "../../context/session"
 import { useVSCode } from "../../context/vscode"
 import { useLanguage } from "../../context/language"
@@ -172,6 +173,7 @@ export const ChatView: Component<ChatViewProps> = (props) => {
           <Show when={server.connectionState() === "error" && server.errorMessage()}>
             <StartupErrorBanner errorMessage={server.errorMessage()!} errorDetails={server.errorDetails()!} />
           </Show>
+          <ConfigWarningsBanner />
           <Show when={permissionRequest()} keyed>
             {(perm) => (
               <PermissionDock

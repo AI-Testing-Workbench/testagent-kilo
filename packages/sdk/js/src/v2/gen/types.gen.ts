@@ -386,13 +386,6 @@ export type OutputFormatJsonSchema = {
 
 export type OutputFormat = OutputFormatText | OutputFormatJsonSchema
 
-export type EditorContext = {
-  visibleFiles?: Array<string>
-  openTabs?: Array<string>
-  activeFile?: string
-  shell?: string
-}
-
 export type UserMessage = {
   id: string
   sessionID: string
@@ -416,7 +409,6 @@ export type UserMessage = {
   tools?: {
     [key: string]: boolean
   }
-  editorContext?: EditorContext
 }
 
 export type AssistantMessage = {
@@ -1616,6 +1608,8 @@ export type Command = {
   template: string
   subtask?: boolean
   hints: Array<string>
+  id?: string
+  version?: string
 }
 
 export type Agent = {
@@ -4466,6 +4460,8 @@ export type AppSkillsResponses = {
   200: Array<{
     name: string
     description?: string
+    id?: string
+    version?: string
     location: string
     content: string
   }>
@@ -5783,7 +5779,6 @@ export type SessionPromptData = {
     format?: OutputFormat
     system?: string
     variant?: string
-    editorContext?: EditorContext
     parts: Array<TextPartInput | FilePartInput | AgentPartInput | SubtaskPartInput>
   }
   path: {
@@ -6121,7 +6116,6 @@ export type SessionPromptAsyncData = {
     format?: OutputFormat
     system?: string
     variant?: string
-    editorContext?: EditorContext
     parts: Array<TextPartInput | FilePartInput | AgentPartInput | SubtaskPartInput>
   }
   path: {

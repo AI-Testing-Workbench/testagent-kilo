@@ -22,6 +22,9 @@ interface ServerContextValue {
   workspaceDirectory: Accessor<string>
   gitInstalled: Accessor<boolean>
   userId: Accessor<string | undefined> // testagent_change
+  configWarningsTitle: Accessor<string | undefined>
+  configWarningsDetail: Accessor<string | undefined>
+  dismissConfigWarnings: () => void
 }
 
 export const ServerContext = createContext<ServerContextValue>()
@@ -36,6 +39,8 @@ export const ServerProvider: ParentComponent = (props) => {
   const [extensionVersion, setExtensionVersion] = createSignal<string | undefined>()
   const [errorMessage, setErrorMessage] = createSignal<string | undefined>()
   const [errorDetails, setErrorDetails] = createSignal<string | undefined>()
+  const [configWarningsTitle, setConfigWarningsTitle] = createSignal<string | undefined>()
+  const [configWarningsDetail, setConfigWarningsDetail] = createSignal<string | undefined>()
   const [profileData, setProfileData] = createSignal<ProfileData | null>(null)
   const [deviceAuth, setDeviceAuth] = createSignal<DeviceAuthState>(initialDeviceAuth)
   const [vscodeLanguage, setVscodeLanguage] = createSignal<string | undefined>()
@@ -97,7 +102,7 @@ export const ServerProvider: ParentComponent = (props) => {
         case "error":
           console.error("[testagent] Server error:", message.message)
           setErrorMessage(message.message)
-          setErrorDetails(message.message)
+          setErrorDetails(message.detail ?? message.message)
           break
 
         case "profileData":
@@ -131,6 +136,12 @@ export const ServerProvider: ParentComponent = (props) => {
           console.log("[testagent] Device auth cancelled")
           setDeviceAuth(initialDeviceAuth)
           break
+
+        case "configWarnings":
+          console.warn("[testagent] Config warnings:", message.title)
+          setConfigWarningsTitle(message.title)
+          setConfigWarningsDetail(message.detail)
+          break
       }
     })
 
@@ -154,6 +165,11 @@ export const ServerProvider: ParentComponent = (props) => {
     vscode.postMessage({ type: "login" })
   }
 
+  const dismissConfigWarnings = () => {
+    setConfigWarningsTitle(undefined)
+    setConfigWarningsDetail(undefined)
+  }
+
   const value: ServerContextValue = {
     connectionState,
     serverInfo,
@@ -169,6 +185,9 @@ export const ServerProvider: ParentComponent = (props) => {
     workspaceDirectory,
     gitInstalled,
     userId, // testagent_change
+    configWarningsTitle,
+    configWarningsDetail,
+    dismissConfigWarnings,
   }
 
   return <ServerContext.Provider value={value}>{props.children}</ServerContext.Provider>

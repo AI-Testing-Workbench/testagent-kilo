@@ -555,7 +555,7 @@ export function activate(context: vscode.ExtensionContext) {
   context.subscriptions.push(
     vscode.commands.registerCommand("testagent.appendToPromptInput", async (content: string) => {
       if (!content || typeof content !== "string") {
-        vscode.window.showErrorMessage("Invalid content: expected a string")
+        vscode.window.showErrorMessage("无效内容：需要一个字符串")
         return
       }
       const target = agentManagerProvider?.isActive() ? agentManagerProvider : provider

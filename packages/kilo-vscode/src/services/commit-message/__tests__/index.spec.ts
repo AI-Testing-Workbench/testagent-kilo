@@ -98,7 +98,7 @@ describe("commit-message service", () => {
 
       await commandCallback()
 
-      expect(vscode.window.showErrorMessage).toHaveBeenCalledWith("Git extension not found")
+      expect(vscode.window.showErrorMessage).toHaveBeenCalledWith("未找到 Git 扩展")
     })
 
     it("shows error when no git repository is found", async () => {
@@ -112,7 +112,7 @@ describe("commit-message service", () => {
 
       await commandCallback()
 
-      expect(vscode.window.showErrorMessage).toHaveBeenCalledWith("No Git repository found")
+      expect(vscode.window.showErrorMessage).toHaveBeenCalledWith("未找到 Git 仓库")
     })
 
     it("shows error when backend fails to connect", async () => {
@@ -130,7 +130,7 @@ describe("commit-message service", () => {
       await commandCallback()
 
       expect(vscode.window.showErrorMessage).toHaveBeenCalledWith(
-        "Failed to connect to Kilo backend. Please try again.",
+        "连接到 TestAgent 后端失败，请重试",
       )
     })
 

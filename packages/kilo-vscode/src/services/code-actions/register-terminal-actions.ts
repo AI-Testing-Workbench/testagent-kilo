@@ -18,7 +18,7 @@ export function registerTerminalActions(
         content = (await getTerminalContents(-1)).content
       }
       if (!content) {
-        vscode.window.showInformationMessage("No terminal content available. Select text in the terminal first.")
+        vscode.window.showInformationMessage("没有可用的终端内容，请先在终端中选择文本")
         return
       }
       const prompt = createPrompt("TERMINAL_ADD_TO_CONTEXT", {
@@ -35,7 +35,7 @@ export function registerTerminalActions(
         content = (await getTerminalContents(1)).content
       }
       if (!content) {
-        vscode.window.showInformationMessage("No terminal content available. Select text in the terminal first.")
+        vscode.window.showInformationMessage("没有可用的终端内容，请先在终端中选择文本")
         return
       }
       const prompt = createPrompt("TERMINAL_FIX", {
@@ -51,7 +51,7 @@ export function registerTerminalActions(
         content = (await getTerminalContents(1)).content
       }
       if (!content) {
-        vscode.window.showInformationMessage("No terminal content available. Select text in the terminal first.")
+        vscode.window.showInformationMessage("没有可用的终端内容，请先在终端中选择文本")
         return
       }
       const prompt = createPrompt("TERMINAL_EXPLAIN", {

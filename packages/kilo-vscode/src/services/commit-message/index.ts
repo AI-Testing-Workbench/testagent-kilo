@@ -37,7 +37,7 @@ export function registerCommitMessageService(
     async (arg?: vscode.SourceControl) => {
       const extension = vscode.extensions.getExtension<GitExtensionExports>("vscode.git")
       if (!extension) {
-        vscode.window.showErrorMessage("Git extension not found")
+        vscode.window.showErrorMessage("未找到 Git 扩展")
         return
       }
 
@@ -48,7 +48,7 @@ export function registerCommitMessageService(
       const git = extension.exports?.getAPI(1)
       const repository = findRepository(git?.repositories ?? [], arg)
       if (!repository) {
-        vscode.window.showErrorMessage("No Git repository found")
+        vscode.window.showErrorMessage("未找到 Git 仓库")
         return
       }
 
@@ -59,7 +59,7 @@ export function registerCommitMessageService(
         client = await connectionService.getClientAsync(path)
       } catch (err) {
         console.error("[TestAgent New] Failed to connect to TestAgent backend:", err)
-        vscode.window.showErrorMessage("Failed to connect to TestAgent backend. Please try again.")
+        vscode.window.showErrorMessage("连接到 TestAgent 后端失败，请重试")
         return
       }
 
@@ -106,7 +106,7 @@ export function registerCommitMessageService(
           }
           const msg = getErrorMessage(error)
           console.error("[TestAgent] Failed to generate commit message:", msg)
-          vscode.window.showErrorMessage(`Failed to generate commit message: ${msg}`)
+          vscode.window.showErrorMessage(`生成提交信息失败: ${msg}`)
         })
     },
   )

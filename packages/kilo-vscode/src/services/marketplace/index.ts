@@ -42,7 +42,7 @@ export class MarketplaceService {
     const result = await this.installer.install(item, options, workspace)
 
     if (result.success) {
-      vscode.window.showInformationMessage(`Successfully installed ${item.name}`)
+      vscode.window.showInformationMessage(`已成功安装 ${item.name}`)
     }
 
     return result
@@ -52,7 +52,7 @@ export class MarketplaceService {
     const result = await this.installer.remove(item, scope, workspace)
 
     if (result.success) {
-      vscode.window.showInformationMessage(`Successfully removed ${item.name}`)
+      vscode.window.showInformationMessage(`已成功移除 ${item.name}`)
     }
 
     return result

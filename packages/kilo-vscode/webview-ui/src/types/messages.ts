@@ -558,8 +558,15 @@ export interface ConnectionStateMessage {
 export interface ErrorMessage {
   type: "error"
   message: string
+  detail?: string
   code?: string
   sessionID?: string
+}
+
+export interface ConfigWarningsMessage {
+  type: "configWarnings"
+  title: string
+  detail: string
 }
 
 export interface SendMessageFailedMessage {
@@ -1672,6 +1679,7 @@ export type ExtensionMessage =
   | GitStatusMessage
   | ConnectionStateMessage
   | ErrorMessage
+  | ConfigWarningsMessage
   | SendMessageFailedMessage
   | PartUpdatedMessage
   | PartsUpdatedMessage

@@ -33,7 +33,7 @@ export async function handleRequestCloudSessions(
   message: { cursor?: string; limit?: number; gitUrl?: string },
 ): Promise<void> {
   if (!ctx.client) {
-    ctx.postMessage({ type: "error", message: "Not connected to CLI backend" })
+    ctx.postMessage({ type: "error", message: "未连接到 CLI 后端" })
     return
   }
 
