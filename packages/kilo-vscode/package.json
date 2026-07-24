@@ -550,7 +550,7 @@
         },
         "testagent.new.browserAutomation.enabled": {
           "type": "boolean",
-          "default": true,
+          "default": false,
           "description": "Enable browser automation powered by Playwright. When enabled, the AI agent can interact with web pages in a visible Chrome window."
         },
         "testagent.new.browserAutomation.useSystemChrome": {
