@@ -1844,18 +1844,10 @@ export const SessionProvider: ParentComponent = (props) => {
   }
   // testagent_change end
 
-  // testagent_change start - Add goal status check before abort
-  function abort(sessionID?: string, skipGoalCheck?: boolean) {
+  function abort(sessionID?: string) {
     const sid = sessionID ?? currentSessionID()
     if (!sid) {
       console.warn("[testagent] Cannot abort: no current session")
-      return
-    }
-
-    // Check if goal feature is enabled and we should show confirmation dialog
-    if (!skipGoalCheck && config().goal?.enabled) {
-      // Show goal abort dialog
-      window.dispatchEvent(new CustomEvent("showGoalAbortDialog", { detail: { sessionID: sid } }))
       return
     }
 
