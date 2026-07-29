@@ -386,13 +386,6 @@ export type OutputFormatJsonSchema = {
 
 export type OutputFormat = OutputFormatText | OutputFormatJsonSchema
 
-export type EditorContext = {
-  visibleFiles?: Array<string>
-  openTabs?: Array<string>
-  activeFile?: string
-  shell?: string
-}
-
 export type UserMessage = {
   id: string
   sessionID: string
@@ -416,7 +409,7 @@ export type UserMessage = {
   tools?: {
     [key: string]: boolean
   }
-  editorContext?: EditorContext
+  thinkingEnabled?: boolean
 }
 
 export type AssistantMessage = {
@@ -1616,6 +1609,8 @@ export type Command = {
   template: string
   subtask?: boolean
   hints: Array<string>
+  id?: string
+  version?: string
 }
 
 export type Agent = {
@@ -4466,6 +4461,8 @@ export type AppSkillsResponses = {
   200: Array<{
     name: string
     description?: string
+    id?: string
+    version?: string
     location: string
     content: string
   }>
@@ -5777,13 +5774,13 @@ export type SessionPromptData = {
     }
     agent?: string
     noReply?: boolean
+    thinkingEnabled?: boolean
     tools?: {
       [key: string]: boolean
     }
     format?: OutputFormat
     system?: string
     variant?: string
-    editorContext?: EditorContext
     parts: Array<TextPartInput | FilePartInput | AgentPartInput | SubtaskPartInput>
   }
   path: {
@@ -6115,13 +6112,13 @@ export type SessionPromptAsyncData = {
     }
     agent?: string
     noReply?: boolean
+    thinkingEnabled?: boolean
     tools?: {
       [key: string]: boolean
     }
     format?: OutputFormat
     system?: string
     variant?: string
-    editorContext?: EditorContext
     parts: Array<TextPartInput | FilePartInput | AgentPartInput | SubtaskPartInput>
   }
   path: {
@@ -6163,6 +6160,7 @@ export type SessionCommandData = {
     model?: string
     arguments: string
     command: string
+    thinkingEnabled?: boolean
     variant?: string
     parts?: Array<{
       id?: string
@@ -6327,6 +6325,7 @@ export type SessionUnrevertResponse = SessionUnrevertResponses[keyof SessionUnre
 export type SessionResumeData = {
   body?: {
     messageID: string
+    thinkingEnabled?: boolean
     model?: {
       providerID: string
       modelID: string

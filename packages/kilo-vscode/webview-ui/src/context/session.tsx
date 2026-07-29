@@ -82,6 +82,7 @@ interface SessionStore {
   sessionOverrides: Record<string, ModelSelection> // sessionID -> per-session model override (compare mode)
   agentSelections: Record<string, string> // sessionID -> agent name
   variantSelections: Record<string, string> // "providerID/modelID" -> variant name
+  enableThinkings: Record<string, boolean> // "providerID" -> enabled
   recentModels: ModelSelection[]
   favoriteModels: ModelSelection[]
 }
@@ -193,6 +194,11 @@ interface SessionContextValue {
   variantList: () => string[]
   currentVariant: () => string | undefined
   selectVariant: (value: string) => void
+  
+  // Enable-thinking toggle for a provider
+  enableThinkings: () => Record<string, boolean>
+  isThinkingEnabledForProvider: (providerID?: string) => boolean
+  toggleThinkingForProvider: (providerID: string) => void
 
   // Model favorites
   favoriteModels: Accessor<ModelSelection[]>
@@ -394,6 +400,7 @@ export const SessionProvider: ParentComponent = (props) => {
     sessionOverrides: {},
     agentSelections: {},
     variantSelections: {},
+    enableThinkings: {},
     recentModels: [],
     favoriteModels: [],
   })
@@ -681,6 +688,25 @@ export const SessionProvider: ParentComponent = (props) => {
   vscode.postMessage({ type: "requestVariants" })
 
   onCleanup(unsubVariants)
+
+  const enableThinkings = () => store.enableThinkings
+
+  const isThinkingEnabledForProvider = (providerID?: string) => enableThinkings()[providerID ?? ""] !== false
+
+  const toggleThinkingForProvider = (providerID: string) => {
+    const current = enableThinkings()[providerID] !== false
+    setStore("enableThinkings", providerID, !current)
+    vscode.postMessage({ type: "persistEnableThinking", key: providerID, enabled: !current })
+  }
+
+  const unsubEnableThinkings = vscode.onMessage((message: ExtensionMessage) => {
+    if (message.type !== "enableThinkingsLoaded") return
+    setStore("enableThinkings", reconcile(message.enableThinkings))
+  })
+
+  vscode.postMessage({ type: "requestEnableThinkings" })
+
+  onCleanup(unsubEnableThinkings)
 
   // Load persisted per-mode model selections from model.json via extension host.
   // Uses replace semantics so a reset (empty payload) clears old entries.
@@ -1718,6 +1744,7 @@ export const SessionProvider: ParentComponent = (props) => {
         modelID,
         agent,
         variant: currentVariant(),
+        thinkingEnabled: store.enableThinkings[providerID ?? ""] !== false,
         files,
       })
       return
@@ -1743,6 +1770,7 @@ export const SessionProvider: ParentComponent = (props) => {
       modelID,
       agent,
       variant: currentVariant(),
+      thinkingEnabled: store.enableThinkings[providerID ?? ""] !== false,
       files,
     })
   }
@@ -1773,6 +1801,7 @@ export const SessionProvider: ParentComponent = (props) => {
         modelID,
         agent,
         variant: currentVariant(),
+        thinkingEnabled: store.enableThinkings[providerID ?? ""] !== false,
         files,
         command,
         commandArgs: args,
@@ -1803,6 +1832,7 @@ export const SessionProvider: ParentComponent = (props) => {
       modelID,
       agent,
       variant: currentVariant(),
+      thinkingEnabled: store.enableThinkings[providerID ?? ""] !== false,
       files,
     })
   }
@@ -1840,6 +1870,7 @@ export const SessionProvider: ParentComponent = (props) => {
       messageID: lastAssistant.id,
       providerID: model?.providerID,
       modelID: model?.modelID,
+      thinkingEnabled: store.enableThinkings[model?.providerID ?? ""] !== false,
     })
   }
   // testagent_change end
@@ -2334,6 +2365,9 @@ export const SessionProvider: ParentComponent = (props) => {
     variantList,
     currentVariant,
     selectVariant,
+    enableThinkings,
+    isThinkingEnabledForProvider,
+    toggleThinkingForProvider,
     revert,
     revertedCount,
     summary,

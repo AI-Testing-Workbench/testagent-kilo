@@ -834,6 +834,7 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
             message.modelID,
             message.agent,
             message.variant,
+            message.thinkingEnabled,
             files,
           )
           break
@@ -850,13 +851,14 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
             message.modelID,
             message.agent,
             message.variant,
+            message.thinkingEnabled,
             files,
           )
           break
         }
         // testagent_change start - 添加继续任务处理
         case "continueTask":
-          await this.handleContinueTask(message.sessionID, message.messageID, message.providerID, message.modelID)
+          await this.handleContinueTask(message.sessionID, message.messageID, message.providerID, message.modelID, message.thinkingEnabled)
           break
         // testagent_change end
         case "abort":
@@ -1334,6 +1336,7 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
             message.modelID,
             message.agent,
             message.variant,
+            message.thinkingEnabled,
             files,
             typeof message.command === "string" ? message.command : undefined,
             typeof message.commandArgs === "string" ? message.commandArgs : undefined,
@@ -1358,6 +1361,20 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
         case "requestVariants": {
           const variants = this.extensionContext?.globalState.get<Record<string, string>>("variantSelections") ?? {}
           this.postMessage({ type: "variantsLoaded", variants })
+          break
+        }
+        case "persistEnableThinking": {
+          const stored = this.extensionContext?.globalState.get<Record<string, boolean>>("enableThinkings") ?? {}
+          stored[message.key] = message.enabled
+          await this.extensionContext?.globalState.update("enableThinkings", stored)
+          // Broadcast to all webviews (sidebar, settings panels, tabs) via central command
+          // This ensures all KiloProvider instances stay in sync, not just the one that initiated the change
+          await vscode.commands.executeCommand("testagent.internal.broadcastEnableThinkings")
+          break
+        }
+        case "requestEnableThinkings": {
+          const enableThinkings = this.extensionContext?.globalState.get<Record<string, boolean>>("enableThinkings") ?? {}
+          this.postMessage({ type: "enableThinkingsLoaded", enableThinkings })
           break
         }
         case "persistRecents":
@@ -2254,6 +2271,15 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
     // testagent_change end
      vscode.window.showInformationMessage("skills已重新加载")
     console.log("[TestAgent] Skills and commands reloaded successfully")
+  }
+
+  /**
+   * Broadcast updated enableThinkings to this provider's webview.
+   * Called by extension.ts to sync all webviews after a settings change.
+   * testagent_change - cross-webview sync for thinking toggle
+   */
+  public broadcastEnableThinkings(enableThinkings: Record<string, boolean>): void {
+    this.postMessage({ type: "enableThinkingsLoaded", enableThinkings })
   }
 
   /**
@@ -3561,8 +3587,10 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
     modelID?: string,
     agent?: string,
     variant?: string,
+    thinkingEnabled?: boolean,
     files?: MessageFile[],
   ): Promise<void> {
+    console.log(thinkingEnabled)
     // testagent_change start - intercept /sdt-* commands for testflow
     if (text.startsWith("/sdt-")) {
       await this.handleSdtCommand(text, sessionID, providerID, modelID, messageID, agent)
@@ -3621,7 +3649,7 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
               model: providerID && modelID ? { providerID, modelID } : undefined,
               agent,
               variant,
-              editorContext,
+              thinkingEnabled,
             }),
           sid,
           messageID,
@@ -3651,6 +3679,7 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
     modelID?: string,
     agent?: string,
     variant?: string,
+    thinkingEnabled?: boolean,
     files?: MessageFile[],
   ): Promise<void> {
     // testagent_change start - intercept sdt-* commands for testflow
@@ -3717,6 +3746,7 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
               model: providerID && modelID ? `${providerID}/${modelID}` : undefined,
               agent,
               variant,
+              thinkingEnabled,
               parts,
             }),
           sid,
@@ -3756,6 +3786,7 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
     messageID?: string,
     providerID?: string,
     modelID?: string,
+    thinkingEnabled?: boolean,
   ): Promise<void> {
     console.log("[TestAgent] 🔄 handleContinueTask called:", { sessionID, messageID, providerID, modelID })
 
@@ -3788,6 +3819,7 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
               sessionID,
               messageID,
               directory: dir,
+              thinkingEnabled,
               ...(providerID && modelID ? { model: { providerID, modelID } } : {}),
             }),
           sessionID,
@@ -4487,6 +4519,7 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
 
     // Re-send globalState items to the webview
     this.postMessage({ type: "variantsLoaded", variants: {} })
+    this.postMessage({ type: "enableThinkingsLoaded", enableThinkings: {} })
     this.postMessage({ type: "recentsLoaded", recents: [] })
 
     // Re-fetch notifications to reflect cleared dismissed IDs

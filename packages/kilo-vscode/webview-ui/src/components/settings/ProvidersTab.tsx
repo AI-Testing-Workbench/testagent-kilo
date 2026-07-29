@@ -3,13 +3,16 @@ import { Card } from "@kilocode/kilo-ui/card"
 import { useDialog } from "@kilocode/kilo-ui/context/dialog"
 import { Icon } from "@kilocode/kilo-ui/icon"
 import { ProviderIcon } from "@kilocode/kilo-ui/provider-icon"
+import { Switch } from "@kilocode/kilo-ui/switch"
 import { Tag } from "@kilocode/kilo-ui/tag"
+import { Tooltip } from "@kilocode/kilo-ui/tooltip"
 import { showToast } from "@kilocode/kilo-ui/toast"
 import { Component, For, Show, createMemo, onCleanup } from "solid-js"
 import { useConfig } from "../../context/config"
 import { useLanguage } from "../../context/language"
 import { useProvider } from "../../context/provider"
 import { useServer } from "../../context/server"
+import { useSession } from "../../context/session"
 import { useVSCode } from "../../context/vscode"
 import type { Provider } from "../../types/messages"
 import CustomProviderDialog from "./CustomProviderDialog"
@@ -29,6 +32,7 @@ const ProvidersTab: Component = () => {
   const language = useLanguage()
   const server = useServer()
   const vscode = useVSCode()
+  const session = useSession()
   const action = createProviderAction(vscode)
 
   onCleanup(action.dispose)
@@ -215,7 +219,15 @@ const ProvidersTab: Component = () => {
                     </span>
                   }
                 >
-                  <div style={{ display: "flex", gap: "4px" }}>
+                  <div style={{ display: "flex", gap: "8px", "align-items": "center" }}>
+                    <div style={{ display: "flex", gap: "6px", "align-items": "center" }}>
+                      <span style={{ "font-size": "14px", color: "var(--vscode-foreground)" }}>思考</span>
+                      <Switch
+                        checked={session.isThinkingEnabledForProvider(item.id)}
+                        onChange={() => session.toggleThinkingForProvider(item.id)}
+                        hideLabel
+                      />
+                    </div>
                     <Show when={isCustom(item)}>
                       <Button size="large" variant="ghost" onClick={() => editProvider(item)}>
                         {language.t("provider.custom.edit.title")}

@@ -75,6 +75,7 @@ export const dict = {
   "command.agent.cycle.reverse.description": "切换到上一个智能体",
   "command.model.variant.cycle": "切换思考强度",
   "command.model.variant.cycle.description": "切换到下一个强度等级",
+  "model.thinking.toggle": "启用思考",
   "command.permissions.autoaccept.enable": "自动接受编辑",
   "command.permissions.autoaccept.disable": "停止自动接受编辑",
   "command.workspace.toggle": "切换工作区",
