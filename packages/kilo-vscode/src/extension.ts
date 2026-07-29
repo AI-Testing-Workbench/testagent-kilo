@@ -47,7 +47,7 @@ export function activate(context: vscode.ExtensionContext) {
   // testagent_change end
 
   // Add CLI to PATH on first activation (Windows only)
-  // void ensureCliInPath(context)
+  void ensureCliInPath(context)
 
   const telemetry = isTestagentBun() ? TelemetryProxy.getInstance() : null
 
