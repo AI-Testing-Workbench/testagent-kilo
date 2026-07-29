@@ -4367,7 +4367,6 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
    * - Notification setting is enabled
    */
   private maybeShowErrorNotification(sessionID: string, error: string): void {
-    // Check if notification is enabled
     const notifications = vscode.workspace.getConfiguration("testagent.new.notifications")
     const notifyErrors = notifications.get<boolean>("errors", true)
     if (!notifyErrors) return
@@ -4380,17 +4379,10 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
 
     const prefix = isChild ? "[子任务] " : ""
     const title = isChild ? "TestAgent" : (this.currentSession?.title ?? "TestAgent")
+    const fullMessage = `${prefix}发生错误：${error}`
 
-    console.log("[TestAgent] ✅ Showing error notification")
+    vscode.window.showErrorMessage(fullMessage)
 
-    this.systemNotification.notify({
-      title,
-      message: `${prefix}发生错误：${error}`,
-      type: "error",
-      onClick: () => this.revealWebview(),
-    })
-
-    // Play sound if configured
     this.playNotificationSound("errors")
   }
 
