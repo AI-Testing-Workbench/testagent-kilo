@@ -298,9 +298,10 @@ export function buildFamilyTiming(
           const dur = p.state.time.end
             ? p.state.time.end - p.state.time.start
             : Date.now() - p.state.time.start // 运行中的工具实时估算
-          tool += dur
           if (p.tool && WAIT_TOOLS.has(p.tool)) {
-            wait += dur
+            wait += dur // question/invalid 只算等待，不算工具执行
+          } else {
+            tool += dur // 其他正常工具算工具执行
           }
         }
       }
