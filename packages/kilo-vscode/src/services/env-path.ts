@@ -105,8 +105,8 @@ if ($currentPath -notlike "*$pathRef*") {
 
     if (addedRef) {
       console.log(`[TestAgent] Added ${TESTAGENT_PATH_REF_WIN} to user PATH`)
-      const message = "TestAgent CLI 已添加到你的 PATH 中，重启终端后可使用 'testagent' 命令。"
-      vscode.window.showInformationMessage(message)
+      // const message = "TestAgent CLI 已添加到你的 PATH 中，重启终端后可使用 'testagent' 命令。"
+      // vscode.window.showInformationMessage(message)
     } else if (refExists) {
       console.log(`[TestAgent] ${TESTAGENT_PATH_REF_WIN} already in PATH, ${TESTAGENT_ENV_VAR}=${binDir}`)
     }
