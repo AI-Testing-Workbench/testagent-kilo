@@ -396,6 +396,7 @@ export interface AgentConfig {
   description?: string | null
   mode?: "subagent" | "primary" | "all"
   hidden?: boolean
+  thinking?: boolean
   disable?: boolean
   temperature?: number | null
   top_p?: number | null

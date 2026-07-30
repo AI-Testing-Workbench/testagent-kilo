@@ -973,6 +973,7 @@ export type AgentConfig = {
   description?: string
   mode?: "subagent" | "primary" | "all"
   hidden?: boolean
+  thinking?: boolean
   options?: {
     [key: string]: unknown
   }
@@ -1619,6 +1620,7 @@ export type Agent = {
   mode: "subagent" | "primary" | "all"
   native?: boolean
   hidden?: boolean
+  thinking?: boolean
   topP?: number
   temperature?: number
   color?: string

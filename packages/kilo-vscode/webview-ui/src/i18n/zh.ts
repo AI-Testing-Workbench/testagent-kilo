@@ -1131,6 +1131,8 @@ export const dict = {
   "settings.agentBehaviour.topP.description": "核采样参数（0-1）",
   "settings.agentBehaviour.maxSteps.title": "最大步数",
   "settings.agentBehaviour.maxSteps.description": "最大智能体迭代次数",
+  "settings.agentBehaviour.thinking.title": "思考",
+  "settings.agentBehaviour.thinking.description": "在聊天输入时启用模型思考功能，当关闭时会禁用思考输出",
   "settings.agentBehaviour.hidden.title": "隐藏",
   "settings.agentBehaviour.hidden.description": "在聊天输入的模式切换器中隐藏此智能体",
   "settings.agentBehaviour.disable.title": "已禁用",

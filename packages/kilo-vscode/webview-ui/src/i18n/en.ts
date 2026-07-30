@@ -1153,6 +1153,8 @@ export const dict = {
   "settings.agentBehaviour.topP.description": "Nucleus sampling parameter (0-1)",
   "settings.agentBehaviour.maxSteps.title": "Max Steps",
   "settings.agentBehaviour.maxSteps.description": "Maximum agentic iterations",
+  "settings.agentBehaviour.thinking.title": "Thinking",
+  "settings.agentBehaviour.thinking.description": "Enable model thinking/reasoning output in chat input. When disabled, thinking is suppressed",
   "settings.agentBehaviour.hidden.title": "Hidden",
   "settings.agentBehaviour.hidden.description": "Hide this agent from the mode switcher in the chat input",
   "settings.agentBehaviour.disable.title": "Disabled",
