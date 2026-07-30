@@ -42,7 +42,10 @@ import {
   buildFamilyLabels,
   buildCostBreakdown,
   buildFamilyTokens,
+  buildFamilyTiming,
   childID,
+  type FamilyTokens,
+  type TimingInfo,
 } from "./session-utils"
 import { Identifier } from "../utils/id"
 import { resolveModelSelection } from "./model-selection"
@@ -164,6 +167,7 @@ interface SessionContextValue {
   costBreakdown: Accessor<Array<{ label: string; cost: number }>>
   contextUsage: Accessor<ContextUsage | undefined>
   familyTokens: Accessor<FamilyTokens | undefined>
+  familyTiming: Accessor<TimingInfo | undefined>
 
   // Skills loaded from the CLI backend
   skills: Accessor<SkillInfo[]>
@@ -2207,6 +2211,21 @@ export const SessionProvider: ParentComponent = (props) => {
     return buildFamilyTokens(sessionFamily(id), store.messages as any)
   })
 
+  /** Accumulated timing across the session family (self + subagents). */
+  // tick 信号保证活跃会话每秒重算，使 buildFamilyTiming 内的 Date.now() 刷新
+  const [tick, setTick] = createSignal(Date.now())
+  createEffect(() => {
+    if (!anyBusy()) return // 无活跃会话时不 tick
+    const id = setInterval(() => setTick(Date.now()), 1000)
+    onCleanup(() => clearInterval(id))
+  })
+  const familyTiming = createMemo<TimingInfo | undefined>(() => {
+    const id = currentSessionID()
+    if (!id) return undefined
+    tick() // 依赖 tick，活跃时每秒重算
+    return buildFamilyTiming(sessionFamily(id), store.messages as any, store.parts as any)
+  })
+
   // Status text derived from last assistant message parts
   const statusText = createMemo<string | undefined>(() => {
     if (status() === "idle") return undefined
@@ -2284,6 +2303,7 @@ export const SessionProvider: ParentComponent = (props) => {
     costBreakdown,
     contextUsage,
     familyTokens,
+    familyTiming,
     agents,
     allAgents,
     skills,

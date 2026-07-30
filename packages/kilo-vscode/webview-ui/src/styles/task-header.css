@@ -266,6 +266,7 @@
   font-size: 11px;
   color: var(--vscode-descriptionForeground);
   white-space: nowrap;
+  cursor: pointer;
 }
 
 .task-header-tokens-label {

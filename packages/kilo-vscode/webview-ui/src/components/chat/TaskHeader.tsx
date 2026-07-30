@@ -8,13 +8,13 @@
  * session activity) and a context window progress bar.
  */
 
-import { Component, For, Show, createMemo, createSignal, onMount, onCleanup } from "solid-js"
+import { Component, For, Show, createMemo, createSignal, createEffect, onMount, onCleanup } from "solid-js"
 import { IconButton } from "@kilocode/kilo-ui/icon-button"
 import { Tooltip } from "@kilocode/kilo-ui/tooltip"
 import { Icon } from "@kilocode/kilo-ui/icon"
 import { Checkbox } from "@kilocode/kilo-ui/checkbox"
 import { useSession } from "../../context/session"
-import { collapseCostBreakdown } from "../../context/session-utils"
+import { collapseCostBreakdown, buildTimingSegments, fmtDuration } from "../../context/session-utils"
 import { useLanguage } from "../../context/language"
 import { useVSCode } from "../../context/vscode"
 import { TaskTimeline } from "./TaskTimeline"
@@ -64,6 +64,56 @@ export const TaskHeader: Component<TaskHeaderProps> = (props) => {
     const has = tk.input > 0 || tk.output > 0 || tk.cache.read > 0 || tk.cache.write > 0
     if (has) return tk
     return undefined
+  })
+
+  const timing = createMemo(() => session.familyTiming())
+
+  // 实时计时器：只要存在消息就每秒 tick，保证耗时持续变动
+  const [now, setNow] = createSignal(Date.now())
+  createEffect(() => {
+    const id = setInterval(() => setNow(Date.now()), 1000)
+    onCleanup(() => clearInterval(id))
+  })
+
+  // 实时耗时：由 buildFamilyTiming 遍历 family 估算（含子会话的运行中工具）
+  // 仅活跃会话时用 Date.now() 实时计算，空闲时回退到静态数据
+  const liveTiming = createMemo(() => {
+    const t = timing()
+    const msgs = session.messages()
+    const isIdle = session.status() === "idle"
+
+    // 没有消息也没有数据时隐藏
+    if (msgs.length === 0 && !t) return undefined
+
+    // 空闲时直接返回静态数据
+    if (isIdle && t) return t
+
+    // 找第一条用户消息的时间作为 session 起点
+    let sessionStart: number | undefined
+    for (const m of msgs) {
+      if (m.role === "user" && m.time?.created) {
+        sessionStart = m.time.created
+        break
+      }
+    }
+
+    // 总计取累加和与墙上时钟的最大值，与 buildFamilyTiming 保持一致
+    const since = session.busySince()
+    const wallClock = since
+      ? Date.now() - since
+      : sessionStart
+        ? Date.now() - sessionStart
+        : (t?.total ?? 0)
+    const accumulated = (t?.llm ?? 0) + (t?.tool ?? 0) + (t?.wait ?? 0)
+    const total = Math.max(wallClock, accumulated, t?.total ?? 0)
+
+    return {
+      total,
+      llm: t?.llm ?? 0,
+      wait: t?.wait ?? 0,
+      actual: Math.max(total - (t?.wait ?? 0), 0),
+      tool: t?.tool ?? 0,
+    }
   })
 
   const fmtNum = (n: number): string => {
@@ -231,7 +281,53 @@ export const TaskHeader: Component<TaskHeaderProps> = (props) => {
               </div>
             )}
           </Show>
-        </div>
+          <Show when={liveTiming()}>
+            {(t) => {
+              const segments = () => buildTimingSegments(t())
+              const pct = (v: number) => t().total > 0 ? `(${((v / t().total) * 100).toFixed(1)}%)` : ""
+              return (
+                <div class="task-header-tokens" style={{ "margin-top": "6px", "line-height": "1.4" }}>
+                  <div style={{ display: "flex", "align-items": "center", gap: "4px", "flex-wrap": "wrap" }}>
+                    <span class="task-header-tokens-label" style={{ "margin-right": '10px' }}>任务累计耗时</span>
+                    <For each={segments()}>
+                      {(seg,index) => (
+                        <>
+                         { index() !== 0 && <span style={{ opacity: 0.4 }}>|</span> }
+                          <span style={{ color: seg.color, "font-size": "11px" }}>
+                            {seg.label}: {fmtDuration(seg.duration)} 
+                          </span>
+                        </>
+                      )}
+                    </For>
+                    <span style={{ opacity: 0.4 }}>|</span>
+                     <Tooltip
+                      value={
+                        <div style={{ "text-align": "left", "white-space": "nowrap" }}>
+                          <div>总耗时:       {fmtDuration(t().total)}</div>
+                          <hr style={{ margin: "2px 0", border: "none", "border-top": "1px solid currentColor", opacity: 0.3 }} />
+                          <div>● LLM 耗时:   {fmtDuration(t().llm)} {pct(t().llm)}</div>
+                          <div>● 工具执行:   {fmtDuration(t().tool)} {pct(t().tool)}</div>
+                          <Show when={t().wait > 0}>
+                            <div>● 等待用户:   {fmtDuration(t().wait)} {pct(t().wait)}</div>
+                          </Show>
+                          <div>● 实际执行:   {fmtDuration(t().actual)} {pct(t().actual)}</div>
+                          <Show when={t().total > t().llm + t().tool + t().wait}>
+                            <div>● 其他开销:   {fmtDuration(t().total - t().llm - t().tool - t().wait)} {pct(t().total - t().llm - t().tool - t().wait)}</div>
+                          </Show>
+                        </div>
+                      }
+                      placement="bottom"
+                    >
+                      <span class="task-header-tokens-value" style={{ "font-weight": 600 }}>
+                       总计: {fmtDuration(t().total)}
+                      </span>
+                    </Tooltip>
+                  </div>
+                </div>
+              )
+            }}
+          </Show>
+          </div>
       </Show>
       <Show when={hasTodos()}>
         <div data-component="task-header-todos">

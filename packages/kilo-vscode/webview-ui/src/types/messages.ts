@@ -120,7 +120,7 @@ export interface Message {
   content?: string
   parts?: Part[]
   createdAt: string
-  time?: { created: number; completed?: number }
+  time?: { created: number; completed?: number; llm?: number }
   agent?: string
   model?: { providerID: string; modelID: string }
   providerID?: string

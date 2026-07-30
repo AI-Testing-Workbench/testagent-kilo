@@ -3,6 +3,30 @@ import type { Part, TokenUsage } from "../types/messages"
 /** Minimal message shape for cost breakdown helpers. */
 export type CostMessage = { id: string; role: string; cost?: number }
 
+/** Minimal message shape for timing helpers — includes time fields from backend */
+export type TimingMessage = {
+  id: string
+  role: string
+  time?: {
+    created: number
+    completed?: number
+    llm?: number
+  }
+}
+
+/** Tool state shape with time fields for timing computation */
+type TimingToolState = {
+  status: string
+  time?: { start: number; end?: number }
+}
+
+/** Minimal tool part shape for timing extraction. */
+type TimingTaskPart = {
+  type: string
+  tool?: string
+  state?: TimingToolState
+}
+
 /** Minimal tool part shape for label extraction. */
 type ToolState = {
   input?: { description?: string; subagent_type?: string }
@@ -220,4 +244,111 @@ export function collapseCostBreakdown(
   const hidden = reversed.slice(VISIBLE_CHILDREN)
   const aggregated = hidden.reduce((sum, e) => sum + e.cost, 0)
   return [root, ...visible, { label: summaryLabel(hidden.length), cost: aggregated }]
+}
+
+// ── Timing ─────────────────────────────────────────────────────
+
+/** Tools that wait for user input */
+const WAIT_TOOLS = new Set(["question", "invalid"])
+
+export interface TimingInfo {
+  total: number  // 总耗时 (ms)
+  llm: number    // LLM 总耗时 (ms)
+  wait: number   // 等待用户耗时 (ms)
+  actual: number // 实际执行耗时 = total - wait (ms)
+  tool: number   // 工具执行耗时 (ms)
+}
+
+export interface TimingSegment {
+  key: string
+  label: string
+  duration: number
+  percent: number
+  width: number
+  color: string
+}
+
+/**
+ * Compute timing breakdown across a session family.
+ * Pure function — no store dependency.
+ */
+export function buildFamilyTiming(
+  family: Set<string>,
+  messages: Record<string, TimingMessage[]>,
+  parts: Record<string, TimingTaskPart[]>,
+): TimingInfo | undefined {
+  let total = 0
+  let llm = 0
+  let wait = 0
+  let tool = 0
+  let has = false
+
+  for (const sid of family) {
+    const msgs = messages[sid] ?? []
+    for (const m of msgs) {
+      if (m.role !== "assistant") continue
+      // LLM 耗时
+      llm += m.time?.llm ?? 0
+      has = true
+
+      // 遍历此消息的 parts，统计等待工具和工具执行耗时
+      const pList = parts[m.id] ?? []
+      for (const p of pList) {
+        if (p.type === "tool" && p.state?.time?.start) {
+          const dur = p.state.time.end
+            ? p.state.time.end - p.state.time.start
+            : Date.now() - p.state.time.start // 运行中的工具实时估算
+          tool += dur
+          if (p.tool && WAIT_TOOLS.has(p.tool)) {
+            wait += dur
+          }
+        }
+      }
+    }
+    // 找第一条和最后一条消息的时间确定总耗时
+    const first = msgs[0]
+    const last = msgs[msgs.length - 1]
+    if (first?.role === "user" && first.time?.created && last?.role === "assistant" && last.time?.completed) {
+      total = Math.max(total, last.time.completed - first.time.created)
+    }
+  }
+
+  if (!has) return undefined
+
+  // 总计取累加和与墙上时钟的最大值，保证数据自洽
+  // 子会话与父会话时间重叠时，累加和 > 墙上时钟
+  const accumulated = llm + tool + wait
+  const finalTotal = Math.max(total, accumulated)
+
+  const actual = Math.max(0, finalTotal - wait)
+
+  return { total: finalTotal, llm, wait, actual, tool }
+}
+
+/**
+ * Compute timing segments for the breakdown bar display.
+ * Segments are: LLM, 工具执行, 等待用户, 其他开销.
+ * "实际执行" (total - wait) is only shown in tooltip, not as a bar segment.
+ */
+export function buildTimingSegments(info: TimingInfo): TimingSegment[] {
+  const pct = (v: number) => (info.total > 0 ? (v / info.total) * 100 : 0)
+  const overhead = Math.max(0, info.total - info.llm - info.tool - info.wait)
+  return [
+    { key: "llm", label: "LLM", duration: info.llm, percent: pct(info.llm), width: pct(info.llm), color: "var(--syntax-property)" },
+    { key: "tool", label: "工具执行", duration: info.tool, percent: pct(info.tool), width: pct(info.tool), color: "var(--syntax-info)" },
+    { key: "wait", label: "等待用户", duration: info.wait, percent: pct(info.wait), width: pct(info.wait), color: "var(--syntax-warning, #d2a106)" },
+    { key: "overhead", label: "其他开销", duration: overhead, percent: pct(overhead), width: pct(overhead), color: "var(--syntax-muted, #888)" },
+  ].filter((s) => s.duration > 0)
+}
+
+/**
+ * Format milliseconds to a human-readable duration string.
+ */
+export function fmtDuration(ms: number): string {
+  if (!ms || ms < 0) return "0s"
+  if (ms < 1000) return `${ms}ms`
+  if (ms < 60000) return `${(ms / 1000).toFixed(1)}s`
+  const m = Math.floor(ms / 60000)
+  const s = Math.round((ms % 60000) / 1000)
+  return `${m}m ${s}s`
 }
