@@ -1154,16 +1154,25 @@ const AgentBehaviourTab: Component = () => {
   // plugin tab
   const renderPluginsSubtab = () => (
     <div>
-      <h4 style={{ "margin-top": "0", "margin-bottom": "8px" }}>已加载插件</h4>
-      <Show
-        when={plugins().length > 0}
-        fallback={
-          <Card style={{ "margin-bottom": "16px" }}>
-            <div data-slot="settings-row-label-subtitle">当前运行时没有成功加载的外部插件。</div>
-          </Card>
-        }
-      >
-        <Card style={{ "margin-bottom": "16px" }}>
+      <div>
+        <h4
+          style={{
+            "margin-top": "0",
+            "margin-bottom": "8px",
+            "font-size": "12px",
+            color: "var(--vscode-testing-iconPassed, #4caf50)",
+            padding: "6px 10px",
+            "border-radius": "4px",
+            "background-color": "color-mix(in srgb, var(--vscode-testing-iconPassed, #4caf50) 15%, transparent)",
+            "border": "1px solid var(--vscode-testing-iconPassed, #4caf50)",
+          }}
+        >
+          已加载插件
+        </h4>
+        <Show
+          when={plugins().length > 0}
+          fallback={<div data-slot="settings-row-label-subtitle">当前运行时没有成功加载的外部插件。</div>}
+        >
           <For each={plugins()}>
             {(plugin, index) => (
               <div
@@ -1205,11 +1214,40 @@ const AgentBehaviourTab: Component = () => {
               </div>
             )}
           </For>
-        </Card>
-      </Show>
+        </Show>
+      </div>
       <Show when={failedPlugins().length > 0}>
-        <h4 style={{ "margin-top": "0", "margin-bottom": "8px" }}>加载失败插件</h4>
-        <Card style={{ "margin-bottom": "16px" }}>
+        <div>
+          <h4
+            style={{
+              "margin-top": "0",
+              "margin-bottom": "8px",
+              "font-size": "12px",
+              color: "var(--vscode-testing-iconFailed, #f44336)",
+              padding: "6px 10px",
+              "border-radius": "4px",
+              "background-color": "color-mix(in srgb, var(--vscode-testing-iconFailed, #f44336) 15%, transparent)",
+              "border": "1px solid var(--vscode-testing-iconFailed, #f44336)",
+              display: "flex",
+              "align-items": "center",
+              "justify-content": "space-between",
+              gap: "8px",
+            }}
+          >
+            <span>加载失败插件</span>
+            <IconButton
+              size="small"
+              variant="ghost"
+              icon="link"
+              title="查看插件加载失败说明文档"
+              onClick={() =>
+                vscode.postMessage({
+                  type: "openExternal",
+                  url: atob("aHR0cHM6Ly9kb2MuY21iY2hpbmEuY29tL2Yvdj9pZD1fNDFaSFQ1"),
+                })
+              }
+            />
+          </h4>
           <For each={failedPlugins()}>
             {(plugin, index) => (
               <div
@@ -1252,7 +1290,7 @@ const AgentBehaviourTab: Component = () => {
               </div>
             )}
           </For>
-        </Card>
+        </div>
       </Show>
     </div>
   )
