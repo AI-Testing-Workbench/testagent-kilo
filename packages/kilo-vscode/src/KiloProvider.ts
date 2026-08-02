@@ -2899,6 +2899,35 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
       console.error("[TestAgent]  Failed to reconcile session statuses on reconnect:", error)
     }
   }
+
+  /**
+   * Reconcile the status of a single session after operations like abort.
+   * Query the backend for the current status and update the webview if stale.
+   */
+  private async reconcileSessionStatus(sessionID: string): Promise<void> {
+    if (!this.client || this.connectionState !== "connected") return
+    const dir = this.getWorkspaceDirectory(sessionID)
+    try {
+      const result = await this.client.session.status({ directory: dir })
+      if (!result.data) {
+        // If backend returns no active sessions, this session must be idle
+        this.sessionStatusMap.set(sessionID, "idle")
+        this.postMessage({ type: "sessionStatus", sessionID, status: "idle" })
+        return
+      }
+      const active = result.data
+      const backendStatus = active[sessionID]?.type ?? "idle"
+      const localStatus = this.sessionStatusMap.get(sessionID)
+      if (localStatus !== backendStatus) {
+        this.sessionStatusMap.set(sessionID, backendStatus)
+        this.postMessage({ type: "sessionStatus", sessionID, status: backendStatus })
+        console.log(`[TestAgent] Reconciled session status: ${sessionID} ${localStatus} → ${backendStatus}`)
+      }
+    } catch (error) {
+      console.error("[TestAgent]  Failed to reconcile session status:", error)
+    }
+  }
+  // testagent_change end
   // testagent_change end
 
   /**
@@ -3841,6 +3870,11 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
         queuedMessageIDs,
         reason: reason as "completed" | "user_abort" | "error" | undefined,
       })
+      // testagent_change start - reconcile session status after abort
+      // The session.status:idle event may be lost if SSE drops during abort,
+      // so we query the backend to get the current status and update the UI.
+      await this.reconcileSessionStatus(targetSessionID)
+      // testagent_change end
     } catch (error) {
       console.error("[TestAgent]  Failed to abort session:", error)
     }
@@ -4700,9 +4734,12 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
         notifiedEventIds.add(event.id)
         setTimeout(() => notifiedEventIds.delete(event.id), 1000)
 
-        // Skip notification for MessageAbortedError (user-initiated abort is not an error)
+        // Skip notification for MessageAbortedError or AbortError (user-initiated abort is not an error)
         const isAbortError =
-          typeof error === "object" && error !== null && "name" in error && error.name === "MessageAbortedError"
+          typeof error === "object" && 
+          error !== null && 
+          "name" in error && 
+          ((error.name as string) === "MessageAbortedError" || (error.name as string) === "AbortError")
         if (isAbortError) {
           return
         }

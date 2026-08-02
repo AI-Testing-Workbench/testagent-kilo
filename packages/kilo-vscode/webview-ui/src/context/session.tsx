@@ -812,7 +812,11 @@ export const SessionProvider: ParentComponent = (props) => {
         break
 
       case "sessionError": {
-        if (message.error?.name === "MessageAbortedError") break
+        // Skip AbortError and MessageAbortedError (user-initiated abort is not an error)
+        const isAbortError = 
+          message.error?.name === "MessageAbortedError" || 
+          (message.error?.name as string) === "AbortError"
+        if (isAbortError) break
         const sid = message.sessionID ?? currentSessionID()
         if (!sid) break
         // Find the last user message in this session to use as parentID
