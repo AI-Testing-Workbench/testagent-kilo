@@ -11,6 +11,7 @@ import { Tooltip } from "@kilocode/kilo-ui/tooltip"
 import { useSession } from "../../context/session"
 import { useLanguage } from "../../context/language"
 import { useVSCode } from "../../context/vscode"
+import { WaitingForUserAvatar } from "./WaitingForUserAvatar"
 
 function ThinkingAvatar() {
   return (
@@ -136,6 +137,14 @@ export const WorkingIndicator: Component = () => {
 
   const isRetrying = () => session.statusInfo().type === "retry"
 
+  const waitingForUser = () => {
+    const text = session.statusText()
+    return (
+      text === language.t("ui.sessionTurn.status.delegatingWaitingPermission") ||
+      text === language.t("ui.sessionTurn.status.delegatingWaitingQuestion")
+    )
+  }
+
   const handleCancelRetry = () => {
     const sid = session.currentSessionID()
     if (sid) {
@@ -146,7 +155,9 @@ export const WorkingIndicator: Component = () => {
   return (
     <Show when={session.status() !== "idle" && !blocked()}>
       <div class="working-indicator">
-        <ThinkingAvatar />
+        <Show when={waitingForUser()} fallback={<ThinkingAvatar />}>
+          <WaitingForUserAvatar />
+        </Show>
         <Tooltip value={statusText()} placement="top">
           <span class="working-text">{statusText()}</span>
         </Tooltip>
