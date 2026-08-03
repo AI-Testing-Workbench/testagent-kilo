@@ -891,6 +891,11 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
         case "createSession":
           await this.handleCreateSession()
           break
+        // testagent_change start - local tabs
+        case "sidebar.openSessions":
+          for (const id of message.sessionIDs) this.trackedSessionIds.add(id)
+          break
+        // testagent_change end
         case "clearSession":
           this.contextSessionID = this.currentSession?.id ?? this.contextSessionID
           this.currentSession = null

@@ -13,6 +13,7 @@ import { Icon } from "@kilocode/kilo-ui/icon"
 import { showToast } from "@kilocode/kilo-ui/toast"
 import { useDialog } from "@kilocode/kilo-ui/context/dialog"
 import { useSession } from "../../context/session"
+import { useLocalTabs } from "../../context/local-tabs"
 import { useServer } from "../../context/server"
 import { useProvider } from "../../context/provider"
 import { useConfig } from "../../context/config"
@@ -73,6 +74,8 @@ interface PromptInputProps {
 
 export const PromptInput: Component<PromptInputProps> = (props) => {
   const session = useSession()
+  const tabs = useLocalTabs()
+  const pending = () => props.pendingSessionID ?? tabs?.pending()
   const server = useServer()
   const { config } = useConfig()
   const provider = useProvider()
@@ -82,12 +85,12 @@ export const PromptInput: Component<PromptInputProps> = (props) => {
   const dialog = useDialog()
   const mention = useFileMention(
     vscode,
-    () => session.currentSessionID() ?? props.pendingSessionID ?? session.draftSessionID(),
+    () => session.currentSessionID() ?? pending() ?? session.draftSessionID(),
   )
   // testagent_change start - /sdt-run 阶段选择下拉框
   const sdtStages = useSdtStages(
     vscode,
-    () => session.currentSessionID() ?? props.pendingSessionID ?? session.draftSessionID(),
+    () => session.currentSessionID() ?? pending() ?? session.draftSessionID(),
   )
   // testagent_change end
   const terminal = useTerminalContext(vscode)
@@ -118,7 +121,7 @@ export const PromptInput: Component<PromptInputProps> = (props) => {
   const boxKey = () => props.boxId ?? "prompt:default"
   const rawKey = () =>
     sessionDraftKey(session.currentSessionID()) ??
-    pendingDraftKey(props.pendingSessionID ?? session.draftSessionID()) ??
+    pendingDraftKey(pending() ?? session.draftSessionID()) ??
     "new"
   const draftKey = () => scopeDraftKey(boxKey(), rawKey())
   const saveDraft = (
@@ -299,6 +302,10 @@ export const PromptInput: Component<PromptInputProps> = (props) => {
 
   // Start a new task, carrying over the current prompt text (without auto-sending it)
   const onNewTaskRequest = () => {
+    if (tabs) {
+      tabs.add()
+      return
+    }
     const draft = text().trim()
     const code = codeContexts()
     const comments = reviewComments()
@@ -435,18 +442,18 @@ const sel = session.selected()
       const target = scopeDraftKey(boxKey(), pendingDraftKey(message.draftID) ?? "new")
       const next = scopeDraftKey(boxKey(), sessionDraftKey(message.session.id) ?? "new")
       const draft = drafts.get(target)
-      const pending = reviewDrafts.get(target)
+      const review = reviewDrafts.get(target)
       const imgs = imageDrafts.get(target)
       if (draft !== undefined) drafts.set(next, draft)
       const code = codeDrafts.get(target)
       if (code) codeDrafts.set(next, code)
-      if (pending) reviewDrafts.set(next, pending)
+      if (review) reviewDrafts.set(next, review)
       if (imgs) imageDrafts.set(next, imgs)
       drafts.delete(target)
       codeDrafts.delete(target)
       reviewDrafts.delete(target)
       imageDrafts.delete(target)
-      if (!session.currentSessionID() && (props.pendingSessionID ?? session.draftSessionID()) === message.draftID) {
+      if (!session.currentSessionID() && (pending() ?? session.draftSessionID()) === message.draftID) {
         session.setDraftSessionID(message.session.id)
       }
     }
@@ -665,7 +672,7 @@ const sel = session.selected()
   }
 
   const openGoal = () => {
-    dialog.show(() => <GoalDialog onClose={() => dialog.close()} pendingSessionID={props.pendingSessionID} />)
+    dialog.show(() => <GoalDialog onClose={() => dialog.close()} pendingSessionID={pending()} />)
   }
 
   // testagent_change start - Goal abort dialog handler
@@ -726,16 +733,16 @@ const sel = session.selected()
 
     const imgs = imageAttach.images()
     const code = codeContexts()
-    const pending = reviewComments()
+    const comments = reviewComments()
     const ctx = code.length > 0 ? code.map(formatCodeContext).join("\n\n") : ""
-    const review = pending.length > 0 ? formatReviewCommentsMarkdown(pending) : ""
+    const review = comments.length > 0 ? formatReviewCommentsMarkdown(comments) : ""
     const message = [ctx, review, draft].filter(Boolean).join("\n\n")
     if ((!message && imgs.length === 0) || isDisabled() || terminal.pending() || props.blocked?.() || provider.models().length === 0) return
 
     const mentionFiles = mention.parseFileAttachments(draft)
     const imgFiles = imgs.map((img) => ({ mime: img.mime, url: img.dataUrl, filename: img.filename }))
     const sel = session.selected()
-    const pendingId = props.pendingSessionID ?? session.draftSessionID()
+    const pendingId = pending() ?? session.draftSessionID()
     const sid = session.currentSessionID()
 
     const terminalFile = await terminal.resolveAttachment(message, sid).catch((err: Error) => {

@@ -15,7 +15,9 @@ import { PromptInput } from "./PromptInput"
 import { PermissionDock } from "./PermissionDock"
 import { QuestionDock } from "./QuestionDock"
 import { StartupErrorBanner } from "./StartupErrorBanner"
+import { SessionTabStrip } from "./SessionTabStrip"
 import { useSession } from "../../context/session"
+import { useLocalTabs } from "../../context/local-tabs"
 import { useVSCode } from "../../context/vscode"
 import { useLanguage } from "../../context/language"
 import { useWorktreeMode } from "../../context/worktree-mode"
@@ -35,6 +37,7 @@ interface ChatViewProps {
 
 export const ChatView: Component<ChatViewProps> = (props) => {
   const session = useSession()
+  const tabs = useLocalTabs()
   const vscode = useVSCode()
   const language = useLanguage()
   const worktreeMode = useWorktreeMode()
@@ -43,6 +46,9 @@ export const ChatView: Component<ChatViewProps> = (props) => {
   const isSidebar = () => worktreeMode === undefined
   // Show "Continue in Worktree": only when explicitly enabled via prop
   const canContinueInWorktree = () => props.continueInWorktree === true
+
+  // Show tab strip when multiple tabs are open
+  const showTabStrip = () => isSidebar() && !props.readonly && tabs && tabs.ids().length > 1
 
   const id = () => session.currentSessionID()
   const hasMessages = () => session.messages().length > 0
@@ -162,6 +168,9 @@ export const ChatView: Component<ChatViewProps> = (props) => {
 
   return (
     <div class="chat-view">
+      <Show when={showTabStrip()}>
+        <SessionTabStrip />
+      </Show>
       <TaskHeader readonly={props.readonly} />
       <div class="chat-messages-wrapper">
         <div class="chat-messages">
@@ -283,7 +292,7 @@ export const ChatView: Component<ChatViewProps> = (props) => {
               suggesting={suggesting}
               questioning={questioning}
               boxId={props.promptBoxId}
-              pendingSessionID={props.pendingSessionID}
+              pendingSessionID={props.pendingSessionID ?? tabs?.pending()}
             />
           </Show>
         </div>

@@ -46,6 +46,12 @@ export const dict = {
   "command.session.new.task": "New task",
   "command.session.continue": "Continue", // testagent_change
   "command.session.show.changes": "Show Changes",
+  "sidebar.session.newSession": "New session",
+  "session.tabs.switcher.open": "Open session switcher",
+  "session.tabs.switcher.search": "Search sessions...",
+  "session.tabs.switcher.current": "Current",
+  "session.tabs.switcher.pending": "Pending",
+  "session.tabs.switcher.busy": "Working",
   "command.file.open": "Open file",
   "command.tab.close": "Close tab",
   "command.context.addSelection": "Add selection to context",
