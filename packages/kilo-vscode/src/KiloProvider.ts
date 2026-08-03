@@ -108,6 +108,14 @@ import {
   fetchAndSendPendingQuestions,
 } from "./kilo-provider/handlers/question"
 import { fetchAndSendPendingSuggestions, routeSuggestionWebviewMessage } from "./kilo-provider/handlers/suggestion"
+// testagent_change start - env vars handlers
+import {
+  handleRequestEnvVars,
+  handleCreateEnvVar,
+  handleUpdateEnvVar,
+  handleDeleteEnvVar,
+} from "./kilo-provider/handlers/env-vars"
+// testagent_change end
 
 import {
   buildActionContext,
@@ -1107,6 +1115,32 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
             console.error("[TestAgent] saveMemorySettings failed:", e),
           )
           break
+        // testagent_change start - env vars message handlers
+        case "requestEnvVars":
+          if (!this.client) break
+          handleRequestEnvVars(this.client, this.webview).catch((e) =>
+            console.error("[TestAgent] handleRequestEnvVars failed:", e),
+          )
+          break
+        case "createEnvVar":
+          if (!this.client) break
+          handleCreateEnvVar(this.client, this.webview, message.key, message.value, message.description).catch((e) =>
+            console.error("[TestAgent] handleCreateEnvVar failed:", e),
+          )
+          break
+        case "updateEnvVar":
+          if (!this.client) break
+          handleUpdateEnvVar(this.client, this.webview, message.key, message.value, message.description).catch((e) =>
+            console.error("[TestAgent] handleUpdateEnvVar failed:", e),
+          )
+          break
+        case "deleteEnvVar":
+          if (!this.client) break
+          handleDeleteEnvVar(this.client, this.webview, message.key).catch((e) =>
+            console.error("[TestAgent] handleDeleteEnvVar failed:", e),
+          )
+          break
+        // testagent_change end
         case "checkGitInstalled": {
           const installed = await this.checkGitInstalled()
           if (this.webview) {
