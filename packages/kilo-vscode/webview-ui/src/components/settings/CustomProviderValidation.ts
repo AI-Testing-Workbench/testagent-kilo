@@ -15,6 +15,10 @@ export type FormState = {
   models: ModelEntry[]
   headers: HeaderRow[]
   saving: boolean
+  // testagent_change start
+  isJisuan: boolean
+  jisuanModelId: string
+  // testagent_change end
 }
 
 export type FormErrors = {
@@ -23,6 +27,8 @@ export type FormErrors = {
   baseURL: string | undefined
   models: Array<{ id?: string; name?: string; variants?: Array<{ name?: string }> }>
   headers: Array<{ key?: string; value?: string }>
+  // testagent_change
+  jisuanModelId?: string
 }
 
 type ValidateArgs = {
@@ -163,6 +169,13 @@ export function validateCustomProvider(input: ValidateArgs): ValidateResult {
       ? input.t("provider.custom.error.baseURL.format")
       : undefined
 
+  // testagent_change start: Validate jisuan model ID
+  const jisuanModelIdError =
+    input.form.isJisuan && !input.form.jisuanModelId.trim()
+      ? input.t("provider.custom.error.required")
+      : undefined
+  // testagent_change end
+
   const seenModels = new Set<string>()
   const modelErrors = input.form.models.map((m) => checkModel(m, seenModels, input.t))
   const modelsValid = modelErrors.every((m) => !m.id && !m.name && m.variants.every((v) => !v.name))
@@ -177,9 +190,12 @@ export function validateCustomProvider(input: ValidateArgs): ValidateResult {
     baseURL: urlError,
     models: modelErrors,
     headers: headerErrors,
+    // testagent_change
+    jisuanModelId: jisuanModelIdError,
   }
 
-  const ok = !idErr && !existsErr && !nameError && !urlError && modelsValid && headersValid
+  // testagent_change: Include jisuanModelId validation in ok check
+  const ok = !idErr && !existsErr && !nameError && !urlError && !jisuanModelIdError && modelsValid && headersValid
   if (!ok) return { errors }
 
   const headers = Object.fromEntries(
