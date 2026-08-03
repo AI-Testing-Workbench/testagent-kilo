@@ -54,7 +54,7 @@ export function Tooltip(props: TooltipProps) {
   ])
 
   const isControlled = () => local.open !== undefined
-  const isOpen = () => isControlled() ? local.open : (local.forceOpen || state.open)
+  const isOpen = () => (isControlled() ? local.open : local.forceOpen || state.open)
 
   const close = () => setState("open", false)
 
@@ -85,11 +85,6 @@ export function Tooltip(props: TooltipProps) {
   const arm = () => {
     setState("block", true)
     close()
-  }
-
-  const leave = () => {
-    if (!inside()) close()
-    drop()
   }
 
   createEffect(() => {
@@ -138,7 +133,7 @@ export function Tooltip(props: TooltipProps) {
               if (event.key !== "Enter" && event.key !== " ") return
               arm()
             }}
-            onPointerLeave={leave}
+            onPointerLeave={() => drop()}
             onFocusOut={() => requestAnimationFrame(() => drop())}
           >
             {local.children}
@@ -150,6 +145,8 @@ export function Tooltip(props: TooltipProps) {
               data-force-open={local.forceOpen}
               class={local.contentClass}
               style={local.contentStyle}
+              onPointerEnter={() => setState("open", true)}
+              onPointerLeave={() => close()}
               onPointerDownOutside={(e) => {
                 if (ref === e.target || (e.target instanceof Node && ref?.contains(e.target))) {
                   justClickedTrigger = true

@@ -304,8 +304,8 @@ export const TaskHeader: Component<TaskHeaderProps> = (props) => {
                           return Object.entries(breakdown).sort((a, b) => b[1] - a[1])
                         })()
                         const segTooltip = (() => {
-                          if (isLlm) return "累加所有 assistant 消息的 time.llm（由 backend processor.ts 在 LLM stream 完成后写入）"
-                          if (isWait) return "累加所有 question/invalid 工具 part 的 (time.end - time.start)，加上 permission 等待总时长"
+                          if (isLlm) return "累计所有模型回复消息的模型处理时长，即模型开始生成到生成完成所用的时间"
+                          if (isWait) return "累计所有需要用户回答或因输入无效而暂停的等待时间，并加上权限确认的等待时长"
                           if (isOverhead) return "总耗时与 LLM + 工具执行 + 等待用户 的差值，通常包含网络延迟、消息存储、session 管理等其他未单独统计的开销"
                           return undefined
                         })()
@@ -352,10 +352,10 @@ export const TaskHeader: Component<TaskHeaderProps> = (props) => {
                           <Show when={t().wait > 0}>
                             <div>● 等待用户:   {fmtDuration(t().wait)} {pct(t().wait)}</div>
                             <Show when={t().permissionWait > 0}>
-                              <div style={{ "margin-left": "8px" }}>权限等待: {fmtDuration(t().permissionWait)} {pct(t().permissionWait)}</div>
+                              <div style={{ "margin-left": "12px" }}>权限等待: {fmtDuration(t().permissionWait)} {pct(t().permissionWait)}</div>
                             </Show>
                             <Show when={t().questionWait > 0}>
-                              <div style={{ "margin-left": "8px" }}>问题等待: {fmtDuration(t().questionWait)} {pct(t().questionWait)}</div>
+                              <div style={{ "margin-left": "12px" }}>问题等待: {fmtDuration(t().questionWait)} {pct(t().questionWait)}</div>
                             </Show>
                           </Show>
                           <div>● 实际执行:   {fmtDuration(t().actual)} {pct(t().actual)}</div>
