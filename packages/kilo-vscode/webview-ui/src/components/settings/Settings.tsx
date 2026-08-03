@@ -20,6 +20,7 @@ import ContextTab from "./ContextTab"
 import NormalSettingTab from "./NormalSettingTab"
 import MemorySettingTab from "./MemorySettings"
 import GoalTab, { GoalIcon } from "./GoalTab" // testagent_change
+import EnvVarsTab from "./EnvVarsTab"
 
 export interface SettingsProps {
   tab?: string
@@ -166,6 +167,12 @@ const Settings: Component<SettingsProps> = (props) => {
             <Icon name="settings-gear" />
             <span class="label">通用设置</span>
           </Tabs.Trigger>
+          {/* testagent_change start - env vars tab */}
+          <Tabs.Trigger value="envVars">
+            <Icon name="sliders" />
+            <span class="label">环境变量</span>
+          </Tabs.Trigger>
+          {/* testagent_change end */}
           {/* testagent_change start - expose experimental settings */}
           <Tabs.Trigger value="experimental">
             <GoalIcon />
@@ -217,6 +224,10 @@ const Settings: Component<SettingsProps> = (props) => {
         <Tabs.Content value="normalSetting">
           <h3>通用设置</h3>
           <NormalSettingTab />
+        </Tabs.Content>
+        <Tabs.Content value="envVars">
+          <h3>环境变量</h3>
+          <EnvVarsTab />
         </Tabs.Content>
         {/* testagent_change start - expose experimental settings */}
         <Tabs.Content value="experimental">
