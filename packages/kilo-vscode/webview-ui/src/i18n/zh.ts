@@ -50,6 +50,14 @@ export const dict = {
   "command.session.new.task": "新建任务",
   "command.session.continue": "恢复任务", // testagent_change
   "command.session.show.changes": "显示更改",
+
+  // Session tabs
+  "sidebar.session.newSession": "新会话",
+  "session.tabs.switcher.open": "打开会话切换器",
+  "session.tabs.switcher.search": "搜索会话...",
+  "session.tabs.switcher.current": "当前",
+  "session.tabs.switcher.pending": "待定",
+  "session.tabs.switcher.busy": "忙碌中",
   "command.file.open": "打开文件",
   "command.tab.close": "关闭标签页",
   "command.context.addSelection": "将所选内容添加到上下文",

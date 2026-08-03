@@ -9,7 +9,9 @@
    Task Header Todos
    ============================================ */
 @import "./task-header.css";
+@import "./search-menu.css";
 @import "./chat-layout.css";
+@import "./session-tabs.css";
 @import "./banners.css";
 @import "./session-actions.css";
 @import "./welcome.css";

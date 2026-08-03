@@ -626,6 +626,7 @@ export interface SessionCreatedMessage {
   type: "sessionCreated"
   session: SessionInfo
   draftID?: string
+  activate?: boolean // testagent_change: added for local tabs
 }
 
 export interface SessionForkedMessage {
@@ -1859,6 +1860,13 @@ export interface UnrevertSessionRequest {
   sessionID: string
 }
 
+// testagent_change start - local tabs
+export interface SidebarOpenSessionsRequest {
+  type: "sidebar.openSessions"
+  sessionIDs: string[]
+}
+// testagent_change end
+
 export interface PermissionResponseRequest {
   type: "permissionResponse"
   permissionId: string
@@ -2836,6 +2844,7 @@ export type WebviewMessage =
   | AbortRequest
   | RevertSessionRequest
   | UnrevertSessionRequest
+  | SidebarOpenSessionsRequest // testagent_change: local tabs
   | PermissionResponseRequest
   | CreateSessionRequest
   | ClearSessionRequest
