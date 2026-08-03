@@ -19,8 +19,12 @@ import { ModelCard } from "./CustomProviderModelCard"
 import type {
   ChatTemplateArgsValue,
   EnableThinkingValue,
+  Modality,
+  Modalities,
   ModelEntry,
+  OutputEffortValue,
   ReasoningEffortValue,
+  SplitReasoningValue,
   ThinkingTypeValue,
   VariantEntry,
 } from "./CustomProviderModelCard"
@@ -66,13 +70,27 @@ const CustomProviderDialog = (props: CustomProviderDialogProps) => {
 
   const editing = () => !!props.existing
 
+  const MODES = new Set<string>(["text", "audio", "image", "video", "pdf"])
+
+  function listModality(raw: unknown): Modality[] | undefined {
+    if (!Array.isArray(raw)) return undefined
+    const result: string[] = []
+    raw.forEach((item) => { if (typeof item === "string" && MODES.has(item)) result.push(item) })
+    return result.length > 0 ? result as any[] : undefined
+  }
+
   function initModels(): ModelEntry[] {
     const cfg = props.existing?.config
-    if (!cfg?.models || typeof cfg.models !== "object") return [{ id: "", name: "", reasoning: false, variants: [], limit: undefined }] // testagent_change
+    if (!cfg?.models || typeof cfg.models !== "object") return [{ id: "", name: "", reasoning: false, supportsImages: false, modalities: {}, variants: [], limit: undefined }]
     const entries = Object.entries(cfg.models)
-    if (entries.length === 0) return [{ id: "", name: "", reasoning: false, variants: [], limit: undefined }] // testagent_change
+    if (entries.length === 0) return [{ id: "", name: "", reasoning: false, supportsImages: false, modalities: {}, variants: [], limit: undefined }]
     return entries.map(([id, m]) => {
-      const raw = m as { name?: string; reasoning?: boolean; variants?: Record<string, Record<string, unknown>>; limit?: { context?: number } } // testagent_change
+      const raw = m as { name?: string; reasoning?: boolean; modalities?: { input?: unknown; output?: unknown }; variants?: Record<string, Record<string, unknown>>; limit?: { context?: number } }
+      const modalities: Modalities = {}
+      const input = listModality(raw.modalities?.input)
+      const output = listModality(raw.modalities?.output)
+      if (input) modalities.input = input
+      if (output) modalities.output = output
       const variants: VariantEntry[] = Object.entries(raw?.variants ?? {}).map(([vname, vcfg]) => ({
         name: vname,
         enableThinking: typeof vcfg.enable_thinking === "boolean" ? (vcfg.enable_thinking as boolean) : undefined,
@@ -80,21 +98,24 @@ const CustomProviderDialog = (props: CustomProviderDialogProps) => {
           typeof vcfg.thinking === "object" && vcfg.thinking !== null
             ? ((vcfg.thinking as { type?: string }).type as ThinkingTypeValue)
             : undefined,
+        splitReasoning: typeof vcfg.reasoning_split === "boolean" ? (vcfg.reasoning_split as boolean) : undefined,
         reasoningEffort:
           typeof vcfg.reasoningEffort === "string" ? (vcfg.reasoningEffort as ReasoningEffortValue) : undefined,
+        outputEffort: typeof vcfg.effort === "string" ? (vcfg.effort as OutputEffortValue) : undefined,
         chatTemplateArgs:
           typeof vcfg.chat_template_args === "object" && vcfg.chat_template_args !== null
             ? ((vcfg.chat_template_args as { enable_thinking?: boolean }).enable_thinking as ChatTemplateArgsValue)
             : undefined,
       }))
+      const supportsImages = (modalities.input ?? []).includes("image" as any)
       return {
         id,
         name: raw?.name ?? id,
         reasoning: raw?.reasoning ?? false,
+        supportsImages,
+        modalities,
         variants,
-        // testagent_change start: Initialize limit from config
         limit: raw?.limit,
-        // testagent_change end
       }
     })
   }
@@ -302,7 +323,7 @@ const CustomProviderDialog = (props: CustomProviderDialogProps) => {
     // Replace the single empty row or append
     const row = form.models[0]
     const empty = form.models.length === 1 && !!row && !row.id.trim() && !row.name.trim()
-    const defaults = (m: FetchedModel): ModelEntry => ({ ...m, reasoning: false, variants: [], limit: undefined }) // testagent_change
+    const defaults = (m: FetchedModel): ModelEntry => ({ ...m, reasoning: false, supportsImages: false, modalities: {}, variants: [], limit: undefined })
     const merged = empty ? picked.map(defaults) : [...form.models, ...picked.map(defaults)]
 
     setForm("models", merged)
@@ -331,7 +352,7 @@ const CustomProviderDialog = (props: CustomProviderDialogProps) => {
   }
 
   function addModel() {
-    setForm("models", (v) => [...v, { id: "", name: "", reasoning: false, variants: [], limit: undefined }]) // testagent_change
+    setForm("models", (v) => [...v, { id: "", name: "", reasoning: false, supportsImages: false, modalities: {}, variants: [], limit: undefined }])
     setErrors("models", (v) => [...v, { variants: [] }])
   }
 
@@ -357,7 +378,9 @@ const CustomProviderDialog = (props: CustomProviderDialogProps) => {
       name: "",
       enableThinking: undefined,
       thinking: undefined,
+      splitReasoning: undefined,
       reasoningEffort: undefined,
+      outputEffort: undefined,
       chatTemplateArgs: undefined,
     }
     setForm("models", mi, "variants", (v) => [...v, blank])
@@ -580,6 +603,7 @@ const CustomProviderDialog = (props: CustomProviderDialogProps) => {
                   onChangeId={(v) => setForm("models", i(), "id", v)}
                   onChangeName={(v) => setForm("models", i(), "name", v)}
                   onChangeReasoning={(v) => setForm("models", i(), "reasoning", v)}
+                  onChangeSupportsImages={(v) => setForm("models", i(), "supportsImages", v)}
                   onRemove={() => removeModel(i())}
                   onAddVariant={() => addVariant(i())}
                   onRemoveVariant={(vi) => removeVariant(i(), vi)}
@@ -588,8 +612,14 @@ const CustomProviderDialog = (props: CustomProviderDialogProps) => {
                     setForm("models", i(), "variants", vi, "enableThinking", val)
                   }
                   onChangeVariantThinking={(vi, val) => setForm("models", i(), "variants", vi, "thinking", val)}
+                  onChangeVariantSplitReasoning={(vi, val) =>
+                    setForm("models", i(), "variants", vi, "splitReasoning", val)
+                  }
                   onChangeVariantReasoningEffort={(vi, val) =>
                     setForm("models", i(), "variants", vi, "reasoningEffort", val)
+                  }
+                  onChangeVariantOutputEffort={(vi, val) =>
+                    setForm("models", i(), "variants", vi, "outputEffort", val)
                   }
                   onChangeVariantChatTemplateArgs={(vi, val) =>
                     setForm("models", i(), "variants", vi, "chatTemplateArgs", val)

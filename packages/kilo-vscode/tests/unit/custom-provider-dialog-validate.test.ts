@@ -1,4 +1,5 @@
 import { describe, expect, it } from "bun:test"
+import { createStore } from "solid-js/store"
 import { validateCustomProvider } from "../../webview-ui/src/components/settings/CustomProviderValidation"
 import type { FormState } from "../../webview-ui/src/components/settings/CustomProviderValidation"
 
@@ -142,5 +143,84 @@ describe("validateCustomProvider – variant name validation", () => {
     expect(out.result).toBeDefined()
     const saved = out.result!.config.models["model-1"] as Record<string, unknown>
     expect(saved.variants).toEqual({ eco: { enable_thinking: true, reasoningEffort: "low" } })
+  })
+})
+
+describe("validateCustomProvider – message serialization", () => {
+  it("returns cloneable modality arrays from a Solid store", () => {
+    const [form] = createStore({
+      ...base(),
+      models: [
+        {
+          ...base().models[0],
+          supportsImages: true,
+          modalities: { input: ["text", "image"] as const, output: ["text"] as const },
+        },
+      ],
+    })
+    const out = validateCustomProvider(args(form as FormState))
+
+    expect(out.result).toBeDefined()
+    expect(() => structuredClone(out.result!.config)).not.toThrow()
+  })
+
+  it("drops image from output when supportsImages is unchecked", () => {
+    const [form] = createStore({
+      ...base(),
+      models: [
+        {
+          ...base().models[0],
+          supportsImages: false,
+          modalities: { input: ["text", "image"] as const, output: ["text", "image"] as const },
+        },
+      ],
+    })
+    const out = validateCustomProvider(args(form as FormState))
+    expect(out.result).toBeDefined()
+
+    const saved = out.result!.config.models["model-1"] as Record<string, unknown>
+    const modes = saved.modalities as { input?: string[]; output?: string[] }
+    expect(modes.input).toEqual(["text"])
+    expect(modes.output).toEqual(["text"])
+  })
+
+  it("emits empty output array when image was the only output modality", () => {
+    const [form] = createStore({
+      ...base(),
+      models: [
+        {
+          ...base().models[0],
+          supportsImages: false,
+          modalities: { input: ["text", "image"] as const, output: ["image"] as const },
+        },
+      ],
+    })
+    const out = validateCustomProvider(args(form as FormState))
+    expect(out.result).toBeDefined()
+
+    const saved = out.result!.config.models["model-1"] as Record<string, unknown>
+    const modes = saved.modalities as { input?: string[]; output?: string[] }
+    expect(modes.input).toEqual(["text"])
+    expect(modes.output).toEqual([])
+  })
+
+  it("keeps both input and output fields when supportsImages is checked", () => {
+    const [form] = createStore({
+      ...base(),
+      models: [
+        {
+          ...base().models[0],
+          supportsImages: true,
+          modalities: {},
+        },
+      ],
+    })
+    const out = validateCustomProvider(args(form as FormState))
+    expect(out.result).toBeDefined()
+
+    const saved = out.result!.config.models["model-1"] as Record<string, unknown>
+    const modes = saved.modalities as { input?: string[]; output?: string[] }
+    expect(modes.input).toEqual(["text", "image"])
+    expect(modes.output).toEqual([])
   })
 })
