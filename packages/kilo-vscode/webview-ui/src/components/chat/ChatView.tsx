@@ -13,6 +13,7 @@ import { TaskHeader } from "./TaskHeader"
 import { MessageList } from "./MessageList"
 import { PromptInput } from "./PromptInput"
 import { PermissionDock } from "./PermissionDock"
+import { QuestionDock } from "./QuestionDock"
 import { StartupErrorBanner } from "./StartupErrorBanner"
 import { ConfigWarningsBanner } from "./ConfigWarningsBanner"
 import { useSession } from "../../context/session"
@@ -84,9 +85,17 @@ export const ChatView: Component<ChatViewProps> = (props) => {
   // Non-tool questions (standalone, not from the question tool) render inline in
   // the message list since they don't have an associated tool part in the conversation.
   // Tool-linked questions render inline at their tool part position via AssistantMessage.
-  const standaloneQuestions = createMemo(() => familyQuestions().filter((q) => !q.tool))
+  // Only this session's own standalone questions render in the message list — questions
+  // from child subagents surface in the bottom dock instead (mirroring PermissionDock).
+  const standaloneQuestions = createMemo(() =>
+    familyQuestions().filter((q) => !q.tool && q.sessionID === id()),
+  )
   const standaloneSuggestions = createMemo(() => familySuggestions().filter((s) => !s.tool))
   const permissionRequest = () => familyPermissions().find((p) => p.sessionID === id()) ?? familyPermissions()[0]
+  // A pending question from a child subagent. The child's message list isn't visible
+  // here, so surface the QuestionDock in the bottom dock so the user can answer the
+  // subagent directly — same pattern as the PermissionDock for child permissions.
+  const delegatedQuestionRequest = () => familyQuestions().find((q) => q.sessionID !== id())
   // Prompt input is decoupled from questions/suggestions — only permissions block.
   // Pending questions and suggestions are auto-dismissed in sendMessage/sendCommand.
   const blocked = () => isPromptBlocked(familyPermissions().length)
@@ -94,7 +103,7 @@ export const ChatView: Component<ChatViewProps> = (props) => {
   const suggesting = () => isSuggesting(blocked(), familySuggestions().length)
   // Session is busy only because a question tool call is pending — prompt should behave as idle
   const questioning = () => isQuestioning(blocked(), familyQuestions().length)
-  const dock = () => !props.readonly || !!permissionRequest()
+  const dock = () => !props.readonly || !!permissionRequest() || !!delegatedQuestionRequest()
 
   // When a bottom-dock permission disappears while the session is busy,
   // the scroll container grows taller. Dispatch a custom event so MessageList can
@@ -181,6 +190,9 @@ export const ChatView: Component<ChatViewProps> = (props) => {
                 onDecide={decide}
               />
             )}
+          </Show>
+          <Show when={delegatedQuestionRequest()} keyed>
+            {(q) => <QuestionDock request={q} />}
           </Show>
           <Show when={!props.readonly && hasMessages() && idle() && !blocked()}>
             <div class="new-task-button-wrapper">

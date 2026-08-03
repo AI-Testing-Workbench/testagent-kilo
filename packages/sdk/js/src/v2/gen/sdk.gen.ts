@@ -3702,6 +3702,7 @@ export class Session2 extends HeyApiClient {
       }
       agent?: string
       noReply?: boolean
+      thinkingEnabled?: boolean
       tools?: {
         [key: string]: boolean
       }
@@ -3724,6 +3725,7 @@ export class Session2 extends HeyApiClient {
             { in: "body", key: "model" },
             { in: "body", key: "agent" },
             { in: "body", key: "noReply" },
+            { in: "body", key: "thinkingEnabled" },
             { in: "body", key: "tools" },
             { in: "body", key: "format" },
             { in: "body", key: "system" },
@@ -4062,6 +4064,7 @@ export class Session2 extends HeyApiClient {
       }
       agent?: string
       noReply?: boolean
+      thinkingEnabled?: boolean
       tools?: {
         [key: string]: boolean
       }
@@ -4084,6 +4087,7 @@ export class Session2 extends HeyApiClient {
             { in: "body", key: "model" },
             { in: "body", key: "agent" },
             { in: "body", key: "noReply" },
+            { in: "body", key: "thinkingEnabled" },
             { in: "body", key: "tools" },
             { in: "body", key: "format" },
             { in: "body", key: "system" },
@@ -4120,6 +4124,7 @@ export class Session2 extends HeyApiClient {
       model?: string
       arguments?: string
       command?: string
+      thinkingEnabled?: boolean
       variant?: string
       parts?: Array<{
         id?: string
@@ -4145,6 +4150,7 @@ export class Session2 extends HeyApiClient {
             { in: "body", key: "model" },
             { in: "body", key: "arguments" },
             { in: "body", key: "command" },
+            { in: "body", key: "thinkingEnabled" },
             { in: "body", key: "variant" },
             { in: "body", key: "parts" },
           ],
@@ -4295,6 +4301,7 @@ export class Session2 extends HeyApiClient {
       directory?: string
       workspace?: string
       messageID?: string
+      thinkingEnabled?: boolean
       model?: {
         providerID: string
         modelID: string
@@ -4311,6 +4318,7 @@ export class Session2 extends HeyApiClient {
             { in: "query", key: "directory" },
             { in: "query", key: "workspace" },
             { in: "body", key: "messageID" },
+            { in: "body", key: "thinkingEnabled" },
             { in: "body", key: "model" },
           ],
         },

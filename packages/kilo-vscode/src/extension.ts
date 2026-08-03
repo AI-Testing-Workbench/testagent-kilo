@@ -47,7 +47,7 @@ export function activate(context: vscode.ExtensionContext) {
   // testagent_change end
 
   // Add CLI to PATH on first activation (Windows only)
-  // void ensureCliInPath(context)
+  void ensureCliInPath(context)
 
   const telemetry = isTestagentBun() ? TelemetryProxy.getInstance() : null
 
@@ -291,6 +291,16 @@ export function activate(context: vscode.ExtensionContext) {
         }
       }
     }),
+    // testagent_change start - Broadcast enableThinkings updates to all webviews
+    // Internal command triggered by KiloProvider after saving enableThinkings to globalState
+    vscode.commands.registerCommand("testagent.internal.broadcastEnableThinkings", async () => {
+      const enableThinkings = context.globalState.get<Record<string, boolean>>("enableThinkings") ?? {}
+      provider.broadcastEnableThinkings(enableThinkings)
+      settingsEditorProvider.broadcastEnableThinkings(enableThinkings)
+      // Note: Tab providers are created dynamically and share the same globalState,
+      // so they will receive updates when they call requestEnableThinkings
+    }),
+    // testagent_change end
     // testagent_change start - Agent Manager with experimental toggle check
     vscode.commands.registerCommand("testagent.new.agentManagerOpen", async () => {
       try {

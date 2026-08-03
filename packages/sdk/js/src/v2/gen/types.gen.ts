@@ -409,6 +409,7 @@ export type UserMessage = {
   tools?: {
     [key: string]: boolean
   }
+  thinkingEnabled?: boolean
 }
 
 export type AssistantMessage = {
@@ -972,6 +973,7 @@ export type AgentConfig = {
   description?: string
   mode?: "subagent" | "primary" | "all"
   hidden?: boolean
+  thinking?: boolean
   options?: {
     [key: string]: unknown
   }
@@ -1618,6 +1620,7 @@ export type Agent = {
   mode: "subagent" | "primary" | "all"
   native?: boolean
   hidden?: boolean
+  thinking?: boolean
   topP?: number
   temperature?: number
   color?: string
@@ -5773,6 +5776,7 @@ export type SessionPromptData = {
     }
     agent?: string
     noReply?: boolean
+    thinkingEnabled?: boolean
     tools?: {
       [key: string]: boolean
     }
@@ -6110,6 +6114,7 @@ export type SessionPromptAsyncData = {
     }
     agent?: string
     noReply?: boolean
+    thinkingEnabled?: boolean
     tools?: {
       [key: string]: boolean
     }
@@ -6157,6 +6162,7 @@ export type SessionCommandData = {
     model?: string
     arguments: string
     command: string
+    thinkingEnabled?: boolean
     variant?: string
     parts?: Array<{
       id?: string
@@ -6321,6 +6327,7 @@ export type SessionUnrevertResponse = SessionUnrevertResponses[keyof SessionUnre
 export type SessionResumeData = {
   body?: {
     messageID: string
+    thinkingEnabled?: boolean
     model?: {
       providerID: string
       modelID: string

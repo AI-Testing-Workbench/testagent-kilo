@@ -365,7 +365,7 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
   private initConnectionPromise: Promise<void> | null = null
   private webviewMessageDisposable: vscode.Disposable | null = null
   // testagent_change start - testflow integration
-  private readonly sdtRunner = new SdtRunner()
+  private readonly sdtRunners = new Map<string, SdtRunner>()
   /** 本地 question 的 deferred 映射表（用于 /sdt-run 交互式阶段选择） */
   private readonly localQuestionMap = new Map<string, {
     deferred: { resolve: (value: string) => void; reject: (reason?: any) => void }
@@ -833,6 +833,7 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
             message.modelID,
             message.agent,
             message.variant,
+            message.thinkingEnabled,
             files,
           )
           break
@@ -849,13 +850,14 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
             message.modelID,
             message.agent,
             message.variant,
+            message.thinkingEnabled,
             files,
           )
           break
         }
         // testagent_change start - 添加继续任务处理
         case "continueTask":
-          await this.handleContinueTask(message.sessionID, message.messageID, message.providerID, message.modelID)
+          await this.handleContinueTask(message.sessionID, message.messageID, message.providerID, message.modelID, message.thinkingEnabled)
           break
         // testagent_change end
         case "abort":
@@ -1333,6 +1335,7 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
             message.modelID,
             message.agent,
             message.variant,
+            message.thinkingEnabled,
             files,
             typeof message.command === "string" ? message.command : undefined,
             typeof message.commandArgs === "string" ? message.commandArgs : undefined,
@@ -1357,6 +1360,20 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
         case "requestVariants": {
           const variants = this.extensionContext?.globalState.get<Record<string, string>>("variantSelections") ?? {}
           this.postMessage({ type: "variantsLoaded", variants })
+          break
+        }
+        case "persistEnableThinking": {
+          const stored = this.extensionContext?.globalState.get<Record<string, boolean>>("enableThinkings") ?? {}
+          stored[message.key] = message.enabled
+          await this.extensionContext?.globalState.update("enableThinkings", stored)
+          // Broadcast to all webviews (sidebar, settings panels, tabs) via central command
+          // This ensures all KiloProvider instances stay in sync, not just the one that initiated the change
+          await vscode.commands.executeCommand("testagent.internal.broadcastEnableThinkings")
+          break
+        }
+        case "requestEnableThinkings": {
+          const enableThinkings = this.extensionContext?.globalState.get<Record<string, boolean>>("enableThinkings") ?? {}
+          this.postMessage({ type: "enableThinkingsLoaded", enableThinkings })
           break
         }
         case "persistRecents":
@@ -2031,6 +2048,7 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
       syncedChildSessions.delete(sessionID)
       this.sessionDirectories.delete(sessionID)
       this.lastReconciledAt.delete(sessionID)
+      this.sdtRunners.delete(sessionID)
       this.connectionService.pruneSession(sessionID)
       if (this.currentSession?.id === sessionID) {
         this.currentSession = null
@@ -2265,6 +2283,15 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
     // testagent_change end
      vscode.window.showInformationMessage("skills已重新加载")
     console.log("[TestAgent] Skills and commands reloaded successfully")
+  }
+
+  /**
+   * Broadcast updated enableThinkings to this provider's webview.
+   * Called by extension.ts to sync all webviews after a settings change.
+   * testagent_change - cross-webview sync for thinking toggle
+   */
+  public broadcastEnableThinkings(enableThinkings: Record<string, boolean>): void {
+    this.postMessage({ type: "enableThinkingsLoaded", enableThinkings })
   }
 
   /**
@@ -2909,6 +2936,35 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
       console.error("[TestAgent]  Failed to reconcile session statuses on reconnect:", error)
     }
   }
+
+  /**
+   * Reconcile the status of a single session after operations like abort.
+   * Query the backend for the current status and update the webview if stale.
+   */
+  private async reconcileSessionStatus(sessionID: string): Promise<void> {
+    if (!this.client || this.connectionState !== "connected") return
+    const dir = this.getWorkspaceDirectory(sessionID)
+    try {
+      const result = await this.client.session.status({ directory: dir })
+      if (!result.data) {
+        // If backend returns no active sessions, this session must be idle
+        this.sessionStatusMap.set(sessionID, "idle")
+        this.postMessage({ type: "sessionStatus", sessionID, status: "idle" })
+        return
+      }
+      const active = result.data
+      const backendStatus = active[sessionID]?.type ?? "idle"
+      const localStatus = this.sessionStatusMap.get(sessionID)
+      if (localStatus !== backendStatus) {
+        this.sessionStatusMap.set(sessionID, backendStatus)
+        this.postMessage({ type: "sessionStatus", sessionID, status: backendStatus })
+        console.log(`[TestAgent] Reconciled session status: ${sessionID} ${localStatus} → ${backendStatus}`)
+      }
+    } catch (error) {
+      console.error("[TestAgent]  Failed to reconcile session status:", error)
+    }
+  }
+  // testagent_change end
   // testagent_change end
 
   /**
@@ -3439,6 +3495,16 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
     }
   }
 
+  // testagent_change start
+  private getSdtRunner(sid: string): SdtRunner {
+    const runner = this.sdtRunners.get(sid)
+    if (runner) return runner
+    const next = new SdtRunner()
+    this.sdtRunners.set(sid, next)
+    return next
+  }
+  // testagent_change end
+
   // testagent_change start - testflow command handler
   private async handleSdtCommand(
     text: string,
@@ -3463,12 +3529,14 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
       void vscode.window.showErrorMessage("TestAgent: Not connected to CLI backend")
       return
     }
+    const runner = this.getSdtRunner(resolved.sid)
+
     // testagent_change start
     // ===== 交互式分支：/sdt-run 无 stage_id 参数，弹出阶段选择面板 =====
     if (cmd === "run" && args.length === 0) {
       await handleInteractiveRun(
         {
-          sdtRunner: this.sdtRunner,
+          sdtRunner: runner,
           localQuestionMap: this.localQuestionMap,
           postMessage: (msg) => this.postMessage(msg),
           showErrorMessage: (msg) => void vscode.window.showErrorMessage(msg),
@@ -3481,7 +3549,7 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
     }
     // testagent_change end
 
-    this.sdtRunner.run({
+    runner.run({
       cmd,
       args,
       cwd: resolved.dir,
@@ -3538,8 +3606,10 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
     modelID?: string,
     agent?: string,
     variant?: string,
+    thinkingEnabled?: boolean,
     files?: MessageFile[],
   ): Promise<void> {
+    console.log(thinkingEnabled)
     // testagent_change start - intercept /sdt-* commands for testflow
     if (text.startsWith("/sdt-")) {
       await this.handleSdtCommand(text, sessionID, providerID, modelID, messageID, agent)
@@ -3598,7 +3668,7 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
               model: providerID && modelID ? { providerID, modelID } : undefined,
               agent,
               variant,
-              editorContext,
+              thinkingEnabled,
             }),
           sid,
           messageID,
@@ -3628,6 +3698,7 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
     modelID?: string,
     agent?: string,
     variant?: string,
+    thinkingEnabled?: boolean,
     files?: MessageFile[],
   ): Promise<void> {
     // testagent_change start - intercept sdt-* commands for testflow
@@ -3694,6 +3765,7 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
               model: providerID && modelID ? `${providerID}/${modelID}` : undefined,
               agent,
               variant,
+              thinkingEnabled,
               parts,
             }),
           sid,
@@ -3733,6 +3805,7 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
     messageID?: string,
     providerID?: string,
     modelID?: string,
+    thinkingEnabled?: boolean,
   ): Promise<void> {
     console.log("[TestAgent] 🔄 handleContinueTask called:", { sessionID, messageID, providerID, modelID })
 
@@ -3765,6 +3838,7 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
               sessionID,
               messageID,
               directory: dir,
+              thinkingEnabled,
               ...(providerID && modelID ? { model: { providerID, modelID } } : {}),
             }),
           sessionID,
@@ -3805,6 +3879,11 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
         queuedMessageIDs,
         reason: reason as "completed" | "user_abort" | "error" | undefined,
       })
+      // testagent_change start - reconcile session status after abort
+      // The session.status:idle event may be lost if SSE drops during abort,
+      // so we query the backend to get the current status and update the UI.
+      await this.reconcileSessionStatus(targetSessionID)
+      // testagent_change end
     } catch (error) {
       console.error("[TestAgent]  Failed to abort session:", error)
     }
@@ -4464,6 +4543,7 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
 
     // Re-send globalState items to the webview
     this.postMessage({ type: "variantsLoaded", variants: {} })
+    this.postMessage({ type: "enableThinkingsLoaded", enableThinkings: {} })
     this.postMessage({ type: "recentsLoaded", recents: [] })
 
     // Re-fetch notifications to reflect cleared dismissed IDs
@@ -4708,10 +4788,15 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
         notifiedEventIds.add(event.id)
         setTimeout(() => notifiedEventIds.delete(event.id), 1000)
 
-        // Skip notification for MessageAbortedError (user-initiated abort is not an error)
+        // Skip notification for MessageAbortedError or AbortError (user-initiated abort is not an error)
         const isAbortError =
-          typeof error === "object" && error !== null && "name" in error && error.name === "MessageAbortedError"
-        if (isAbortError) return
+          typeof error === "object" && 
+          error !== null && 
+          "name" in error && 
+          ((error.name as string) === "MessageAbortedError" || (error.name as string) === "AbortError")
+        if (isAbortError) {
+          return
+        }
 
         this.maybeShowErrorNotification(sid, errorMsg)
       } else if (errorMsg) {
@@ -5156,6 +5241,7 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
     this.visibilityDisposable?.dispose()
     this.webviewMessageDisposable?.dispose()
     this.streams.dispose()
+    this.sdtRunners.clear()
     this.isWebviewReady = false
     this.promptRecoveryQueued = false
     clearNetworkWaits(this.trackedSessionIds)

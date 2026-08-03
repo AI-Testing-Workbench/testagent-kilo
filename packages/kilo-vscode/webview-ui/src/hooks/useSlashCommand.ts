@@ -196,6 +196,11 @@ export function useSlashCommand(vscode: VSCodeContext, exclude?: Set<string>): S
       hints: ["testflow", "run", "stage"],
     },
     {
+      name: "sdt-run:continue",
+      description: "继续执行因 AI 异常中断的任务阶段",
+      hints: ["testflow", "continue", "resume"],
+    },
+    {
       name: "sdt-init",
       description: "初始化 TestFlow 框架全局环境",
       hints: ["testflow", "init", "setup"],
@@ -214,6 +219,11 @@ export function useSlashCommand(vscode: VSCodeContext, exclude?: Set<string>): S
       name: "sdt-list",
       description: "查看当前的任务列表",
       hints: ["testflow", "list", "tasks"],
+    },
+    {
+      name: "sdt-config",
+      description: "更新 SDT 项目配置（目录结构 + 配置文件SDTConfig字段级合并）",
+      hints: ["testflow", "config", "update", "profile"],
     },
     // testagent_change end
   ]

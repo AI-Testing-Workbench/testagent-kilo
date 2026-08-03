@@ -234,6 +234,8 @@ type ModelCardProps = {
   // testagent_change start: Add limit change handlers
   onChangeLimitContext: (val: string) => void
   // testagent_change end
+  // testagent_change: 新增属性，标识是否禁用 ID 和名称编辑
+  disableIdAndName?: boolean
 }
 
 export function ModelCard(props: ModelCardProps) {
@@ -258,6 +260,7 @@ export function ModelCard(props: ModelCardProps) {
             onChange={props.onChangeId}
             validationState={props.errors.id ? "invalid" : undefined}
             error={props.errors.id}
+            disabled={props.disableIdAndName}
           />
         </div>
         <div style={{ flex: 1 }}>
@@ -268,6 +271,7 @@ export function ModelCard(props: ModelCardProps) {
             onChange={props.onChangeName}
             validationState={props.errors.name ? "invalid" : undefined}
             error={props.errors.name}
+            disabled={props.disableIdAndName}
           />
         </div>
         <IconButton
