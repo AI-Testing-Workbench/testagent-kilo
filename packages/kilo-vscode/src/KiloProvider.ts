@@ -289,7 +289,6 @@ const notifiedEventIds: Set<string> = new Set()
 // testagent_change end
 
 export class KiloProvider implements vscode.WebviewViewProvider, TelemetryPropertiesProvider {
-  private _debug_syncedSet: Set<string> | null = null // testagent_change - debug for syncedChildSessions
   public static readonly viewType = "testagent.SidebarProvider" // testagent_change
   private readonly instanceId = crypto.randomUUID()
   private webviewType: "sidebar" | "panel" | "unknown" = "unknown" // testagent_change
@@ -1714,6 +1713,18 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
       this.sendTimelineSetting()
       this.postMessage({ type: "extensionDataReady" })
 
+      // 技能等服务是异步加载的，可能在第一次 checkConfigWarnings 之后才完成，
+      // 导致它们的 reportWarning 没有被前端捕获。所以这里再查一次。
+      this.configWarningsShown = false
+      void this.checkConfigWarnings("init-late")
+
+      // 再加一个延时兜底：tools/skills/plugins 等异步层可能在主流程完成后
+      // 才加载完毕。5秒后重新检查一次。
+      setTimeout(() => {
+        this.configWarningsShown = false
+        void this.checkConfigWarnings("init-late-timeout")
+      }, 5000)
+
       if (this.cachedGitRepo) this.startStatsPolling()
 
       console.log("[TestAgent]  ✅ initializeConnection completed successfully")
@@ -2990,16 +3001,12 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
       const dir = this.getWorkspaceDirectory()
       console.log("[TestAgent]  checking config warnings", { from, dir })
       const result = await this.client.config.warnings({ directory: dir })
-      console.log("[TestAgent]  raw result:", JSON.stringify(result).substring(0, 500)) // testagent_change - debug raw result (truncated)
-      console.log("[TestAgent]  result.data type:", typeof result?.data, "isArray:", Array.isArray(result?.data)) // testagent_change - debug type
 
-      // testagent_change start - ensure list is always an array
       let list = result?.data ?? []
       if (!Array.isArray(list)) {
         console.warn("[TestAgent]  result.data is not an array, converting:", typeof list)
         list = []
       }
-      // testagent_change end
 
       console.log("[TestAgent]  config warnings fetched", { from, count: list.length })
       if (list.length === 0) return
@@ -3011,53 +3018,23 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
       const truncated = list.length > MAX_WARNINGS
       // testagent_change end
 
+      const lines = displayList.map((w) => {
+        const base = `${w.path}\n  ${w.message}`
+        return w.detail ? `${base}\n  ${w.detail}` : base
+      })
+      if (truncated) {
+        lines.push(`\n... and ${list.length - MAX_WARNINGS} more warnings (showing first ${MAX_WARNINGS})`)
+      }
+
       const first = list[0]!
       const summary = list.length === 1 ? first.message : `${first.message} (and ${list.length - 1} more)`
-      console.warn("[TestAgent]  showing config warnings", { from, count: list.length, path: first.path })
+      console.warn("[TestAgent]  showing config warnings in webview", { from, count: list.length, path: first.path })
 
-      const action = await vscode.window.showWarningMessage(`Config: ${summary}`, "Show Details")
-      console.log("[TestAgent]  user action:", JSON.stringify(action)) // testagent_change - debug exact value
-      if (action === "Show Details") {
-        console.log(
-          "[TestAgent]  creating output channel with",
-          displayList.length,
-          "warnings (total:",
-          list.length,
-          ")",
-        ) // testagent_change - debug
-        console.log("[TestAgent]  displayList is array?", Array.isArray(displayList), "sample:", displayList[0]) // testagent_change - debug
-        try {
-          // testagent_change start - safe array handling
-          if (!Array.isArray(displayList)) {
-            console.error("[TestAgent]  displayList is not an array at show time:", typeof displayList, displayList)
-            vscode.window.showErrorMessage("Failed to display config warnings: invalid data format")
-            return
-          }
-          // testagent_change end
-
-          const lines = displayList.map((w) => {
-            const base = `${w.path}\n  ${w.message}`
-            return w.detail ? `${base}\n  ${w.detail}` : base
-          })
-
-          // testagent_change start - add truncation notice
-          if (truncated) {
-            lines.push(`\n... and ${list.length - MAX_WARNINGS} more warnings (showing first ${MAX_WARNINGS})`)
-          }
-          // testagent_change end
-
-          const channel = vscode.window.createOutputChannel("Kilo Config Warnings")
-          channel.clear()
-          channel.appendLine(lines.join("\n\n"))
-          console.log("[TestAgent]  showing output channel") // testagent_change - debug
-          channel.show(true) // testagent_change - preserveFocus=true to ensure visibility
-          console.log("[TestAgent]  output channel shown") // testagent_change - debug
-        } catch (channelErr) {
-          console.error("[TestAgent]  failed to show output channel:", channelErr) // testagent_change
-        }
-      } else {
-        console.log("[TestAgent]  user dismissed warning or action was:", action) // testagent_change
-      }
+      this.postMessage({
+        type: "configWarnings",
+        title: `Config: ${summary}`,
+        detail: lines.join("\n\n"),
+      })
     } catch (err) {
       console.warn("[TestAgent]  checkConfigWarnings failed:", { from, err })
     }
@@ -4604,10 +4581,45 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
   /** Restart the CLI backend process and reconnect. */
   private async handleRestartServer(logLevel?: string): Promise<void> {
     this.postMessage({ type: "connectionState", state: "connecting" })
+    this.configWarningsShown = false
     try {
-      await this.connectionService.restart(this.getWorkspaceDirectory(), logLevel)
+      // Clear ALL frontend caches before reloading
+      this.cachedProvidersMessage = null
+      this.cachedAgentsMessage = null
+      this.cachedSkillsMessage = null
+      this.cachedCommandsMessage = null
+      this.cachedConfigMessage = null
+      this.cachedMcpStatusMessage = null
+      this.clearCommandsCache()
+      
+      // Clear backend instance cache to force complete reload
+      // instance.dispose() will invalidate ALL backend caches including:
+      // - Config (with warnings)
+      // - Skills
+      // - Agents
+      // - Commands
+      // - Tools
+      // - Plugins
+      // - MCP servers
+      if (this.client) {
+        const dir = this.getWorkspaceDirectory()
+        await this.client.instance.dispose({ directory: dir }).catch((e: unknown) => {
+          console.warn("[TestAgent] instance.dispose() during restart failed:", e)
+        })
+        // Wait for backend to fully dispose the instance
+        await new Promise((resolve) => setTimeout(resolve, 300))
+      }
+      
+      // await this.connectionService.restart(this.getWorkspaceDirectory(), logLevel)
+      
+      // 重新初始化连接：重新订阅 SSE、拉取 providers/agents/skills/config、
+      // 检查配置警告（含 init-late / init-late-timeout 异步兜底）。
+      // 复用 doInitializeConnection 全流程，避免手动重复。
+      await this.initializeConnection()
+      vscode.window.showInformationMessage("TestAgent 后端服务已重启，配置已重新加载")
     } catch (e) {
       console.error("[TestAgent] restartServer failed:", e)
+      vscode.window.showErrorMessage("TestAgent 后端服务重启失败")
     }
   }
 
@@ -4761,7 +4773,16 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
     if (event.type === "session.error") {
       const sid = event.properties.sessionID
       const error = event.properties.error
-      if (sid && error && (this.trackedSessionIds.has(sid) || childToParent.has(sid))) {
+      const errorMsg =
+        typeof error === "string"
+          ? error
+          : typeof error === "object" && error !== null && "data" in error
+            ? typeof error.data === "object" && error.data !== null && "message" in error.data && typeof error.data.message === "string"
+              ? error.data.message
+              : "发生错误"
+            : "发生错误"
+
+      if (sid && (this.trackedSessionIds.has(sid) || childToParent.has(sid))) {
         // Deduplicate across KiloProvider instances
         if (notifiedEventIds.has(event.id)) return
         notifiedEventIds.add(event.id)
@@ -4777,17 +4798,11 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
           return
         }
 
-        // Extract error message from the error object
-        // SDK error types: { name: "...", data: { message: "..." } }
-        const errorMsg =
-          typeof error === "string"
-            ? error
-            : typeof error === "object" && error !== null && "data" in error
-              ? typeof error.data === "object" && error.data !== null && "message" in error.data && typeof error.data.message === "string"
-                ? error.data.message
-                : "发生错误"
-              : "发生错误"
         this.maybeShowErrorNotification(sid, errorMsg)
+      } else if (errorMsg) {
+        // 没有 sessionID 的错误（如 tools/skills 加载失败），作为 config 警告展示
+        this.configWarningsShown = false
+        void this.checkConfigWarnings("session-error")
       }
       return
     }
