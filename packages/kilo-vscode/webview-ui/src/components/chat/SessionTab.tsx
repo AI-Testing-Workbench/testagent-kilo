@@ -1,7 +1,7 @@
 import { IconButton } from "@kilocode/kilo-ui/icon-button"
-import { Spinner } from "@kilocode/kilo-ui/spinner"
 import { TooltipKeybind } from "@kilocode/kilo-ui/tooltip"
 import { Show, type Component, type JSX } from "solid-js"
+import { ThinkingAvatar } from "../shared/ThinkingAvatar"
 
 export const SessionTab: Component<{
   title: string
@@ -43,7 +43,7 @@ export const SessionTab: Component<{
         <span class="am-tab-title">
           <Show when={props.busy}>
             <span class="am-tab-icon">
-              <Spinner class="am-worktree-spinner" />
+              <ThinkingAvatar class="thinking-avatar am-tab-thinking" />
             </span>
           </Show>
           <span class="am-tab-label">{props.title}</span>

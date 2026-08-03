@@ -1,5 +1,7 @@
 export const PENDING_TAB_PREFIX = "sidebar-pending:"
 
+export const MAX_TABS = 5
+
 export interface LocalTabState {
   ids: string[]
   active?: string
@@ -74,6 +76,15 @@ export function restoreTabs(
   return normalize(tabs, tab, pending)
 }
 
+// Trim a restored state down to MAX_TABS, keeping the active tab first.
+export function capTabs(state: LocalTabState): LocalTabState {
+  if (state.ids.length <= MAX_TABS) return state
+  const active = state.active
+  const rest = state.ids.filter((id) => id !== active)
+  const ids = active ? [active, ...rest].slice(0, MAX_TABS) : rest.slice(0, MAX_TABS)
+  return { ids, active: active && ids.includes(active) ? active : ids[0] }
+}
+
 // New composers become active immediately even before the backend creates a session.
 export function addPendingTab(state: LocalTabState, id: string): LocalTabState {
   return { ids: unique([...state.ids, id]), active: id }
@@ -98,6 +109,27 @@ export function replacePendingTab(state: LocalTabState, pending: string, id: str
   const ids = unique(state.ids.map((tab) => (tab === pending ? id : tab)))
   const active = state.active === pending ? id : state.active
   return { ids, active: active && ids.includes(active) ? active : ids[0] }
+}
+
+// Open a session by reusing the active new-session tab when present, otherwise
+// opening a fresh tab. Keeps an empty "New session" tab from lingering when the
+// user opens a history/recent session.
+export function reuseOrOpenSessionTab(
+  state: LocalTabState,
+  id: string,
+  check: PendingTabCheck = isPendingTab,
+): LocalTabState {
+  const current = state.active
+  if (current && check(current)) return replacePendingTab(state, current, id)
+  return openSessionTab(state, id)
+}
+
+// Jump to an existing new-session tab when one is present so "New Task" doesn't
+// stack empty tabs. Returns the same state when none is found or it is active.
+export function activatePendingTab(state: LocalTabState, check: PendingTabCheck = isPendingTab): LocalTabState {
+  const existing = state.ids.find(check)
+  if (!existing || state.active === existing) return state
+  return { ids: state.ids, active: existing }
 }
 
 export function pendingTabForCreated(

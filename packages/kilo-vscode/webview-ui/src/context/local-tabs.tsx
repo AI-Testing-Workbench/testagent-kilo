@@ -12,10 +12,15 @@ import {
 import { useServer } from "./server"
 import { useSession } from "./session"
 import { useVSCode } from "./vscode"
+import { useLanguage } from "./language"
+import { showToast } from "@kilocode/kilo-ui/toast"
 import {
+  MAX_TABS,
   PENDING_TAB_PREFIX,
+  activatePendingTab,
   addPendingTab,
   addSessionTab,
+  capTabs,
   closeOtherTabs,
   closeTab,
   insertSessionTabAfter,
@@ -23,6 +28,7 @@ import {
   openSessionTab,
   reconcileTabs,
   restoreTabs,
+  reuseOrOpenSessionTab,
   tabsForCreatedSession,
   type LocalTabState,
 } from "../utils/local-tabs"
@@ -65,15 +71,27 @@ export const LocalTabsProvider: ParentComponent = (props) => {
   const session = useSession()
   const saved = vscode.getState<LocalTabsState>()
   const pending = () => `${PENDING_TAB_PREFIX}${crypto.randomUUID()}`
-  const init = restoreTabs(saved?.sidebarSessionTabIDs, saved?.sidebarActiveSessionTabID, pending)
+  const init = capTabs(restoreTabs(saved?.sidebarSessionTabIDs, saved?.sidebarActiveSessionTabID, pending))
   const [ids, setIds] = createSignal(init.ids)
   const [active, setActive] = createSignal(init.active)
   const [cloud, setCloud] = createSignal<string>()
   const fresh = new Set<string>()
+  const language = useLanguage()
   const current = (): LocalTabState => ({ ids: ids(), active: active() })
   const apply = (next: LocalTabState) => {
     if (!same(ids(), next.ids)) setIds(next.ids)
     if (active() !== next.active) setActive(next.active)
+  }
+  const notifyLimit = () => {
+    showToast({ title: language.t("session.tabs.limitReached", { limit: MAX_TABS }) })
+  }
+  const applyTab = (next: LocalTabState) => {
+    if (next.ids.length > MAX_TABS) {
+      notifyLimit()
+      return false
+    }
+    apply(next)
+    return true
   }
   const focus = (id: string | undefined) => {
     setCloud(undefined)
@@ -96,19 +114,33 @@ export const LocalTabsProvider: ParentComponent = (props) => {
   }
 
   const open = (id: string) => {
-    apply(openSessionTab(current(), id))
+    const prev = active()
+    if (!applyTab(reuseOrOpenSessionTab(current(), id))) return
+    if (prev && isPendingTab(prev)) {
+      // Reused the active new-session tab — discard its draft so an empty
+      // "New session" tab (and its input) doesn't linger.
+      if (isPendingSend(prev)) discardPendingDraft(prev)
+      queueMicrotask(() => deletePendingDraft(prev))
+    }
     focus(id)
   }
 
   const openAfter = (source: string, id: string) => {
-    apply(insertSessionTabAfter(current(), source, id))
+    if (!applyTab(insertSessionTabAfter(current(), source, id))) return
     focus(id)
     persist()
   }
 
   const add = () => {
+    const state = current()
+    const existing = state.ids.find(isPendingTab)
+    if (existing) {
+      apply(activatePendingTab(state))
+      focus(existing)
+      return existing
+    }
     const id = pending()
-    apply(addPendingTab(current(), id))
+    if (!applyTab(addPendingTab(state, id))) return ""
     focus(id)
     return id
   }
@@ -189,15 +221,20 @@ export const LocalTabsProvider: ParentComponent = (props) => {
         if (message.draftID && promotePendingDraftDiscard(message.draftID, message.session.id)) return
         const next = tabsForCreatedSession(current(), message.session.id, message.draftID, message.activate)
         if (!next) return
+        if (!applyTab(next)) return
         fresh.add(message.session.id)
-        apply(next)
         focus(next.active)
         return
       }
       if (message.type === "cloudSessionImported") {
         const activate = cloud() === message.cloudSessionId
+        if (
+          !applyTab(
+            activate ? openSessionTab(current(), message.session.id) : addSessionTab(current(), message.session.id),
+          )
+        )
+          return
         fresh.add(message.session.id)
-        apply(activate ? openSessionTab(current(), message.session.id) : addSessionTab(current(), message.session.id))
         if (activate) setCloud(undefined)
         return
       }

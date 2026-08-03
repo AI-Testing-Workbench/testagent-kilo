@@ -18,13 +18,6 @@ export const SessionTabMenu: ParentComponent<{
       </ContextMenu.Trigger>
       <ContextMenu.Portal>
         <ContextMenu.Content class="session-tab-menu am-ctx-menu">
-          <Show when={props.showFork}>
-            <ContextMenu.Item disabled={!props.onFork} onSelect={() => props.onFork?.()}>
-              <Icon name="fork" size="small" />
-              <ContextMenu.ItemLabel>{t("agentManager.tab.forkSession")}</ContextMenu.ItemLabel>
-            </ContextMenu.Item>
-            <ContextMenu.Separator />
-          </Show>
           <ContextMenu.Item onSelect={props.onClose}>
             <Icon name="close" size="small" />
             <ContextMenu.ItemLabel>{t("agentManager.tab.close")}</ContextMenu.ItemLabel>

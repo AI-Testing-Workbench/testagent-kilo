@@ -94,13 +94,6 @@ export const SortableTab: Component<{
         </ContextMenu.Trigger>
         <ContextMenu.Portal>
           <ContextMenu.Content class="am-ctx-menu">
-            <Show when={props.onFork}>
-              <ContextMenu.Item onSelect={() => props.onFork?.()}>
-                <Icon name="branch" size="small" />
-                <ContextMenu.ItemLabel>{t("agentManager.tab.forkSession")}</ContextMenu.ItemLabel>
-              </ContextMenu.Item>
-              <ContextMenu.Separator />
-            </Show>
             <ContextMenu.Item onSelect={props.onClose}>
               <Icon name="close" size="small" />
               <ContextMenu.ItemLabel>{t("agentManager.tab.close")}</ContextMenu.ItemLabel>

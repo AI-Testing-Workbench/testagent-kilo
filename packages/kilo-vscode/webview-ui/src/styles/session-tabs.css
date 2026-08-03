@@ -143,7 +143,7 @@
 
 .session-tab-bar .am-tab-active {
   color: var(--text-base);
-  border-bottom-color: var(--surface-interactive-base);
+  border-bottom-color: var(--border-interactive-selected);
   background: color-mix(in srgb, var(--surface-interactive-base) 10%, transparent);
 }
 
@@ -177,9 +177,10 @@
   flex-shrink: 0;
 }
 
-.session-tab-bar .am-worktree-spinner {
+.session-tab-bar .am-tab-icon .am-tab-thinking {
   width: 16px;
   height: 16px;
+  animation: none;
 }
 
 .session-tab-bar .am-tab-label {
