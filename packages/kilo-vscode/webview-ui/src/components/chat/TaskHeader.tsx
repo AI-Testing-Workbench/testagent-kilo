@@ -113,6 +113,9 @@ export const TaskHeader: Component<TaskHeaderProps> = (props) => {
       wait: t?.wait ?? 0,
       actual: Math.max(total - (t?.wait ?? 0), 0),
       tool: t?.tool ?? 0,
+      permissionWait: t?.permissionWait ?? 0,
+      questionWait: t?.questionWait ?? 0,
+      toolBreakdown: t?.toolBreakdown,
     }
   })
 
@@ -290,17 +293,56 @@ export const TaskHeader: Component<TaskHeaderProps> = (props) => {
                   <div style={{ display: "flex", "align-items": "center", gap: "4px", "flex-wrap": "wrap" }}>
                     <span class="task-header-tokens-label" style={{ "margin-right": '10px' }}>任务累计耗时</span>
                     <For each={segments()}>
-                      {(seg,index) => (
-                        <>
-                         { index() !== 0 && <span style={{ opacity: 0.4 }}>|</span> }
-                          <span style={{ color: seg.color, "font-size": "11px" }}>
-                            {seg.label}: {fmtDuration(seg.duration)} 
-                          </span>
-                        </>
-                      )}
+                      {(seg, index) => {
+                        const isTool = seg.key === "tool"
+                        const isLlm = seg.key === "llm"
+                        const isWait = seg.key === "wait"
+                        const isOverhead = seg.key === "overhead"
+                        const breakdown = t().toolBreakdown
+                        const toolEntries = (() => {
+                          if (!isTool || !breakdown) return []
+                          return Object.entries(breakdown).sort((a, b) => b[1] - a[1])
+                        })()
+                        const segTooltip = (() => {
+                          if (isLlm) return "累加所有 assistant 消息的 time.llm（由 backend processor.ts 在 LLM stream 完成后写入）"
+                          if (isWait) return "累加所有 question/invalid 工具 part 的 (time.end - time.start)，加上 permission 等待总时长"
+                          if (isOverhead) return "总耗时与 LLM + 工具执行 + 等待用户 的差值，通常包含网络延迟、消息存储、session 管理等其他未单独统计的开销"
+                          return undefined
+                        })()
+                        return (
+                          <>
+                            {index() !== 0 && <span style={{ opacity: 0.4 }}>|</span>}
+                            <Show when={isTool && toolEntries.length > 0} fallback={
+                              <Show when={segTooltip} fallback={
+                                <span style={{ color: seg.color, "font-size": "11px" }}>
+                                  {seg.label}: {fmtDuration(seg.duration)}
+                                </span>
+                              }>
+                                <Tooltip value={segTooltip!} placement="bottom">
+                                  <span style={{ color: seg.color, "font-size": "11px" }}>
+                                    {seg.label}: {fmtDuration(seg.duration)}
+                                  </span>
+                                </Tooltip>
+                              </Show>
+                            }>
+                              <Tooltip value={
+                                <div style={{ "text-align": "left", "white-space": "nowrap" }}>
+                                  <For each={toolEntries}>
+                                    {(entry) => <div>{entry[0]}: {fmtDuration(entry[1])}</div>}
+                                  </For>
+                                </div>
+                              } placement="bottom">
+                                <span style={{ color: seg.color, "font-size": "11px" }}>
+                                  {seg.label}: {fmtDuration(seg.duration)}
+                                </span>
+                              </Tooltip>
+                            </Show>
+                          </>
+                        )
+                      }}
                     </For>
                     <span style={{ opacity: 0.4 }}>|</span>
-                     <Tooltip
+                    <Tooltip
                       value={
                         <div style={{ "text-align": "left", "white-space": "nowrap" }}>
                           <div>总耗时:       {fmtDuration(t().total)}</div>
@@ -309,6 +351,12 @@ export const TaskHeader: Component<TaskHeaderProps> = (props) => {
                           <div>● 工具执行:   {fmtDuration(t().tool)} {pct(t().tool)}</div>
                           <Show when={t().wait > 0}>
                             <div>● 等待用户:   {fmtDuration(t().wait)} {pct(t().wait)}</div>
+                            <Show when={t().permissionWait > 0}>
+                              <div style={{ "margin-left": "8px" }}>权限等待: {fmtDuration(t().permissionWait)} {pct(t().permissionWait)}</div>
+                            </Show>
+                            <Show when={t().questionWait > 0}>
+                              <div style={{ "margin-left": "8px" }}>问题等待: {fmtDuration(t().questionWait)} {pct(t().questionWait)}</div>
+                            </Show>
                           </Show>
                           <div>● 实际执行:   {fmtDuration(t().actual)} {pct(t().actual)}</div>
                           <Show when={t().total > t().llm + t().tool + t().wait}>
@@ -319,7 +367,7 @@ export const TaskHeader: Component<TaskHeaderProps> = (props) => {
                       placement="bottom"
                     >
                       <span class="task-header-tokens-value" style={{ "font-weight": 600 }}>
-                       总计: {fmtDuration(t().total)}
+                        总计: {fmtDuration(t().total)}
                       </span>
                     </Tooltip>
                   </div>
@@ -327,7 +375,7 @@ export const TaskHeader: Component<TaskHeaderProps> = (props) => {
               )
             }}
           </Show>
-          </div>
+        </div>
       </Show>
       <Show when={hasTodos()}>
         <div data-component="task-header-todos">

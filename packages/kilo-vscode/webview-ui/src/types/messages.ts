@@ -21,9 +21,9 @@ export type SessionStatusInfo =
 // Tool state for tool parts
 export type ToolState =
   | { status: "pending"; input: Record<string, unknown> }
-  | { status: "running"; input: Record<string, unknown>; title?: string }
-  | { status: "completed"; input: Record<string, unknown>; output: string; title: string }
-  | { status: "error"; input: Record<string, unknown>; error: string }
+  | { status: "running"; input: Record<string, unknown>; title?: string; time?: { start: number } }
+  | { status: "completed"; input: Record<string, unknown>; output: string; title: string; time?: { start: number; end: number; compacted?: number } }
+  | { status: "error"; input: Record<string, unknown>; error: string; time?: { start: number; end: number } }
 
 // Base part interface - all parts have these fields
 export interface BasePart {

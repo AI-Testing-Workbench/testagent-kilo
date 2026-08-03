@@ -251,12 +251,18 @@ export function collapseCostBreakdown(
 /** Tools that wait for user input */
 const WAIT_TOOLS = new Set(["question", "invalid"])
 
+// debug: 模块级缓存 —— 仅当计时统计结果变化时打印明细，避免每 tick 刷屏
+let lastTimingDebugSig = ""
+
 export interface TimingInfo {
   total: number  // 总耗时 (ms)
   llm: number    // LLM 总耗时 (ms)
   wait: number   // 等待用户耗时 (ms)
   actual: number // 实际执行耗时 = total - wait (ms)
   tool: number   // 工具执行耗时 (ms)
+  permissionWait: number // 权限等待耗时 (ms)
+  questionWait: number   // 问题等待耗时 (ms)
+  toolBreakdown?: Record<string, number> // 各工具名称的耗时明细
 }
 
 export interface TimingSegment {
@@ -276,15 +282,34 @@ export function buildFamilyTiming(
   family: Set<string>,
   messages: Record<string, TimingMessage[]>,
   parts: Record<string, TimingTaskPart[]>,
+  permissionWaits: Record<string, number> = {},
 ): TimingInfo | undefined {
   let total = 0
   let llm = 0
   let wait = 0
   let tool = 0
+  let permissionWait = 0
+  let questionWait = 0
+  const toolBreakdown: Record<string, number> = {}
   let has = false
 
   for (const sid of family) {
     const msgs = messages[sid] ?? []
+    // debug: 检测本 sid 消息数组内是否有重复 mid（同一 mid 出现多次 → 会被重复累加导致虚高）
+    {
+      const seenMid = new Map<string, number>()
+      for (const m of msgs) {
+        if (m.role !== "assistant") continue
+        seenMid.set(m.id, (seenMid.get(m.id) ?? 0) + 1)
+      }
+      const dupMids = [...seenMid.entries()].filter(([, n]) => n > 1)
+      if (dupMids.length > 0) {
+        console.warn(
+          "[timing] duplicate mids in messages:",
+          JSON.stringify({ sid, dupMids }),
+        )
+      }
+    }
     for (const m of msgs) {
       if (m.role !== "assistant") continue
       // LLM 耗时
@@ -300,12 +325,58 @@ export function buildFamilyTiming(
             : Date.now() - p.state.time.start // 运行中的工具实时估算
           if (p.tool && WAIT_TOOLS.has(p.tool)) {
             wait += dur // question/invalid 只算等待，不算工具执行
+            if (p.tool === "question") {
+              questionWait += dur
+            }
           } else {
             tool += dur // 其他正常工具算工具执行
+            if (p.tool) {
+              toolBreakdown[p.tool] = (toolBreakdown[p.tool] ?? 0) + dur
+            }
+          }
+        }
+      }
+      // debug: 打印本消息的 tool part 明细 + 去重检测（同一 mid 下同 tool 多个 part 说明 store 有重复）
+      {
+        const toolParts = pList.filter((p) => p.type === "tool")
+        if (toolParts.length > 0) {
+          const rows = toolParts.map((p, i) => ({
+            i,
+            tool: p.tool,
+            status: p.state?.status,
+            start: p.state?.time?.start ?? null,
+            end: p.state?.time?.end ?? null,
+            dur: p.state?.time?.start
+              ? (p.state.time.end ?? Date.now()) - p.state.time.start
+              : null,
+          }))
+          const sig = JSON.stringify(rows)
+          if (sig !== lastTimingDebugSig) {
+            lastTimingDebugSig = sig
+            // 去重检测：同 tool + 同 start 的 part 出现多次 = 重复入 store
+            const seen = new Map<string, number>()
+            for (const r of rows) {
+              const key = `${r.tool}|${r.start}`
+              seen.set(key, (seen.get(key) ?? 0) + 1)
+            }
+            const dupes = [...seen.entries()].filter(([, n]) => n > 1)
+            console.warn(
+              "[timing] tool parts:",
+              JSON.stringify({
+                mid: m.id,
+                sid,
+                count: rows.length,
+                dupes,
+                rows,
+              }),
+            )
           }
         }
       }
     }
+    // 累加 permission 等待耗时
+    wait += permissionWaits[sid] ?? 0
+    permissionWait += permissionWaits[sid] ?? 0
     // 找第一条和最后一条消息的时间确定总耗时
     const first = msgs[0]
     const last = msgs[msgs.length - 1]
@@ -323,7 +394,7 @@ export function buildFamilyTiming(
 
   const actual = Math.max(0, finalTotal - wait)
 
-  return { total: finalTotal, llm, wait, actual, tool }
+  return { total: finalTotal, llm, wait, actual, tool, permissionWait, questionWait, toolBreakdown }
 }
 
 /**
@@ -331,7 +402,7 @@ export function buildFamilyTiming(
  * Segments are: LLM, 工具执行, 等待用户, 其他开销.
  * "实际执行" (total - wait) is only shown in tooltip, not as a bar segment.
  */
-export function buildTimingSegments(info: TimingInfo): TimingSegment[] {
+export function buildTimingSegments(info: Pick<TimingInfo, "total" | "llm" | "tool" | "wait">): TimingSegment[] {
   const pct = (v: number) => (info.total > 0 ? (v / info.total) * 100 : 0)
   const overhead = Math.max(0, info.total - info.llm - info.tool - info.wait)
   return [

@@ -306,6 +306,10 @@ export const SessionProvider: ParentComponent = (props) => {
   // Permission IDs that have been responded to but not yet confirmed by the server
   const [respondingPermissions, setRespondingPermissions] = createSignal<Set<string>>(new Set())
 
+  // Track permission wait durations keyed by sessionID
+  const permissionStartTimes = new Map<string, number>()
+  const [permissionWaits, setPermissionWaits] = createSignal<Record<string, number>>({})
+
   // Pending questions
   const [questions, setQuestions] = createSignal<QuestionRequest[]>([])
 
@@ -1174,10 +1178,22 @@ export const SessionProvider: ParentComponent = (props) => {
   }
 
   function handlePermissionRequest(permission: PermissionRequest) {
+    permissionStartTimes.set(permission.id, Date.now())
     setPermissions((prev) => upsertPermission(prev, permission))
   }
 
   function handlePermissionResolved(permissionID: string) {
+    const perm = permissions().find((p) => p.id === permissionID)
+    const sessionID = perm?.sessionID
+    const start = permissionStartTimes.get(permissionID)
+    if (start && sessionID) {
+      const duration = Date.now() - start
+      permissionStartTimes.delete(permissionID)
+      setPermissionWaits((prev) => ({
+        ...prev,
+        [sessionID]: (prev[sessionID] ?? 0) + duration,
+      }))
+    }
     setPermissions((prev) => prev.filter((p) => p.id !== permissionID))
     setRespondingPermissions((prev) => {
       if (!prev.has(permissionID)) return prev
@@ -2227,7 +2243,12 @@ export const SessionProvider: ParentComponent = (props) => {
     const id = currentSessionID()
     if (!id) return undefined
     tick() // 依赖 tick，活跃时每秒重算
-    return buildFamilyTiming(sessionFamily(id), store.messages as any, store.parts as any)
+    return buildFamilyTiming(
+      sessionFamily(id),
+      store.messages as any,
+      store.parts as any,
+      permissionWaits(),
+    )
   })
 
   // Status text derived from last assistant message parts
