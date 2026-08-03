@@ -1188,7 +1188,7 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
         }
         case "changeRuntime": {
           if (!this.extensionContext) {
-            vscode.window.showErrorMessage("扩展上下文不可用")
+            vscode.window.showErrorMessage("Extension context not available")
             break
           }
           const { runtime } = message
@@ -1419,9 +1419,9 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
               this.postMessage({ type: "enhancePromptResult", text: data.text, requestId: message.requestId })
             })
             .catch((err: unknown) => {
-              const msg = getErrorMessage(err) || "增强提示失败"
+              const msg = getErrorMessage(err) || "Failed to enhance prompt"
               console.error("[TestAgent]  Failed to enhance prompt:", err)
-              vscode.window.showErrorMessage(`增强提示失败: ${msg}`)
+              vscode.window.showErrorMessage(`Enhance prompt failed: ${msg}`)
               this.postMessage({
                 type: "enhancePromptError",
                 error: msg,
@@ -1592,7 +1592,7 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
             console.error("[TestAgent]  ❌ Failed during connected state handling:", error)
             this.postMessage({
               type: "error",
-              message: getErrorMessage(error) || "连接后同步失败",
+              message: getErrorMessage(error) || "Failed to sync after connecting",
             })
           }
         }
@@ -1756,7 +1756,7 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
       console.error("[TestAgent]  Failed to create session:", error)
       this.postMessage({
         type: "error",
-        message: getErrorMessage(error) || "创建会话失败",
+        message: getErrorMessage(error) || "Failed to create session",
       })
     }
   }
@@ -1802,7 +1802,7 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
       this.contextSessionID = sessionID
     }
     if (!this.client) {
-      this.postMessage({ type: "error", message: "未连接到 CLI 后端", sessionID })
+      this.postMessage({ type: "error", message: "Not connected to CLI backend", sessionID })
       return
     }
     const dir = this.getWorkspaceDirectory(sessionID)
@@ -1873,7 +1873,7 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
         message: getErrorMessage(error),
         error,
       })
-      this.postMessage({ type: "error", message: getErrorMessage(error) || "加载消息失败", sessionID })
+      this.postMessage({ type: "error", message: getErrorMessage(error) || "Failed to load messages", sessionID })
     }
   }
 
@@ -2019,7 +2019,7 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
    */
   private async handleDeleteSession(sessionID: string): Promise<void> {
     if (!this.client) {
-      this.postMessage({ type: "error", message: "未连接到 CLI 后端" })
+      this.postMessage({ type: "error", message: "Not connected to CLI backend" })
       return
     }
 
@@ -2051,7 +2051,7 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
    */
   private async handleRenameSession(sessionID: string, title: string): Promise<void> {
     if (!this.client) {
-      this.postMessage({ type: "error", message: "未连接到 CLI 后端" })
+      this.postMessage({ type: "error", message: "Not connected to CLI backend" })
       return
     }
 
@@ -2122,7 +2122,7 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
             continue
           }
           console.error("[TestAgent]  Failed to fetch providers:", error)
-          this.postMessage({ type: "error", message: `获取提供商失败: ${getConfigErrorMessage(error)}` }) // testagent_change
+          this.postMessage({ type: "error", message: `Failed to fetch providers: ${getConfigErrorMessage(error)}` }) // testagent_change
           this.connectionState = "error" // testagent_change
           this.postMessage({ type: "connectionState", state: "error", error: getConfigErrorMessage(error) }) // testagent_change
         }
@@ -2225,7 +2225,7 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
       this.postMessage(message)
     } catch (error) {
       console.error("[TestAgent]  Failed to fetch agents:", error)
-      this.postMessage({ type: "error", message: `获取代理失败: ${getConfigErrorMessage(error)}` }) // testagent_change
+      this.postMessage({ type: "error", message: `Failed to fetch agents: ${getConfigErrorMessage(error)}` }) // testagent_change
       this.connectionState = "error" // testagent_change
       this.postMessage({ type: "connectionState", state: "error", error: getConfigErrorMessage(error) }) // testagent_change
     }
@@ -2845,7 +2845,7 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
       this.postMessage(message)
     } catch (error) {
       console.error("[TestAgent]  Failed to fetch config:", error)
-      this.postMessage({ type: "error", message: `获取配置失败: ${getConfigErrorMessage(error)}` }) // testagent_change
+      this.postMessage({ type: "error", message: `Failed to fetch config: ${getConfigErrorMessage(error)}` }) // testagent_change
       this.connectionState = "error" // testagent_change
       this.postMessage({ type: "connectionState", state: "error", error: getConfigErrorMessage(error) }) // testagent_change
     }
@@ -2929,7 +2929,7 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
 
   /**
    * Fetch config warnings from the server and display a single consolidated
-   * VS Code warning with a "查看详情" action button.
+   * VS Code warning with a "Show Details" action button.
    * Only shown once per provider lifecycle (flag resets on dispose/re-create, not on SSE reconnect).
    */
   private async checkConfigWarnings(from: string): Promise<void> {
@@ -2967,16 +2967,16 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
         return w.detail ? `${base}\n  ${w.detail}` : base
       })
       if (truncated) {
-        lines.push(`\n...以及另外 ${list.length - MAX_WARNINGS} 个警告（仅显示前 ${MAX_WARNINGS} 个）`)
+        lines.push(`\n... and ${list.length - MAX_WARNINGS} more warnings (showing first ${MAX_WARNINGS})`)
       }
 
       const first = list[0]!
-      const summary = list.length === 1 ? first.message : `${first.message} (以及另外 ${list.length - 1} 个)`
+      const summary = list.length === 1 ? first.message : `${first.message} (and ${list.length - 1} more)`
       console.warn("[TestAgent]  showing config warnings in webview", { from, count: list.length, path: first.path })
 
       this.postMessage({
         type: "configWarnings",
-        title: `配置警告：${summary}`,
+        title: `Config: ${summary}`,
         detail: lines.join("\n\n"),
       })
     } catch (err) {
@@ -3454,13 +3454,13 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
 
     const serverConfig = this.connectionService.getServerConfig()
     if (!serverConfig) {
-      void vscode.window.showErrorMessage("TestAgent：未连接到 CLI 后端")
+      void vscode.window.showErrorMessage("TestAgent: Not connected to CLI backend")
       return
     }
 
     const resolved = await this.resolveSession(sessionID)
     if (!resolved) {
-      void vscode.window.showErrorMessage("TestAgent：未连接到 CLI 后端")
+      void vscode.window.showErrorMessage("TestAgent: Not connected to CLI backend")
       return
     }
     // testagent_change start
@@ -3513,7 +3513,7 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
 
     const resolved = await this.resolveSession(sessionID)
     if (!resolved) {
-      void vscode.window.showErrorMessage("TestAgent：未连接到 CLI 后端")
+      void vscode.window.showErrorMessage("TestAgent: Not connected to CLI backend")
       return
     }
 
@@ -3816,7 +3816,7 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
     const { data, error } = await this.client.session.revert({ sessionID, messageID, directory: dir })
     if (error) {
       console.error("[TestAgent]  Failed to revert session:", error)
-      this.postMessage({ type: "error", message: "还原会话失败", sessionID })
+      this.postMessage({ type: "error", message: "Failed to revert session", sessionID })
       return
     }
     if (data) this.postMessage({ type: "sessionUpdated", session: sessionToWebview(data) })
@@ -3828,7 +3828,7 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
     const { data, error } = await this.client.session.unrevert({ sessionID, directory: dir })
     if (error) {
       console.error("[TestAgent]  Failed to unrevert session:", error)
-      this.postMessage({ type: "error", message: "重做会话失败", sessionID })
+      this.postMessage({ type: "error", message: "Failed to redo session", sessionID })
       return
     }
     if (data) this.postMessage({ type: "sessionUpdated", session: sessionToWebview(data) })
@@ -4430,11 +4430,11 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
    */
   private async handleResetAllSettings(): Promise<void> {
     const confirmed = await vscode.window.showWarningMessage(
-      "将所有 TestAgent 扩展设置重置为默认值？",
+      "Reset all TestAgent extension settings to defaults?",
       { modal: true },
-      "重置",
+      "Reset",
     )
-    if (confirmed !== "重置") return
+    if (confirmed !== "Reset") return
 
     const prefix = "testagent.new."
     const ext = vscode.extensions.getExtension("testagent.testagent-vscode")
@@ -4469,7 +4469,7 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
     // Re-fetch notifications to reflect cleared dismissed IDs
     // await this.fetchAndSendNotifications()
 
-    vscode.window.showInformationMessage("TestAgent 设置已重置为默认值")
+    vscode.window.showInformationMessage("TestAgent settings have been reset to defaults.")
   }
 
   /**
@@ -4501,10 +4501,45 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
   /** Restart the CLI backend process and reconnect. */
   private async handleRestartServer(logLevel?: string): Promise<void> {
     this.postMessage({ type: "connectionState", state: "connecting" })
+    this.configWarningsShown = false
     try {
-      await this.connectionService.restart(this.getWorkspaceDirectory(), logLevel)
+      // Clear ALL frontend caches before reloading
+      this.cachedProvidersMessage = null
+      this.cachedAgentsMessage = null
+      this.cachedSkillsMessage = null
+      this.cachedCommandsMessage = null
+      this.cachedConfigMessage = null
+      this.cachedMcpStatusMessage = null
+      this.clearCommandsCache()
+      
+      // Clear backend instance cache to force complete reload
+      // instance.dispose() will invalidate ALL backend caches including:
+      // - Config (with warnings)
+      // - Skills
+      // - Agents
+      // - Commands
+      // - Tools
+      // - Plugins
+      // - MCP servers
+      if (this.client) {
+        const dir = this.getWorkspaceDirectory()
+        await this.client.instance.dispose({ directory: dir }).catch((e: unknown) => {
+          console.warn("[TestAgent] instance.dispose() during restart failed:", e)
+        })
+        // Wait for backend to fully dispose the instance
+        await new Promise((resolve) => setTimeout(resolve, 300))
+      }
+      
+      // await this.connectionService.restart(this.getWorkspaceDirectory(), logLevel)
+      
+      // 重新初始化连接：重新订阅 SSE、拉取 providers/agents/skills/config、
+      // 检查配置警告（含 init-late / init-late-timeout 异步兜底）。
+      // 复用 doInitializeConnection 全流程，避免手动重复。
+      await this.initializeConnection()
+      vscode.window.showInformationMessage("TestAgent 后端服务已重启，配置已重新加载")
     } catch (e) {
       console.error("[TestAgent] restartServer failed:", e)
+      vscode.window.showErrorMessage("TestAgent 后端服务重启失败")
     }
   }
 

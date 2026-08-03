@@ -98,7 +98,7 @@ describe("commit-message service", () => {
 
       await commandCallback()
 
-      expect(vscode.window.showErrorMessage).toHaveBeenCalledWith("未找到 Git 扩展")
+      expect(vscode.window.showErrorMessage).toHaveBeenCalledWith("Git extension not found")
     })
 
     it("shows error when no git repository is found", async () => {
@@ -112,7 +112,7 @@ describe("commit-message service", () => {
 
       await commandCallback()
 
-      expect(vscode.window.showErrorMessage).toHaveBeenCalledWith("未找到 Git 仓库")
+      expect(vscode.window.showErrorMessage).toHaveBeenCalledWith("No Git repository found")
     })
 
     it("shows error when backend fails to connect", async () => {
@@ -130,7 +130,7 @@ describe("commit-message service", () => {
       await commandCallback()
 
       expect(vscode.window.showErrorMessage).toHaveBeenCalledWith(
-        "连接到 TestAgent 后端失败，请重试",
+        "Failed to connect to TestAgent backend. Please try again.",
       )
     })
 

@@ -173,7 +173,6 @@ export const ChatView: Component<ChatViewProps> = (props) => {
           <Show when={server.connectionState() === "error" && server.errorMessage()}>
             <StartupErrorBanner errorMessage={server.errorMessage()!} errorDetails={server.errorDetails()!} />
           </Show>
-          <ConfigWarningsBanner />
           <Show when={permissionRequest()} keyed>
             {(perm) => (
               <PermissionDock
@@ -202,7 +201,7 @@ export const ChatView: Component<ChatViewProps> = (props) => {
                   </Tooltip>
                 </Show>
                 {/* testagent_change end */}
-                
+
                 <Tooltip value="Start a new conversation" placement="top">
                   <Button
                     variant="secondary"
@@ -267,6 +266,7 @@ export const ChatView: Component<ChatViewProps> = (props) => {
               </div>
             </div>
           </Show>
+          <ConfigWarningsBanner />
           <Show when={!props.readonly}>
             <PromptInput
               blocked={blocked}

@@ -6,9 +6,9 @@ export function registerHeapSnapshot(context: vscode.ExtensionContext, connectio
     vscode.commands.registerCommand("testagent.new.takeHeapSnapshot", async () => {
       try {
         const file = await snapshot(connectionService)
-        vscode.window.showInformationMessage(`堆快照已写入 ${file}`)
+        vscode.window.showInformationMessage(`Heap snapshot written to ${file}`)
       } catch (err) {
-        vscode.window.showErrorMessage(`写入堆快照失败: ${message(err)}`)
+        vscode.window.showErrorMessage(`Failed to write heap snapshot: ${message(err)}`)
       }
     }),
   )

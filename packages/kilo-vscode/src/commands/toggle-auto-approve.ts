@@ -52,7 +52,7 @@ export function registerToggleAutoApprove(
       const snapshot = generation
 
       if (active) {
-        vscode.window.showInformationMessage("自动批准已启用")
+        vscode.window.showInformationMessage("Auto-approve enabled")
         // Drain any already-pending permission requests across all tracked directories
         const client = tryGetClient(connectionService)
         if (client) {
@@ -72,7 +72,7 @@ export function registerToggleAutoApprove(
           }
         }
       } else {
-        vscode.window.showInformationMessage("自动批准已禁用")
+        vscode.window.showInformationMessage("Auto-approve disabled")
       }
     }),
   )

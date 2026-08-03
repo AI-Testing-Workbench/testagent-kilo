@@ -1,4 +1,4 @@
-import { createSignal, onCleanup, onMount, createEffect } from "solid-js"
+import { createSignal, onCleanup, onMount, createEffect, untrack } from "solid-js"
 import type { Accessor } from "solid-js"
 import type { SlashCommandInfo, WebviewMessage, ExtensionMessage } from "../types/messages"
 import { useServer } from "../context/server"
@@ -60,9 +60,12 @@ export function useSlashCommand(vscode: VSCodeContext, exclude?: Set<string>): S
     const sessionID = sessionCtx.currentSessionID()
     const connected = serverCtx.isConnected()
     if (sessionID && connected) {
-      // Reset and request commands when session changes
-      setRequested(false)
-      request()
+      // untrack 断开 request() 内部对 requested signal 的追踪，
+      // 否则 effect 会形成「读 requested → 写 requested → 重跑 effect」的死循环
+      untrack(() => {
+        setRequested(false)
+        request()
+      })
     }
   })
   // testagent_change end
