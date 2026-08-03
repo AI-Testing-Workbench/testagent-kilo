@@ -16,6 +16,7 @@ import { PermissionDock } from "./PermissionDock"
 import { QuestionDock } from "./QuestionDock"
 import { StartupErrorBanner } from "./StartupErrorBanner"
 import { SessionTabStrip } from "./SessionTabStrip"
+import { ConfigWarningsBanner } from "./ConfigWarningsBanner"
 import { useSession } from "../../context/session"
 import { useLocalTabs } from "../../context/local-tabs"
 import { useVSCode } from "../../context/vscode"
@@ -221,7 +222,7 @@ export const ChatView: Component<ChatViewProps> = (props) => {
                   </Tooltip>
                 </Show>
                 {/* testagent_change end */}
-                
+
                 <Tooltip value="Start a new conversation" placement="top">
                   <Button
                     variant="secondary"
@@ -286,6 +287,7 @@ export const ChatView: Component<ChatViewProps> = (props) => {
               </div>
             </div>
           </Show>
+          <ConfigWarningsBanner />
           <Show when={!props.readonly}>
             <PromptInput
               blocked={blocked}

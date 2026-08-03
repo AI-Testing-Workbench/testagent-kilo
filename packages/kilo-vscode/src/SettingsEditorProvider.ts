@@ -158,6 +158,17 @@ export class SettingsEditorProvider implements vscode.Disposable {
   }
 
   /**
+   * Broadcast enableThinkings to all panel providers.
+   * Called when settings change to sync all open panels.
+   * testagent_change - cross-webview sync for thinking toggle
+   */
+  broadcastEnableThinkings(enableThinkings: Record<string, boolean>): void {
+    for (const [, provider] of this.providers) {
+      provider.broadcastEnableThinkings(enableThinkings)
+    }
+  }
+
+  /**
    * Reload MCP servers for all panel providers.
    * Called when MCP config changes externally and needs to be refreshed in all webviews.
    */

@@ -396,6 +396,7 @@ export interface AgentConfig {
   description?: string | null
   mode?: "subagent" | "primary" | "all"
   hidden?: boolean
+  thinking?: boolean
   disable?: boolean
   temperature?: number | null
   top_p?: number | null
@@ -558,8 +559,15 @@ export interface ConnectionStateMessage {
 export interface ErrorMessage {
   type: "error"
   message: string
+  detail?: string
   code?: string
   sessionID?: string
+}
+
+export interface ConfigWarningsMessage {
+  type: "configWarnings"
+  title: string
+  detail: string
 }
 
 export interface SendMessageFailedMessage {
@@ -1146,6 +1154,11 @@ export interface FavoritesLoadedMessage {
   favorites: ModelSelection[]
 }
 
+export interface EnableThinkingsLoadedMessage {
+  type: "enableThinkingsLoaded"
+  enableThinkings: Record<string, boolean>
+}
+
 // Per-mode model selections loaded from model.json (extension → webview)
 export interface ModelSelectionsLoadedMessage {
   type: "modelSelectionsLoaded"
@@ -1673,6 +1686,7 @@ export type ExtensionMessage =
   | GitStatusMessage
   | ConnectionStateMessage
   | ErrorMessage
+  | ConfigWarningsMessage
   | SendMessageFailedMessage
   | PartUpdatedMessage
   | PartsUpdatedMessage
@@ -1781,6 +1795,7 @@ export type ExtensionMessage =
   | CustomProviderModelsFetchedMessage
   | RecentsLoadedMessage
   | FavoritesLoadedMessage
+  | EnableThinkingsLoadedMessage
   | RuntimeResultMessage // testagent_change
   | ShellPathResolvedMessage // testagent_change
   | MemorySettingsLoadedMessage // testagent_change
@@ -1823,6 +1838,7 @@ export interface SendMessageRequest {
   modelID?: string
   agent?: string
   variant?: string
+  thinkingEnabled?: boolean
   files?: FileAttachment[]
 }
 
@@ -1905,6 +1921,7 @@ export interface ImportAndSendMessage {
   modelID?: string
   agent?: string
   variant?: string
+  thinkingEnabled?: boolean
   files?: FileAttachment[]
   command?: string
   commandArgs?: string
@@ -2008,6 +2025,7 @@ export interface SendCommandRequest {
   modelID?: string
   agent?: string
   variant?: string
+  thinkingEnabled?: boolean
   files?: FileAttachment[]
 }
 
@@ -2018,6 +2036,7 @@ export interface ContinueTaskRequest {
   messageID?: string
   providerID?: string
   modelID?: string
+  thinkingEnabled?: boolean
 }
 // testagent_change end
 
@@ -2571,6 +2590,18 @@ export interface RequestVariantsMessage {
   type: "requestVariants"
 }
 
+// Enable thinking persistence (webview → extension)
+export interface PersistEnableThinkingRequest {
+  type: "persistEnableThinking"
+  key: string
+  enabled: boolean
+}
+
+// Request stored enableThinkings from extension (webview → extension)
+export interface RequestEnableThinkingsMessage {
+  type: "requestEnableThinkings"
+}
+
 // Enhance prompt request (webview → extension)
 export interface EnhancePromptRequest {
   type: "enhancePrompt"
@@ -2909,6 +2940,8 @@ export type WebviewMessage =
   | SetReviewDiffStyleRequest
   | PersistVariantRequest
   | RequestVariantsMessage
+  | PersistEnableThinkingRequest
+  | RequestEnableThinkingsMessage
   | RequestCloudSessionDataMessage
   | ImportAndSendMessage
   | RequestBranchesMessage
