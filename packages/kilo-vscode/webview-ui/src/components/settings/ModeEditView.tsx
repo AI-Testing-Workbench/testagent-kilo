@@ -317,6 +317,21 @@ const ModeEditView: Component<Props> = (props) => {
         </SettingsRow>
 
         <SettingsRow
+          title={language.t("settings.agentBehaviour.thinking.title")}
+          description={language.t("settings.agentBehaviour.thinking.description")}
+        >
+          <Switch
+            checked={cfg().thinking ?? true}
+            onChange={(val) => {
+              update({ thinking: val })
+            }}
+            hideLabel
+          >
+            {language.t("settings.agentBehaviour.thinking.title")}
+          </Switch>
+        </SettingsRow>
+
+        <SettingsRow
           title={language.t("settings.agentBehaviour.hidden.title")}
           description={language.t("settings.agentBehaviour.hidden.description")}
         >

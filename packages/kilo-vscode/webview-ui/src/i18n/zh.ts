@@ -50,6 +50,14 @@ export const dict = {
   "command.session.new.task": "新建任务",
   "command.session.continue": "恢复任务", // testagent_change
   "command.session.show.changes": "显示更改",
+
+  // Session tabs
+  "sidebar.session.newSession": "新会话",
+  "session.tabs.switcher.open": "打开会话切换器",
+  "session.tabs.switcher.search": "搜索会话...",
+  "session.tabs.switcher.current": "当前",
+  "session.tabs.switcher.pending": "待定",
+  "session.tabs.switcher.busy": "忙碌中",
   "command.file.open": "打开文件",
   "command.tab.close": "关闭标签页",
   "command.context.addSelection": "将所选内容添加到上下文",
@@ -75,6 +83,7 @@ export const dict = {
   "command.agent.cycle.reverse.description": "切换到上一个智能体",
   "command.model.variant.cycle": "切换思考强度",
   "command.model.variant.cycle.description": "切换到下一个强度等级",
+  "model.thinking.toggle": "启用思考",
   "command.permissions.autoaccept.enable": "自动接受编辑",
   "command.permissions.autoaccept.disable": "停止自动接受编辑",
   "command.workspace.toggle": "切换工作区",
@@ -1130,6 +1139,8 @@ export const dict = {
   "settings.agentBehaviour.topP.description": "核采样参数（0-1）",
   "settings.agentBehaviour.maxSteps.title": "最大步数",
   "settings.agentBehaviour.maxSteps.description": "最大智能体迭代次数",
+  "settings.agentBehaviour.thinking.title": "思考",
+  "settings.agentBehaviour.thinking.description": "在聊天输入时启用模型思考功能，当关闭时会禁用思考输出",
   "settings.agentBehaviour.hidden.title": "隐藏",
   "settings.agentBehaviour.hidden.description": "在聊天输入的模式切换器中隐藏此智能体",
   "settings.agentBehaviour.disable.title": "已禁用",
