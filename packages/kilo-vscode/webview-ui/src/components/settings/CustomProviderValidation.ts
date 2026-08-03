@@ -1,4 +1,4 @@
-import type { ModelEntry, VariantEntry } from "./CustomProviderModelCard"
+import type { Modalities, ModelEntry, VariantEntry } from "./CustomProviderModelCard"
 
 type Translator = (key: string, params?: Record<string, string>) => string
 
@@ -112,15 +112,46 @@ function serializeVariant(v: VariantEntry): [string, Record<string, unknown>] {
   const cfg: Record<string, unknown> = {}
   if (v.enableThinking !== undefined) cfg.enable_thinking = v.enableThinking
   if (v.thinking !== undefined) cfg.thinking = { type: v.thinking }
+  if (v.splitReasoning !== undefined) cfg.reasoning_split = v.splitReasoning
   if (v.reasoningEffort !== undefined) cfg.reasoningEffort = v.reasoningEffort
+  if (v.outputEffort !== undefined) cfg.effort = v.outputEffort
   if (v.chatTemplateArgs !== undefined) cfg.chat_template_args = { enable_thinking: v.chatTemplateArgs }
   return [v.name.trim(), cfg]
+}
+
+function modalities(m: ModelEntry): Modalities | undefined {
+  const input = new Set(m.modalities?.input ?? [])
+  const output = new Set(m.modalities?.output ?? [])
+  const existing = input.size > 0 || output.size > 0
+  if (!existing && !m.supportsImages) return
+
+  const image = input.has("image")
+  const changed = image !== m.supportsImages
+  if (m.supportsImages && !image) {
+    input.add("text")
+    input.add("image")
+  }
+  if (!m.supportsImages) {
+    input.delete("image")
+    output.delete("image")
+  }
+
+  const include = input.size > 0 || (m.modalities?.input !== undefined && !changed)
+  if (!include && output.size === 0) return
+
+  // CLI 的 modalities schema 要求 input/output 两个字段同时存在(可为空数组)
+  return {
+    input: include ? [...input] : [],
+    output: [...output],
+  }
 }
 
 function serializeModel(m: ModelEntry): [string, Record<string, unknown>] {
   const ventries = m.reasoning ? m.variants.filter((v) => v.name.trim()).map(serializeVariant) : []
   const entry: Record<string, unknown> = { name: m.name.trim() }
+  const modes = modalities(m)
   if (m.reasoning) entry.reasoning = true
+  if (modes) entry.modalities = modes
   if (ventries.length > 0) entry.variants = Object.fromEntries(ventries)
   // testagent_change start: Include limit in serialized model only if at least one field has a value
   if (m.limit) {
