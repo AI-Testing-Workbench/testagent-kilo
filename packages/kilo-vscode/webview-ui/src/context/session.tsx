@@ -42,7 +42,10 @@ import {
   buildFamilyLabels,
   buildCostBreakdown,
   buildFamilyTokens,
+  buildFamilyTiming,
   childID,
+  type FamilyTokens,
+  type TimingInfo,
 } from "./session-utils"
 import { Identifier } from "../utils/id"
 import { resolveModelSelection } from "./model-selection"
@@ -165,6 +168,7 @@ interface SessionContextValue {
   costBreakdown: Accessor<Array<{ label: string; cost: number }>>
   contextUsage: Accessor<ContextUsage | undefined>
   familyTokens: Accessor<FamilyTokens | undefined>
+  familyTiming: Accessor<TimingInfo | undefined>
 
   // Skills loaded from the CLI backend
   skills: Accessor<SkillInfo[]>
@@ -307,6 +311,10 @@ export const SessionProvider: ParentComponent = (props) => {
 
   // Permission IDs that have been responded to but not yet confirmed by the server
   const [respondingPermissions, setRespondingPermissions] = createSignal<Set<string>>(new Set())
+
+  // Track permission wait durations keyed by sessionID
+  const permissionStartTimes = new Map<string, number>()
+  const [permissionWaits, setPermissionWaits] = createSignal<Record<string, number>>({})
 
   // Pending questions
   const [questions, setQuestions] = createSignal<QuestionRequest[]>([])
@@ -1196,10 +1204,22 @@ export const SessionProvider: ParentComponent = (props) => {
   }
 
   function handlePermissionRequest(permission: PermissionRequest) {
+    permissionStartTimes.set(permission.id, Date.now())
     setPermissions((prev) => upsertPermission(prev, permission))
   }
 
   function handlePermissionResolved(permissionID: string) {
+    const perm = permissions().find((p) => p.id === permissionID)
+    const sessionID = perm?.sessionID
+    const start = permissionStartTimes.get(permissionID)
+    if (start && sessionID) {
+      const duration = Date.now() - start
+      permissionStartTimes.delete(permissionID)
+      setPermissionWaits((prev) => ({
+        ...prev,
+        [sessionID]: (prev[sessionID] ?? 0) + duration,
+      }))
+    }
     setPermissions((prev) => prev.filter((p) => p.id !== permissionID))
     setRespondingPermissions((prev) => {
       if (!prev.has(permissionID)) return prev
@@ -2242,6 +2262,26 @@ export const SessionProvider: ParentComponent = (props) => {
     return buildFamilyTokens(sessionFamily(id), store.messages as any)
   })
 
+  /** Accumulated timing across the session family (self + subagents). */
+  // tick 信号保证活跃会话每秒重算，使 buildFamilyTiming 内的 Date.now() 刷新
+  const [tick, setTick] = createSignal(Date.now())
+  createEffect(() => {
+    if (!anyBusy()) return // 无活跃会话时不 tick
+    const id = setInterval(() => setTick(Date.now()), 1000)
+    onCleanup(() => clearInterval(id))
+  })
+  const familyTiming = createMemo<TimingInfo | undefined>(() => {
+    const id = currentSessionID()
+    if (!id) return undefined
+    tick() // 依赖 tick，活跃时每秒重算
+    return buildFamilyTiming(
+      sessionFamily(id),
+      store.messages as any,
+      store.parts as any,
+      permissionWaits(),
+    )
+  })
+
   // Status text derived from last assistant message parts
   const statusText = createMemo<string | undefined>(() => {
     if (status() === "idle") return undefined
@@ -2319,6 +2359,7 @@ export const SessionProvider: ParentComponent = (props) => {
     costBreakdown,
     contextUsage,
     familyTokens,
+    familyTiming,
     agents,
     allAgents,
     skills,
