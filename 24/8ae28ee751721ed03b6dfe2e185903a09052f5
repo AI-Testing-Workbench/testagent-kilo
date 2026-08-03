@@ -1,0 +1,108 @@
+packages/sdk/js/src/v2/gen/types.gen.ts
+  h_cb3d00609d57f2 412,976,1626-1627,1636,5969,6307,6355,6520
+packages/kilo-vscode/package.json
+  h_cb3d00609d57f2 5
+packages/kilo-vscode/src/KiloProvider.ts
+  h_cb3d00609d57f2 376,844,861,868,903-907,1377,1404-1417,1755-1766,2090,2327-2335,2978-3006,3060-3067,3070,3072-3076,3537-3546,3571-3572,3578,3591,3648,3651,3710,3740,3807,3847,3880,3921-3925,4585,4623,4625-4658,4661,4815-4824,4830,4832-4835,4841-4844,5283
+packages/kilo-vscode/src/SettingsEditorProvider.ts
+  h_cb3d00609d57f2 160-170
+packages/kilo-vscode/src/extension.ts
+  h_cb3d00609d57f2 50,294-303
+packages/kilo-vscode/src/kilo-provider/handlers/cloud-session.ts
+  h_cb3d00609d57f2 119,224
+packages/kilo-vscode/src/services/cli-backend/sdk-sse-adapter.ts
+  h_cb3d00609d57f2 194
+packages/kilo-vscode/src/services/commit-message/__tests__/index.spec.ts
+  h_cb3d00609d57f2 133
+packages/kilo-vscode/src/services/env-path.ts
+  h_cb3d00609d57f2 5,9-11,14-30,42-63,65-71,74-80,83-84,86,88,92,94-100,102-104,106-112,114-119,121-123,127,129-183,185-186,188-192,194-209,212-260,262-276
+packages/kilo-vscode/src/testagent/sdt-runner.ts
+  h_cb3d00609d57f2 17,37,49,91,155,159-160,222,224
+packages/kilo-vscode/src/testagent/testflow-bridge.ts
+  h_cb3d00609d57f2 202
+packages/kilo-vscode/webview-ui/src/App.tsx
+  h_cb3d00609d57f2 20,151,157-159,162,197-198,236-237,320-324
+packages/kilo-vscode/webview-ui/src/components/chat/AssistantMessage.tsx
+  h_cb3d00609d57f2 188-189,193,258-270,290
+packages/kilo-vscode/webview-ui/src/components/chat/ChatView.tsx
+  h_cb3d00609d57f2 16,18-19,21,41,51-53,94-98,101-104,112,172-174,203-205,225,290,297
+packages/kilo-vscode/webview-ui/src/components/chat/ConfigWarningsBanner.tsx
+  h_cb3d00609d57f2 1-63
+packages/kilo-vscode/webview-ui/src/components/chat/PromptInput.tsx
+  h_cb3d00609d57f2 16,77-78,88,93,124,305-308,445,450,456,675,736,738,745
+packages/kilo-vscode/webview-ui/src/components/chat/SessionTab.tsx
+  h_cb3d00609d57f2 1-75
+packages/kilo-vscode/webview-ui/src/components/chat/SessionTabMenu.tsx
+  h_cb3d00609d57f2 1-43
+packages/kilo-vscode/webview-ui/src/components/chat/SessionTabStrip.tsx
+  h_cb3d00609d57f2 1-190
+packages/kilo-vscode/webview-ui/src/components/chat/SessionTabSwitcher.tsx
+  h_cb3d00609d57f2 1-176
+packages/kilo-vscode/webview-ui/src/components/chat/TabDnd.tsx
+  h_cb3d00609d57f2 1-43
+packages/kilo-vscode/webview-ui/src/components/settings/AgentBehaviourTab.tsx
+  h_cb3d00609d57f2 1157-1175,1217-1218,1220-1250,1293
+packages/kilo-vscode/webview-ui/src/components/settings/CustomProviderDialog.tsx
+  h_cb3d00609d57f2 64-66,125-128,477-536,547-548,609-610
+packages/kilo-vscode/webview-ui/src/components/settings/CustomProviderModelCard.tsx
+  h_cb3d00609d57f2 237-238,263,274
+packages/kilo-vscode/webview-ui/src/components/settings/CustomProviderValidation.ts
+  h_cb3d00609d57f2 18-21,30-31,172-178,193-194,197-198
+packages/kilo-vscode/webview-ui/src/components/settings/ModeEditView.tsx
+  h_cb3d00609d57f2 319-333
+packages/kilo-vscode/webview-ui/src/components/settings/ProvidersTab.tsx
+  h_cb3d00609d57f2 6,8,15,35,222-230
+packages/kilo-vscode/webview-ui/src/components/shared/WaitingForUserAvatar.tsx
+  h_cb3d00609d57f2 1-418
+packages/kilo-vscode/webview-ui/src/components/shared/WorkingIndicator.tsx
+  h_cb3d00609d57f2 14,140-147,158-160
+packages/kilo-vscode/webview-ui/src/context/local-tabs.tsx
+  h_cb3d00609d57f2 1-249
+packages/kilo-vscode/webview-ui/src/context/server.tsx
+  h_cb3d00609d57f2 25-27,42-43,105,139-144,168-172,188-190
+packages/kilo-vscode/webview-ui/src/context/session.tsx
+  h_cb3d00609d57f2 85,197-201,403,692-710,841-845,1751,1777,1808,1839,1877,2364-2366
+packages/kilo-vscode/webview-ui/src/hooks/useSlashCommand.ts
+  h_cb3d00609d57f2 1,63-68,198-202,223-227
+packages/kilo-vscode/webview-ui/src/i18n/en.ts
+  h_cb3d00609d57f2 49-54,80,1162-1163
+packages/kilo-vscode/webview-ui/src/i18n/zh.ts
+  h_cb3d00609d57f2 53-60,86,1142-1143
+packages/kilo-vscode/webview-ui/src/styles/chat.css
+  h_cb3d00609d57f2 12,14,2155-2162
+packages/kilo-vscode/webview-ui/src/styles/search-menu.css
+  h_cb3d00609d57f2 1-92
+packages/kilo-vscode/webview-ui/src/styles/session-tabs.css
+  h_cb3d00609d57f2 1-323
+packages/kilo-vscode/webview-ui/src/types/messages.ts
+  h_cb3d00609d57f2 399,562,567-572,629,1157-1161,1689,1799,1842,1864-1870,1925,2029,2040,2594-2605,2848,2948-2949
+packages/kilo-vscode/webview-ui/src/utils/draft-store.ts
+  h_cb3d00609d57f2 1-90
+packages/kilo-vscode/webview-ui/src/utils/local-tabs.ts
+  h_cb3d00609d57f2 1-223
+packages/kilo-vscode/webview-ui/src/utils/tab-navigation.ts
+  h_cb3d00609d57f2 1-78
+packages/kilo-vscode/webview-ui/src/utils/tab-order.ts
+  h_cb3d00609d57f2 1-17
+packages/kilo-vscode/webview-ui/src/utils/tab-scroll.ts
+  h_cb3d00609d57f2 1-81
+packages/kilo-vscode/webview-ui/src/utils/tab-widths.ts
+  h_cb3d00609d57f2 1-21
+packages/sdk/js/src/v2/gen/sdk.gen.ts
+  h_cb3d00609d57f2 3920,3943,4282,4305,4342,4368,4519,4536
+packages/testagent-core
+  h_cb3d00609d57f2 1
+packages/ui/src/i18n/zh.ts
+  h_cb3d00609d57f2 60-61
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.20",
+  "base_commit_sha": "248ae28ee751721ed03b6dfe2e185903a09052f5",
+  "prompts": {},
+  "humans": {
+    "h_cb3d00609d57f2": {
+      "author": "BoSeal <1135378788@qq.com>"
+    }
+  }
+}
