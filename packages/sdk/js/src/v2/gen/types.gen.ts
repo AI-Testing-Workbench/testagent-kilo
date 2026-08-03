@@ -1624,8 +1624,6 @@ export type Command = {
   hints: Array<string>
   id?: string
   version?: string
-  id?: string
-  version?: string
 }
 
 export type Agent = {
