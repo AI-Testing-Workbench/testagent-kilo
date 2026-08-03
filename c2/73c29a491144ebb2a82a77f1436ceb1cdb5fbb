@@ -1,0 +1,71 @@
+packages/kilo-vscode/src/KiloProvider.ts
+  h_cb3d00609d57f2 1118-1138
+  h_cb3d00609d57f2 111-118,1139-1143
+packages/kilo-vscode/webview-ui/src/types/messages.ts
+  s_3bf50601b784de::t_6d8f6e246dd2c2 1770
+  s_096129d0f5ef53::t_4f37cc39020959 2901,2904
+  s_3bf50601b784de::t_f94744accc8d88 2902-2903
+packages/kilo-vscode/webview-ui/src/components/settings/Settings.tsx
+  s_096129d0f5ef53::t_02fc50c874835e 228-231
+  s_096129d0f5ef53::t_cf2ec405f28150 170-171,173-175
+  s_096129d0f5ef53::t_5edbea6cdf1ecb 23
+  s_3bf50601b784de::t_58014bea3cb37a 172
+packages/kilo-vscode/src/kilo-provider/handlers/env-vars.ts
+  s_3bf50601b784de::t_c47e6419de8698 16
+  s_3bf50601b784de::t_3b7ac33ef17da4 22
+  s_3bf50601b784de::t_e84920a2890c0c 29,31,39-51,54,64,66-100,107
+  s_096129d0f5ef53::t_c08b0a450de21a 15
+  s_096129d0f5ef53::t_a79d1a2871cb0d 1-14,17-21,23-28,30,32-38,52-53,55-63,65,101-106,108-118
+  s_096129d0f5ef53::t_08186b07da308d 119-121
+  h_cb3d00609d57f2 122-140
+packages/ui/src/components/text-field.tsx
+  s_096129d0f5ef53::t_d8c8049193dfc4 89
+packages/kilo-vscode/webview-ui/src/styles/settings.css
+  s_096129d0f5ef53::t_3183bfaee6d3dd 124,135-136,158-159,182-185
+  s_096129d0f5ef53::t_703062c6ac39c5 88,94-96
+  s_3bf50601b784de::t_5c36e631fdd2d9 125-129
+  s_096129d0f5ef53::t_630a0897841a40 160,162-165,167-168
+  s_096129d0f5ef53::t_d8239c0dad21b4 161,166
+  s_096129d0f5ef53::t_dc8d70a886e2a4 130-134
+  s_096129d0f5ef53::t_bb4331b9305693 169-181
+  s_096129d0f5ef53::t_b6aaaf19988e47 137-157
+packages/kilo-vscode/webview-ui/src/components/settings/SettingsRow.tsx
+  s_096129d0f5ef53::t_7c662f04b1ea7c 18
+  s_096129d0f5ef53::t_cbbffc6c6bef16 24
+packages/kilo-vscode/webview-ui/src/components/settings/EnvVarsTab.tsx
+  h_cb3d00609d57f2 1-285
+  h_cb3d00609d57f2 286-313
+packages/sdk/js/src/v2/gen/sdk.gen.ts
+  h_cb3d00609d57f2 189-195,663-860,866-875
+packages/sdk/js/src/v2/gen/types.gen.ts
+  h_cb3d00609d57f2 1324-1338,1622-1623,3635-3811,4651-4652
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.20",
+  "base_commit_sha": "c273c29a491144ebb2a82a77f1436ceb1cdb5fbb",
+  "prompts": {},
+  "humans": {
+    "h_cb3d00609d57f2": {
+      "author": "BoSeal <1135378788@qq.com>"
+    }
+  },
+  "sessions": {
+    "s_096129d0f5ef53": {
+      "agent_id": {
+        "tool": "cursor",
+        "id": "2045dad7-3dd7-4b04-985a-41716e99d907",
+        "model": "3efe410f4cada80c"
+      },
+      "human_author": "BoSeal <1135378788@qq.com>"
+    },
+    "s_3bf50601b784de": {
+      "agent_id": {
+        "tool": "cursor",
+        "id": "1383a24e-67e9-415b-b355-8ffea170a445",
+        "model": "3efe410f4cada80c"
+      },
+      "human_author": "BoSeal <1135378788@qq.com>"
+    }
+  }
+}
