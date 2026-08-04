@@ -517,7 +517,7 @@ export const dict = {
   "session.files.binaryContent": "二进制文件（无法显示内容）",
   "session.messages.renderEarlier": "显示更早的消息",
   "session.messages.loadingEarlier": "正在加载更早的消息...",
-  "session.prompts.navLabel": "提示词导航",
+  "session.prompts.navLabel": "用户消息导航",
   "session.prompts.tick": "提示词 {{index}}/{{total}}：{{prompt}}",
   "session.prompts.noAnswer": "暂无响应",
   "session.prompts.queued": "已排队",
