@@ -318,12 +318,23 @@ const ModeEditView: Component<Props> = (props) => {
 
         <SettingsRow
           title={language.t("settings.agentBehaviour.thinking.title")}
-          description={language.t("settings.agentBehaviour.thinking.description")}
+          description={
+            // testagent_change start - 显示默认值提示
+            (() => {
+              const baseDesc = language.t("settings.agentBehaviour.thinking.description")
+              const enableThinking = (cfg().options as Record<string, any> | undefined)?.chat_template_kwargs?.enable_thinking
+              if (enableThinking === undefined) {
+                return `${baseDesc}（当前agent未配置思考）`
+              }
+              return baseDesc
+            })()
+            // testagent_change end
+          }
         >
           <Switch
             checked={
               // testagent_change start - 从 options.chat_template_kwargs.enable_thinking 读取
-              (cfg().options as Record<string, any> | undefined)?.chat_template_kwargs?.enable_thinking ?? true
+              (cfg().options as Record<string, any> | undefined)?.chat_template_kwargs?.enable_thinking ?? false
               // testagent_change end
             }
             onChange={(val) => {
