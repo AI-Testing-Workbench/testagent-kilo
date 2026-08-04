@@ -420,11 +420,7 @@ jobs:
         if: steps.should_build.outputs.build == 'true'
         run: |
           cd packages/kilo-vscode
-          if [ "${{ matrix.target }}" = "win32-x64" ]; then
-            bun run build:testflow
-          else
-            echo "⏭️ Skipping testflow build for ${{ matrix.target }}"
-          fi
+          bun script/build-testflow.ts --target=${{ matrix.target }}
           bun script/package-nodejs-server.ts --skip-server-build --target=${{ matrix.target }}
           echo "✅ Dual-runtime VSIX packaged for ${{ matrix.target }}"
 
