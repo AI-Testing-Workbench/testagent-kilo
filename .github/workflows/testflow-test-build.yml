@@ -1,5 +1,5 @@
 # testagent_change start - manual trigger only
-name: publish
+name: testflow-test-build
 run-name: "Build ${{ inputs.platform || 'all platforms' }} from ${{ inputs.branch || github.ref_name }}"
 
 on:
