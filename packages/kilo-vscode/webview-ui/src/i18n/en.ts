@@ -524,6 +524,13 @@ export const dict = {
 
   "session.messages.renderEarlier": "Render earlier messages",
   "session.messages.loadingEarlier": "Loading earlier messages...",
+  "session.prompts.navLabel": "Prompt navigator",
+  "session.prompts.tick": "Prompt {{index}} of {{total}}: {{prompt}}",
+  "session.prompts.noAnswer": "No response yet",
+  "session.prompts.queued": "Queued",
+  "session.prompts.first": "First prompt",
+  "session.prompts.latest": "Latest prompt",
+  "session.prompts.overflow": "{{count}} earlier prompts",
   "session.messages.loadEarlier": "Load earlier messages",
   "session.messages.loading": "Loading messages...",
   "session.messages.jumpToLatest": "Jump to latest",

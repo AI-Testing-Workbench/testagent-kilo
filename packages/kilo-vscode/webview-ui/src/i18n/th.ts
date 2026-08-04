@@ -511,6 +511,13 @@ export const dict = {
 
   "session.messages.renderEarlier": "แสดงข้อความก่อนหน้า",
   "session.messages.loadingEarlier": "กำลังโหลดข้อความก่อนหน้า...",
+  "session.prompts.navLabel": "ตัวนำทางพรอมต์",
+  "session.prompts.tick": "พรอมต์ {{index}} จาก {{total}}: {{prompt}}",
+  "session.prompts.noAnswer": "ยังไม่มีการตอบกลับ",
+  "session.prompts.queued": "อยู่ในคิว",
+  "session.prompts.first": "พรอมต์แรก",
+  "session.prompts.latest": "พรอมต์ล่าสุด",
+  "session.prompts.overflow": "พรอมต์ก่อนหน้า {{count}} รายการ",
   "session.messages.loadEarlier": "โหลดข้อความก่อนหน้า",
   "session.messages.loading": "กำลังโหลดข้อความ...",
   "session.messages.jumpToLatest": "ไปที่ล่าสุด",
