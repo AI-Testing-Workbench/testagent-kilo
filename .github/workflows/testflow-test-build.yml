@@ -1,0 +1,583 @@
+# testagent_change start - manual trigger only
+name: publish
+run-name: "Build ${{ inputs.platform || 'all platforms' }} from ${{ inputs.branch || github.ref_name }}"
+
+on:
+  workflow_dispatch:
+    inputs:
+      branch:
+        description: "构建分支 (Branch to build from)"
+        required: true
+        type: string
+        default: "testflow"
+      testagent_core_branch:
+        description: "testagent-core 子模块分支 (testagent-core submodule branch)"
+        required: true
+        type: string
+        default: "dev"
+      testflow_branch:
+        description: "testflow 子模块分支 (testflow submodule branch)"
+        required: true
+        type: string
+        default: "dev"
+      platform:
+        description: "构建平台 (Platform to build)"
+        required: true
+        type: choice
+        options:
+          - all
+          - linux-x64
+          - linux-arm64
+          - alpine-x64
+          - alpine-arm64
+          - darwin-x64
+          - darwin-arm64
+          - win32-x64
+        default: "all"
+
+concurrency: ${{ github.workflow }}-${{ github.ref }}-${{ inputs.platform || 'all' }}
+# testagent_change end
+
+permissions:
+  id-token: write
+  contents: write
+  packages: write
+
+jobs:
+  version:
+    runs-on: ubuntu-24.04
+    if: github.repository == 'AI-Testing-Workbench/testagent-kilo' # testagent_change
+    steps:
+      # testagent_change - checkout specified branch
+      - uses: actions/checkout@v3
+        with:
+          ref: ${{ inputs.branch || github.ref }}
+          fetch-depth: 0
+          submodules: false
+
+      # testagent_change - use latest testagent-core commit for release builds
+      - name: Update testagent-core submodule
+        run: |
+          git config --global url."https://github.com/".insteadOf "git@github.com:"
+          git submodule sync --recursive packages/testagent-core
+          git submodule update --init packages/testagent-core
+          cd packages/testagent-core
+          git fetch origin
+          git checkout ${{ inputs.testagent_core_branch || 'dev' }}
+          cd ../..
+
+      # testagent_change - root workspace install needs the testflow workspace
+      - name: Update testflow submodule
+        env:
+          TESTFLOW_GITHUB_TOKEN: ${{ secrets.TESTFLOW_GITHUB_TOKEN }}
+        run: |
+          if [ -z "$TESTFLOW_GITHUB_TOKEN" ]; then
+            echo "::error::TESTFLOW_GITHUB_TOKEN is required to clone private submodule Pluto-AI-Workbench/testflow"
+            exit 1
+          fi
+          git config --local --unset-all http.https://github.com/.extraheader || true
+          git config --global --unset-all http.https://github.com/.extraheader || true
+          STATUS=$(curl -sS -o /tmp/testflow-repo.json -w "%{http_code}" \
+            -H "Authorization: Bearer ${TESTFLOW_GITHUB_TOKEN}" \
+            https://api.github.com/repos/Pluto-AI-Workbench/testflow)
+          if [ "$STATUS" != "200" ]; then
+            echo "::error::TESTFLOW_GITHUB_TOKEN cannot read Pluto-AI-Workbench/testflow (HTTP $STATUS)"
+            cat /tmp/testflow-repo.json
+            exit 1
+          fi
+          git submodule init packages/testflow
+          git config submodule.packages/testflow.url "https://${GITHUB_ACTOR}:${TESTFLOW_GITHUB_TOKEN}@github.com/Pluto-AI-Workbench/testflow.git"
+          git submodule update --remote --recursive packages/testflow
+
+      - uses: ./.github/actions/setup-bun
+
+      # kilocode_change start - install deps for version script workspace resolution
+      - name: Install dependencies
+        run: bun install --ignore-scripts
+
+      # testagent_change - removed: bun i -g @kilocode/cli (not needed for version script)
+      # kilocode_change end
+
+      - id: version
+        run: |
+          ./script/version.ts
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+          KILO_API_KEY: ${{ secrets.KILO_API_KEY }}
+          KILO_ORG_ID: ${{ secrets.KILO_ORG_ID }}
+    outputs:
+      version: ${{ steps.version.outputs.version }}
+      release: ${{ steps.version.outputs.release }}
+      tag: ${{ steps.version.outputs.tag }}
+
+  build-cli:
+    needs: version
+    runs-on: ubuntu-24.04
+    if: github.repository == 'AI-Testing-Workbench/testagent-kilo' # testagent_change
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - target: linux-x64
+            script: bun:linux
+            binary: testagent
+            output_dir: testagent-linux-x64
+          - target: linux-arm64
+            script: bun:linux-arm64
+            binary: testagent
+            output_dir: testagent-linux-arm64
+          - target: alpine-x64
+            script: bun:alpine
+            binary: testagent
+            output_dir: testagent-linux-x64-musl
+          - target: alpine-arm64
+            script: bun:alpine-arm64
+            binary: testagent
+            output_dir: testagent-linux-arm64-musl
+          - target: darwin-x64
+            script: bun:mac
+            binary: testagent
+            output_dir: testagent-darwin-x64
+          - target: darwin-arm64
+            script: bun:mac-arm64
+            binary: testagent
+            output_dir: testagent-darwin-arm64
+          - target: win32-x64
+            script: bun:windows
+            binary: testagent.exe
+            output_dir: testagent-windows-x64-baseline
+    steps:
+      # testagent_change - skip if platform not selected
+      - name: Check if platform should be built
+        id: should_build
+        run: |
+          PLATFORM="${{ inputs.platform }}"
+          TARGET="${{ matrix.target }}"
+
+          if [ "$PLATFORM" = "all" ] || [ -z "$PLATFORM" ] || [ "$PLATFORM" = "$TARGET" ]; then
+            echo "build=true" >> $GITHUB_OUTPUT
+            echo "✅ Building $TARGET"
+          else
+            echo "build=false" >> $GITHUB_OUTPUT
+            echo "⏭️  Skipping $TARGET (selected: $PLATFORM)"
+          fi
+
+      # testagent_change - checkout specified branch
+      - uses: actions/checkout@v3
+        if: steps.should_build.outputs.build == 'true'
+        with:
+          ref: ${{ inputs.branch || github.ref }}
+          fetch-depth: 0
+          fetch-tags: true
+          submodules: false
+
+      # testagent_change - use latest testagent-core commit for release builds
+      - name: Update testagent-core submodule
+        if: steps.should_build.outputs.build == 'true'
+        run: |
+          git config --global url."https://github.com/".insteadOf "git@github.com:"
+          git submodule sync --recursive packages/testagent-core
+          git submodule update --init packages/testagent-core
+          cd packages/testagent-core
+          git fetch origin
+          git checkout ${{ inputs.testagent_core_branch || 'dev' }}
+          cd ../..
+
+      # testagent_change - use latest testflow commit for CLI builds (fix workspace missing error)
+      - name: Update testflow submodule
+        if: steps.should_build.outputs.build == 'true'
+        env:
+          TESTFLOW_GITHUB_TOKEN: ${{ secrets.TESTFLOW_GITHUB_TOKEN }}
+        run: |
+          if [ -z "$TESTFLOW_GITHUB_TOKEN" ]; then
+            echo "::error::TESTFLOW_GITHUB_TOKEN is required to clone private submodule Pluto-AI-Workbench/testflow"
+            exit 1
+          fi
+          git config --local --unset-all http.https://github.com/.extraheader || true
+          git config --global --unset-all http.https://github.com/.extraheader || true
+          STATUS=$(curl -sS -o /tmp/testflow-repo.json -w "%{http_code}" \
+            -H "Authorization: Bearer ${TESTFLOW_GITHUB_TOKEN}" \
+            https://api.github.com/repos/Pluto-AI-Workbench/testflow)
+          if [ "$STATUS" != "200" ]; then
+            echo "::error::TESTFLOW_GITHUB_TOKEN cannot read Pluto-AI-Workbench/testflow (HTTP $STATUS)"
+            cat /tmp/testflow-repo.json
+            exit 1
+          fi
+          git submodule init packages/testflow
+          git config submodule.packages/testflow.url "https://${GITHUB_ACTOR}:${TESTFLOW_GITHUB_TOKEN}@github.com/Pluto-AI-Workbench/testflow.git"
+          git submodule update --init packages/testflow
+          cd packages/testflow
+          git fetch origin
+          git checkout ${{ inputs.testflow_branch || 'dev' }}
+          cd ../..
+
+      - uses: ./.github/actions/setup-bun
+        if: steps.should_build.outputs.build == 'true'
+
+      - name: Install dependencies
+        if: steps.should_build.outputs.build == 'true'
+        run: bun install
+        working-directory: ./packages/testagent-core
+
+      - name: Build CLI (${{ matrix.target }})
+        if: steps.should_build.outputs.build == 'true'
+        run: |
+          if grep -q "\"${{ matrix.script }}\"" package.json; then
+            bun run ${{ matrix.script }}
+          else
+            echo "Script ${{ matrix.script }} not found, using build.ts directly"
+            cross-env OPENCODE_VERSION=${{ needs.version.outputs.version }} \
+              OPENCODE_CHANNEL=latest \
+              bun packages/opencode/script/build.ts \
+              --target=${{ matrix.target }} \
+              --skip-models
+          fi
+        working-directory: ./packages/testagent-core
+        env:
+          OPENCODE_VERSION: ${{ needs.version.outputs.version }}
+          OPENCODE_CHANNEL: latest
+
+      - name: Verify CLI binary
+        if: steps.should_build.outputs.build == 'true'
+        run: |
+          BINARY_PATH="packages/testagent-core/packages/opencode/dist/${{ matrix.output_dir }}/bin/${{ matrix.binary }}"
+          if [ ! -f "$BINARY_PATH" ]; then
+            echo "❌ Error: ${{ matrix.binary }} not found at $BINARY_PATH!"
+            echo "Contents of dist directory:"
+            ls -la packages/testagent-core/packages/opencode/dist/ || true
+            exit 1
+          fi
+          echo "✅ CLI binary built successfully"
+          ls -lh "$BINARY_PATH"
+
+      # testagent_change - upload only binary (avoid overwriting package.json in consumers)
+      - uses: actions/upload-artifact@v4
+        if: steps.should_build.outputs.build == 'true'
+        with:
+          name: testagent-cli-${{ matrix.target }}
+          path: packages/testagent-core/packages/opencode/dist/${{ matrix.output_dir }}/bin
+          retention-days: 7
+
+    outputs:
+      version: ${{ needs.version.outputs.version }}
+
+  build-vscode:
+    needs: build-cli
+    runs-on: ubuntu-24.04
+    if: github.repository == 'AI-Testing-Workbench/testagent-kilo' # testagent_change
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - target: linux-x64
+            cli_target: linux-x64
+            binary: testagent
+          - target: linux-arm64
+            cli_target: linux-arm64
+            binary: testagent
+          - target: alpine-x64
+            cli_target: alpine-x64
+            binary: testagent
+          - target: alpine-arm64
+            cli_target: alpine-arm64
+            binary: testagent
+          - target: darwin-x64
+            cli_target: darwin-x64
+            binary: testagent
+          - target: darwin-arm64
+            cli_target: darwin-arm64
+            binary: testagent
+          - target: win32-x64
+            cli_target: win32-x64
+            binary: testagent.exe
+    steps:
+      # testagent_change - skip if platform not selected
+      - name: Check if platform should be built
+        id: should_build
+        run: |
+          PLATFORM="${{ inputs.platform }}"
+          TARGET="${{ matrix.target }}"
+
+          if [ "$PLATFORM" = "all" ] || [ -z "$PLATFORM" ] || [ "$PLATFORM" = "$TARGET" ]; then
+            echo "build=true" >> $GITHUB_OUTPUT
+            echo "✅ Building VSIX for $TARGET"
+          else
+            echo "build=false" >> $GITHUB_OUTPUT
+            echo "⏭️  Skipping VSIX for $TARGET (selected: $PLATFORM)"
+          fi
+
+      # testagent_change - checkout specified branch
+      - uses: actions/checkout@v3
+        if: steps.should_build.outputs.build == 'true'
+        with:
+          ref: ${{ inputs.branch || github.ref }}
+          submodules: false # testagent_change - submodules are updated explicitly below
+
+      # testagent_change - use latest testagent-core commit for release builds
+      - name: Update testagent-core submodule
+        if: steps.should_build.outputs.build == 'true'
+        run: |
+          git config --global url."https://github.com/".insteadOf "git@github.com:"
+          git submodule sync --recursive packages/testagent-core
+          git submodule update --init packages/testagent-core
+          cd packages/testagent-core
+          git fetch origin
+          git checkout ${{ inputs.testagent_core_branch || 'dev' }}
+          cd ../..
+
+      # testagent_change - use latest testflow commit for VSIX builds
+      - name: Update testflow submodule
+        if: steps.should_build.outputs.build == 'true'
+        env:
+          TESTFLOW_GITHUB_TOKEN: ${{ secrets.TESTFLOW_GITHUB_TOKEN }}
+        run: |
+          if [ -z "$TESTFLOW_GITHUB_TOKEN" ]; then
+            echo "::error::TESTFLOW_GITHUB_TOKEN is required to clone private submodule Pluto-AI-Workbench/testflow"
+            exit 1
+          fi
+          git config --local --unset-all http.https://github.com/.extraheader || true
+          git config --global --unset-all http.https://github.com/.extraheader || true
+          STATUS=$(curl -sS -o /tmp/testflow-repo.json -w "%{http_code}" \
+            -H "Authorization: Bearer ${TESTFLOW_GITHUB_TOKEN}" \
+            https://api.github.com/repos/Pluto-AI-Workbench/testflow)
+          if [ "$STATUS" != "200" ]; then
+            echo "::error::TESTFLOW_GITHUB_TOKEN cannot read Pluto-AI-Workbench/testflow (HTTP $STATUS)"
+            cat /tmp/testflow-repo.json
+            exit 1
+          fi
+          git submodule init packages/testflow
+          git config submodule.packages/testflow.url "https://${GITHUB_ACTOR}:${TESTFLOW_GITHUB_TOKEN}@github.com/Pluto-AI-Workbench/testflow.git"
+          git submodule update --init packages/testflow
+          cd packages/testflow
+          git fetch origin
+          git checkout ${{ inputs.testflow_branch || 'dev' }}
+          cd ../..
+
+      - uses: ./.github/actions/setup-bun
+        if: steps.should_build.outputs.build == 'true'
+
+      - uses: actions/setup-node@v4
+        if: steps.should_build.outputs.build == 'true'
+        with:
+          node-version: "24"
+          registry-url: "https://registry.npmjs.org"
+
+      - name: Install @vscode/vsce
+        if: steps.should_build.outputs.build == 'true'
+        run: bun install -g @vscode/vsce
+
+      # testagent_change - install root workspace deps for kilo-vscode and testflow
+      - name: Install workspace dependencies
+        if: steps.should_build.outputs.build == 'true'
+        run: bun install --ignore-scripts
+
+      # testagent_change - install testagent-core dependencies (uses cached Bun packages)
+      - name: Install testagent-core dependencies
+        if: steps.should_build.outputs.build == 'true'
+        run: |
+          echo "📦 Installing testagent-core dependencies..."
+          cd packages/testagent-core
+          if [ "$RUNNER_OS" = "Windows" ]; then
+            bun install --linker hoisted
+          else
+            bun install
+          fi
+          echo "✅ testagent-core dependencies installed"
+
+        # testagent_change - download CLI binary for dual-runtime support
+      - name: Download CLI binary for ${{ matrix.target }}
+        if: steps.should_build.outputs.build == 'true'
+        uses: actions/download-artifact@v4
+        with:
+          name: testagent-cli-${{ matrix.cli_target }}
+          path: packages/kilo-vscode/bin
+
+      - name: Set executable permissions (Unix)
+        if: steps.should_build.outputs.build == 'true' && matrix.binary != 'testagent.exe'
+        run: chmod +x packages/kilo-vscode/bin/${{ matrix.binary }}
+
+      - name: Verify CLI binary
+        if: steps.should_build.outputs.build == 'true'
+        run: |
+          if [ ! -f packages/kilo-vscode/bin/${{ matrix.binary }} ]; then
+            echo "❌ Error: ${{ matrix.binary }} not found after download!"
+            ls -la packages/kilo-vscode/bin/ || true
+            exit 1
+          fi
+          echo "✅ CLI binary downloaded successfully"
+          ls -lh packages/kilo-vscode/bin/
+      # testagent_change start - build dual-runtime VSIX with Node.js server
+      - name: Build nodejs-server
+        if: steps.should_build.outputs.build == 'true'
+        run: |
+          cd packages/testagent-core/packages/nodejs-server
+          OPENCODE_CHANNEL=latest bun run build
+          echo "✅ Node.js server built"
+
+      # testagent_change - cache nodejs-server node_modules
+      - name: Get nodejs-server package.json hash
+        if: steps.should_build.outputs.build == 'true'
+        id: nodejs_cache_key
+        run: |
+          HASH=$(sha256sum packages/testagent-core/packages/nodejs-server/dist/package.json | cut -d' ' -f1)
+          echo "hash=$HASH" >> $GITHUB_OUTPUT
+          echo "📦 package.json hash: $HASH"
+
+      - name: Cache nodejs-server node_modules
+        if: steps.should_build.outputs.build == 'true'
+        id: nodejs_cache
+        uses: actions/cache@v4
+        with:
+          path: packages/kilo-vscode/nodejs-server/node_modules
+          key: ${{ runner.os }}-${{ matrix.target }}-nodejs-modules-${{ steps.nodejs_cache_key.outputs.hash }}
+          restore-keys: |
+            ${{ runner.os }}-${{ matrix.target }}-nodejs-modules-
+
+      - name: Cache status
+        if: steps.should_build.outputs.build == 'true'
+        run: |
+          if [ "${{ steps.nodejs_cache.outputs.cache-hit }}" = "true" ]; then
+            echo "✅ Cache hit! Using cached node_modules"
+          else
+            echo "📥 Cache miss. Will install dependencies and cache them"
+          fi
+
+      - name: Package dual-runtime VSIX for ${{ matrix.target }}
+        if: steps.should_build.outputs.build == 'true'
+        run: |
+          cd packages/kilo-vscode
+          if [ "${{ matrix.target }}" = "win32-x64" ]; then
+            bun run build:testflow
+          else
+            echo "⏭️ Skipping testflow build for ${{ matrix.target }}"
+          fi
+          bun script/package-nodejs-server.ts --skip-server-build --target=${{ matrix.target }}
+          echo "✅ Dual-runtime VSIX packaged for ${{ matrix.target }}"
+
+      - name: Verify VSIX package
+        if: steps.should_build.outputs.build == 'true'
+        run: |
+          VSIX_FILE="packages/kilo-vscode/testagent-nodejs-tscode-${{ matrix.target }}.vsix"
+          if [ ! -f "$VSIX_FILE" ]; then
+            echo "❌ Error: VSIX package not found!"
+            ls -la packages/kilo-vscode/*.vsix || echo "No VSIX files found"
+            exit 1
+          fi
+          echo "✅ VSIX package built successfully"
+          ls -lh "$VSIX_FILE"
+      # testagent_change end
+      - uses: actions/upload-artifact@v4
+        if: steps.should_build.outputs.build == 'true'
+        with:
+          name: testagent-vscode-${{ matrix.target }}
+          path: packages/kilo-vscode/testagent-nodejs-tscode-${{ matrix.target }}.vsix
+          retention-days: 7
+
+  publish:
+    needs:
+      - version
+      - build-cli
+      - build-vscode
+    runs-on: ubuntu-24.04
+    # testagent_change - always run publish if version task succeeded
+    if: always() && needs.version.result == 'success' && needs.build-cli.result == 'success' && needs.build-vscode.result == 'success'
+    steps:
+      - uses: actions/checkout@v3
+        with:
+          submodules: false
+
+      # testagent_change - use GITHUB_TOKEN instead of app token for simplicity
+      # - name: Setup Git Committer
+      #   id: committer
+      #   uses: ./.github/actions/setup-git-committer
+      #   with:
+      #     kilo-maintainer-app-id: ${{ secrets.KILO_MAINTAINER_APP_ID }}
+      #     kilo-maintainer-app-secret: ${{ secrets.KILO_MAINTAINER_APP_SECRET }}
+
+      # 下载 CLI 产物
+      - uses: actions/download-artifact@v4
+        with:
+          pattern: testagent-cli-*
+          path: packages/testagent-core/packages/opencode/dist
+
+      # 下载 VS Code 插件产物
+      - uses: actions/download-artifact@v4
+        with:
+          pattern: testagent-vscode-*
+          path: packages/kilo-vscode/artifacts
+
+      # testagent_change - move VSIX files from artifact subdirectories to out/
+      - name: Organize VSIX files
+        run: |
+          mkdir -p packages/kilo-vscode/out
+          find packages/kilo-vscode/artifacts -name "*.vsix" -exec mv {} packages/kilo-vscode/out/ \;
+          echo "✅ VSIX files organized"
+          ls -lh packages/kilo-vscode/out/
+
+      # 创建 CLI 压缩包
+      - name: Create CLI release archives
+        run: |
+          cd packages/testagent-core/packages/opencode
+
+          for artifact_dir in dist/testagent-cli-*/; do
+            [ -d "$artifact_dir" ] || continue
+            artifact=$(basename "$artifact_dir")
+            target=${artifact#testagent-cli-}
+
+            # map build target to output_dir naming convention
+            case "$target" in
+              win32-x64)   plat="testagent-windows-x64-baseline" ;;
+              win32-arm64) plat="testagent-windows-arm64" ;;
+              alpine-x64)  plat="testagent-linux-x64-musl" ;;
+              alpine-arm64) plat="testagent-linux-arm64-musl" ;;
+              *)           plat="testagent-${target}" ;;
+            esac
+
+            if [[ "$target" == win32-* ]]; then
+              (cd "$artifact_dir" && zip -r "../../dist/${plat}.zip" .)
+            else
+              tar -czf "dist/${plat}.tar.gz" -C "$artifact_dir" .
+            fi
+          done
+
+          ls -lh dist/*.tar.gz dist/*.zip || true
+
+      # Ensure release is published before uploading assets
+      - name: Ensure release is published
+        run: |
+          gh release edit v${{ needs.version.outputs.version }} --draft=false --repo ${{ github.repository }}
+        env:
+          GH_TOKEN: ${{ github.token }}
+
+      # 上传 CLI 到 GitHub Release
+      - name: Upload CLI archives to GitHub Release
+        run: |
+          gh release upload v${{ needs.version.outputs.version }} \
+            packages/testagent-core/packages/opencode/dist/*.tar.gz \
+            packages/testagent-core/packages/opencode/dist/*.zip \
+            --clobber \
+            --repo ${{ github.repository }}
+        env:
+          GH_TOKEN: ${{ github.token }}
+
+      # 上传 VSIX 到 GitHub Release
+      - name: Upload VSIX to GitHub Release
+        run: |
+          echo "📦 Uploading VSIX files to release v${{ needs.version.outputs.version }}..."
+          echo "📂 Files to upload:"
+          ls -lh packages/kilo-vscode/out/*.vsix || {
+            echo "❌ No VSIX files found!"
+            echo "Directory contents:"
+            ls -la packages/kilo-vscode/out/ || echo "Directory doesn't exist"
+            exit 1
+          }
+
+          gh release upload v${{ needs.version.outputs.version }} \
+            packages/kilo-vscode/out/*.vsix \
+            --clobber \
+            --repo ${{ github.repository }}
+
+          echo "✅ VSIX files uploaded successfully"
+        env:
+          GH_TOKEN: ${{ github.token }}
