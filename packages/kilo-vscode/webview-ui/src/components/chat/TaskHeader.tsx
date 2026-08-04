@@ -159,6 +159,7 @@ export const TaskHeader: Component<TaskHeaderProps> = (props) => {
 
   const [todosOpen, setTodosOpen] = createSignal(false)
   const [copied, setCopied] = createSignal(false)
+  const [timingCopied, setTimingCopied] = createSignal(false)
 
   const copySid = (sid: string) => {
     navigator.clipboard.writeText(sid)
@@ -300,6 +301,36 @@ export const TaskHeader: Component<TaskHeaderProps> = (props) => {
             {(t) => {
               const segments = () => buildTimingSegments(t())
               const pct = (v: number) => t().total > 0 ? `(${((v / t().total) * 100).toFixed(1)}%)` : ""
+              const copyTiming = () => {
+                const info = t()
+                const overhead = info.total - info.llm - info.tool - info.wait
+                const lines = [
+                  `累计耗时统计: ${fmtDuration(info.total)}`,
+                  "包含当前会话及子会话，并行执行时间会分别累计",
+                  `实际执行: ${fmtDuration(info.actual)} ${pct(info.actual)}`,
+                  `工具执行: ${fmtDuration(info.tool)} ${pct(info.tool)}`,
+                  `LLM 耗时: ${fmtDuration(info.llm)} ${pct(info.llm)}`,
+                  "累计所有模型回复消息的模型处理时长，即模型开始生成到生成完成所用的时间",
+                ]
+                if (info.wait > 0) {
+                  lines.push(
+                    `等待用户: ${fmtDuration(info.wait)} ${pct(info.wait)}`,
+                    "累计所有需要用户回答或因输入无效而暂停的等待时间，并加上权限确认的等待时长",
+                  )
+                  if (info.permissionWait > 0) lines.push(`权限等待: ${fmtDuration(info.permissionWait)} ${pct(info.permissionWait)}`)
+                  if (info.questionWait > 0) lines.push(`问题等待: ${fmtDuration(info.questionWait)} ${pct(info.questionWait)}`)
+                }
+                if (overhead > 0) {
+                  lines.push(
+                    `其他开销: ${fmtDuration(overhead)} ${pct(overhead)}`,
+                    "通常包含网络延迟、消息存储、session 管理等其他未单独统计的开销",
+                  )
+                }
+                lines.push("LLM、工具和等待耗时按每次执行分别累加；父子会话并行时也会分别计入，不按实际经过时间去重，因此可能与本轮耗时不同")
+                navigator.clipboard.writeText(lines.join("\n"))
+                setTimingCopied(true)
+                setTimeout(() => setTimingCopied(false), 2000)
+              }
               return (
                 <div id="task-header-timing" class="task-header-tokens" style={{ "margin-top": "6px", "line-height": "1.4" }}>
                   <div style={{ display: "flex", "align-items": "center", gap: "4px", "flex-wrap": "wrap" }}>
@@ -339,7 +370,7 @@ export const TaskHeader: Component<TaskHeaderProps> = (props) => {
                     <span style={{ opacity: 0.4 }}>|</span>
                     <Tooltip
                       contentStyle={{ "max-width": "440px" }}
-                      value={
+                      value={timingCopied() ? "已复制" :
                         <div style={{ "text-align": "left" }}>
                           <div>累计耗时统计:     {fmtDuration(t().total)}</div>
                           <div style={{ "font-size": "10px", opacity: 0.6, "margin-top": "4px", }}>包含当前会话及子会话，并行执行时间会分别累计</div>
@@ -379,9 +410,14 @@ export const TaskHeader: Component<TaskHeaderProps> = (props) => {
                       }
                       placement="bottom"
                     >
-                      <span class="task-header-tokens-value" style={{ "font-weight": 600 }}>
+                      <button
+                        class="task-header-tokens-value"
+                        style={{ "font-weight": 600, color: "inherit", background: "none", border: "none", padding: 0, cursor: "pointer" }}
+                        aria-label="复制累计耗时统计"
+                        onClick={copyTiming}
+                      >
                         累计耗时: {fmtDuration(t().total)}
-                      </span>
+                      </button>
                     </Tooltip>
                   </div>
                 </div>
