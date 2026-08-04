@@ -495,6 +495,7 @@ export interface Config {
   mcp?: Record<string, McpConfig>
   command?: Record<string, CommandConfig>
   plugin?: PluginSpec[]
+  pluginEnable?: boolean
   plugin_origins?: PluginOrigin[]
   mcp_origins?: Record<string, string>
   mcp_scopes?: Record<string, "local" | "global">
