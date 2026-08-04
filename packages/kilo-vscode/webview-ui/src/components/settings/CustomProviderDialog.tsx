@@ -144,7 +144,7 @@ const CustomProviderDialog = (props: CustomProviderDialogProps) => {
     headers: initHeaders(),
     saving: false,
     // testagent_change start
-    isJisuan: false,
+    isJisuan: true,
     jisuanModelId: "",
     // testagent_change end
   })
