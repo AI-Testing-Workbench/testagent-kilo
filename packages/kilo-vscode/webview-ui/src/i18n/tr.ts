@@ -516,6 +516,13 @@ export const dict = {
 
   "session.messages.renderEarlier": "Önceki mesajları göster",
   "session.messages.loadingEarlier": "Önceki mesajlar yükleniyor...",
+  "session.prompts.navLabel": "Komut gezgini",
+  "session.prompts.tick": "Komut {{index}} / {{total}}: {{prompt}}",
+  "session.prompts.noAnswer": "Henüz yanıt yok",
+  "session.prompts.queued": "Sırada",
+  "session.prompts.first": "İlk istem",
+  "session.prompts.latest": "En son istem",
+  "session.prompts.overflow": "{{count}} önceki istem",
   "session.messages.loadEarlier": "Önceki mesajları yükle",
   "session.messages.loading": "Mesajlar yükleniyor...",
   "session.messages.jumpToLatest": "En sona atla",

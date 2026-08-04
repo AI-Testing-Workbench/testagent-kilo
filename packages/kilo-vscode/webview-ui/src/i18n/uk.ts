@@ -517,6 +517,13 @@ export const dict = {
 
   "session.messages.renderEarlier": "Показати попередні повідомлення",
   "session.messages.loadingEarlier": "Завантаження попередніх повідомлень...",
+  "session.prompts.navLabel": "Навігатор запитів",
+  "session.prompts.tick": "Запит {{index}} з {{total}}: {{prompt}}",
+  "session.prompts.noAnswer": "Відповіді ще немає",
+  "session.prompts.queued": "У черзі",
+  "session.prompts.first": "Перший запит",
+  "session.prompts.latest": "Останній запит",
+  "session.prompts.overflow": "{{count}} попередніх запитів",
   "session.messages.loadEarlier": "Завантажити попередні повідомлення",
   "session.messages.loading": "Завантаження повідомлень...",
   "session.messages.jumpToLatest": "Перейти до останнього",

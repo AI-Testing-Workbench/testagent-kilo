@@ -506,6 +506,13 @@ export const dict = {
   "session.files.binaryContent": "二進位檔案（無法顯示內容）",
   "session.messages.renderEarlier": "顯示更早的訊息",
   "session.messages.loadingEarlier": "正在載入更早的訊息...",
+  "session.prompts.navLabel": "提示詞導覽",
+  "session.prompts.tick": "提示詞 {{index}}/{{total}}：{{prompt}}",
+  "session.prompts.noAnswer": "尚無回應",
+  "session.prompts.queued": "已排入佇列",
+  "session.prompts.first": "第一個提示",
+  "session.prompts.latest": "最新提示",
+  "session.prompts.overflow": "{{count}} 個較早的提示",
   "session.messages.loadEarlier": "載入更早的訊息",
   "session.messages.loading": "正在載入訊息...",
 
