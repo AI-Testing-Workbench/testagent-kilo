@@ -190,7 +190,7 @@ function TestflowToolCard(props: { part: ToolPart }) {
 // ---------------------------------------------------------------------------
 
 type TestflowResultInput = {
-  kind: "init" | "new" | "list" | "switch" | "validate" | "config-update" | "error"
+  kind: "init" | "new" | "list" | "switch" | "validate" | "config-update" | "error" | "help"
   [k: string]: unknown
 }
 
@@ -268,6 +268,9 @@ function buildResultMarkdown(kind: string, payload: Record<string, unknown>): st
     if (filesUpdated > 0) parts.push(`📄 更新文件: ${filesUpdated} 个`)
     return parts.join("\n")
   }
+  if (kind === "help") {
+    return `${String(payload.text ?? "")}`
+  }
   // kind === "error"
   return `❌ **${String(payload.command ?? "命令")} 执行失败**\n\n\`\`\`\n${String(payload.error ?? "")}\n\`\`\``
 }
@@ -289,6 +292,7 @@ const TestflowResultCard: Component<{ input: TestflowResultInput; output: string
       case "validate": return "校验流程配置"
       case "config-update": return "更新项目配置"
       case "error": return "命令执行失败"
+      case "help": return "命令帮助"
       default: return "命令结果"
     }
   })()

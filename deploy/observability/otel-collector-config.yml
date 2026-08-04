@@ -17,6 +17,8 @@ processors:
 exporters:
   elasticsearch:
     endpoint: http://elasticsearch:9200
+    user: "elastic"
+    password: "changeme"
     mapping:
       mode: otel
     logs_dynamic_index:

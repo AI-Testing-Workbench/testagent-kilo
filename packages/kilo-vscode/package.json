@@ -2,7 +2,7 @@
   "name": "TestAgent",
   "displayName": "TestAgent",
   "description": "TestAgent Code Extension",
-  "version": "1.3.0",
+  "version": "1.3.2",
   "icon": "assets/icons/logo-outline-black.png",
   "galleryBanner": {
     "color": "#FFFFFF",
@@ -534,7 +534,7 @@
         },
         "testagent.new.browserAutomation.enabled": {
           "type": "boolean",
-          "default": true,
+          "default": false,
           "description": "Enable browser automation powered by Playwright. When enabled, the AI agent can interact with web pages in a visible Chrome window."
         },
         "testagent.new.browserAutomation.useSystemChrome": {

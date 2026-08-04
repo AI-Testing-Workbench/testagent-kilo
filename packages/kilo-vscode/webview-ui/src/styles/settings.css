@@ -103,6 +103,9 @@
   [data-slot="settings-row-input"] {
     flex: 0 0 auto;
     max-width: 400px;
+    display: flex;
+    flex-direction: column;
+    align-items: end;
 
     & > * {
       max-width: 100%;

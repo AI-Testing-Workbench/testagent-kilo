@@ -184,21 +184,21 @@ const ModeEditView: Component<Props> = (props) => {
             />
           </SettingsRow>
           <div
-              style={{
-                "text-align": "end",
-                "font-size": "12px",
-                color: "var(--vscode-descriptionForeground)",
-                "margin-top": "6px",
-                "line-height": "1.4",
-                "align-self":'end'
-              }}
-            >
-              {
-                modeDescriptions[
-                  (modes as readonly string[]).includes(cfg().mode ?? "") ? (cfg().mode as Mode) : "primary"
-                ]
-              }
-            </div>
+            style={{
+              "text-align": "end",
+              "font-size": "12px",
+              color: "var(--vscode-descriptionForeground)",
+              "margin-top": "6px",
+              "line-height": "1.4",
+              "align-self": 'end'
+            }}
+          >
+            {
+              modeDescriptions[
+              (modes as readonly string[]).includes(cfg().mode ?? "") ? (cfg().mode as Mode) : "primary"
+              ]
+            }
+          </div>
         </Card>
       </Show>
 
@@ -414,7 +414,7 @@ const PermissionRuleset: Component<RulesetProps> = (props) => {
     "todowrite",
     "skill",
     "sandbox",
-    "toast",
+    // "toast",   //testagent_change
   ]
 
   // Deduplicate by permission+pattern (last wins — matches backend findLast semantics).

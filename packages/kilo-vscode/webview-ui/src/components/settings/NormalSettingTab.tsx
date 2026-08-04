@@ -106,7 +106,7 @@ const NormalSetting: Component = () => {
   }
 
   const currentNpmOption = (): SelectOption | undefined => {
-    return npmRegistry().includes('')
+    return npmRegistry().includes('artifactory/api/npm/group-npm')
       ? { value: INTERNAL_NPM_REGISTRY, label: "内网源" }
       : undefined
   }
@@ -142,8 +142,23 @@ const NormalSetting: Component = () => {
             disabled={npmRegistryLoading()}
           />
         </SettingsRow>
+        <SettingsRow
+          title="后端服务运行时"
+          description={`选择后端运行时 (当前: ${runtime() === "bun" ? "Bun" : "Node.js"})`}
+        >
+          <Select
+            options={RUNTIME_OPTIONS}
+            current={currentRuntime()}
+            value={(opt) => opt.value}
+            label={(opt) => opt.label}
+            onSelect={handleRuntimeChange}
+            variant="secondary"
+            size="small"
+            triggerVariant="settings"
+          />
+        </SettingsRow>
         <SettingsRow title="终端 Shell" description="输入 agent 使用的默认终端路径，或点击下方列表中的项快速填入">
-          <div style={{ display: "flex", "flex-direction": "column", gap: "6px", width: "100%" }}>
+          <div style={{ display: "flex", "flex-direction": "column", gap: "6px", "min-width": "360px", "width": "100%" }}>
             <input
               type="text"
               value={currentShell()}
@@ -162,21 +177,6 @@ const NormalSetting: Component = () => {
             />
 
           </div>
-        </SettingsRow>
-        <SettingsRow
-          title="后端服务运行时"
-          description={`选择后端运行时 (当前: ${runtime() === "bun" ? "Bun" : "Node.js"})`}
-        >
-          <Select
-            options={RUNTIME_OPTIONS}
-            current={currentRuntime()}
-            value={(opt) => opt.value}
-            label={(opt) => opt.label}
-            onSelect={handleRuntimeChange}
-            variant="secondary"
-            size="small"
-            triggerVariant="settings"
-          />
         </SettingsRow>
         <Show when={availableTerminals().length > 0}>
           <div style={{ "margin": "10px 10px" }}>

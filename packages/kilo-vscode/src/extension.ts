@@ -291,9 +291,31 @@ export function activate(context: vscode.ExtensionContext) {
         }
       }
     }),
-    vscode.commands.registerCommand("testagent.new.agentManagerOpen", () => {
-      agentManagerProvider.openPanel()
+    // testagent_change start - Agent Manager with experimental toggle check
+    vscode.commands.registerCommand("testagent.new.agentManagerOpen", async () => {
+      try {
+        const config = await connectionService.client.config.get()
+        const enabled = config.data?.experimental?.agent_manager ?? false
+        
+        if (!enabled) {
+          const result = await vscode.window.showInformationMessage(
+            "Agent Manager 是实验性功能，需要在设置中启用。是否现在打开设置？",
+            "打开设置",
+            "取消"
+          )
+          if (result === "打开设置") {
+            vscode.commands.executeCommand("testagent.new.settingsButtonClicked")
+          }
+          return
+        }
+        
+        agentManagerProvider.openPanel()
+      } catch (error) {
+        // If config fetch fails, allow opening (fail-open for better UX)
+        agentManagerProvider.openPanel()
+      }
     }),
+    // testagent_change end
     //testagent_change 注释
     // vscode.commands.registerCommand("testagent.new.marketplaceButtonClicked", (directory?: string) => {
     //   settingsEditorProvider.openPanel("marketplace", undefined, directory)

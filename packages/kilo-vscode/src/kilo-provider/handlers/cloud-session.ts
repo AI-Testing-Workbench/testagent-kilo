@@ -119,7 +119,6 @@ export async function handleImportAndSend(
   files?: MessageFile[],
   command?: string,
   commandArgs?: string,
-  goal?: string,
 ): Promise<void> {
   if (!ctx.client) {
     ctx.postMessage({
@@ -192,7 +191,6 @@ export async function handleImportAndSend(
             directory: dir,
             command,
             arguments: commandArgs ?? "",
-            goal,
             messageID,
             model: providerID && modelID ? `${providerID}/${modelID}` : undefined,
             agent,

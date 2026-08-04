@@ -201,6 +201,7 @@ export class TestflowMessageBridge {
       validate: "校验流程配置",
       "config-update": "更新项目配置",
       error: "命令执行失败",
+      help: "命令帮助",
     }
     const title = titles[kind] ?? "命令结果"
     this.post?.({

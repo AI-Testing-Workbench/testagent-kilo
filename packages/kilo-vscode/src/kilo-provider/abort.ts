@@ -10,8 +10,12 @@ export async function abortSession(input: {
   sessionID: string
   dir: string
   queuedMessageIDs: string[]
+  reason?: "completed" | "user_abort" | "error"
 }) {
-  await input.client.session.abort({ sessionID: input.sessionID, directory: input.dir }, { throwOnError: true })
+  await input.client.session.abort(
+    { sessionID: input.sessionID, directory: input.dir, reason: input.reason },
+    { throwOnError: true },
+  )
 
   for (const mid of new Set(input.queuedMessageIDs)) {
     await input.client.session

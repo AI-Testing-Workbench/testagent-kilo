@@ -7,6 +7,7 @@ import {
   createSignal,
   createMemo,
   createEffect,
+  createRoot,
   on,
   onMount,
   onCleanup,
@@ -48,6 +49,7 @@ import {
   SortableProvider,
   closestCenter,
   createSortable,
+  useDragDropContext,
 } from "@thisbeyond/solid-dnd"
 import type { DragEvent } from "@thisbeyond/solid-dnd"
 import { ThemeProvider } from "@kilocode/kilo-ui/theme"
@@ -2150,8 +2152,7 @@ const AgentManagerContent: Component = () => {
         </button>
 
         {/* WORKTREES section */}
-        {/* testagent_change  注释worktree */}
-        {/* <div class={`am-section ${sessionsCollapsed() ? "am-section-grow" : ""}`}>
+        <div class={`am-section ${sessionsCollapsed() ? "am-section-grow" : ""}`}>
           <div class="am-section-header">
             <span class="am-section-label">{t("agentManager.section.worktrees")}</span>
             <Show when={isGitRepo()}>
@@ -2498,7 +2499,7 @@ const AgentManagerContent: Component = () => {
               </Show>
             </Show>
           </div>
-        </div> */}
+        </div>
 
         {/* SESSIONS section (unassigned) — collapsible */}
         <div class={`am-section ${sessionsCollapsed() ? "" : "am-section-grow"}`}>

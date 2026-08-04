@@ -1190,6 +1190,18 @@ export type Config = {
     source: string
     scope: "global" | "local"
   }>
+  /**
+   * Runtime source file paths for each MCP server entry
+   */
+  mcp_origins?: {
+    [key: string]: string
+  }
+  /**
+   * Scope (local/global) for each MCP server entry. local = project config, global = user config.
+   */
+  mcp_scopes?: {
+    [key: string]: "local" | "global"
+  }
   plugin_status?: {
     success: Array<string>
     failed: Array<{
@@ -1198,6 +1210,9 @@ export type Config = {
     }>
   }
   langfuse?: boolean
+  goal?: {
+    enabled?: boolean
+  }
   share?: "manual" | "auto" | "disabled"
   autoshare?: boolean
   /**
@@ -1301,8 +1316,7 @@ export type Config = {
     prune?: boolean
     tail_turns?: number
     preserve_recent_tokens?: number
-    reserved?: number,
-
+    reserved?: number
   }
   experimental?: {
     disable_paste_summary?: boolean
@@ -1311,6 +1325,7 @@ export type Config = {
     primary_tools?: Array<string>
     continue_loop_on_deny?: boolean
     mcp_timeout?: number
+    agent_manager?: boolean
   }
 }
 
@@ -3678,6 +3693,29 @@ export type ConfigUpdateResponses = {
 
 export type ConfigUpdateResponse = ConfigUpdateResponses[keyof ConfigUpdateResponses]
 
+export type ConfigWarningsData = {
+  body?: never
+  path?: never
+  query?: {
+    directory?: string
+    workspace?: string
+  }
+  url: "/config/warnings"
+}
+
+export type ConfigWarningsResponses = {
+  /**
+   * Config warnings
+   */
+  200: Array<{
+    path: string
+    message: string
+    detail?: string
+  }>
+}
+
+export type ConfigWarningsResponse = ConfigWarningsResponses[keyof ConfigWarningsResponses]
+
 export type ConfigProvidersData = {
   body?: never
   path?: never
@@ -5889,7 +5927,9 @@ export type SessionForkResponses = {
 export type SessionForkResponse = SessionForkResponses[keyof SessionForkResponses]
 
 export type SessionAbortData = {
-  body?: never
+  body?: {
+    reason?: "completed" | "user_abort" | "error"
+  }
   path: {
     sessionID: string
   }
@@ -6123,7 +6163,6 @@ export type SessionCommandData = {
     model?: string
     arguments: string
     command: string
-    goal?: string
     variant?: string
     parts?: Array<{
       id?: string
@@ -6327,6 +6366,40 @@ export type SessionResumeResponses = {
 }
 
 export type SessionResumeResponse = SessionResumeResponses[keyof SessionResumeResponses]
+
+export type SessionClearContextData = {
+  body?: never
+  path: {
+    sessionID: string
+  }
+  query?: {
+    directory?: string
+    workspace?: string
+  }
+  url: "/session/{sessionID}/context-clear"
+}
+
+export type SessionClearContextErrors = {
+  /**
+   * Bad request
+   */
+  400: BadRequestError
+  /**
+   * NotFoundError
+   */
+  404: NotFoundError
+}
+
+export type SessionClearContextError = SessionClearContextErrors[keyof SessionClearContextErrors]
+
+export type SessionClearContextResponses = {
+  /**
+   * Context cleared
+   */
+  200: boolean
+}
+
+export type SessionClearContextResponse = SessionClearContextResponses[keyof SessionClearContextResponses]
 
 export type PermissionRespondData = {
   body?: {

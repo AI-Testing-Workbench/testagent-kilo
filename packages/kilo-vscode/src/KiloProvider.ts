@@ -30,6 +30,7 @@ import {
   buildSettingPath,
   mapSSEEventToWebviewMessage,
   getErrorMessage,
+  getConfigErrorMessage, // testagent_change
   getConfigErrorDetails,
   isEventFromForeignProject,
   MessageConfirmation,
@@ -273,7 +274,22 @@ function removeNulls(obj: Record<string, unknown>): Record<string, unknown> {
 // // testagent_change: Structured log channel for config write operations
 // const configLog = vscode.window.createOutputChannel("TestAgent Config", { log: true })
 
+// testagent_change start - shared parent-child session tracking across KiloProvider instances
+// These must be module-level (not instance-level) because permission.asked / question.asked /
+// session.error / session.status events bypass the per-instance trackedSessionIds filter
+// and are dispatched to ALL KiloProvider instances. Only the instance that performed
+// auto-adoption would know the parent-child relationship; others would duplicate notifications
+// or fire completion notifications for child sessions.
+const syncedChildSessions: Set<string> = new Set()
+const parentWithChildren: Set<string> = new Set()
+const childToParent: Map<string, string> = new Map()
+/** Deduplicates notifications across KiloProvider instances — event IDs are
+ *  added here when first processed and cleaned up after a short delay. */
+const notifiedEventIds: Set<string> = new Set()
+// testagent_change end
+
 export class KiloProvider implements vscode.WebviewViewProvider, TelemetryPropertiesProvider {
+  private _debug_syncedSet: Set<string> | null = null // testagent_change - debug for syncedChildSessions
   public static readonly viewType = "testagent.SidebarProvider" // testagent_change
   private readonly instanceId = crypto.randomUUID()
   private webviewType: "sidebar" | "panel" | "unknown" = "unknown" // testagent_change
@@ -318,9 +334,6 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
   private promptRecoveryQueued = false
   private promptRecovery: Promise<void> | null = null
   private trackedSessionIds: Set<string> = new Set()
-  private syncedChildSessions: Set<string> = new Set()
-  /** Tracks parent sessions that have spawned child sessions — their idle transitions are child-result related, not user-facing. */
-  private parentWithChildren: Set<string> = new Set()
   /** Tracks the latest status for each session, used to warn before destructive config operations. */
   private sessionStatusMap = new Map<string, SessionStatus["type"]>()
   /** Per-session directory overrides (e.g., worktree paths registered by AgentManagerProvider). */
@@ -822,7 +835,6 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
             message.agent,
             message.variant,
             files,
-            message.goal,
           )
           break
         }
@@ -839,7 +851,6 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
             message.agent,
             message.variant,
             files,
-            message.goal,
           )
           break
         }
@@ -850,7 +861,7 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
         // testagent_change end
         case "abort":
           this.cancelRetry(message.sessionID ?? "")
-          await this.handleAbort(message.sessionID, parseQueued(message.queuedMessageIDs))
+          await this.handleAbort(message.sessionID, parseQueued(message.queuedMessageIDs), message.reason)
           break
         // testagent_change start - testflow message handlers
         case "testflow.syncChildSession":
@@ -1326,7 +1337,6 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
             files,
             typeof message.command === "string" ? message.command : undefined,
             typeof message.commandArgs === "string" ? message.commandArgs : undefined,
-            message.goal,
           )
           break
         }
@@ -1559,7 +1569,7 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
         if (state === "connected") {
           // Fire config warnings independently so a failure in the
           // sequential await chain doesn't prevent warnings from being shown
-          // void this.checkConfigWarnings("state")
+          void this.checkConfigWarnings("state")
           try {
             // testagent_change start - disable profile API (not available in testagent backend)
             // Profile fetch is best-effort — returns 401 when user isn't logged into gateway.
@@ -1664,7 +1674,7 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
       // provider subscribes to onStateChange(). In that case the initial
       // connected callback is missed, so run the warning check here too.
       if (this.connectionState === "connected") {
-        // void this.checkConfigWarnings("init")
+        void this.checkConfigWarnings("init")
       }
 
       await this.syncWebviewState("initializeConnection")
@@ -1862,9 +1872,9 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
    */
   private async handleSyncSession(sessionID: string, parentSessionID?: string): Promise<void> {
     if (!this.client) return
-    if (this.syncedChildSessions.has(sessionID)) return
+    if (syncedChildSessions.has(sessionID)) return
 
-    this.syncedChildSessions.add(sessionID)
+    syncedChildSessions.add(sessionID)
     this.trackedSessionIds.add(sessionID)
 
     // Inherit the parent's worktree directory so permission responses use
@@ -1908,7 +1918,7 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
       // Recover any prompts emitted by the child before we started tracking it.
       this.recoverPendingPrompts()
     } catch (err) {
-      this.syncedChildSessions.delete(sessionID)
+      syncedChildSessions.delete(sessionID)
       console.error("[TestAgent]  Failed to sync child session:", err)
     }
   }
@@ -2007,7 +2017,7 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
       await this.client.session.delete({ sessionID, directory: workspaceDir }, { throwOnError: true })
       this.trackedSessionIds.delete(sessionID)
       this.streams.drop(sessionID)
-      this.syncedChildSessions.delete(sessionID)
+      syncedChildSessions.delete(sessionID)
       this.sessionDirectories.delete(sessionID)
       this.lastReconciledAt.delete(sessionID)
       this.sdtRunners.delete(sessionID)
@@ -2102,6 +2112,9 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
             continue
           }
           console.error("[TestAgent]  Failed to fetch providers:", error)
+          this.postMessage({ type: "error", message: `Failed to fetch providers: ${getConfigErrorMessage(error)}` }) // testagent_change
+          this.connectionState = "error" // testagent_change
+          this.postMessage({ type: "connectionState", state: "error", error: getConfigErrorMessage(error) }) // testagent_change
         }
         if (!this.providersQueued) return
         generation = this.providersGeneration
@@ -2202,6 +2215,9 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
       this.postMessage(message)
     } catch (error) {
       console.error("[TestAgent]  Failed to fetch agents:", error)
+      this.postMessage({ type: "error", message: `Failed to fetch agents: ${getConfigErrorMessage(error)}` }) // testagent_change
+      this.connectionState = "error" // testagent_change
+      this.postMessage({ type: "connectionState", state: "error", error: getConfigErrorMessage(error) }) // testagent_change
     }
   }
 
@@ -2819,6 +2835,9 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
       this.postMessage(message)
     } catch (error) {
       console.error("[TestAgent]  Failed to fetch config:", error)
+      this.postMessage({ type: "error", message: `Failed to fetch config: ${getConfigErrorMessage(error)}` }) // testagent_change
+      this.connectionState = "error" // testagent_change
+      this.postMessage({ type: "connectionState", state: "error", error: getConfigErrorMessage(error) }) // testagent_change
     }
   }
 
@@ -3556,7 +3575,6 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
     agent?: string,
     variant?: string,
     files?: MessageFile[],
-    goal?: string,
   ): Promise<void> {
     // testagent_change start - intercept /sdt-* commands for testflow
     if (text.startsWith("/sdt-")) {
@@ -3647,7 +3665,6 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
     agent?: string,
     variant?: string,
     files?: MessageFile[],
-    goal?: string,
   ): Promise<void> {
     // testagent_change start - intercept sdt-* commands for testflow
     if (command.startsWith("sdt-")) {
@@ -3709,7 +3726,6 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
               directory: dir,
               command,
               arguments: args,
-              goal,
               messageID,
               model: providerID && modelID ? `${providerID}/${modelID}` : undefined,
               agent,
@@ -3806,7 +3822,7 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
   }
   // testagent_change end
 
-  private async handleAbort(sessionID?: string, queuedMessageIDs: string[] = []): Promise<void> {
+  private async handleAbort(sessionID?: string, queuedMessageIDs: string[] = [], reason?: string): Promise<void> {
     if (!this.client) {
       return
     }
@@ -3823,6 +3839,7 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
         sessionID: targetSessionID,
         dir: this.getWorkspaceDirectory(targetSessionID),
         queuedMessageIDs,
+        reason: reason as "completed" | "user_abort" | "error" | undefined,
       })
     } catch (error) {
       console.error("[TestAgent]  Failed to abort session:", error)
@@ -4237,28 +4254,12 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
 
     console.log("[TestAgent] ✅ Step 2: Session is tracked by this provider")
 
-    if (this.syncedChildSessions.has(sessionID)) {
+    if (syncedChildSessions.has(sessionID)) {
       console.log("[TestAgent] ❌ Child session completed, skipping notification")
       return
     }
 
     console.log("[TestAgent] ✅ Step 3: Session is not a child session")
-
-    // Skip if this parent session just finished processing child results
-    if (this.parentWithChildren.has(sessionID)) {
-      console.log("[TestAgent] ❌ Parent session with children completed, skipping notification")
-      return
-    }
-
-    console.log("[TestAgent] ✅ Step 3b: Session is not a parent with children")
-
-    // Only notify if webview is hidden (check both sidebar and panel)
-    // if (this.isWebviewVisible()) {
-    //   console.log("[TestAgent] ❌ Webview is visible, skipping notification")
-    //   return
-    // }
-
-    console.log("[TestAgent] ✅ Step 4: Webview is hidden")
 
     // Check if notification is enabled
     const notifications = vscode.workspace.getConfiguration("testagent.new.notifications")
@@ -4269,9 +4270,6 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
       console.log("[TestAgent] ❌ Notification disabled in settings")
       return
     }
-
-    console.log("[TestAgent] ✅ Step 5: Notification is enabled")
-    console.log("[TestAgent] 🎉 All checks passed! Showing notification...")
 
     // Get task name from current session
     let taskName = "任务"
@@ -4318,10 +4316,10 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
     const notifyPermissions = notifications.get<boolean>("permissions", true)
     if (!notifyPermissions) return
 
-    const isChild = this.syncedChildSessions.has(sessionID)
+    const isChild = syncedChildSessions.has(sessionID)
     // Subagent notifications are opt-in (default off)
     if (isChild) {
-      const notifySubagent = notifications.get<boolean>("subagent", false)
+      const notifySubagent = notifications.get<boolean>("subagent", true)
       if (!notifySubagent) return
     }
 
@@ -4353,9 +4351,9 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
     const notifyQuestions = notifications.get<boolean>("questions", true)
     if (!notifyQuestions) return
 
-    const isChild = this.syncedChildSessions.has(sessionID)
+    const isChild = syncedChildSessions.has(sessionID)
     if (isChild) {
-      const notifySubagent = notifications.get<boolean>("subagent", false)
+      const notifySubagent = notifications.get<boolean>("subagent", true)
       if (!notifySubagent) return
     }
 
@@ -4387,9 +4385,9 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
     const notifyErrors = notifications.get<boolean>("errors", true)
     if (!notifyErrors) return
 
-    const isChild = this.syncedChildSessions.has(sessionID)
+    const isChild = syncedChildSessions.has(sessionID)
     if (isChild) {
-      const notifySubagent = notifications.get<boolean>("subagent", false)
+      const notifySubagent = notifications.get<boolean>("subagent", true)
       if (!notifySubagent) return
     }
 
@@ -4593,6 +4591,7 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
     // trackedSessionIds guard so the Settings panel's allStatusMap stays current for the
     // busy-session warning on Save.
     if (event.type === "session.status") {
+
       const sid = event.properties.sessionID
       const prevStatus = this.sessionStatusMap.get(sid)
       const newStatus = event.properties.status.type
@@ -4605,9 +4604,25 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
       // testagent_change start - show notification when agent completes
       if (newStatus === "idle") {
         const reason = (event.properties.status as { reason?: string }).reason
-        // Skip notifications for child/sub-agent sessions
-        if (!this.syncedChildSessions.has(sid)) {
-          this.maybeShowAgentCompletionNotification(sid, prevStatus, reason)
+        // testagent_change start - 子session idle时清理父session的 parentWithChildren 标记，
+        // 让父session后续完成时能正常触发通知
+        const parent = childToParent.get(sid)
+        if (parent) {
+          parentWithChildren.delete(parent)
+          if (reason === "user_abort") {
+            console.log("[TestAgent]  🧹 Child abort cleanup:", { childId: sid, parent, parentWithChildrenSize: parentWithChildren.size })
+          }
+        }
+        // testagent_change end
+        // Deduplicate completion notifications across KiloProvider instances
+        if (!notifiedEventIds.has(event.id)) {
+          notifiedEventIds.add(event.id)
+          setTimeout(() => notifiedEventIds.delete(event.id), 1000)
+          // Skip notifications for child/sub-agent sessions
+          // Also skip if the parent has children — its idle may be child-result related
+          if (!syncedChildSessions.has(sid) && !childToParent.has(sid) && !parentWithChildren.has(sid)) {
+            this.maybeShowAgentCompletionNotification(sid, prevStatus, reason)
+          }
         }
       }
       // testagent_change end
@@ -4640,8 +4655,14 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
     if (event.type === "permission.asked") {
       const sid = event.properties.sessionID
       const permission = event.properties.permission
-      if (sid && this.trackedSessionIds.has(sid)) {
-        this.maybeShowPermissionNotification(sid, permission)
+      if (sid && (this.trackedSessionIds.has(sid) || childToParent.has(sid))) {
+        // Deduplicate notification across KiloProvider instances — no early return,
+        // the event must also be forwarded to the webview below.
+        if (!notifiedEventIds.has(event.id)) {
+          notifiedEventIds.add(event.id)
+          setTimeout(() => notifiedEventIds.delete(event.id), 1000)
+          this.maybeShowPermissionNotification(sid, permission)
+        }
       }
     }
     // testagent_change end
@@ -4652,9 +4673,19 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
     if (event.type === "question.asked") {
       const sid = event.properties.sessionID
       const qs = event.properties.questions
-      if (sid && qs && qs.length > 0 && this.trackedSessionIds.has(sid)) {
-        const header = qs[0].header || qs[0].question
-        this.maybeShowQuestionNotification(sid, header)
+      if (sid && qs && qs.length > 0 && (this.trackedSessionIds.has(sid) || childToParent.has(sid))) {
+        // Deduplicate notification across KiloProvider instances — no early return,
+        // the event must also be forwarded to the webview below.
+        if (!notifiedEventIds.has(event.id)) {
+          notifiedEventIds.add(event.id)
+          setTimeout(() => notifiedEventIds.delete(event.id), 1000)
+
+          // When multiple questions are asked, combine them into a summary
+          const header = qs.length > 1
+            ? qs.map((q: { header?: string; question?: string }) => q.header || q.question).join(", ")
+            : (qs[0].header || qs[0].question)
+          this.maybeShowQuestionNotification(sid, header)
+        }
       }
     }
     // testagent_change end
@@ -4663,7 +4694,12 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
     if (event.type === "session.error") {
       const sid = event.properties.sessionID
       const error = event.properties.error
-      if (sid && error && this.trackedSessionIds.has(sid)) {
+      if (sid && error && (this.trackedSessionIds.has(sid) || childToParent.has(sid))) {
+        // Deduplicate across KiloProvider instances
+        if (notifiedEventIds.has(event.id)) return
+        notifiedEventIds.add(event.id)
+        setTimeout(() => notifiedEventIds.delete(event.id), 1000)
+
         // Skip notification for MessageAbortedError (user-initiated abort is not an error)
         const isAbortError =
           typeof error === "object" && error !== null && "name" in error && error.name === "MessageAbortedError"
@@ -4728,11 +4764,17 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
     // Forward relevant events to webview
     // Side effects that must happen before the webview message is sent
     if (event.type === "session.created" && !this.currentSession) {
+      console.log('event==============info', event.properties.info)
       this.currentSession = event.properties.info
       this.contextSessionID = event.properties.info.id
       this.trackedSessionIds.add(event.properties.info.id)
     }
     if (event.type === "session.updated" && this.currentSession?.id === event.properties.info.id) {
+        console.log("[DEBUG] session.updated for currentSession", {                                              
+        id: event.properties.info.id,                                                                          
+        title: event.properties.info.title,                                                                    
+        agent: event.properties.info.agent,                                                                    
+      })  
       this.currentSession = event.properties.info
       this.contextSessionID = event.properties.info.id
     }
@@ -4750,10 +4792,12 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
         sessionID?: string
       }
       const childId = childID(part)
+        console.log("[DEBUG] message.part.updated", { childId, tool: part.tool, type: part.type, sessionID })
       if (childId && !this.trackedSessionIds.has(childId)) {
-        console.log("[TestAgent]  🔗 Auto-adopting child session from task tool", { childId })
-        this.parentWithChildren.add(sessionID)
-        void this.handleSyncSession(childId, part.sessionID ?? sessionID)
+        console.log("[TestAgent]  🔗 Auto-adopting child session from task tool", { childId, parentId: part.sessionID ?? sessionID! })
+        parentWithChildren.add(sessionID!)
+        childToParent.set(childId, part.sessionID ?? sessionID!)
+        void this.handleSyncSession(childId, part.sessionID ?? sessionID!)
       }
     }
 
@@ -5117,8 +5161,9 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
     this.promptRecoveryQueued = false
     clearNetworkWaits(this.trackedSessionIds)
     this.trackedSessionIds.clear()
-    this.syncedChildSessions.clear()
-    this.parentWithChildren.clear()
+    // syncedChildSessions, parentWithChildren, childToParent are module-level
+    // (shared across KiloProvider instances) — not cleared here to avoid
+    // breaking other instances that still reference them.
     this.sessionDirectories.clear()
     this.sessionStatusMap.clear()
     this.ignoreController?.dispose()
@@ -5189,11 +5234,11 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
         }
       }
 
-      // CMD
-      const cmdPath = "C:/Windows/System32/cmd.exe"
-      if (fs.existsSync(cmdPath)) {
-        result.push({ name: "CMD", path: cmdPath, description: "Windows Command Prompt" })
-      }
+      // // CMD
+      // const cmdPath = "C:/Windows/System32/cmd.exe"
+      // if (fs.existsSync(cmdPath)) {
+      //   result.push({ name: "CMD", path: cmdPath, description: "Windows Command Prompt" })
+      // }
 
       // Git Bash
       const gitBashPaths = [
@@ -5208,11 +5253,6 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
         }
       }
 
-      // WSL
-      const wslPath = "C:/Windows/System32/wsl.exe"
-      if (fs.existsSync(wslPath)) {
-        result.push({ name: "WSL", path: wslPath, description: "Windows Subsystem for Linux" })
-      }
     } else {
       // macOS / Linux — read available shells from /etc/shells
       try {

@@ -3,7 +3,7 @@
  * Text input with send/abort buttons, ghost-text autocomplete, and @ file mention support
  */
 
-import { createSignal, createEffect, on, For, Index, onCleanup, Show, untrack, type Component } from "solid-js"
+import { createSignal, createEffect, on, For, Index, onCleanup, onMount, Show, untrack, type Component } from "solid-js"
 import { Button } from "@kilocode/kilo-ui/button"
 import { Dialog } from "@kilocode/kilo-ui/dialog"
 import { IconButton } from "@kilocode/kilo-ui/icon-button"
@@ -15,6 +15,7 @@ import { useDialog } from "@kilocode/kilo-ui/context/dialog"
 import { useSession } from "../../context/session"
 import { useServer } from "../../context/server"
 import { useProvider } from "../../context/provider"
+import { useConfig } from "../../context/config"
 import { useLanguage } from "../../context/language"
 import { useVSCode } from "../../context/vscode"
 import { useWorktreeMode } from "../../context/worktree-mode"
@@ -32,12 +33,14 @@ import { useGhostText } from "../../hooks/useGhostText"
 import { useImageAttachments, type ImageAttachment } from "../../hooks/useImageAttachments"
 import { convertToMentionPath } from "../../utils/path-mentions"
 import { usePromptHistory } from "../../hooks/usePromptHistory"
-import { WandSparkles } from "@kilocode/kilo-ui/lucide"
+import { Target, WandSparkles } from "@kilocode/kilo-ui/lucide"
 import { fileName, dirName, buildHighlightSegments, atEnd, isPromptBusy } from "./prompt-input-utils"
 import type { CodeContext, ReviewComment, TextPart } from "../../types/messages"
 import { formatReviewCommentsMarkdown } from "../../utils/review-comment-markdown"
 import { pendingDraftKey, scopeDraftKey, sessionDraftKey } from "../../utils/prompt-drafts"
 import { ContextRing, SessionInfoContent } from "./SessionInfo"
+import { GoalDialog } from "./GoalDialog"
+import { GoalAbortDialog } from "./GoalAbortDialog"  // testagent_change
 
 // Per-session input text storage (module-level so it survives remounts)
 const drafts = new Map<string, string>()
@@ -71,6 +74,7 @@ interface PromptInputProps {
 export const PromptInput: Component<PromptInputProps> = (props) => {
   const session = useSession()
   const server = useServer()
+  const { config } = useConfig()
   const provider = useProvider()
   const language = useLanguage()
   const vscode = useVSCode()
@@ -88,6 +92,7 @@ export const PromptInput: Component<PromptInputProps> = (props) => {
   // testagent_change end
   const terminal = useTerminalContext(vscode)
   const slash = useSlashCommand(vscode)
+  const goal = () => config().goal?.enabled === true && slash.commands().some((cmd) => cmd.name === "goal")
   const imageAttach = useImageAttachments()
   imageAttach.setFilePathDropHandler((paths) => {
     const cwd = server.workspaceDirectory()
@@ -659,6 +664,34 @@ const sel = session.selected()
     vscode.postMessage({ type: "enhancePrompt", text: draft, requestId: `enhance-${draftKey()}-${enhanceCounter}` })
   }
 
+  const openGoal = () => {
+    dialog.show(() => <GoalDialog onClose={() => dialog.close()} pendingSessionID={props.pendingSessionID} />)
+  }
+
+  // testagent_change start - Goal abort dialog handler
+  onMount(() => {
+    const handler = (e: CustomEvent<{ sessionID: string }>) => {
+      const sid = e.detail.sessionID
+      dialog.show(() => (
+        <GoalAbortDialog
+          sessionID={sid}
+          onClose={() => dialog.close()}
+          onConfirm={() => {
+            const queuedMessageIDs = []  // TODO: get from session state if needed
+            vscode.postMessage({
+              type: "abort",
+              sessionID: sid,
+              queuedMessageIDs,
+            })
+          }}
+        />
+      ))
+    }
+    window.addEventListener("showGoalAbortDialog", handler as EventListener)
+    onCleanup(() => window.removeEventListener("showGoalAbortDialog", handler as EventListener))
+  })
+  // testagent_change end
+
   const handleSend = async () => {
     const draft = text().trim()
 
@@ -1075,7 +1108,20 @@ const sel = session.selected()
           </Show>
         </div>
         <div class="prompt-input-hint-actions">
-            <ContextRing  />
+          <ContextRing />
+          <Show when={goal()}>
+            <Tooltip value="Goal 控制" placement="top">
+              <Button
+                variant="ghost"
+                size="small"
+                onClick={openGoal}
+                disabled={!server.isConnected()}
+                aria-label="Goal 控制"
+              >
+                <Target size={16} />
+              </Button>
+            </Tooltip>
+          </Show>
           <Tooltip value={language.t("prompt.action.enhance")} placement="top">
             <Button
               variant="ghost"

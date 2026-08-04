@@ -191,6 +191,28 @@ const ExperimentalTab: Component = () => {
           </Switch>
         </SettingsRow>
 
+        {/* testagent_change start - Goal plugin toggle */}
+        <SettingsRow
+          title={language.t("settings.experimental.goal.title")}
+          description={language.t("settings.experimental.goal.description")}
+        >
+          <Switch
+            checked={config().goal?.enabled ?? false}
+            onChange={(checked) => {
+              updateConfig({
+                goal: {
+                  ...config().goal,
+                  enabled: checked,
+                },
+              })
+            }}
+            hideLabel
+          >
+            {language.t("settings.experimental.goal.title")}
+          </Switch>
+        </SettingsRow>
+        {/* testagent_change end */}
+
         {/* MCP timeout */}
         <SettingsRow
           title={language.t("settings.experimental.mcpTimeout.title")}
