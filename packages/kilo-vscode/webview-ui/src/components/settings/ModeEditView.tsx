@@ -321,9 +321,25 @@ const ModeEditView: Component<Props> = (props) => {
           description={language.t("settings.agentBehaviour.thinking.description")}
         >
           <Switch
-            checked={cfg().thinking ?? true}
+            checked={
+              // testagent_change start - 从 options.chat_template_kwargs.enable_thinking 读取
+              (cfg().options as Record<string, any> | undefined)?.chat_template_kwargs?.enable_thinking ?? true
+              // testagent_change end
+            }
             onChange={(val) => {
-              update({ thinking: val })
+              // testagent_change start - 保存到 options.chat_template_kwargs.enable_thinking
+              const currentOptions = cfg().options as Record<string, any> | undefined
+              const chatTemplateKwargs = currentOptions?.chat_template_kwargs as Record<string, any> | undefined
+              update({
+                options: {
+                  ...currentOptions,
+                  chat_template_kwargs: {
+                    ...chatTemplateKwargs,
+                    enable_thinking: val,
+                  },
+                },
+              })
+              // testagent_change end
             }}
             hideLabel
           >
