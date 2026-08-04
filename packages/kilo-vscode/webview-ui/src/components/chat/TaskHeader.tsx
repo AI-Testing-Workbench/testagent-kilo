@@ -127,6 +127,7 @@ export const TaskHeader: Component<TaskHeaderProps> = (props) => {
 
   const vscode = useVSCode()
   const [expanded, setExpanded] = createSignal(true)
+  const [timingOpen, setTimingOpen] = createSignal(true)
 
   // Read initial value from VS Code settings
   onMount(() => vscode.postMessage({ type: "requestTimelineSetting" }))
@@ -281,49 +282,43 @@ export const TaskHeader: Component<TaskHeaderProps> = (props) => {
                 <span class="task-header-tokens-value" style={{ "font-weight": 600 }}>
                   总计: {fmtNum(tk().total ?? (tk().input + tk().output + (tk().cache?.read ?? 0) + (tk().cache?.write ?? 0)))}
                 </span>
+                <Show when={liveTiming()}>
+                  <button
+                    data-slot="task-header-expand"
+                    aria-expanded={timingOpen()}
+                    aria-controls="task-header-timing"
+                    title={timingOpen() ? "收起累计执行耗时统计" : "展开累计执行耗时统计"}
+                    onClick={() => setTimingOpen((open) => !open)}
+                  >
+                    {timingOpen() ? "▲" : "▼"}
+                  </button>
+                </Show>
               </div>
             )}
           </Show>
-          <Show when={liveTiming()}>
+          <Show when={timingOpen() ? liveTiming() : undefined}>
             {(t) => {
               const segments = () => buildTimingSegments(t())
               const pct = (v: number) => t().total > 0 ? `(${((v / t().total) * 100).toFixed(1)}%)` : ""
               return (
-                <div class="task-header-tokens" style={{ "margin-top": "6px", "line-height": "1.4" }}>
+                <div id="task-header-timing" class="task-header-tokens" style={{ "margin-top": "6px", "line-height": "1.4" }}>
                   <div style={{ display: "flex", "align-items": "center", gap: "4px", "flex-wrap": "wrap" }}>
-                    <span class="task-header-tokens-label" style={{ "margin-right": '10px' }}>任务累计耗时</span>
+                    <span class="task-header-tokens-label" style={{ "margin-right": '10px' }}>累计执行耗时统计</span>
                     <For each={segments()}>
                       {(seg, index) => {
                         const isTool = seg.key === "tool"
-                        const isLlm = seg.key === "llm"
-                        const isWait = seg.key === "wait"
-                        const isOverhead = seg.key === "overhead"
                         const breakdown = t().toolBreakdown
                         const toolEntries = (() => {
                           if (!isTool || !breakdown) return []
                           return Object.entries(breakdown).sort((a, b) => b[1] - a[1])
                         })()
-                        const segTooltip = (() => {
-                          if (isLlm) return "累计所有模型回复消息的模型处理时长，即模型开始生成到生成完成所用的时间"
-                          if (isWait) return "累计所有需要用户回答或因输入无效而暂停的等待时间，并加上权限确认的等待时长"
-                          if (isOverhead) return "总耗时与 LLM + 工具执行 + 等待用户 的差值，通常包含网络延迟、消息存储、session 管理等其他未单独统计的开销"
-                          return undefined
-                        })()
                         return (
                           <>
                             {index() !== 0 && <span style={{ opacity: 0.4 }}>|</span>}
                             <Show when={isTool && toolEntries.length > 0} fallback={
-                              <Show when={segTooltip} fallback={
-                                <span style={{ color: seg.color, "font-size": "11px" }}>
-                                  {seg.label}: {fmtDuration(seg.duration)}
-                                </span>
-                              }>
-                                <Tooltip value={segTooltip!} placement="bottom">
-                                  <span style={{ color: seg.color, "font-size": "11px" }}>
-                                    {seg.label}: {fmtDuration(seg.duration)}
-                                  </span>
-                                </Tooltip>
-                              </Show>
+                              <span style={{ color: seg.color, "font-size": "11px" }}>
+                                {seg.label}: {fmtDuration(seg.duration)}
+                              </span>
                             }>
                               <Tooltip value={
                                 <div style={{ "text-align": "left", "white-space": "nowrap" }}>
@@ -343,14 +338,25 @@ export const TaskHeader: Component<TaskHeaderProps> = (props) => {
                     </For>
                     <span style={{ opacity: 0.4 }}>|</span>
                     <Tooltip
+                      contentStyle={{ "max-width": "440px" }}
                       value={
-                        <div style={{ "text-align": "left", "white-space": "nowrap" }}>
-                          <div>总耗时:       {fmtDuration(t().total)}</div>
+                        <div style={{ "text-align": "left" }}>
+                          <div>累计耗时统计:     {fmtDuration(t().total)}</div>
+                          <div style={{ "font-size": "10px", opacity: 0.6, "margin-top": "4px", }}>包含当前会话及子会话，并行执行时间会分别累计</div>
                           <hr style={{ margin: "2px 0", border: "none", "border-top": "1px solid currentColor", opacity: 0.3 }} />
-                          <div>● LLM 耗时:   {fmtDuration(t().llm)} {pct(t().llm)}</div>
-                          <div>● 工具执行:   {fmtDuration(t().tool)} {pct(t().tool)}</div>
+
+                          <div>● 实际执行:   {fmtDuration(t().actual)} {pct(t().actual)}</div>
+                          <div>● 工具执行:   {fmtDuration(t().tool)} {pct(t().tool)}
+                            <div>● LLM 耗时:   {fmtDuration(t().llm)} {pct(t().llm)}
+                              <span style={{ "font-size": "10px", opacity: 0.6, "margin-left": "10px", }}>
+                                累计所有模型回复消息的模型处理时长，即模型开始生成到生成完成所用的时间
+                              </span>
+                            </div>
+                          </div>
                           <Show when={t().wait > 0}>
-                            <div>● 等待用户:   {fmtDuration(t().wait)} {pct(t().wait)}</div>
+                            <div>● 等待用户:   {fmtDuration(t().wait)} {pct(t().wait)}  <span style={{ "font-size": "10px", opacity: 0.6, "margin-left": "10px", }}>
+                              累计所有需要用户回答或因输入无效而暂停的等待时间，并加上权限确认的等待时长
+                            </span></div>
                             <Show when={t().permissionWait > 0}>
                               <div style={{ "margin-left": "12px" }}>权限等待: {fmtDuration(t().permissionWait)} {pct(t().permissionWait)}</div>
                             </Show>
@@ -358,16 +364,23 @@ export const TaskHeader: Component<TaskHeaderProps> = (props) => {
                               <div style={{ "margin-left": "12px" }}>问题等待: {fmtDuration(t().questionWait)} {pct(t().questionWait)}</div>
                             </Show>
                           </Show>
-                          <div>● 实际执行:   {fmtDuration(t().actual)} {pct(t().actual)}</div>
                           <Show when={t().total > t().llm + t().tool + t().wait}>
-                            <div>● 其他开销:   {fmtDuration(t().total - t().llm - t().tool - t().wait)} {pct(t().total - t().llm - t().tool - t().wait)}</div>
+                            <div>● 其他开销:   {fmtDuration(t().total - t().llm - t().tool - t().wait)} {pct(t().total - t().llm - t().tool - t().wait)}
+                              <span style={{ "font-size": "10px", opacity: 0.6, "margin-left": "10px", }}>
+                                通常包含网络延迟、消息存储、session 管理等其他未单独统计的开销
+                              </span>
+                            </div>
                           </Show>
+                          <hr style={{ margin: "4px 0", border: "none", "border-top": "1px solid currentColor", opacity: 0.3 }} />
+                          <div style={{ "font-size": "10px", opacity: 0.6, "margin-top": "4px", "text-wrap": "wrap" }}>
+                            LLM、工具和等待耗时按每次执行分别累加；父子会话并行时也会分别计入，不按实际经过时间去重，因此可能与本轮耗时不同
+                          </div>
                         </div>
                       }
                       placement="bottom"
                     >
                       <span class="task-header-tokens-value" style={{ "font-weight": 600 }}>
-                        总计: {fmtDuration(t().total)}
+                        累计耗时: {fmtDuration(t().total)}
                       </span>
                     </Tooltip>
                   </div>

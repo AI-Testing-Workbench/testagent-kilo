@@ -161,8 +161,8 @@ const NormalSetting: Component = () => {
 
         <SettingsRow title="插件功能" description="关闭后插件系统将被禁用，所有插件功能将无法使用">
           <Switch
-            checked={config().pluginEnable !== false}
-            onChange={(checked) => updateConfig({ pluginEnable: checked })}
+            checked={config().plugin_enable !== false}
+            onChange={(checked) => updateConfig({ plugin_enable: checked })}
             hideLabel
           />
         </SettingsRow>
