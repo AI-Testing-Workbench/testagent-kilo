@@ -318,6 +318,20 @@ export const PromptInput: Component<PromptInputProps> = (props) => {
   window.addEventListener("newTaskRequest", onNewTaskRequest)
   onCleanup(() => window.removeEventListener("newTaskRequest", onNewTaskRequest))
 
+  // Same as onNewTaskRequest, but the session-actions-row button closes the
+  // current tab instead of leaving it open alongside the new task tab.
+  const onNewTaskReplace = () => {
+    if (!tabs) {
+      onNewTaskRequest()
+      return
+    }
+    const current = tabs.active()
+    const next = tabs.add()
+    if (current && next && next !== current) tabs.close(current)
+  }
+  window.addEventListener("newTaskRequestReplace", onNewTaskReplace)
+  onCleanup(() => window.removeEventListener("newTaskRequestReplace", onNewTaskReplace))
+
   // Compact/summarize the current session (mirrors canCompact guards in TaskHeader)
   const onCompact = () => {
     if (session.status() === "busy") return

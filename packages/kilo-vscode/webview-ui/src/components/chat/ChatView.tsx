@@ -227,7 +227,7 @@ export const ChatView: Component<ChatViewProps> = (props) => {
                   <Button
                     variant="secondary"
                     size="small"
-                    onClick={() => window.dispatchEvent(new CustomEvent("newTaskRequest"))}
+                    onClick={() => window.dispatchEvent(new CustomEvent("newTaskRequestReplace"))}
                     aria-label={language.t("command.session.new.task")}
                   >
                     {language.t("command.session.new.task")}
