@@ -1783,7 +1783,7 @@ export type ExtensionMessage =
   | EnhancePromptResultMessage
   | EnhancePromptErrorMessage
   | ViewSubAgentSessionMessage
-  | { type: "envVarsData"; envVars: { system: Record<string, { key: string; value: string; description?: string }>; custom: Record<string, { key: string; value: string; description?: string }> } }
+  | { type: "envVarsData"; envVars: { system: Record<string, { key: string; value: string }>; custom: Record<string, { key: string; value: string }> } }
   | DiffViewerDiffsMessage
   | DiffViewerLoadingMessage
   | DiffViewerRevertFileResultMessage
@@ -2940,8 +2940,8 @@ export type WebviewMessage =
   | SetWorktreeOrderRequest
   | SetSessionsCollapsedRequest
   | { type: "requestEnvVars" }
-  | { type: "createEnvVar"; key: string; value: string; description?: string }
-  | { type: "updateEnvVar"; key: string; value: string; description?: string }
+  | { type: "createEnvVar"; key: string; value: string }
+  | { type: "updateEnvVar"; key: string; value: string }
   | { type: "deleteEnvVar"; key: string }
   | SetReviewDiffStyleRequest
   | PersistVariantRequest

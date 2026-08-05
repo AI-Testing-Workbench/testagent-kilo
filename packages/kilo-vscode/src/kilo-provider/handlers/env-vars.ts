@@ -37,10 +37,9 @@ export async function handleCreateEnvVar(
   webview: vscode.Webview | null,
   key: string,
   value: string,
-  description?: string,
 ): Promise<void> {
   try {
-    const response = await client.testagent.customEnvVars.batchCreate({ body: [{ key, value, description }] })
+    const response = await client.testagent.customEnvVars.batchCreate({ body: [{ key, value }] })
     const result = response.data
     
     if (!result) {
@@ -81,10 +80,9 @@ export async function handleUpdateEnvVar(
   webview: vscode.Webview | null,
   key: string,
   value: string,
-  description?: string,
 ): Promise<void> {
   try {
-    const response = await client.testagent.customEnvVars.batchUpdate({ body: [{ key, value, description }] })
+    const response = await client.testagent.customEnvVars.batchUpdate({ body: [{ key, value }] })
     const result = response.data
     
     if (!result) {

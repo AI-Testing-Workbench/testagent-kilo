@@ -3668,14 +3668,12 @@ export type TestagentEnvVarsListResponses = {
       [key: string]: {
         key: string
         value: string
-        description?: string
       }
     }
     custom: {
       [key: string]: {
         key: string
         value: string
-        description?: string
       }
     }
   }
@@ -3715,14 +3713,12 @@ export type TestagentEnvVarsBatchQueryResponses = {
       [key: string]: {
         key: string
         value: string
-        description?: string
       }
     }
     custom: {
       [key: string]: {
         key: string
         value: string
-        description?: string
       }
     }
   }
@@ -3755,7 +3751,6 @@ export type TestagentCustomEnvVarsBatchCreateData = {
   body?: Array<{
     key: string
     value: string
-    description?: string
   }>
   path?: never
   query?: {
@@ -3786,7 +3781,6 @@ export type TestagentCustomEnvVarsBatchUpdateData = {
   body?: Array<{
     key: string
     value: string
-    description?: string
   }>
   path?: never
   query?: {
