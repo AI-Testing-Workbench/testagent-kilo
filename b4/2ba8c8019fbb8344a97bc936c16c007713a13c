@@ -1,0 +1,31 @@
+packages/kilo-vscode/webview-ui/src/types/messages.ts
+  s_751a1b40f53a57::t_ee059da748a06d 1786
+  s_751a1b40f53a57::t_8e51c8cf6048ca 2943-2944
+packages/kilo-vscode/webview-ui/src/components/settings/EnvVarsTab.tsx
+  h_cb3d00609d57f2 167,210
+packages/kilo-vscode/src/KiloProvider.ts
+  h_cb3d00609d57f2 1133,1139
+packages/kilo-vscode/src/kilo-provider/handlers/env-vars.ts
+  h_cb3d00609d57f2 42,85
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.20",
+  "base_commit_sha": "b42ba8c8019fbb8344a97bc936c16c007713a13c",
+  "prompts": {},
+  "humans": {
+    "h_cb3d00609d57f2": {
+      "author": "BoSeal <1135378788@qq.com>"
+    }
+  },
+  "sessions": {
+    "s_751a1b40f53a57": {
+      "agent_id": {
+        "tool": "cursor",
+        "id": "f929380b-4582-4dad-97e2-4132efb339d5",
+        "model": "3efe410f4cada80c"
+      },
+      "human_author": "BoSeal <1135378788@qq.com>"
+    }
+  }
+}
