@@ -385,6 +385,10 @@ export function buildFamilyTiming(
     }
   }
 
+  // 旧会话可能只有 total（从 time.created/computed 算出），但没有 llm/tool/wait 细项
+  // 这种情况不展示耗时面板
+  if (llm === 0) return undefined
+
   if (!has) return undefined
 
   // 总计取累加和与墙上时钟的最大值，保证数据自洽

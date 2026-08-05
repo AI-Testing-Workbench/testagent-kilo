@@ -1,9 +1,9 @@
 /* Startup Error Banner */
 .startup-error-banner {
   margin: 8px 12px;
-  border: 1px solid var(--vscode-inputValidation-errorBorder, #f14c4c);
+  border: 1px solid var(--vscode-inputValidation-warningBorder, #cc7a00);
   border-radius: 4px;
-  background: var(--vscode-inputValidation-errorBackground, rgba(241, 76, 76, 0.1));
+  background: var(--vscode-inputValidation-warningBackground, rgba(204, 122, 0, 0.1));
   font-size: 12px;
 }
 
@@ -58,7 +58,7 @@
 .startup-error-details {
   margin: 0;
   padding: 8px 10px;
-  border-top: 1px solid var(--vscode-inputValidation-errorBorder, #f14c4c);
+  border-top: 1px solid var(--vscode-inputValidation-warningBorder, #cc7a00);
   background: var(--vscode-editor-background);
   font-family: var(--vscode-editor-font-family, monospace);
   font-size: 11px;
