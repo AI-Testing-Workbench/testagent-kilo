@@ -1130,13 +1130,13 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
           break
         case "createEnvVar":
           if (!this.client) break
-          handleCreateEnvVar(this.client, this.webview, message.key, message.value, message.description).catch((e) =>
+          handleCreateEnvVar(this.client, this.webview, message.key, message.value).catch((e) =>
             console.error("[TestAgent] handleCreateEnvVar failed:", e),
           )
           break
         case "updateEnvVar":
           if (!this.client) break
-          handleUpdateEnvVar(this.client, this.webview, message.key, message.value, message.description).catch((e) =>
+          handleUpdateEnvVar(this.client, this.webview, message.key, message.value).catch((e) =>
             console.error("[TestAgent] handleUpdateEnvVar failed:", e),
           )
           break

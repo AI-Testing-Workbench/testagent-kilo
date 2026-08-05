@@ -8,7 +8,6 @@ import SettingsRow from "./SettingsRow"
 interface EnvVar {
   key: string
   value: string
-  description?: string
 }
 
 const EnvVarsTab: Component = () => {
@@ -18,14 +17,12 @@ const EnvVarsTab: Component = () => {
   const [loadError, setLoadError] = createSignal("")
   const [newKey, setNewKey] = createSignal("")
   const [newValue, setNewValue] = createSignal("")
-  const [newDesc, setNewDesc] = createSignal("")
   const [keyError, setKeyError] = createSignal("")
   const [valueError, setValueError] = createSignal("")
   // 编辑状态：记录正在编辑的变量 key
   const [editingKey, setEditingKey] = createSignal<string | null>(null)
   const [editValue, setEditValue] = createSignal("")
   const [editValueError, setEditValueError] = createSignal("")
-  const [editDesc, setEditDesc] = createSignal("")
 
   onMount(() => {
     vscode.postMessage({ type: "requestEnvVars" })
@@ -69,12 +66,10 @@ const EnvVarsTab: Component = () => {
       type: "createEnvVar",
       key: newKey(),
       value: newValue(),
-      description: newDesc(),
     })
     // 清空输入
     setNewKey("")
     setNewValue("")
-    setNewDesc("")
     setKeyError("")
     setValueError("")
   }
@@ -87,14 +82,12 @@ const EnvVarsTab: Component = () => {
     setEditingKey(v.key)
     setEditValue(v.value)
     setEditValueError("")
-    setEditDesc(v.description || "")
   }
 
   const cancelEdit = () => {
     setEditingKey(null)
     setEditValue("")
     setEditValueError("")
-    setEditDesc("")
   }
 
   const saveEdit = (key: string) => {
@@ -106,7 +99,6 @@ const EnvVarsTab: Component = () => {
       type: "updateEnvVar",
       key,
       value: editValue(),
-      description: editDesc(),
     })
     setEditingKey(null)
     setEditValueError("")
@@ -171,11 +163,8 @@ const EnvVarsTab: Component = () => {
             style={{ width: "100%" }}
           />
         </SettingsRow>
-        <SettingsRow title="描述（可选）" description="备注说明" last>
-          <TextField value={newDesc()} onChange={setNewDesc} style={{ width: "100%" }} />
-        </SettingsRow>
         <Button onClick={handleAdd} style={{ "margin-top": "8px" }}>
-          新增环境变量
+          保存环境变量
         </Button>
       </Card>
 
@@ -218,10 +207,7 @@ const EnvVarsTab: Component = () => {
         <h4>自定义环境变量</h4>
         <For each={customVars()}>
           {(v) => (
-            <SettingsRow
-              title={v.key}
-              description={v.description || ""}
-            >
+            <SettingsRow title={v.key}>
               <Show
                 when={editingKey() === v.key}
                 fallback={
@@ -275,17 +261,6 @@ const EnvVarsTab: Component = () => {
                       placeholder="变量值"
                       validationState={editValueError() ? "invalid" : undefined}
                       error={editValueError()}
-                      style={{ width: "100%" }}
-                    />
-                  </div>
-                  <div>
-                    <label style={{ display: "block", "margin-bottom": "4px", "font-size": "12px", "font-weight": 500 }}>
-                      描述（可选）
-                    </label>
-                    <TextField 
-                      value={editDesc()} 
-                      onChange={setEditDesc}
-                      placeholder="备注说明"
                       style={{ width: "100%" }}
                     />
                   </div>

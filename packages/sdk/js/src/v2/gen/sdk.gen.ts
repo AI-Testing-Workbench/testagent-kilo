@@ -787,7 +787,6 @@ export class CustomEnvVars extends HeyApiClient {
       body?: Array<{
         key: string
         value: string
-        description?: string
       }>
     },
     options?: Options<never, ThrowOnError>,
@@ -828,7 +827,6 @@ export class CustomEnvVars extends HeyApiClient {
       body?: Array<{
         key: string
         value: string
-        description?: string
       }>
     },
     options?: Options<never, ThrowOnError>,
