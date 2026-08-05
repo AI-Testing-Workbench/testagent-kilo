@@ -13,6 +13,7 @@ import { IconButton } from "@kilocode/kilo-ui/icon-button"
 import { Tooltip } from "@kilocode/kilo-ui/tooltip"
 import { Icon } from "@kilocode/kilo-ui/icon"
 import { Checkbox } from "@kilocode/kilo-ui/checkbox"
+import { InlineInput } from "@kilocode/kilo-ui/inline-input"
 import { useSession } from "../../context/session"
 import { collapseCostBreakdown, buildTimingSegments, fmtDuration } from "../../context/session-utils"
 import { useLanguage } from "../../context/language"
@@ -33,7 +34,26 @@ export const TaskHeader: Component<TaskHeaderProps> = (props) => {
   const busy = createMemo(() => session.status() === "busy")
   const stop = () => session.abort()
 
-
+  // Title editing state
+  const [editing, setEditing] = createSignal(false)
+  const [draft, setDraft] = createSignal("")
+  const editable = createMemo(() => {
+    const id = session.currentSessionID()
+    return !!id && !id.startsWith("cloud:")
+  })
+  const startEdit = () => {
+    setDraft(title())
+    setEditing(true)
+  }
+  const saveEdit = () => {
+    setEditing(false)
+    const id = session.currentSessionID()
+    if (!id || id.startsWith("cloud:")) return
+    const value = draft().trim()
+    if (!value || value === title()) return
+    session.renameSession(id, value)
+  }
+  const cancelEdit = () => setEditing(false)
 
   const fmt = (n: number) => new Intl.NumberFormat(language.locale(), { style: "currency", currency: "USD" }).format(n)
 
@@ -187,7 +207,38 @@ export const TaskHeader: Component<TaskHeaderProps> = (props) => {
             <ellipse class="th-blink" cx="8" cy="9.33" rx="1.63" ry="2.62" fill="#2979ff" />
             <ellipse class="th-blink" cx="16" cy="9.33" rx="1.63" ry="2.62" fill="#2979ff" />
           </svg>
-          {title()}
+          <Show when={editing()} fallback={<span class="task-header-title-text">{title()}</span>}>
+            <InlineInput
+              ref={(el) => requestAnimationFrame(() => el?.focus())}
+              value={draft()}
+              onInput={(e) => setDraft(e.currentTarget.value)}
+              onKeyDown={(e) => {
+                e.stopPropagation()
+                if (e.key === "Enter") {
+                  e.preventDefault()
+                  saveEdit()
+                }
+                if (e.key === "Escape") {
+                  e.preventDefault()
+                  cancelEdit()
+                }
+              }}
+              onBlur={saveEdit}
+              class="task-header-title-input"
+            />
+          </Show>
+          <Show when={!editing() && editable()}>
+            <Tooltip value={language.t("common.rename")} placement="bottom" gutter={4}>
+              <IconButton
+                icon="edit"
+                size="small"
+                variant="ghost"
+                aria-label={language.t("common.rename")}
+                class="task-header-title-edit"
+                onClick={startEdit}
+              />
+            </Tooltip>
+          </Show>
         </div>
 
         <div data-slot="task-header-stats">

@@ -50,26 +50,28 @@ export const SessionTab: Component<{
         </span>
       </TooltipKeybind>
     </div>
-    <TooltipKeybind
-      title={props.closeTitle}
-      keybind={props.closeKeybind ?? ""}
-      placement="top"
-      gutter={8}
-      class="am-tab-close-wrap"
-      openDelay={0}
-    >
-      <IconButton
-        icon="close-small"
-        size="small"
-        variant="ghost"
-        aria-label={props.closeLabel}
-        tabIndex={props.closeTabIndex}
-        class="am-tab-close"
-        onClick={(event) => {
-          event.stopPropagation()
-          props.onClose()
-        }}
-      />
-    </TooltipKeybind>
+    <Show when={!props.busy}>
+      <TooltipKeybind
+        title={props.closeTitle}
+        keybind={props.closeKeybind ?? ""}
+        placement="top"
+        gutter={8}
+        class="am-tab-close-wrap"
+        openDelay={0}
+      >
+        <IconButton
+          icon="close-small"
+          size="small"
+          variant="ghost"
+          aria-label={props.closeLabel}
+          tabIndex={props.closeTabIndex}
+          class="am-tab-close"
+          onClick={(event) => {
+            event.stopPropagation()
+            props.onClose()
+          }}
+        />
+      </TooltipKeybind>
+    </Show>
   </div>
 )

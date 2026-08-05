@@ -2230,6 +2230,29 @@
 [data-slot="task-header-title"] {
   display: flex;
   align-items: center;
+  gap: 6px;
+  min-width: 0;
+}
+
+.task-header-title-text {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.task-header-title-input {
+  flex: 1;
+  min-width: 0;
+}
+
+.task-header-title-edit[data-component="icon-button"] {
+  flex-shrink: 0;
+  opacity: 0.7;
+}
+
+.task-header-title-edit[data-component="icon-button"]:hover {
+  opacity: 1;
 }
 
 @keyframes home-blink {

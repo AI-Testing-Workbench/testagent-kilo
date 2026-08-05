@@ -58,6 +58,7 @@ export const SessionTabSwitcher: Component<SessionTabSwitcherProps> = (props) =>
   }
 
   const remove = (item: SessionTabSwitcherItem) => {
+    if (item.busy) return
     const last = props.items().length === 2
     props.onClose(item.id)
     setNotice(`${props.labels.close}: ${item.title}`)
@@ -89,18 +90,20 @@ export const SessionTabSwitcher: Component<SessionTabSwitcherProps> = (props) =>
   const wrap = (item: SessionTabSwitcherItem, node: JSX.Element) => (
     <div class="session-tab-switcher-item">
       {node}
-      <IconButton
-        icon="close-small"
-        size="normal"
-        variant="ghost"
-        aria-label={`${props.labels.close}: ${item.title}`}
-        class="session-tab-switcher-close"
-        onClick={(event) => {
-          event.preventDefault()
-          event.stopPropagation()
-          remove(item)
-        }}
-      />
+      <Show when={!item.busy}>
+        <IconButton
+          icon="close-small"
+          size="normal"
+          variant="ghost"
+          aria-label={`${props.labels.close}: ${item.title}`}
+          class="session-tab-switcher-close"
+          onClick={(event) => {
+            event.preventDefault()
+            event.stopPropagation()
+            remove(item)
+          }}
+        />
+      </Show>
     </div>
   )
 

@@ -9,6 +9,7 @@ import { useTabScroll } from "../../utils/tab-scroll"
 import { focusPrompt, focusSelectedTab, focusTabElement, handleTabKey } from "../../utils/tab-navigation"
 import { setTabWidths } from "../../utils/tab-widths"
 import { useVSCode } from "../../context/vscode"
+import { showToast } from "@kilocode/kilo-ui/toast"
 import { SessionTab } from "./SessionTab"
 import { SessionTabMenu } from "./SessionTabMenu"
 import { SessionTabSwitcher } from "./SessionTabSwitcher"
@@ -69,6 +70,10 @@ export const SessionTabStrip: Component = () => {
   const freeze = () => setTabWidths(true, document)
   const release = () => setTabWidths(false, document)
   const close = (id: string, restore = true) => {
+    if (working(id)) {
+      showToast({ title: language.t("session.tabs.cannotCloseBusy") })
+      return
+    }
     freeze()
     const active = tabs.active() === id
     tabs.close(id)
@@ -77,7 +82,10 @@ export const SessionTabStrip: Component = () => {
   }
   const closeOthers = (id: string) => {
     freeze()
-    tabs.closeOthers(id)
+    for (const other of tabs.ids()) {
+      if (other !== id && !working(other)) tabs.close(other)
+    }
+    if (tabs.active() !== id) tabs.select(id)
     focusTabElement(document, id, focusPrompt)
     requestAnimationFrame(release)
   }
@@ -129,6 +137,7 @@ export const SessionTabStrip: Component = () => {
                     <SortableTabContainer id={id}>
                       <SessionTabMenu
                         showFork
+                        busy={working(id)}
                         onFork={
                           !isPendingTab(id) && !working(id)
                             ? () => vscode.postMessage({ type: "forkSession", sessionId: id })

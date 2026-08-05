@@ -59,6 +59,7 @@ export const dict = {
   "session.tabs.switcher.pending": "待定",
   "session.tabs.switcher.busy": "忙碌中",
   "session.tabs.limitReached": "最多同时打开 {{limit}} 个标签页，请先关闭部分标签页",
+  "session.tabs.cannotCloseBusy": "会话运行中，无法关闭",
   "command.file.open": "打开文件",
   "command.tab.close": "关闭标签页",
   "command.context.addSelection": "将所选内容添加到上下文",

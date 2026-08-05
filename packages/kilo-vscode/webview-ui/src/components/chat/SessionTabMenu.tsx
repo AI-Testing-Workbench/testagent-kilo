@@ -9,6 +9,7 @@ export const SessionTabMenu: ParentComponent<{
   onClose: () => void
   onCloseOthers?: () => void
   closeShortcut?: JSX.Element
+  busy?: boolean
 }> = (props) => {
   const { t } = useLanguage()
   return (
@@ -18,11 +19,13 @@ export const SessionTabMenu: ParentComponent<{
       </ContextMenu.Trigger>
       <ContextMenu.Portal>
         <ContextMenu.Content class="session-tab-menu am-ctx-menu">
-          <ContextMenu.Item onSelect={props.onClose}>
-            <Icon name="close" size="small" />
-            <ContextMenu.ItemLabel>{t("agentManager.tab.close")}</ContextMenu.ItemLabel>
-            {props.closeShortcut}
-          </ContextMenu.Item>
+          <Show when={!props.busy}>
+            <ContextMenu.Item onSelect={props.onClose}>
+              <Icon name="close" size="small" />
+              <ContextMenu.ItemLabel>{t("agentManager.tab.close")}</ContextMenu.ItemLabel>
+              {props.closeShortcut}
+            </ContextMenu.Item>
+          </Show>
           <Show when={props.onCloseOthers}>
             <ContextMenu.Item onSelect={() => props.onCloseOthers?.()}>
               <Icon name="close" size="small" />

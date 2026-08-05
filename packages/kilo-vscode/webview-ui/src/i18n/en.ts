@@ -53,6 +53,7 @@ export const dict = {
   "session.tabs.switcher.pending": "Pending",
   "session.tabs.switcher.busy": "Working",
   "session.tabs.limitReached": "A maximum of {{limit}} tabs can be open. Close a tab first.",
+  "session.tabs.cannotCloseBusy": "Cannot close a session while it is running.",
   "command.file.open": "Open file",
   "command.tab.close": "Close tab",
   "command.context.addSelection": "Add selection to context",
