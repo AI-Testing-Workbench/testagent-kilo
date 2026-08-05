@@ -85,6 +85,9 @@ export const TaskHeader: Component<TaskHeaderProps> = (props) => {
     // 没有消息也没有数据时隐藏
     if (msgs.length === 0 && !t) return undefined
 
+    // 空闲且无耗时数据（旧会话）不展示
+    if (isIdle && !t) return undefined
+
     // 空闲时直接返回静态数据
     if (isIdle && t) return t
 
