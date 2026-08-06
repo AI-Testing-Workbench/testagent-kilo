@@ -2655,6 +2655,12 @@ body.vscode-light
   width: 100%;
 }
 
+.vscode-session-turn-user [data-slot="user-message-text"] {
+  background: rgb(235, 243, 250);
+  border-radius: 12px;
+  padding: 8px 12px;
+}
+
 .vscode-session-turn-user[data-revert-disabled] [data-component="icon-button"][data-icon="arrow-left"] {
   opacity: 0.4;
   cursor: not-allowed;
