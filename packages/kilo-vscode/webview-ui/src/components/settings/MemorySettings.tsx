@@ -4,6 +4,8 @@ import { Switch } from "@kilocode/kilo-ui/switch"
 import { TextField } from "@kilocode/kilo-ui/text-field"
 import { showToast } from "@kilocode/kilo-ui/toast"
 import { useVSCode } from "../../context/vscode"
+import { useConfig } from "../../context/config" // testagent_change
+import { useSession } from "../../context/session" // testagent_change
 import SettingsRow from "./SettingsRow"
 import type { ExtensionMessage, MemorySettingsConfig } from "../../types/messages"
 
@@ -48,6 +50,8 @@ const num = (value: string, fallback: number) => {
 
 const MemorySettings: Component<MemorySettingsProps> = (props) => {
   const vscode = useVSCode()
+  const { config, updateConfig } = useConfig() // testagent_change
+  const session = useSession() // testagent_change
   const [cfg, setCfg] = createSignal<MemorySettingsConfig>(clone(defaults))
   const [saved, setSaved] = createSignal<MemorySettingsConfig>(clone(defaults))
   const [file, setFile] = createSignal("")
@@ -99,6 +103,11 @@ const MemorySettings: Component<MemorySettingsProps> = (props) => {
 
   const update = (patch: Partial<MemorySettingsConfig>) => {
     setCfg((prev) => ({ ...prev, ...patch }))
+    // testagent_change start - update memory agent configurations when enable changes
+    if ('enable' in patch && patch.enable !== undefined) {
+      updateMemoryAgentsConfig(patch.enable)
+    }
+    // testagent_change end
   }
 
   const cmd = (patch: Partial<MemorySettingsConfig["cmd"]>) => {
@@ -113,7 +122,115 @@ const MemorySettings: Component<MemorySettingsProps> = (props) => {
     setCfg((prev) => ({ ...prev, recall: { ...prev.recall, ...patch } }))
   }
 
+  // testagent_change start - update memory agent configurations
+  const updateMemoryAgentsConfig = (enable: boolean) => {
+    const memoryAgentConfigs = {
+      "auto-extraction": {
+        hidden: true,
+        mode: "subagent" as const,
+        description: "Review conversation message and extract any information worth remembering for future sessions",
+        disable: !enable,
+      },
+      "auto-dream": {
+        hidden: true,
+        mode: "subagent" as const,
+        description: "You are performing an auto-dream memory consolidation pass",
+        disable: !enable,
+      },
+      "auto-personal-memory": {
+        hidden: true,
+        mode: "subagent" as const,
+        description: "负责整理合并项目记忆，输出标准个人全局记忆",
+        permission: {
+          "memory_save": "deny" as const,
+          "memory_delete": "deny" as const,
+          "memory_read": "allow" as const,
+          "memory_personal_read": "allow" as const,
+          "memory_list": "allow" as const,
+          "memory_personal_save": "allow" as const,
+        },
+        tools: {
+          "memory_save": false,
+          "memory_delete": false,
+          "memory_read": true,
+          "memory_personal_read": true,
+          "memory_list": true,
+          "memory_personal_save": true,
+        },
+        disable: !enable,
+      },
+      "memory-recall": {
+        hidden: true,
+        mode: "subagent" as const,
+        description: "You are a file/memory matching engine.",
+        permission: {
+          "grep": "deny" as const,
+          "glob": "deny" as const,
+          "memory_search": "deny" as const,
+        },
+        prompt: "You are a file/memory matching engine. Select the top 5 most semantically relevant items from [memories List] that match the [Query].You may only match based on filename / name / description / type",
+        disable: !enable,
+      },
+    }
+
+    const existingAgents = config().agent || {}
+    const updatedAgents: Record<string, any> = {} 
+
+    // Update memory-related agents
+    for (const [agentName, agentConfig] of Object.entries(memoryAgentConfigs)) {
+      if (existingAgents[agentName]) {
+        // Agent exists, only update disable property (like edit mode)
+        updatedAgents[agentName] = {
+          ...existingAgents[agentName],
+          disable: !enable,
+        }
+      } else {
+        // Agent doesn't exist, add it with full config (like create mode)
+        updatedAgents[agentName] = agentConfig
+      }
+    }
+
+    // Handle build and plan agents separately
+    const nativeAgentsToUpdate = ["build", "plan"]
+    for (const agentName of nativeAgentsToUpdate) {
+      if (existingAgents[agentName]) {
+        // Agent exists in config
+        const current = existingAgents[agentName]
+        const currentPermission = current.permission || {}
+        
+        // Enable: add deny permissions; Disable: use null sentinel to remove
+        updatedAgents[agentName] = {
+          ...current,
+          permission: {
+            ...currentPermission,
+            memory_personal_read: enable ? ("deny" as const) : (null as any),
+            memory_personal_save: enable ? ("deny" as const) : (null as any),
+          },
+        }
+      } else if (enable) {
+        // Agent doesn't exist and memory is enabled: create agent with deny permissions
+        updatedAgents[agentName] = {
+          permission: {
+            "memory_personal_read": "deny" as const,
+            "memory_personal_save": "deny" as const,
+          },
+        }
+      }
+      // If agent doesn't exist and memory is disabled, do nothing
+    }
+    updateConfig({ agent: {...existingAgents, ...updatedAgents} })
+  }
+  // testagent_change end
+
   const save = () => {
+    // testagent_change start - check busy sessions before saving (since save also triggers agent config save)
+    const busyCount = Object.values(session.allStatusMap()).filter((s) => s.type === "busy").length
+    if (busyCount > 0) {
+      // Don't save if there are busy sessions - this will be caught by Settings.tsx but we prevent the message send
+      return
+    }
+    // testagent_change end
+    
     setSaving(true)
     vscode.postMessage({ type: "updateMemorySettings", settings: cfg() })
   }
