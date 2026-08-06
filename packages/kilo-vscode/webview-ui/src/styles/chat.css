@@ -2700,7 +2700,7 @@ body.vscode-light
 
 [data-component="question-dock"] {
   margin: 8px;
-  background-color: var(--surface-base);
+  background-color: var(--surface-inset-base, var(--vscode-sideBar-background));
   border: 1px solid var(--vscode-inputValidation-infoBorder, #3794ff);
   border-radius: 8px;
   overflow: hidden;
@@ -2714,7 +2714,7 @@ body.vscode-light
     padding: 10px 10px 8px 14px;
     cursor: pointer;
     border-bottom: 1px solid var(--vscode-inputValidation-infoBorder, #3794ff);
-    background: var(--surface-inset-base, var(--vscode-sideBar-background));
+    background: rgb(234, 244, 254);
   }
 
   [data-slot="question-dock-header-content"] {
@@ -2960,7 +2960,7 @@ body.vscode-light
     gap: 6px;
     padding: 6px 10px;
     margin: 0 4px;
-    background-color: var(--surface-raised-stronger-non-alpha);
+    background-color: var(--surface-inset-base, var(--vscode-sideBar-background));
     border: none;
     border-radius: 6px;
   }
@@ -3028,7 +3028,8 @@ body.vscode-light
     display: flex;
     align-items: center;
     justify-content: end;
-    padding: 6px 10px 10px;
+    padding: 10px 10px 10px;
+    border-top: 1px solid var(--border-base);
   }
 
   [data-slot="question-footer-actions"] {
@@ -3042,13 +3043,13 @@ body.vscode-light
     box-shadow: none;
   }
 
-  [data-slot="question-footer-actions"] > [data-component="button"][data-variant="primary"] {
-    color: var(--vscode-button-foreground);
-    background-color: var(--vscode-button-background);
-    border: 1px solid var(--vscode-button-border, transparent);
+  [data-slot="question-footer-actions"] > [data-component="button"] {
+    color: #fff;
+    background-color: var(--vscode-inputValidation-infoBorder, #3794ff);
+    border: 1px solid transparent;
 
     &:hover:not(:disabled) {
-      background-color: var(--vscode-button-hoverBackground);
+      background-color: color-mix(in srgb, var(--vscode-inputValidation-infoBorder, #3794ff) 85%, black);
     }
   }
 }
