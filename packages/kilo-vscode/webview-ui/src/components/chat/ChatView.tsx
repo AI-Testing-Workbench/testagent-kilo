@@ -14,6 +14,7 @@ import { MessageList } from "./MessageList"
 import { PromptInput } from "./PromptInput"
 import { PermissionDock } from "./PermissionDock"
 import { QuestionDock } from "./QuestionDock"
+import { RevertConfirmDock } from "./RevertConfirmDock"
 import { StartupErrorBanner } from "./StartupErrorBanner"
 import { SessionTabStrip } from "./SessionTabStrip"
 import { ConfigWarningsBanner } from "./ConfigWarningsBanner"
@@ -173,6 +174,11 @@ export const ChatView: Component<ChatViewProps> = (props) => {
         <SessionTabStrip />
       </Show>
       <TaskHeader readonly={props.readonly} />
+      {/* testagent_change start - 检查点重置确认dock */}
+      <Show when={session.revertConfirm()}>
+        <RevertConfirmDock />
+      </Show>
+      {/* testagent_change end */}
       <div class="chat-messages-wrapper">
         <div class="chat-messages">
           <MessageList
@@ -203,7 +209,7 @@ export const ChatView: Component<ChatViewProps> = (props) => {
           <Show when={delegatedQuestionRequest()} keyed>
             {(q) => <QuestionDock request={q} />}
           </Show>
-          <Show when={!props.readonly && hasMessages() && idle() && !blocked()}>
+          <Show when={!props.readonly && hasMessages() && idle() && !blocked() && !session.revertConfirm()}>
             <div class="new-task-button-wrapper">
               <div class="session-actions-row">
                 {/* testagent_change start - 继续按钮：仅在出错或中断时显示 */}
@@ -293,6 +299,7 @@ export const ChatView: Component<ChatViewProps> = (props) => {
               blocked={blocked}
               suggesting={suggesting}
               questioning={questioning}
+              locked={() => !!session.revertConfirm()}
               boxId={props.promptBoxId}
               pendingSessionID={props.pendingSessionID ?? tabs?.pending()}
             />

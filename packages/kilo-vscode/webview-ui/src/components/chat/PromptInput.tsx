@@ -68,6 +68,8 @@ interface PromptInputProps {
   suggesting?: () => boolean
   /** When true, session is busy only because a question is pending — treat as idle for input */
   questioning?: () => boolean
+  /** When true, the textarea is disabled until the user confirms the pending action */
+  locked?: () => boolean
   boxId?: string
   pendingSessionID?: string
 }
@@ -343,7 +345,8 @@ export const PromptInput: Component<PromptInputProps> = (props) => {
   onCleanup(() => window.removeEventListener("compactSession", onCompact))
 
   const isBusy = () => isPromptBusy(session.status(), !!props.suggesting?.(), !!props.questioning?.())
-  const isDisabled = () => !server.isConnected() || isBusy()
+  const locked = () => !!props.locked?.()
+  const isDisabled = () => !server.isConnected() || isBusy() || locked()
   const hasInput = () =>
     text().trim().length > 0 ||
     codeContexts().length > 0 ||
@@ -1090,6 +1093,7 @@ const sel = session.selected()
             classList={{ "prompt-input--disabled": isDisabled() }}
             placeholder={placeholder()}
             value={text()}
+            disabled={locked()}
             onInput={handleInput}
             onKeyDown={handleKeyDown}
             onKeyUp={syncGhost}

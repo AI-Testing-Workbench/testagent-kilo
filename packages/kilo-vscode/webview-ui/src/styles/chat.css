@@ -364,6 +364,59 @@
 }
 
 /* ============================================
+   Revert Confirm Dock (testagent_change - 检查点重置确认)
+   ============================================ */
+
+.revert-confirm-dock {
+  margin: 8px 12px;
+  padding: 10px 12px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  border: 1px solid var(--vscode-inputValidation-errorBorder, #f14c4c);
+  border-radius: 4px;
+  background: var(--vscode-inputValidation-errorBackground, rgba(241, 76, 76, 0.1));
+  font-size: 12px;
+  flex-shrink: 0;
+}
+
+.revert-confirm-dock-content {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+}
+
+.revert-confirm-dock-content [data-component="icon"] {
+  color: var(--vscode-inputValidation-errorBorder, #f14c4c);
+  flex-shrink: 0;
+}
+
+.revert-confirm-dock-text {
+  color: var(--text-base, var(--vscode-foreground));
+  line-height: 1.4;
+  word-break: break-word;
+}
+
+.revert-confirm-dock-actions {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  flex-shrink: 0;
+}
+
+.revert-confirm-dock-actions > [data-component="button"][data-variant="primary"] {
+  color: var(--vscode-button-foreground);
+  background-color: var(--vscode-button-background);
+  border: 1px solid var(--vscode-button-border, transparent);
+
+  &:hover:not(:disabled) {
+    background-color: var(--vscode-button-hoverBackground);
+  }
+}
+
+/* ============================================
    Prompt Input
    ============================================ */
 

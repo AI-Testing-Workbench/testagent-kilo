@@ -216,7 +216,7 @@ export const VscodeSessionTurn: Component<VscodeSessionTurnProps> = (props) => {
                 assistantMessages().length > 0 && !session.revert()
                   ? () => {
                     if (session.status() !== "idle") return
-                    session.revertSession(msg().id)
+                    session.requestRevert(msg().id)
                   }
                   : undefined
               }

@@ -216,6 +216,13 @@ interface SessionContextValue {
   // Live worktree diff stats (polled from CLI backend)
   worktreeStats: Accessor<{ files: number; additions: number; deletions: number } | undefined>
 
+  // testagent_change start - 检查点重置确认状态
+  revertConfirm: Accessor<string | null>
+  requestRevert: (messageID: string) => void
+  cancelRevert: () => void
+  confirmRevert: () => void
+  // testagent_change end
+
   // Actions
   revertSession: (messageID: string) => void
   unrevertSession: () => void
@@ -2041,6 +2048,7 @@ export const SessionProvider: ParentComponent = (props) => {
     setCurrentSessionID(undefined)
     setDraftSessionID(undefined)
     setCloudPreviewId(null)
+    setRevertConfirm(null)  // testagent_change - 清除会话时清除检查点重置确认
     setLoading(false)
     setPendingAgentSelection(defaultAgent())
     vscode.postMessage({ type: "clearSession" })
@@ -2084,6 +2092,7 @@ export const SessionProvider: ParentComponent = (props) => {
     const ready = loaded().has(id)
     setCurrentSessionID(id)
     setDraftSessionID(id)
+    setRevertConfirm(null)  // testagent_change - 切换会话时清除检查点重置确认
     setLoading(!ready)
     if (ready) {
       vscode.postMessage({ type: "loadMessages", sessionID: id, mode: "focus" })
@@ -2102,6 +2111,7 @@ export const SessionProvider: ParentComponent = (props) => {
     setCloudPreviewId(cloudSessionId)
     setCurrentSessionID(key)
     setDraftSessionID(key)
+    setRevertConfirm(null)  // testagent_change - 切换会话时清除检查点重置确认
     setLoading(true)
     vscode.postMessage({ type: "requestCloudSessionData", sessionId: cloudSessionId })
   }
@@ -2183,6 +2193,25 @@ export const SessionProvider: ParentComponent = (props) => {
     // revert can be null (cleared by unrevert) or undefined (never set) — treat both as "no revert"
     return id ? (store.sessions[id]?.revert ?? undefined) : undefined
   })
+
+  // testagent_change start - 检查点重置确认状态
+  const [revertConfirm, setRevertConfirm] = createSignal<string | null>(null)
+
+  function requestRevert(messageID: string) {
+    setRevertConfirm(messageID)
+  }
+
+  function cancelRevert() {
+    setRevertConfirm(null)
+  }
+
+  function confirmRevert() {
+    const messageID = revertConfirm()
+    if (!messageID) return
+    setRevertConfirm(null)
+    revertSession(messageID)
+  }
+  // testagent_change end
 
   const revertedCount = createMemo(() => {
     const boundary = revert()?.messageID
@@ -2410,6 +2439,12 @@ export const SessionProvider: ParentComponent = (props) => {
     revertedCount,
     summary,
     worktreeStats,
+    // testagent_change start - 检查点重置确认状态
+    revertConfirm,
+    requestRevert,
+    cancelRevert,
+    confirmRevert,
+    // testagent_change end
     revertSession,
     unrevertSession,
     sendMessage,
