@@ -913,7 +913,7 @@ export function UserMessageDisplay(props: {
               <Show when={props.onRevert}>
                 <div data-slot="checkpoint-wrapper">
                   <Icon name="branch" size="small" />
-                  <span data-slot="checkpoint-label">检查点:</span>
+                  <span data-slot="checkpoint-label">检查点</span>
                   <div data-slot="checkpoint-divider" />
                   <button
                     data-slot="checkpoint-restore-button"
