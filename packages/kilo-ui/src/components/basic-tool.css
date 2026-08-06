@@ -123,6 +123,11 @@ html[data-theme="kilo-vscode"] [data-component="tool-part-wrapper"][data-part-ty
   border: 1px solid var(--border-weak-base, var(--vscode-panel-border));
   overflow: hidden;
 
+  /* Tool execution failed — draw the card border in the critical red */
+  &[data-variant="error"] {
+    border-color: var(--border-critical-base, var(--vscode-charts-red));
+  }
+
   /* Tool parts get a second nested wrapper from ToolPartDisplay — strip its
      border so the outline isn't doubled */
   [data-component="tool-part-wrapper"] {

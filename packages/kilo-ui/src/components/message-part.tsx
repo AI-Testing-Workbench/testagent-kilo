@@ -1262,7 +1262,12 @@ PART_MAPPING["tool"] = function ToolPartDisplay(props) {
 
   return (
     <Show when={!hideQuestion()}>
-      <div data-component="tool-part-wrapper" data-part-type="tool" data-tool={part.tool}>
+      <div
+        data-component="tool-part-wrapper"
+        data-part-type="tool"
+        data-tool={part.tool}
+        data-variant={part.state.status === "error" ? "error" : undefined}
+      >
         <Switch>
           <Match when={part.state.status === "error" && part.state.error}>
             {(error) => {

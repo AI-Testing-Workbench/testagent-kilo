@@ -351,7 +351,11 @@ export const AssistantMessage: Component<AssistantMessageProps> = (props) => {
               {/* testagent_change start - testflow tools render outside tool-part-wrapper */}
               <Show when={isTestflowLog} fallback={
                 <Show when={isTestflow} fallback={
-                  <div data-component="tool-part-wrapper" data-part-type={part.type}>
+                  <div
+                    data-component="tool-part-wrapper"
+                    data-part-type={part.type}
+                    data-variant={(part as unknown as ToolPart).state?.status === "error" ? "error" : undefined}
+                  >
                     <Show
                       when={activeQuestion()}
                       fallback={
