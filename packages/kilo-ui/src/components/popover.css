@@ -1,9 +1,11 @@
 /* Kilo Popover overrides */
 
 [data-component="popover-content"] {
-  border-radius: 2px;
-  border: 1px solid var(--border-base);
+  border-radius: 6px;
+  border: 1px solid var(--border-focus, var(--vscode-focusBorder, #007fd4));
   overflow: hidden;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.15);
+  background: var(--background-stronger, var(--vscode-editorWidget-background));
 
   [data-slot="popover-body"] {
     padding: 0;

@@ -280,7 +280,7 @@
 
 .model-selector-item:hover,
 .model-selector-item.selected {
-  background: var(--surface-interactive-hover, var(--vscode-list-hoverBackground));
+  background: color-mix(in srgb, var(--vscode-editor-foreground, #cccccc) 5%, transparent);
 }
 
 .model-selector-item.keyboard-focused {
@@ -289,10 +289,7 @@
 }
 
 .model-selector-item.active {
-  background: var(
-    --surface-interactive-active,
-    var(--vscode-list-activeSelectionBackground, var(--vscode-list-hoverBackground))
-  );
+  background: color-mix(in srgb, var(--vscode-editor-foreground, #cccccc) 10%, transparent);
   color: var(--text-on-interactive-base, var(--vscode-list-activeSelectionForeground));
 }
 
@@ -432,14 +429,11 @@
 }
 
 .thinking-selector-item:hover {
-  background: var(--surface-interactive-hover, var(--vscode-list-hoverBackground));
+  background: color-mix(in srgb, var(--vscode-editor-foreground, #cccccc) 5%, transparent);
 }
 
 .thinking-selector-item.selected {
-  background: var(
-    --surface-interactive-active,
-    var(--vscode-list-activeSelectionBackground, var(--vscode-list-hoverBackground))
-  );
+  background: color-mix(in srgb, var(--vscode-editor-foreground, #cccccc) 10%, transparent);
   color: var(--text-on-interactive-base, var(--vscode-list-activeSelectionForeground));
 }
 
@@ -472,20 +466,17 @@
 }
 
 .mode-switcher-item:hover {
-  background: var(--surface-interactive-hover, var(--vscode-list-hoverBackground));
+  background: color-mix(in srgb, var(--vscode-editor-foreground, #cccccc) 5%, transparent);
 }
 
 .mode-switcher-item:focus-visible {
   outline: 1px solid var(--vscode-focusBorder);
   outline-offset: -1px;
-  background: var(--surface-interactive-hover, var(--vscode-list-hoverBackground));
+  background: color-mix(in srgb, var(--vscode-editor-foreground, #cccccc) 5%, transparent);
 }
 
 .mode-switcher-item.selected {
-  background: var(
-    --surface-interactive-active,
-    var(--vscode-list-activeSelectionBackground, var(--vscode-list-hoverBackground))
-  );
+  background: color-mix(in srgb, var(--vscode-editor-foreground, #cccccc) 10%, transparent);
   color: var(--text-on-interactive-base, var(--vscode-list-activeSelectionForeground));
 }
 
