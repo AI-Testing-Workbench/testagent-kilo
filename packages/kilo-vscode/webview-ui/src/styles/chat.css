@@ -2708,7 +2708,7 @@ body.vscode-light
     padding: 10px 10px 8px 14px;
     cursor: pointer;
     border-bottom: 1px solid var(--vscode-inputValidation-infoBorder, #3794ff);
-    background: var(--vscode-inputValidation-infoBackground, rgba(55, 148, 255, 0.1));
+    background: var(--surface-inset-base, var(--vscode-sideBar-background));
   }
 
   [data-slot="question-dock-header-content"] {

@@ -18,7 +18,7 @@
     padding: 6px 8px 4px 12px;
     cursor: pointer;
     border-bottom: 1px solid var(--vscode-inputValidation-infoBorder, #3794ff);
-    background: var(--vscode-inputValidation-infoBackground, rgba(55, 148, 255, 0.1));
+    background: var(--surface-inset-base, var(--vscode-sideBar-background));
   }
 
   [data-slot="question-dock-header-content"] {
@@ -149,7 +149,7 @@
     margin-top: 6px;
     padding: 8px 4px 2px;
     border-top: 1px solid var(--border-base);
-    background-color: #fff;
+    background-color: var(--surface-raised-stronger-non-alpha);
     max-height: 40vh;
     overflow-y: auto;
     scrollbar-width: thin;
