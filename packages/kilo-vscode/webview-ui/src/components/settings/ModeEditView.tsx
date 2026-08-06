@@ -317,6 +317,48 @@ const ModeEditView: Component<Props> = (props) => {
         </SettingsRow>
 
         <SettingsRow
+          title={language.t("settings.agentBehaviour.thinking.title")}
+          description={
+            // testagent_change start - 显示默认值提示
+            (() => {
+              const baseDesc = language.t("settings.agentBehaviour.thinking.description")
+              const enableThinking = (cfg().options as Record<string, any> | undefined)?.chat_template_kwargs?.enable_thinking
+              if (enableThinking === undefined) {
+                return `${baseDesc}（当前agent未配置思考）`
+              }
+              return baseDesc
+            })()
+            // testagent_change end
+          }
+        >
+          <Switch
+            checked={
+              // testagent_change start - 从 options.chat_template_kwargs.enable_thinking 读取
+              (cfg().options as Record<string, any> | undefined)?.chat_template_kwargs?.enable_thinking ?? false
+              // testagent_change end
+            }
+            onChange={(val) => {
+              // testagent_change start - 保存到 options.chat_template_kwargs.enable_thinking
+              const currentOptions = cfg().options as Record<string, any> | undefined
+              const chatTemplateKwargs = currentOptions?.chat_template_kwargs as Record<string, any> | undefined
+              update({
+                options: {
+                  ...currentOptions,
+                  chat_template_kwargs: {
+                    ...chatTemplateKwargs,
+                    enable_thinking: val,
+                  },
+                },
+              })
+              // testagent_change end
+            }}
+            hideLabel
+          >
+            {language.t("settings.agentBehaviour.thinking.title")}
+          </Switch>
+        </SettingsRow>
+
+        <SettingsRow
           title={language.t("settings.agentBehaviour.hidden.title")}
           description={language.t("settings.agentBehaviour.hidden.description")}
         >

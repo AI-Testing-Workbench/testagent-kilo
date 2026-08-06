@@ -8,13 +8,14 @@
  * session activity) and a context window progress bar.
  */
 
-import { Component, For, Show, createMemo, createSignal, onMount, onCleanup } from "solid-js"
+import { Component, For, Show, createMemo, createSignal, createEffect, onMount, onCleanup } from "solid-js"
 import { IconButton } from "@kilocode/kilo-ui/icon-button"
 import { Tooltip } from "@kilocode/kilo-ui/tooltip"
 import { Icon } from "@kilocode/kilo-ui/icon"
 import { Checkbox } from "@kilocode/kilo-ui/checkbox"
+import { InlineInput } from "@kilocode/kilo-ui/inline-input"
 import { useSession } from "../../context/session"
-import { collapseCostBreakdown } from "../../context/session-utils"
+import { collapseCostBreakdown, buildTimingSegments, fmtDuration } from "../../context/session-utils"
 import { useLanguage } from "../../context/language"
 import { useVSCode } from "../../context/vscode"
 import { TaskTimeline } from "./TaskTimeline"
@@ -33,7 +34,26 @@ export const TaskHeader: Component<TaskHeaderProps> = (props) => {
   const busy = createMemo(() => session.status() === "busy")
   const stop = () => session.abort()
 
-
+  // Title editing state
+  const [editing, setEditing] = createSignal(false)
+  const [draft, setDraft] = createSignal("")
+  const editable = createMemo(() => {
+    const id = session.currentSessionID()
+    return !!id && !id.startsWith("cloud:")
+  })
+  const startEdit = () => {
+    setDraft(title())
+    setEditing(true)
+  }
+  const saveEdit = () => {
+    setEditing(false)
+    const id = session.currentSessionID()
+    if (!id || id.startsWith("cloud:")) return
+    const value = draft().trim()
+    if (!value || value === title()) return
+    session.renameSession(id, value)
+  }
+  const cancelEdit = () => setEditing(false)
 
   const fmt = (n: number) => new Intl.NumberFormat(language.locale(), { style: "currency", currency: "USD" }).format(n)
 
@@ -66,6 +86,62 @@ export const TaskHeader: Component<TaskHeaderProps> = (props) => {
     return undefined
   })
 
+  const timing = createMemo(() => session.familyTiming())
+
+  // 实时计时器：只要存在消息就每秒 tick，保证耗时持续变动
+  const [now, setNow] = createSignal(Date.now())
+  createEffect(() => {
+    const id = setInterval(() => setNow(Date.now()), 1000)
+    onCleanup(() => clearInterval(id))
+  })
+
+  // 实时耗时：由 buildFamilyTiming 遍历 family 估算（含子会话的运行中工具）
+  // 仅活跃会话时用 Date.now() 实时计算，空闲时回退到静态数据
+  const liveTiming = createMemo(() => {
+    const t = timing()
+    const msgs = session.messages()
+    const isIdle = session.status() === "idle"
+
+    // 没有消息也没有数据时隐藏
+    if (msgs.length === 0 && !t) return undefined
+
+    // 空闲且无耗时数据（旧会话）不展示
+    if (isIdle && !t) return undefined
+
+    // 空闲时直接返回静态数据
+    if (isIdle && t) return t
+
+    // 找第一条用户消息的时间作为 session 起点
+    let sessionStart: number | undefined
+    for (const m of msgs) {
+      if (m.role === "user" && m.time?.created) {
+        sessionStart = m.time.created
+        break
+      }
+    }
+
+    // 总计取累加和与墙上时钟的最大值，与 buildFamilyTiming 保持一致
+    const since = session.busySince()
+    const wallClock = since
+      ? Date.now() - since
+      : sessionStart
+        ? Date.now() - sessionStart
+        : (t?.total ?? 0)
+    const accumulated = (t?.llm ?? 0) + (t?.tool ?? 0) + (t?.wait ?? 0)
+    const total = Math.max(wallClock, accumulated, t?.total ?? 0)
+
+    return {
+      total,
+      llm: t?.llm ?? 0,
+      wait: t?.wait ?? 0,
+      actual: Math.max(total - (t?.wait ?? 0), 0),
+      tool: t?.tool ?? 0,
+      permissionWait: t?.permissionWait ?? 0,
+      questionWait: t?.questionWait ?? 0,
+      toolBreakdown: t?.toolBreakdown,
+    }
+  })
+
   const fmtNum = (n: number): string => {
     if (n >= 1_000_000) return `${(n / 1_000_000).toFixed(1)}M`
     if (n >= 1_000) return `${(n / 1_000).toFixed(1)}K`
@@ -74,6 +150,7 @@ export const TaskHeader: Component<TaskHeaderProps> = (props) => {
 
   const vscode = useVSCode()
   const [expanded, setExpanded] = createSignal(true)
+  const [timingOpen, setTimingOpen] = createSignal(true)
 
   // Read initial value from VS Code settings
   onMount(() => vscode.postMessage({ type: "requestTimelineSetting" }))
@@ -105,6 +182,7 @@ export const TaskHeader: Component<TaskHeaderProps> = (props) => {
 
   const [todosOpen, setTodosOpen] = createSignal(false)
   const [copied, setCopied] = createSignal(false)
+  const [timingCopied, setTimingCopied] = createSignal(false)
 
   const copySid = (sid: string) => {
     navigator.clipboard.writeText(sid)
@@ -129,7 +207,38 @@ export const TaskHeader: Component<TaskHeaderProps> = (props) => {
             <ellipse class="th-blink" cx="8" cy="9.33" rx="1.63" ry="2.62" fill="#2979ff" />
             <ellipse class="th-blink" cx="16" cy="9.33" rx="1.63" ry="2.62" fill="#2979ff" />
           </svg>
-          {title()}
+          <Show when={editing()} fallback={<span class="task-header-title-text">{title()}</span>}>
+            <InlineInput
+              ref={(el) => requestAnimationFrame(() => el?.focus())}
+              value={draft()}
+              onInput={(e) => setDraft(e.currentTarget.value)}
+              onKeyDown={(e) => {
+                e.stopPropagation()
+                if (e.key === "Enter") {
+                  e.preventDefault()
+                  saveEdit()
+                }
+                if (e.key === "Escape") {
+                  e.preventDefault()
+                  cancelEdit()
+                }
+              }}
+              onBlur={saveEdit}
+              class="task-header-title-input"
+            />
+          </Show>
+          <Show when={!editing() && editable()}>
+            <Tooltip value={language.t("common.rename")} placement="bottom" gutter={4}>
+              <IconButton
+                icon="edit"
+                size="small"
+                variant="ghost"
+                aria-label={language.t("common.rename")}
+                class="task-header-title-edit"
+                onClick={startEdit}
+              />
+            </Tooltip>
+          </Show>
         </div>
 
         <div data-slot="task-header-stats">
@@ -228,8 +337,146 @@ export const TaskHeader: Component<TaskHeaderProps> = (props) => {
                 <span class="task-header-tokens-value" style={{ "font-weight": 600 }}>
                   总计: {fmtNum(tk().total ?? (tk().input + tk().output + (tk().cache?.read ?? 0) + (tk().cache?.write ?? 0)))}
                 </span>
+                <Show when={liveTiming()}>
+                  <button
+                    data-slot="task-header-expand"
+                    aria-expanded={timingOpen()}
+                    aria-controls="task-header-timing"
+                    title={timingOpen() ? "收起累计执行耗时统计" : "展开累计执行耗时统计"}
+                    onClick={() => setTimingOpen((open) => !open)}
+                  >
+                    {timingOpen() ? "▲" : "▼"}
+                  </button>
+                </Show>
               </div>
             )}
+          </Show>
+          <Show when={timingOpen() ? liveTiming() : undefined}>
+            {(t) => {
+              const segments = () => buildTimingSegments(t())
+              const pct = (v: number) => t().total > 0 ? `(${((v / t().total) * 100).toFixed(1)}%)` : ""
+              const copyTiming = () => {
+                const info = t()
+                const overhead = info.total - info.llm - info.tool - info.wait
+                const lines = [
+                  `累计耗时统计: ${fmtDuration(info.total)}`,
+                  "包含当前会话及子会话，并行执行时间会分别累计",
+                  `实际执行: ${fmtDuration(info.actual)} ${pct(info.actual)}`,
+                  `工具执行: ${fmtDuration(info.tool)} ${pct(info.tool)}`,
+                  `LLM 耗时: ${fmtDuration(info.llm)} ${pct(info.llm)}`,
+                  "累计所有模型回复消息的模型处理时长，即模型开始生成到生成完成所用的时间",
+                ]
+                if (info.wait > 0) {
+                  lines.push(
+                    `等待用户: ${fmtDuration(info.wait)} ${pct(info.wait)}`,
+                    "累计所有需要用户回答或因输入无效而暂停的等待时间，并加上权限确认的等待时长",
+                  )
+                  if (info.permissionWait > 0) lines.push(`权限等待: ${fmtDuration(info.permissionWait)} ${pct(info.permissionWait)}`)
+                  if (info.questionWait > 0) lines.push(`问题等待: ${fmtDuration(info.questionWait)} ${pct(info.questionWait)}`)
+                }
+                if (overhead > 0) {
+                  lines.push(
+                    `其他开销: ${fmtDuration(overhead)} ${pct(overhead)}`,
+                    "通常包含网络延迟、消息存储、session 管理等其他未单独统计的开销",
+                  )
+                }
+                lines.push("LLM、工具和等待耗时按每次执行分别累加；父子会话并行时也会分别计入，不按实际经过时间去重，因此可能与本轮耗时不同")
+                navigator.clipboard.writeText(lines.join("\n"))
+                setTimingCopied(true)
+                setTimeout(() => setTimingCopied(false), 2000)
+              }
+              return (
+                <div id="task-header-timing" class="task-header-tokens" style={{ "margin-top": "6px", "line-height": "1.4" }}>
+                  <div style={{ display: "flex", "align-items": "center", gap: "4px", "flex-wrap": "wrap" }}>
+                    <span class="task-header-tokens-label" style={{ "margin-right": '10px' }}>累计执行耗时统计</span>
+                    <For each={segments()}>
+                      {(seg, index) => {
+                        const isTool = seg.key === "tool"
+                        const breakdown = t().toolBreakdown
+                        const toolEntries = (() => {
+                          if (!isTool || !breakdown) return []
+                          return Object.entries(breakdown).sort((a, b) => b[1] - a[1])
+                        })()
+                        return (
+                          <>
+                            {index() !== 0 && <span style={{ opacity: 0.4 }}>|</span>}
+                            <Show when={isTool && toolEntries.length > 0} fallback={
+                              <span style={{ color: seg.color, "font-size": "11px" }}>
+                                {seg.label}: {fmtDuration(seg.duration)}
+                              </span>
+                            }>
+                              <Tooltip value={
+                                <div style={{ "text-align": "left", "white-space": "nowrap" }}>
+                                  <For each={toolEntries}>
+                                    {(entry) => <div>{entry[0]}: {fmtDuration(entry[1])}</div>}
+                                  </For>
+                                </div>
+                              } placement="bottom">
+                                <span style={{ color: seg.color, "font-size": "11px" }}>
+                                  {seg.label}: {fmtDuration(seg.duration)}
+                                </span>
+                              </Tooltip>
+                            </Show>
+                          </>
+                        )
+                      }}
+                    </For>
+                    <span style={{ opacity: 0.4 }}>|</span>
+                    <Tooltip
+                      contentStyle={{ "max-width": "440px" }}
+                      value={timingCopied() ? "已复制" :
+                        <div style={{ "text-align": "left" }}>
+                          <div>累计耗时统计:     {fmtDuration(t().total)}</div>
+                          <div style={{ "font-size": "10px", opacity: 0.6, "margin-top": "4px", }}>包含当前会话及子会话，并行执行时间会分别累计</div>
+                          <hr style={{ margin: "2px 0", border: "none", "border-top": "1px solid currentColor", opacity: 0.3 }} />
+
+                          <div>● 实际执行:   {fmtDuration(t().actual)} {pct(t().actual)}</div>
+                          <div>● 工具执行:   {fmtDuration(t().tool)} {pct(t().tool)}
+                            <div>● LLM 耗时:   {fmtDuration(t().llm)} {pct(t().llm)}
+                              <span style={{ "font-size": "10px", opacity: 0.6, "margin-left": "10px", }}>
+                                累计所有模型回复消息的模型处理时长，即模型开始生成到生成完成所用的时间
+                              </span>
+                            </div>
+                          </div>
+                          <Show when={t().wait > 0}>
+                            <div>● 等待用户:   {fmtDuration(t().wait)} {pct(t().wait)}  <span style={{ "font-size": "10px", opacity: 0.6, "margin-left": "10px", }}>
+                              累计所有需要用户回答或因输入无效而暂停的等待时间，并加上权限确认的等待时长
+                            </span></div>
+                            <Show when={t().permissionWait > 0}>
+                              <div style={{ "margin-left": "12px" }}>权限等待: {fmtDuration(t().permissionWait)} {pct(t().permissionWait)}</div>
+                            </Show>
+                            <Show when={t().questionWait > 0}>
+                              <div style={{ "margin-left": "12px" }}>问题等待: {fmtDuration(t().questionWait)} {pct(t().questionWait)}</div>
+                            </Show>
+                          </Show>
+                          <Show when={t().total > t().llm + t().tool + t().wait}>
+                            <div>● 其他开销:   {fmtDuration(t().total - t().llm - t().tool - t().wait)} {pct(t().total - t().llm - t().tool - t().wait)}
+                              <span style={{ "font-size": "10px", opacity: 0.6, "margin-left": "10px", }}>
+                                通常包含网络延迟、消息存储、session 管理等其他未单独统计的开销
+                              </span>
+                            </div>
+                          </Show>
+                          <hr style={{ margin: "4px 0", border: "none", "border-top": "1px solid currentColor", opacity: 0.3 }} />
+                          <div style={{ "font-size": "10px", opacity: 0.6, "margin-top": "4px", "text-wrap": "wrap" }}>
+                            LLM、工具和等待耗时按每次执行分别累加；父子会话并行时也会分别计入，不按实际经过时间去重，因此可能与本轮耗时不同
+                          </div>
+                        </div>
+                      }
+                      placement="bottom"
+                    >
+                      <button
+                        class="task-header-tokens-value"
+                        style={{ "font-weight": 600, color: "inherit", background: "none", border: "none", padding: 0, cursor: "pointer" }}
+                        aria-label="复制累计耗时统计"
+                        onClick={copyTiming}
+                      >
+                        累计耗时: {fmtDuration(t().total)}
+                      </button>
+                    </Tooltip>
+                  </div>
+                </div>
+              )
+            }}
           </Show>
         </div>
       </Show>

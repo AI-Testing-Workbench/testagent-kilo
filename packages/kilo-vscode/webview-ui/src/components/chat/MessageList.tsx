@@ -23,7 +23,7 @@ import { AccountSwitcher } from "../shared/AccountSwitcher"
 import { KiloNotifications } from "./KiloNotifications"
 import { WorkingIndicator } from "../shared/WorkingIndicator"
 import { QuestionDock } from "./QuestionDock"
-import { Virtualizer } from "virtua/solid"
+import { Virtualizer, type VirtualizerHandle } from "virtua/solid"
 import { SuggestBar } from "./SuggestBar"
 import {
   activeUserMessageID as getActiveUserMessageID,
@@ -31,6 +31,15 @@ import {
   queuedUserMessageIDs,
 } from "../../context/session-queue"
 import type { QuestionRequest, SuggestionRequest } from "../../types/messages"
+import { PromptRail } from "./PromptRail"
+import {
+  capacity,
+  historyAction,
+  promptItems,
+  railEntries,
+  type PromptRailEntry,
+  type PromptRailItem,
+} from "./prompt-rail"
 
 const KiloLogo = (): JSX.Element => {
   return (
@@ -88,6 +97,8 @@ export const MessageList: Component<MessageListProps> = (props) => {
   })
 
   const [scrollEl, setScrollEl] = createSignal<HTMLElement>()
+  const [virtualizer, setVirtualizer] = createSignal<VirtualizerHandle>()
+  const [height, setHeight] = createSignal(0)
   const positions = new Map<string, { top: number; userScrolled: boolean }>()
 
   const boundary = () => session.revert()?.messageID
@@ -104,6 +115,7 @@ export const MessageList: Component<MessageListProps> = (props) => {
   const queuedIDs = createMemo(() => new Set(queuedUserMessageIDs(session.messages(), session.statusInfo())))
   const visibleTurns = createMemo(() => turns().filter((turn) => !queuedIDs().has(turn.user.id)))
   const queuedTurns = createMemo(() => turns().filter((turn) => queuedIDs().has(turn.user.id)))
+  const indexes = createMemo(() => new Map(visibleTurns().map((turn, index) => [turn.id, index])))
 
   const activeUserIndex = createMemo(() => {
     const active = activeUserID()
@@ -126,12 +138,168 @@ export const MessageList: Component<MessageListProps> = (props) => {
   const handleScroll = () => {
     autoScroll.handleScroll()
     maybeLoadOlder()
+    scheduleActive()
   }
 
+  let resize: ResizeObserver | undefined
   const setScrollRef = (el: HTMLElement | undefined) => {
+    resize?.disconnect()
     setScrollEl(el)
     autoScroll.scrollRef(el)
+    if (!el) {
+      setHeight(0)
+      return
+    }
+    setHeight(el.clientHeight)
+    resize = new ResizeObserver(() => setHeight(el.clientHeight))
+    resize.observe(el)
   }
+
+  onCleanup(() => resize?.disconnect())
+
+  const [pending, setPending] = createSignal<{ sid: string; key: string }>()
+
+  const jump = (key: string) => {
+    autoScroll.pause()
+    const index = indexes().get(key)
+    if (index !== undefined) {
+      const handle = virtualizer()
+      if (handle) {
+        setPending(undefined)
+        handle.scrollToIndex(index, { align: "start" })
+        return
+      }
+    }
+    const el = scrollEl()
+    const target = el?.querySelector<HTMLElement>(`[data-message="${CSS.escape(key)}"]`)
+    if (target) {
+      setPending(undefined)
+      target.scrollIntoView({ block: "start" })
+      return
+    }
+    const sid = session.currentSessionID()
+    if (sid) setPending({ sid, key })
+  }
+
+  createEffect(() => {
+    const target = pending()
+    if (!target) return
+    if (target.sid !== session.currentSessionID()) {
+      setPending(undefined)
+      return
+    }
+    const index = indexes().get(target.key)
+    const handle = virtualizer()
+    if (index !== undefined && handle) {
+      setPending(undefined)
+      autoScroll.pause()
+      handle.scrollToIndex(index, { align: "start" })
+      return
+    }
+    const row = scrollEl()?.querySelector<HTMLElement>(`[data-message="${CSS.escape(target.key)}"]`)
+    if (!row) return
+    setPending(undefined)
+    autoScroll.pause()
+    row.scrollIntoView({ block: "start" })
+  })
+
+  const items = createMemo((previous: PromptRailItem[] | undefined) =>
+    promptItems(turns(), session.getParts, queuedIDs(), previous),
+  )
+  const entries = createMemo((previous: PromptRailEntry[] | undefined) =>
+    railEntries(items(), capacity(height()), session.hasOlderMessages(), previous),
+  )
+  const [active, setActive] = createSignal<string>()
+  const [seek, setSeek] = createSignal<{ sid: string; count: number }>()
+  let paging = false
+
+  const first = () => {
+    const item = items()[0]
+    if (!session.hasOlderMessages()) {
+      if (item) jump(item.key)
+      return
+    }
+    const sid = session.currentSessionID()
+    if (!sid || session.loadingOlderMessages()) return
+    setSeek({ sid, count: session.messages().length })
+    if (!session.loadOlderMessages()) setSeek(undefined)
+  }
+
+  createEffect(() => {
+    const loading = session.loadingOlderMessages()
+    const target = seek()
+    if (!target) {
+      paging = loading
+      return
+    }
+    if (target.sid !== session.currentSessionID()) {
+      paging = false
+      setSeek(undefined)
+      return
+    }
+    if (loading) {
+      paging = true
+      return
+    }
+    if (!paging) return
+    paging = false
+    const count = session.messages().length
+    const action = historyAction(target.count, count, session.hasOlderMessages())
+    if (action === "load") {
+      setSeek({ sid: target.sid, count })
+      if (!session.loadOlderMessages()) setSeek(undefined)
+      return
+    }
+    const item = items()[0]
+    setSeek(undefined)
+    if (item) jump(item.key)
+  })
+
+  const trackActive = () => {
+    const values = items()
+    if (values.length === 0) {
+      setActive(undefined)
+      return
+    }
+    const el = scrollEl()
+    if (!el || el.scrollHeight <= el.clientHeight + 1) {
+      setActive(values.at(-1)?.key)
+      return
+    }
+    const top = el.getBoundingClientRect().top + 1
+    const rows = el.querySelectorAll<HTMLElement>("[data-message]")
+    let next: { key: string; top: number } | undefined
+    for (const row of rows) {
+      const rect = row.getBoundingClientRect()
+      const key = row.dataset.message
+      if (!key || rect.bottom <= top) continue
+      if (rect.top <= top) {
+        setActive(key)
+        return
+      }
+      if (!next || rect.top < next.top) next = { key, top: rect.top }
+    }
+    setActive(next?.key ?? values.at(-1)?.key)
+  }
+
+  let activeFrame: number | undefined
+  const scheduleActive = () => {
+    if (activeFrame !== undefined) return
+    activeFrame = requestAnimationFrame(() => {
+      activeFrame = undefined
+      trackActive()
+    })
+  }
+
+  onCleanup(() => {
+    if (activeFrame !== undefined) cancelAnimationFrame(activeFrame)
+  })
+
+  createEffect(() => {
+    items()
+    visibleTurns()
+    scheduleActive()
+  })
 
   const [pendingRestore, setPendingRestore] = createSignal<string>()
 
@@ -234,6 +402,7 @@ export const MessageList: Component<MessageListProps> = (props) => {
             </Show>
             <Show when={scrollEl()}>
               <Virtualizer
+                ref={setVirtualizer}
                 data={visibleTurns()}
                 scrollRef={scrollEl()}
                 shift={session.messageMutation() === "prepend"}
@@ -261,6 +430,29 @@ export const MessageList: Component<MessageListProps> = (props) => {
           </Show>
         </div>
       </div>
+
+      <PromptRail
+        entries={entries}
+        items={items}
+        active={active}
+        onSelect={(item: PromptRailItem) => jump(item.key)}
+        onFirst={first}
+        onLatest={() => {
+          const item = items().at(-1)
+          if (item) jump(item.key)
+        }}
+        onLoadOlder={() => session.loadOlderMessages()}
+        onWheel={(deltaY: number) => {
+          const el = scrollEl()
+          if (el) el.scrollTop += deltaY
+        }}
+        height={height}
+        hasOlder={session.hasOlderMessages}
+        loadingOlder={session.loadingOlderMessages}
+        prepending={() => session.messageMutation() === "prepend"}
+        seeking={() => Boolean(seek())}
+        scope={session.currentSessionID}
+      />
 
       <Show when={autoScroll.userScrolled()}>
         <button

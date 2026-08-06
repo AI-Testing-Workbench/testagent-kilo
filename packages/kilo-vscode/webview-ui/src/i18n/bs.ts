@@ -516,6 +516,13 @@ export const dict = {
 
   "session.messages.renderEarlier": "Prikaži ranije poruke",
   "session.messages.loadingEarlier": "Učitavanje ranijih poruka...",
+  "session.prompts.navLabel": "Navigator upita",
+  "session.prompts.tick": "Upit {{index}} od {{total}}: {{prompt}}",
+  "session.prompts.noAnswer": "Još nema odgovora",
+  "session.prompts.queued": "Na čekanju",
+  "session.prompts.first": "Prvi upit",
+  "session.prompts.latest": "Najnoviji upit",
+  "session.prompts.overflow": "{{count}} ranijih upita",
   "session.messages.loadEarlier": "Učitaj ranije poruke",
   "session.messages.loading": "Učitavanje poruka...",
   "session.messages.jumpToLatest": "Idi na najnovije",

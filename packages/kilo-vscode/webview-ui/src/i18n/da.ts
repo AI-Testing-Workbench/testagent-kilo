@@ -511,6 +511,13 @@ export const dict = {
   "session.files.binaryContent": "Binær fil (indhold kan ikke vises)",
   "session.messages.renderEarlier": "Vis tidligere beskeder",
   "session.messages.loadingEarlier": "Indlæser tidligere beskeder...",
+  "session.prompts.navLabel": "Promptnavigator",
+  "session.prompts.tick": "Prompt {{index}} af {{total}}: {{prompt}}",
+  "session.prompts.noAnswer": "Intet svar endnu",
+  "session.prompts.queued": "I kø",
+  "session.prompts.first": "Første prompt",
+  "session.prompts.latest": "Seneste prompt",
+  "session.prompts.overflow": "{{count}} tidligere prompter",
   "session.messages.loadEarlier": "Indlæs tidligere beskeder",
   "session.messages.loading": "Indlæser beskeder...",
 

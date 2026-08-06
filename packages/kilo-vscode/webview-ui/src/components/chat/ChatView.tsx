@@ -13,8 +13,12 @@ import { TaskHeader } from "./TaskHeader"
 import { MessageList } from "./MessageList"
 import { PromptInput } from "./PromptInput"
 import { PermissionDock } from "./PermissionDock"
+import { QuestionDock } from "./QuestionDock"
 import { StartupErrorBanner } from "./StartupErrorBanner"
+import { SessionTabStrip } from "./SessionTabStrip"
+import { ConfigWarningsBanner } from "./ConfigWarningsBanner"
 import { useSession } from "../../context/session"
+import { useLocalTabs } from "../../context/local-tabs"
 import { useVSCode } from "../../context/vscode"
 import { useLanguage } from "../../context/language"
 import { useWorktreeMode } from "../../context/worktree-mode"
@@ -34,6 +38,7 @@ interface ChatViewProps {
 
 export const ChatView: Component<ChatViewProps> = (props) => {
   const session = useSession()
+  const tabs = useLocalTabs()
   const vscode = useVSCode()
   const language = useLanguage()
   const worktreeMode = useWorktreeMode()
@@ -42,6 +47,9 @@ export const ChatView: Component<ChatViewProps> = (props) => {
   const isSidebar = () => worktreeMode === undefined
   // Show "Continue in Worktree": only when explicitly enabled via prop
   const canContinueInWorktree = () => props.continueInWorktree === true
+
+  // Show tab strip when multiple tabs are open
+  const showTabStrip = () => isSidebar() && !props.readonly && tabs && tabs.ids().length > 1
 
   const id = () => session.currentSessionID()
   const hasMessages = () => session.messages().length > 0
@@ -83,9 +91,17 @@ export const ChatView: Component<ChatViewProps> = (props) => {
   // Non-tool questions (standalone, not from the question tool) render inline in
   // the message list since they don't have an associated tool part in the conversation.
   // Tool-linked questions render inline at their tool part position via AssistantMessage.
-  const standaloneQuestions = createMemo(() => familyQuestions().filter((q) => !q.tool))
+  // Only this session's own standalone questions render in the message list — questions
+  // from child subagents surface in the bottom dock instead (mirroring PermissionDock).
+  const standaloneQuestions = createMemo(() =>
+    familyQuestions().filter((q) => !q.tool && q.sessionID === id()),
+  )
   const standaloneSuggestions = createMemo(() => familySuggestions().filter((s) => !s.tool))
   const permissionRequest = () => familyPermissions().find((p) => p.sessionID === id()) ?? familyPermissions()[0]
+  // A pending question from a child subagent. The child's message list isn't visible
+  // here, so surface the QuestionDock in the bottom dock so the user can answer the
+  // subagent directly — same pattern as the PermissionDock for child permissions.
+  const delegatedQuestionRequest = () => familyQuestions().find((q) => q.sessionID !== id())
   // Prompt input is decoupled from questions/suggestions — only permissions block.
   // Pending questions and suggestions are auto-dismissed in sendMessage/sendCommand.
   const blocked = () => isPromptBlocked(familyPermissions().length)
@@ -93,7 +109,7 @@ export const ChatView: Component<ChatViewProps> = (props) => {
   const suggesting = () => isSuggesting(blocked(), familySuggestions().length)
   // Session is busy only because a question tool call is pending — prompt should behave as idle
   const questioning = () => isQuestioning(blocked(), familyQuestions().length)
-  const dock = () => !props.readonly || !!permissionRequest()
+  const dock = () => !props.readonly || !!permissionRequest() || !!delegatedQuestionRequest()
 
   // When a bottom-dock permission disappears while the session is busy,
   // the scroll container grows taller. Dispatch a custom event so MessageList can
@@ -153,6 +169,9 @@ export const ChatView: Component<ChatViewProps> = (props) => {
 
   return (
     <div class="chat-view">
+      <Show when={showTabStrip()}>
+        <SessionTabStrip />
+      </Show>
       <TaskHeader readonly={props.readonly} />
       <div class="chat-messages-wrapper">
         <div class="chat-messages">
@@ -181,6 +200,9 @@ export const ChatView: Component<ChatViewProps> = (props) => {
               />
             )}
           </Show>
+          <Show when={delegatedQuestionRequest()} keyed>
+            {(q) => <QuestionDock request={q} />}
+          </Show>
           <Show when={!props.readonly && hasMessages() && idle() && !blocked()}>
             <div class="new-task-button-wrapper">
               <div class="session-actions-row">
@@ -200,12 +222,12 @@ export const ChatView: Component<ChatViewProps> = (props) => {
                   </Tooltip>
                 </Show>
                 {/* testagent_change end */}
-                
+
                 <Tooltip value="Start a new conversation" placement="top">
                   <Button
                     variant="secondary"
                     size="small"
-                    onClick={() => window.dispatchEvent(new CustomEvent("newTaskRequest"))}
+                    onClick={() => window.dispatchEvent(new CustomEvent("newTaskRequestReplace"))}
                     aria-label={language.t("command.session.new.task")}
                   >
                     {language.t("command.session.new.task")}
@@ -265,13 +287,14 @@ export const ChatView: Component<ChatViewProps> = (props) => {
               </div>
             </div>
           </Show>
+          <ConfigWarningsBanner />
           <Show when={!props.readonly}>
             <PromptInput
               blocked={blocked}
               suggesting={suggesting}
               questioning={questioning}
               boxId={props.promptBoxId}
-              pendingSessionID={props.pendingSessionID}
+              pendingSessionID={props.pendingSessionID ?? tabs?.pending()}
             />
           </Show>
         </div>

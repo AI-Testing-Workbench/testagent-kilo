@@ -86,6 +86,7 @@ export function TextField(props: TextFieldProps) {
   // 数字类型默认 min=0，禁止负数
   const inputProps = () => {
     const p = { ...others } as Record<string, unknown>
+    p.placeholder = local.placeholder
     if (local.type === "number") {
       p.type = "number"
       p.min = local.min ?? 0

@@ -4,7 +4,8 @@
 
 [data-component="question-dock"] {
   margin: 6px 8px;
-  background-color: var(--surface-base);
+  background-color: var(--surface-inset-base, var(--vscode-sideBar-background));
+  border: 1px solid var(--vscode-inputValidation-infoBorder, #3794ff);
   border-radius: 8px;
   overflow: hidden;
 
@@ -16,6 +17,8 @@
     gap: 6px;
     padding: 6px 8px 4px 12px;
     cursor: pointer;
+    border-bottom: 1px solid var(--vscode-inputValidation-infoBorder, #3794ff);
+    background: rgb(234, 244, 254);
   }
 
   [data-slot="question-dock-header-content"] {
@@ -31,7 +34,7 @@
     font-size: 11px;
     font-weight: var(--font-weight-medium);
     line-height: var(--line-height-large);
-    color: var(--text-weak);
+    color: color-mix(in srgb, var(--vscode-textLink-foreground) 85%, black);
   }
 
   /* Shown only when collapsed — truncated question preview */
@@ -143,7 +146,10 @@
     display: flex;
     flex-direction: column;
     gap: 1px;
-    padding: 2px 4px;
+    margin-top: 6px;
+    padding: 8px 4px 2px;
+    border-top: 1px solid var(--border-base);
+    background-color: var(--surface-inset-base, var(--vscode-sideBar-background));
     max-height: 40vh;
     overflow-y: auto;
     scrollbar-width: thin;
@@ -301,7 +307,7 @@
     gap: 6px;
     padding: 4px 8px;
     margin: 0 4px;
-    background-color: var(--surface-raised-stronger-non-alpha);
+    background-color: var(--surface-inset-base, var(--vscode-sideBar-background));
     border: none;
     border-radius: 6px;
   }
@@ -369,7 +375,8 @@
     display: flex;
     align-items: center;
     justify-content: end;
-    padding: 4px 8px 6px;
+    padding: 10px 8px 6px;
+    border-top: 1px solid var(--border-base);
   }
 
   [data-slot="question-footer-actions"] {
@@ -383,13 +390,13 @@
     box-shadow: none;
   }
 
-  [data-slot="question-footer-actions"] > [data-component="button"][data-variant="primary"] {
-    color: var(--vscode-button-foreground);
-    background-color: var(--vscode-button-background);
-    border: 1px solid var(--vscode-button-border, transparent);
+  [data-slot="question-footer-actions"] > [data-component="button"] {
+    color: #fff;
+    background-color: var(--vscode-inputValidation-infoBorder, #3794ff);
+    border: 1px solid transparent;
 
     &:hover:not(:disabled) {
-      background-color: var(--vscode-button-hoverBackground);
+      background-color: color-mix(in srgb, var(--vscode-inputValidation-infoBorder, #3794ff) 85%, black);
     }
   }
 }

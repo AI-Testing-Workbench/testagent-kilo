@@ -512,6 +512,13 @@ export const dict = {
   "session.files.binaryContent": "바이너리 파일 (내용을 표시할 수 없음)",
   "session.messages.renderEarlier": "이전 메시지 렌더링",
   "session.messages.loadingEarlier": "이전 메시지 로드 중...",
+  "session.prompts.navLabel": "프롬프트 탐색기",
+  "session.prompts.tick": "프롬프트 {{index}}/{{total}}: {{prompt}}",
+  "session.prompts.noAnswer": "아직 응답이 없습니다",
+  "session.prompts.queued": "대기 중",
+  "session.prompts.first": "첫 번째 프롬프트",
+  "session.prompts.latest": "최신 프롬프트",
+  "session.prompts.overflow": "{{count}}개 이전 프롬프트",
   "session.messages.loadEarlier": "이전 메시지 로드",
   "session.messages.loading": "메시지 로드 중...",
 

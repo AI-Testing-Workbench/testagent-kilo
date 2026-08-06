@@ -509,6 +509,13 @@ export const dict = {
   "session.files.binaryContent": "バイナリファイル（内容を表示できません）",
   "session.messages.renderEarlier": "以前のメッセージを表示",
   "session.messages.loadingEarlier": "以前のメッセージを読み込み中...",
+  "session.prompts.navLabel": "プロンプトナビゲーター",
+  "session.prompts.tick": "プロンプト {{index}}/{{total}}: {{prompt}}",
+  "session.prompts.noAnswer": "まだ応答がありません",
+  "session.prompts.queued": "キューに追加済み",
+  "session.prompts.first": "最初のプロンプト",
+  "session.prompts.latest": "最新のプロンプト",
+  "session.prompts.overflow": "{{count}} 件前のプロンプト",
   "session.messages.loadEarlier": "以前のメッセージを読み込む",
   "session.messages.loading": "メッセージを読み込み中...",
 

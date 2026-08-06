@@ -17,6 +17,7 @@ import { ServerProvider, useServer } from "./context/server"
 import { ProviderProvider, useProvider } from "./context/provider"
 import { ConfigProvider } from "./context/config"
 import { SessionProvider, useSession } from "./context/session"
+import { LocalTabsProvider, useLocalTabs } from "./context/local-tabs"
 import { LanguageProvider } from "./context/language"
 import { ChatView } from "./components/chat"
 import { MarketplaceView } from "./components/marketplace"
@@ -147,15 +148,18 @@ const AppContent: Component = () => {
   // race conditions with SettingsEditorProvider's navigate messages.
   const [migrationNeeded, setMigrationNeeded] = createSignal(false)
   const session = useSession()
+  const tabs = useLocalTabs()
   const server = useServer()
   const vscode = useVSCode()
 
   const handleViewAction = (action: string) => {
     switch (action) {
-      case "plusButtonClicked":
-        window.dispatchEvent(new CustomEvent("newTaskRequest"))
+      case "plusButtonClicked": {
+        if (tabs) tabs.add()
+        if (!tabs) session.clearCurrentSession()
         setCurrentView("newTask")
         break
+      }
       case "marketplaceButtonClicked":
         setCurrentView("marketplace")
         break
@@ -190,7 +194,8 @@ const AppContent: Component = () => {
 
   const handleForked = (message: { type?: string; sessionID?: string }) => {
     if (message.type !== "sessionForked" || !message.sessionID) return
-    session.selectSession(message.sessionID)
+    if (tabs) tabs.open(message.sessionID)
+    if (!tabs) session.selectSession(message.sessionID)
     setCurrentView("newTask")
   }
 
@@ -228,7 +233,8 @@ const AppContent: Component = () => {
   })
 
   const handleSelectSession = (id: string) => {
-    session.selectSession(id)
+    if (tabs) tabs.open(id)
+    if (!tabs) session.selectSession(id)
     setCurrentView("newTask")
   }
 
@@ -311,9 +317,11 @@ const App: Component = () => {
                         <ConfigProvider>
                           <NotificationsProvider>
                             <SessionProvider>
-                              <DataBridge>
-                                <AppContent />
-                              </DataBridge>
+                              <LocalTabsProvider>
+                                <DataBridge>
+                                  <AppContent />
+                                </DataBridge>
+                              </LocalTabsProvider>
                             </SessionProvider>
                           </NotificationsProvider>
                         </ConfigProvider>

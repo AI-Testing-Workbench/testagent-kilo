@@ -518,6 +518,13 @@ export const dict = {
   "session.files.binaryContent": "Fichier binaire (le contenu ne peut pas être affiché)",
   "session.messages.renderEarlier": "Afficher les messages précédents",
   "session.messages.loadingEarlier": "Chargement des messages précédents...",
+  "session.prompts.navLabel": "Navigateur de prompts",
+  "session.prompts.tick": "Prompt {{index}} sur {{total}} : {{prompt}}",
+  "session.prompts.noAnswer": "Pas encore de réponse",
+  "session.prompts.queued": "En attente",
+  "session.prompts.first": "Premier prompt",
+  "session.prompts.latest": "Dernier prompt",
+  "session.prompts.overflow": "{{count}} prompts précédents",
   "session.messages.loadEarlier": "Charger les messages précédents",
   "session.messages.loading": "Chargement des messages...",
 

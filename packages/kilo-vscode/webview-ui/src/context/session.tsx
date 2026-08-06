@@ -42,7 +42,10 @@ import {
   buildFamilyLabels,
   buildCostBreakdown,
   buildFamilyTokens,
+  buildFamilyTiming,
   childID,
+  type FamilyTokens,
+  type TimingInfo,
 } from "./session-utils"
 import { Identifier } from "../utils/id"
 import { resolveModelSelection } from "./model-selection"
@@ -82,6 +85,7 @@ interface SessionStore {
   sessionOverrides: Record<string, ModelSelection> // sessionID -> per-session model override (compare mode)
   agentSelections: Record<string, string> // sessionID -> agent name
   variantSelections: Record<string, string> // "providerID/modelID" -> variant name
+  enableThinkings: Record<string, boolean> // "providerID" -> enabled
   recentModels: ModelSelection[]
   favoriteModels: ModelSelection[]
 }
@@ -164,6 +168,7 @@ interface SessionContextValue {
   costBreakdown: Accessor<Array<{ label: string; cost: number }>>
   contextUsage: Accessor<ContextUsage | undefined>
   familyTokens: Accessor<FamilyTokens | undefined>
+  familyTiming: Accessor<TimingInfo | undefined>
 
   // Skills loaded from the CLI backend
   skills: Accessor<SkillInfo[]>
@@ -193,6 +198,11 @@ interface SessionContextValue {
   variantList: () => string[]
   currentVariant: () => string | undefined
   selectVariant: (value: string) => void
+  
+  // Enable-thinking toggle for a provider
+  enableThinkings: () => Record<string, boolean>
+  isThinkingEnabledForProvider: (providerID?: string) => boolean
+  toggleThinkingForProvider: (providerID: string) => void
 
   // Model favorites
   favoriteModels: Accessor<ModelSelection[]>
@@ -235,7 +245,7 @@ interface SessionContextValue {
   createSession: () => void
   clearCurrentSession: () => void
   loadSessions: () => void
-  loadOlderMessages: () => void
+  loadOlderMessages: () => boolean
   selectSession: (id: string) => void
   deleteSession: (id: string) => void
   renameSession: (id: string, title: string) => void
@@ -301,6 +311,10 @@ export const SessionProvider: ParentComponent = (props) => {
 
   // Permission IDs that have been responded to but not yet confirmed by the server
   const [respondingPermissions, setRespondingPermissions] = createSignal<Set<string>>(new Set())
+
+  // Track permission wait durations keyed by sessionID
+  const permissionStartTimes = new Map<string, number>()
+  const [permissionWaits, setPermissionWaits] = createSignal<Record<string, number>>({})
 
   // Pending questions
   const [questions, setQuestions] = createSignal<QuestionRequest[]>([])
@@ -394,6 +408,7 @@ export const SessionProvider: ParentComponent = (props) => {
     sessionOverrides: {},
     agentSelections: {},
     variantSelections: {},
+    enableThinkings: {},
     recentModels: [],
     favoriteModels: [],
   })
@@ -682,6 +697,25 @@ export const SessionProvider: ParentComponent = (props) => {
 
   onCleanup(unsubVariants)
 
+  const enableThinkings = () => store.enableThinkings
+
+  const isThinkingEnabledForProvider = (providerID?: string) => enableThinkings()[providerID ?? ""] !== false
+
+  const toggleThinkingForProvider = (providerID: string) => {
+    const current = enableThinkings()[providerID] !== false
+    setStore("enableThinkings", providerID, !current)
+    vscode.postMessage({ type: "persistEnableThinking", key: providerID, enabled: !current })
+  }
+
+  const unsubEnableThinkings = vscode.onMessage((message: ExtensionMessage) => {
+    if (message.type !== "enableThinkingsLoaded") return
+    setStore("enableThinkings", reconcile(message.enableThinkings))
+  })
+
+  vscode.postMessage({ type: "requestEnableThinkings" })
+
+  onCleanup(unsubEnableThinkings)
+
   // Load persisted per-mode model selections from model.json via extension host.
   // Uses replace semantics so a reset (empty payload) clears old entries.
   const unsubSelections = vscode.onMessage((message: ExtensionMessage) => {
@@ -812,7 +846,11 @@ export const SessionProvider: ParentComponent = (props) => {
         break
 
       case "sessionError": {
-        if (message.error?.name === "MessageAbortedError") break
+        // Skip AbortError and MessageAbortedError (user-initiated abort is not an error)
+        const isAbortError = 
+          message.error?.name === "MessageAbortedError" || 
+          (message.error?.name as string) === "AbortError"
+        if (isAbortError) break
         const sid = message.sessionID ?? currentSessionID()
         if (!sid) break
         // Find the last user message in this session to use as parentID
@@ -1166,10 +1204,22 @@ export const SessionProvider: ParentComponent = (props) => {
   }
 
   function handlePermissionRequest(permission: PermissionRequest) {
+    permissionStartTimes.set(permission.id, Date.now())
     setPermissions((prev) => upsertPermission(prev, permission))
   }
 
   function handlePermissionResolved(permissionID: string) {
+    const perm = permissions().find((p) => p.id === permissionID)
+    const sessionID = perm?.sessionID
+    const start = permissionStartTimes.get(permissionID)
+    if (start && sessionID) {
+      const duration = Date.now() - start
+      permissionStartTimes.delete(permissionID)
+      setPermissionWaits((prev) => ({
+        ...prev,
+        [sessionID]: (prev[sessionID] ?? 0) + duration,
+      }))
+    }
     setPermissions((prev) => prev.filter((p) => p.id !== permissionID))
     setRespondingPermissions((prev) => {
       if (!prev.has(permissionID)) return prev
@@ -1718,6 +1768,7 @@ export const SessionProvider: ParentComponent = (props) => {
         modelID,
         agent,
         variant: currentVariant(),
+        thinkingEnabled: store.enableThinkings[providerID ?? ""] !== false,
         files,
       })
       return
@@ -1743,6 +1794,7 @@ export const SessionProvider: ParentComponent = (props) => {
       modelID,
       agent,
       variant: currentVariant(),
+      thinkingEnabled: store.enableThinkings[providerID ?? ""] !== false,
       files,
     })
   }
@@ -1773,6 +1825,7 @@ export const SessionProvider: ParentComponent = (props) => {
         modelID,
         agent,
         variant: currentVariant(),
+        thinkingEnabled: store.enableThinkings[providerID ?? ""] !== false,
         files,
         command,
         commandArgs: args,
@@ -1803,6 +1856,7 @@ export const SessionProvider: ParentComponent = (props) => {
       modelID,
       agent,
       variant: currentVariant(),
+      thinkingEnabled: store.enableThinkings[providerID ?? ""] !== false,
       files,
     })
   }
@@ -1840,6 +1894,7 @@ export const SessionProvider: ParentComponent = (props) => {
       messageID: lastAssistant.id,
       providerID: model?.providerID,
       modelID: model?.modelID,
+      thinkingEnabled: store.enableThinkings[model?.providerID ?? ""] !== false,
     })
   }
   // testagent_change end
@@ -2003,9 +2058,9 @@ export const SessionProvider: ParentComponent = (props) => {
 
   function loadOlderMessages() {
     const id = currentSessionID()
-    if (!id || !server.isConnected()) return
+    if (!id || !server.isConnected()) return false
     const page = pages[id] ?? emptyPageState
-    if (!page.hasMore || page.loadingOlder || page.loadingInitial || !page.before) return
+    if (!page.hasMore || page.loadingOlder || page.loadingInitial || !page.before) return false
     patchPage(id, { loadingOlder: true })
     vscode.postMessage({
       type: "loadMessages",
@@ -2014,6 +2069,7 @@ export const SessionProvider: ParentComponent = (props) => {
       before: page.before,
       limit: MESSAGE_PAGE_LIMIT,
     })
+    return true
   }
 
   function selectSession(id: string) {
@@ -2207,6 +2263,26 @@ export const SessionProvider: ParentComponent = (props) => {
     return buildFamilyTokens(sessionFamily(id), store.messages as any)
   })
 
+  /** Accumulated timing across the session family (self + subagents). */
+  // tick 信号保证活跃会话每秒重算，使 buildFamilyTiming 内的 Date.now() 刷新
+  const [tick, setTick] = createSignal(Date.now())
+  createEffect(() => {
+    if (!anyBusy()) return // 无活跃会话时不 tick
+    const id = setInterval(() => setTick(Date.now()), 1000)
+    onCleanup(() => clearInterval(id))
+  })
+  const familyTiming = createMemo<TimingInfo | undefined>(() => {
+    const id = currentSessionID()
+    if (!id) return undefined
+    tick() // 依赖 tick，活跃时每秒重算
+    return buildFamilyTiming(
+      sessionFamily(id),
+      store.messages as any,
+      store.parts as any,
+      permissionWaits(),
+    )
+  })
+
   // Status text derived from last assistant message parts
   const statusText = createMemo<string | undefined>(() => {
     if (status() === "idle") return undefined
@@ -2284,6 +2360,7 @@ export const SessionProvider: ParentComponent = (props) => {
     costBreakdown,
     contextUsage,
     familyTokens,
+    familyTiming,
     agents,
     allAgents,
     skills,
@@ -2326,6 +2403,9 @@ export const SessionProvider: ParentComponent = (props) => {
     variantList,
     currentVariant,
     selectVariant,
+    enableThinkings,
+    isThinkingEnabledForProvider,
+    toggleThinkingForProvider,
     revert,
     revertedCount,
     summary,

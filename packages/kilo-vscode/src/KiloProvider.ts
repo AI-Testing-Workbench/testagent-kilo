@@ -108,6 +108,14 @@ import {
   fetchAndSendPendingQuestions,
 } from "./kilo-provider/handlers/question"
 import { fetchAndSendPendingSuggestions, routeSuggestionWebviewMessage } from "./kilo-provider/handlers/suggestion"
+// testagent_change start - env vars handlers
+import {
+  handleRequestEnvVars,
+  handleCreateEnvVar,
+  handleUpdateEnvVar,
+  handleDeleteEnvVar,
+} from "./kilo-provider/handlers/env-vars"
+// testagent_change end
 
 import {
   buildActionContext,
@@ -289,7 +297,6 @@ const notifiedEventIds: Set<string> = new Set()
 // testagent_change end
 
 export class KiloProvider implements vscode.WebviewViewProvider, TelemetryPropertiesProvider {
-  private _debug_syncedSet: Set<string> | null = null // testagent_change - debug for syncedChildSessions
   public static readonly viewType = "testagent.SidebarProvider" // testagent_change
   private readonly instanceId = crypto.randomUUID()
   private webviewType: "sidebar" | "panel" | "unknown" = "unknown" // testagent_change
@@ -834,6 +841,7 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
             message.modelID,
             message.agent,
             message.variant,
+            message.thinkingEnabled,
             files,
           )
           break
@@ -850,13 +858,14 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
             message.modelID,
             message.agent,
             message.variant,
+            message.thinkingEnabled,
             files,
           )
           break
         }
         // testagent_change start - 添加继续任务处理
         case "continueTask":
-          await this.handleContinueTask(message.sessionID, message.messageID, message.providerID, message.modelID)
+          await this.handleContinueTask(message.sessionID, message.messageID, message.providerID, message.modelID, message.thinkingEnabled)
           break
         // testagent_change end
         case "abort":
@@ -891,6 +900,11 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
         case "createSession":
           await this.handleCreateSession()
           break
+        // testagent_change start - local tabs
+        case "sidebar.openSessions":
+          for (const id of message.sessionIDs) this.trackedSessionIds.add(id)
+          break
+        // testagent_change end
         case "clearSession":
           this.contextSessionID = this.currentSession?.id ?? this.contextSessionID
           this.currentSession = null
@@ -1107,6 +1121,32 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
             console.error("[TestAgent] saveMemorySettings failed:", e),
           )
           break
+        // testagent_change start - env vars message handlers
+        case "requestEnvVars":
+          if (!this.client) break
+          handleRequestEnvVars(this.client, this.webview).catch((e) =>
+            console.error("[TestAgent] handleRequestEnvVars failed:", e),
+          )
+          break
+        case "createEnvVar":
+          if (!this.client) break
+          handleCreateEnvVar(this.client, this.webview, message.key, message.value).catch((e) =>
+            console.error("[TestAgent] handleCreateEnvVar failed:", e),
+          )
+          break
+        case "updateEnvVar":
+          if (!this.client) break
+          handleUpdateEnvVar(this.client, this.webview, message.key, message.value).catch((e) =>
+            console.error("[TestAgent] handleUpdateEnvVar failed:", e),
+          )
+          break
+        case "deleteEnvVar":
+          if (!this.client) break
+          handleDeleteEnvVar(this.client, this.webview, message.key).catch((e) =>
+            console.error("[TestAgent] handleDeleteEnvVar failed:", e),
+          )
+          break
+        // testagent_change end
         case "checkGitInstalled": {
           const installed = await this.checkGitInstalled()
           if (this.webview) {
@@ -1334,6 +1374,7 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
             message.modelID,
             message.agent,
             message.variant,
+            message.thinkingEnabled,
             files,
             typeof message.command === "string" ? message.command : undefined,
             typeof message.commandArgs === "string" ? message.commandArgs : undefined,
@@ -1358,6 +1399,20 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
         case "requestVariants": {
           const variants = this.extensionContext?.globalState.get<Record<string, string>>("variantSelections") ?? {}
           this.postMessage({ type: "variantsLoaded", variants })
+          break
+        }
+        case "persistEnableThinking": {
+          const stored = this.extensionContext?.globalState.get<Record<string, boolean>>("enableThinkings") ?? {}
+          stored[message.key] = message.enabled
+          await this.extensionContext?.globalState.update("enableThinkings", stored)
+          // Broadcast to all webviews (sidebar, settings panels, tabs) via central command
+          // This ensures all KiloProvider instances stay in sync, not just the one that initiated the change
+          await vscode.commands.executeCommand("testagent.internal.broadcastEnableThinkings")
+          break
+        }
+        case "requestEnableThinkings": {
+          const enableThinkings = this.extensionContext?.globalState.get<Record<string, boolean>>("enableThinkings") ?? {}
+          this.postMessage({ type: "enableThinkingsLoaded", enableThinkings })
           break
         }
         case "persistRecents":
@@ -1696,6 +1751,18 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
       this.sendNotificationSettings()
       this.sendTimelineSetting()
       this.postMessage({ type: "extensionDataReady" })
+
+      // 技能等服务是异步加载的，可能在第一次 checkConfigWarnings 之后才完成，
+      // 导致它们的 reportWarning 没有被前端捕获。所以这里再查一次。
+      this.configWarningsShown = false
+      void this.checkConfigWarnings("init-late")
+
+      // 再加一个延时兜底：tools/skills/plugins 等异步层可能在主流程完成后
+      // 才加载完毕。5秒后重新检查一次。
+      setTimeout(() => {
+        this.configWarningsShown = false
+        void this.checkConfigWarnings("init-late-timeout")
+      }, 5000)
 
       if (this.cachedGitRepo) this.startStatsPolling()
 
@@ -2255,6 +2322,15 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
     // testagent_change end
      vscode.window.showInformationMessage("skills已重新加载")
     console.log("[TestAgent] Skills and commands reloaded successfully")
+  }
+
+  /**
+   * Broadcast updated enableThinkings to this provider's webview.
+   * Called by extension.ts to sync all webviews after a settings change.
+   * testagent_change - cross-webview sync for thinking toggle
+   */
+  public broadcastEnableThinkings(enableThinkings: Record<string, boolean>): void {
+    this.postMessage({ type: "enableThinkingsLoaded", enableThinkings })
   }
 
   /**
@@ -2899,6 +2975,35 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
       console.error("[TestAgent]  Failed to reconcile session statuses on reconnect:", error)
     }
   }
+
+  /**
+   * Reconcile the status of a single session after operations like abort.
+   * Query the backend for the current status and update the webview if stale.
+   */
+  private async reconcileSessionStatus(sessionID: string): Promise<void> {
+    if (!this.client || this.connectionState !== "connected") return
+    const dir = this.getWorkspaceDirectory(sessionID)
+    try {
+      const result = await this.client.session.status({ directory: dir })
+      if (!result.data) {
+        // If backend returns no active sessions, this session must be idle
+        this.sessionStatusMap.set(sessionID, "idle")
+        this.postMessage({ type: "sessionStatus", sessionID, status: "idle" })
+        return
+      }
+      const active = result.data
+      const backendStatus = active[sessionID]?.type ?? "idle"
+      const localStatus = this.sessionStatusMap.get(sessionID)
+      if (localStatus !== backendStatus) {
+        this.sessionStatusMap.set(sessionID, backendStatus)
+        this.postMessage({ type: "sessionStatus", sessionID, status: backendStatus })
+        console.log(`[TestAgent] Reconciled session status: ${sessionID} ${localStatus} → ${backendStatus}`)
+      }
+    } catch (error) {
+      console.error("[TestAgent]  Failed to reconcile session status:", error)
+    }
+  }
+  // testagent_change end
   // testagent_change end
 
   /**
@@ -2935,16 +3040,12 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
       const dir = this.getWorkspaceDirectory()
       console.log("[TestAgent]  checking config warnings", { from, dir })
       const result = await this.client.config.warnings({ directory: dir })
-      console.log("[TestAgent]  raw result:", JSON.stringify(result).substring(0, 500)) // testagent_change - debug raw result (truncated)
-      console.log("[TestAgent]  result.data type:", typeof result?.data, "isArray:", Array.isArray(result?.data)) // testagent_change - debug type
 
-      // testagent_change start - ensure list is always an array
       let list = result?.data ?? []
       if (!Array.isArray(list)) {
         console.warn("[TestAgent]  result.data is not an array, converting:", typeof list)
         list = []
       }
-      // testagent_change end
 
       console.log("[TestAgent]  config warnings fetched", { from, count: list.length })
       if (list.length === 0) return
@@ -2956,53 +3057,23 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
       const truncated = list.length > MAX_WARNINGS
       // testagent_change end
 
+      const lines = displayList.map((w) => {
+        const base = `${w.path}\n  ${w.message}`
+        return w.detail ? `${base}\n  ${w.detail}` : base
+      })
+      if (truncated) {
+        lines.push(`\n... and ${list.length - MAX_WARNINGS} more warnings (showing first ${MAX_WARNINGS})`)
+      }
+
       const first = list[0]!
       const summary = list.length === 1 ? first.message : `${first.message} (and ${list.length - 1} more)`
-      console.warn("[TestAgent]  showing config warnings", { from, count: list.length, path: first.path })
+      console.warn("[TestAgent]  showing config warnings in webview", { from, count: list.length, path: first.path })
 
-      const action = await vscode.window.showWarningMessage(`Config: ${summary}`, "Show Details")
-      console.log("[TestAgent]  user action:", JSON.stringify(action)) // testagent_change - debug exact value
-      if (action === "Show Details") {
-        console.log(
-          "[TestAgent]  creating output channel with",
-          displayList.length,
-          "warnings (total:",
-          list.length,
-          ")",
-        ) // testagent_change - debug
-        console.log("[TestAgent]  displayList is array?", Array.isArray(displayList), "sample:", displayList[0]) // testagent_change - debug
-        try {
-          // testagent_change start - safe array handling
-          if (!Array.isArray(displayList)) {
-            console.error("[TestAgent]  displayList is not an array at show time:", typeof displayList, displayList)
-            vscode.window.showErrorMessage("Failed to display config warnings: invalid data format")
-            return
-          }
-          // testagent_change end
-
-          const lines = displayList.map((w) => {
-            const base = `${w.path}\n  ${w.message}`
-            return w.detail ? `${base}\n  ${w.detail}` : base
-          })
-
-          // testagent_change start - add truncation notice
-          if (truncated) {
-            lines.push(`\n... and ${list.length - MAX_WARNINGS} more warnings (showing first ${MAX_WARNINGS})`)
-          }
-          // testagent_change end
-
-          const channel = vscode.window.createOutputChannel("Kilo Config Warnings")
-          channel.clear()
-          channel.appendLine(lines.join("\n\n"))
-          console.log("[TestAgent]  showing output channel") // testagent_change - debug
-          channel.show(true) // testagent_change - preserveFocus=true to ensure visibility
-          console.log("[TestAgent]  output channel shown") // testagent_change - debug
-        } catch (channelErr) {
-          console.error("[TestAgent]  failed to show output channel:", channelErr) // testagent_change
-        }
-      } else {
-        console.log("[TestAgent]  user dismissed warning or action was:", action) // testagent_change
-      }
+      this.postMessage({
+        type: "configWarnings",
+        title: `Config: ${summary}`,
+        detail: lines.join("\n\n"),
+      })
     } catch (err) {
       console.warn("[TestAgent]  checkConfigWarnings failed:", { from, err })
     }
@@ -3574,8 +3645,10 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
     modelID?: string,
     agent?: string,
     variant?: string,
+    thinkingEnabled?: boolean,
     files?: MessageFile[],
   ): Promise<void> {
+    console.log(thinkingEnabled)
     // testagent_change start - intercept /sdt-* commands for testflow
     if (text.startsWith("/sdt-")) {
       await this.handleSdtCommand(text, sessionID, providerID, modelID, messageID, agent)
@@ -3634,7 +3707,7 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
               model: providerID && modelID ? { providerID, modelID } : undefined,
               agent,
               variant,
-              editorContext,
+              thinkingEnabled,
             }),
           sid,
           messageID,
@@ -3664,6 +3737,7 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
     modelID?: string,
     agent?: string,
     variant?: string,
+    thinkingEnabled?: boolean,
     files?: MessageFile[],
   ): Promise<void> {
     // testagent_change start - intercept sdt-* commands for testflow
@@ -3730,6 +3804,7 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
               model: providerID && modelID ? `${providerID}/${modelID}` : undefined,
               agent,
               variant,
+              thinkingEnabled,
               parts,
             }),
           sid,
@@ -3769,6 +3844,7 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
     messageID?: string,
     providerID?: string,
     modelID?: string,
+    thinkingEnabled?: boolean,
   ): Promise<void> {
     console.log("[TestAgent] 🔄 handleContinueTask called:", { sessionID, messageID, providerID, modelID })
 
@@ -3801,6 +3877,7 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
               sessionID,
               messageID,
               directory: dir,
+              thinkingEnabled,
               ...(providerID && modelID ? { model: { providerID, modelID } } : {}),
             }),
           sessionID,
@@ -3841,6 +3918,11 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
         queuedMessageIDs,
         reason: reason as "completed" | "user_abort" | "error" | undefined,
       })
+      // testagent_change start - reconcile session status after abort
+      // The session.status:idle event may be lost if SSE drops during abort,
+      // so we query the backend to get the current status and update the UI.
+      await this.reconcileSessionStatus(targetSessionID)
+      // testagent_change end
     } catch (error) {
       console.error("[TestAgent]  Failed to abort session:", error)
     }
@@ -4500,6 +4582,7 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
 
     // Re-send globalState items to the webview
     this.postMessage({ type: "variantsLoaded", variants: {} })
+    this.postMessage({ type: "enableThinkingsLoaded", enableThinkings: {} })
     this.postMessage({ type: "recentsLoaded", recents: [] })
 
     // Re-fetch notifications to reflect cleared dismissed IDs
@@ -4537,10 +4620,45 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
   /** Restart the CLI backend process and reconnect. */
   private async handleRestartServer(logLevel?: string): Promise<void> {
     this.postMessage({ type: "connectionState", state: "connecting" })
+    this.configWarningsShown = false
     try {
-      await this.connectionService.restart(this.getWorkspaceDirectory(), logLevel)
+      // Clear ALL frontend caches before reloading
+      this.cachedProvidersMessage = null
+      this.cachedAgentsMessage = null
+      this.cachedSkillsMessage = null
+      this.cachedCommandsMessage = null
+      this.cachedConfigMessage = null
+      this.cachedMcpStatusMessage = null
+      this.clearCommandsCache()
+      
+      // Clear backend instance cache to force complete reload
+      // instance.dispose() will invalidate ALL backend caches including:
+      // - Config (with warnings)
+      // - Skills
+      // - Agents
+      // - Commands
+      // - Tools
+      // - Plugins
+      // - MCP servers
+      if (this.client) {
+        const dir = this.getWorkspaceDirectory()
+        await this.client.instance.dispose({ directory: dir }).catch((e: unknown) => {
+          console.warn("[TestAgent] instance.dispose() during restart failed:", e)
+        })
+        // Wait for backend to fully dispose the instance
+        await new Promise((resolve) => setTimeout(resolve, 300))
+      }
+      
+      // await this.connectionService.restart(this.getWorkspaceDirectory(), logLevel)
+      
+      // 重新初始化连接：重新订阅 SSE、拉取 providers/agents/skills/config、
+      // 检查配置警告（含 init-late / init-late-timeout 异步兜底）。
+      // 复用 doInitializeConnection 全流程，避免手动重复。
+      await this.initializeConnection()
+      vscode.window.showInformationMessage("TestAgent 后端服务已重启，配置已重新加载")
     } catch (e) {
       console.error("[TestAgent] restartServer failed:", e)
+      vscode.window.showErrorMessage("TestAgent 后端服务重启失败")
     }
   }
 
@@ -4694,30 +4812,36 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
     if (event.type === "session.error") {
       const sid = event.properties.sessionID
       const error = event.properties.error
-      if (sid && error && (this.trackedSessionIds.has(sid) || childToParent.has(sid))) {
+      const errorMsg =
+        typeof error === "string"
+          ? error
+          : typeof error === "object" && error !== null && "data" in error
+            ? typeof error.data === "object" && error.data !== null && "message" in error.data && typeof error.data.message === "string"
+              ? error.data.message
+              : "发生错误"
+            : "发生错误"
+
+      if (sid && (this.trackedSessionIds.has(sid) || childToParent.has(sid))) {
         // Deduplicate across KiloProvider instances
         if (notifiedEventIds.has(event.id)) return
         notifiedEventIds.add(event.id)
         setTimeout(() => notifiedEventIds.delete(event.id), 1000)
 
-        // Skip notification for MessageAbortedError (user-initiated abort is not an error)
+        // Skip notification for MessageAbortedError or AbortError (user-initiated abort is not an error)
         const isAbortError =
-          typeof error === "object" && error !== null && "name" in error && error.name === "MessageAbortedError"
+          typeof error === "object" && 
+          error !== null && 
+          "name" in error && 
+          ((error.name as string) === "MessageAbortedError" || (error.name as string) === "AbortError")
         if (isAbortError) {
           return
         }
 
-        // Extract error message from the error object
-        // SDK error types: { name: "...", data: { message: "..." } }
-        const errorMsg =
-          typeof error === "string"
-            ? error
-            : typeof error === "object" && error !== null && "data" in error
-              ? typeof error.data === "object" && error.data !== null && "message" in error.data && typeof error.data.message === "string"
-                ? error.data.message
-                : "发生错误"
-              : "发生错误"
         this.maybeShowErrorNotification(sid, errorMsg)
+      } else if (errorMsg) {
+        // 没有 sessionID 的错误（如 tools/skills 加载失败），作为 config 警告展示
+        this.configWarningsShown = false
+        void this.checkConfigWarnings("session-error")
       }
       return
     }

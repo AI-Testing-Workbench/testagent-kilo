@@ -116,6 +116,7 @@ export async function handleImportAndSend(
   modelID?: string,
   agent?: string,
   variant?: string,
+  thinkingEnabled?: boolean,
   files?: MessageFile[],
   command?: string,
   commandArgs?: string,
@@ -220,7 +221,7 @@ export async function handleImportAndSend(
           model: providerID && modelID ? { providerID, modelID } : undefined,
           agent,
           variant,
-          editorContext,
+          thinkingEnabled,
         },
         { throwOnError: true },
       )
