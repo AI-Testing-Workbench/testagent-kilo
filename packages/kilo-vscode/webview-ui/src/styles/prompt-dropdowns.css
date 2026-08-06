@@ -74,12 +74,16 @@
   left: 0;
   right: 0;
   z-index: 10;
-  background: var(--vscode-editorWidget-background, var(--vscode-input-background));
-  border: 1px solid var(--vscode-editorWidget-border, var(--vscode-input-border));
+  background: #ffffff;
+  border: 1px solid #007fd4;
   border-radius: 4px;
   overflow: hidden;
   max-height: 200px;
   overflow-y: auto;
+}
+
+body.vscode-dark .slash-command-dropdown {
+  background: var(--vscode-editorWidget-background, var(--vscode-input-background));
 }
 
 .slash-command-item {
