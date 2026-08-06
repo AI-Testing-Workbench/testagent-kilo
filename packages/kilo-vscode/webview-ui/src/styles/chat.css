@@ -2657,7 +2657,8 @@ body.vscode-light
 
 .vscode-session-turn-user [data-slot="user-message-text"] {
   background: rgb(235, 243, 250);
-  border-radius: 12px;
+  border: 1px solid rgb(0, 120, 212);
+  border-radius: 6px;
   padding: 8px 12px;
 }
 
