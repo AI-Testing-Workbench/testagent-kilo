@@ -2656,8 +2656,8 @@ body.vscode-light
 }
 
 .vscode-session-turn-user [data-slot="user-message-text"] {
-  background: rgb(235, 243, 250);
-  border: 1px solid rgb(0, 120, 212);
+  background: color-mix(in srgb, var(--vscode-textLink-foreground, #3794ff) 8%, var(--surface-base));
+  border: 1px solid color-mix(in srgb, var(--vscode-textLink-foreground, #3794ff) 35%, transparent);
   border-radius: 6px;
   padding: 8px 12px;
 }
