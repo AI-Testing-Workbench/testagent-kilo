@@ -1,9 +1,9 @@
 /* Startup Error Banner */
 .startup-error-banner {
   margin: 8px 12px;
-  border: 1px solid var(--vscode-inputValidation-warningBorder, #cc7a00);
+  border: 1px solid var(--vscode-inputValidation-errorBorder, #f14c4c);
   border-radius: 4px;
-  background: var(--vscode-inputValidation-warningBackground, rgba(204, 122, 0, 0.1));
+  background: var(--vscode-inputValidation-errorBackground, rgba(241, 76, 76, 0.1));
   font-size: 12px;
 }
 
@@ -56,6 +56,77 @@
 }
 
 .startup-error-details {
+  margin: 0;
+  padding: 8px 10px;
+  border-top: 1px solid var(--vscode-inputValidation-errorBorder, #f14c4c);
+  background: var(--vscode-editor-background);
+  font-family: var(--vscode-editor-font-family, monospace);
+  font-size: 11px;
+  white-space: pre-wrap;
+  word-break: break-word;
+  max-height: 200px;
+  overflow-y: auto;
+}
+
+
+/* configwaringsbanner */
+.config-error-banner {
+  margin: 8px 12px;
+  border: 1px solid var(--vscode-inputValidation-warningBorder, #cc7a00);
+  border-radius: 4px;
+  background: var(--vscode-inputValidation-warningBackground, rgba(204, 122, 0, 0.1));
+  font-size: 12px;
+}
+
+.config-error-header {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 10px;
+  cursor: pointer;
+  user-select: none;
+  min-width: 0;
+}
+
+.config-error-title {
+  flex: 1;
+  font-weight: 600;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  min-width: 0;
+}
+
+.config-error-firstline {
+  font-weight: 400;
+}
+
+.config-error-chevron {
+  display: flex;
+  align-items: center;
+  flex-shrink: 0;
+  transition: transform 150ms;
+}
+
+.config-error-chevron-expanded {
+  transform: rotate(90deg);
+}
+
+.config-error-retry {
+  background: none;
+  border: none;
+  color: var(--vscode-textLink-foreground);
+  cursor: pointer;
+  font-size: 11px;
+  padding: 0;
+  flex-shrink: 0;
+}
+
+.config-error-retry:hover {
+  text-decoration: underline;
+}
+
+.config-error-details {
   margin: 0;
   padding: 8px 10px;
   border-top: 1px solid var(--vscode-inputValidation-warningBorder, #cc7a00);

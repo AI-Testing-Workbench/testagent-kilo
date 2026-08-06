@@ -15,17 +15,17 @@ export const ConfigWarningsBanner: Component = () => {
 
   return (
     <Show when={server.configWarningsTitle()}>
-      <div class="startup-error-banner">
-        <div class="startup-error-header" onClick={() => setExpanded((v) => !v)} role="button" aria-expanded={expanded()}>
-          <span class={`startup-error-chevron${expanded() ? " startup-error-chevron-expanded" : ""}`}>
+      <div class="config-error-banner">
+        <div class="config-error-header" onClick={() => setExpanded((v) => !v)} role="button" aria-expanded={expanded()}>
+          <span class={`config-error-chevron${expanded() ? " config-error-chevron-expanded" : ""}`}>
             <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor"><path d="M6 4l4 4-4 4" /></svg>
           </span>
-          <span class="startup-error-title">
-            <span class="startup-error-firstline">{server.configWarningsTitle()}</span>
+          <span class="config-error-title">
+            <span class="config-error-firstline">{server.configWarningsTitle()}</span>
           </span>
           {/* 重启： 重启后端服务，重新加载配置和SSE连接 */}
           <button
-            class="startup-error-retry"
+            class="config-error-retry"
             onClick={(e: MouseEvent) => {
               e.stopPropagation()
               server.dismissConfigWarnings()
@@ -40,7 +40,7 @@ export const ConfigWarningsBanner: Component = () => {
           </button>
           {/* 关闭： 仅隐藏横幅 */}
           <button
-            class="startup-error-retry"
+            class="config-error-retry"
             onClick={(e: MouseEvent) => {
               e.stopPropagation()
               server.dismissConfigWarnings()
@@ -55,7 +55,7 @@ export const ConfigWarningsBanner: Component = () => {
 
         </div>
         <Show when={expanded()}>
-          <pre class="startup-error-details">{server.configWarningsDetail()}</pre>
+          <pre class="config-error-details">{server.configWarningsDetail()}</pre>
         </Show>
       </div>
     </Show >
