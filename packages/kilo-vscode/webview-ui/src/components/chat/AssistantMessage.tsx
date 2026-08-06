@@ -351,14 +351,14 @@ export const AssistantMessage: Component<AssistantMessageProps> = (props) => {
               {/* testagent_change start - testflow tools render outside tool-part-wrapper */}
               <Show when={isTestflowLog} fallback={
                 <Show when={isTestflow} fallback={
-                  <div
-                    data-component="tool-part-wrapper"
-                    data-part-type={part.type}
-                    data-variant={(part as unknown as ToolPart).state?.status === "error" ? "error" : undefined}
-                  >
-                    <Show
-                      when={activeQuestion()}
-                      fallback={
+                  <Show
+                    when={activeQuestion()}
+                    fallback={
+                      <div
+                        data-component="tool-part-wrapper"
+                        data-part-type={part.type}
+                        data-variant={(part as unknown as ToolPart).state?.status === "error" ? "error" : undefined}
+                      >
                         <Show
                           when={activeSuggestion()}
                           fallback={
@@ -383,11 +383,11 @@ export const AssistantMessage: Component<AssistantMessageProps> = (props) => {
                         >
                           {(req) => <SuggestBar request={req()} />}
                         </Show>
-                      }
-                    >
-                      {(req) => <QuestionDock request={req()} />}
-                    </Show>
-                  </div>
+                      </div>
+                    }
+                  >
+                    {(req) => <QuestionDock request={req()} />}
+                  </Show>
                 }>
                   <TestflowToolCard part={part as unknown as ToolPart} />
                 </Show>
