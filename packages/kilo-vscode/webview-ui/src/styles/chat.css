@@ -2854,7 +2854,7 @@ body.vscode-light
     transition: background-color 0.15s ease;
 
     &:hover:not([data-picked="true"]) {
-      background-color: var(--surface-raised-stronger-non-alpha);
+      background-color: var(--surface-base-hover);
     }
 
     &[data-picked="true"] {
@@ -2877,7 +2877,7 @@ body.vscode-light
     height: 16px;
     padding: 2px;
     border-radius: var(--radius-sm);
-    border: 1px solid var(--border-base);
+    border: 1px solid var(--vscode-button-background);
     display: inline-flex;
     align-items: center;
     justify-content: center;
