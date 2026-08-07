@@ -1,7 +1,6 @@
 import { Component, createSignal, onMount, onCleanup, createMemo, Show, For } from "solid-js"
 import { Card } from "@kilocode/kilo-ui/card"
 import { Select } from "@kilocode/kilo-ui/select"
-import { Switch } from "@kilocode/kilo-ui/switch"
 import { showToast } from "@kilocode/kilo-ui/toast"
 import { useConfig } from "../../context/config"
 import { useVSCode } from "../../context/vscode"
@@ -159,6 +158,7 @@ const NormalSetting: Component = () => {
           />
         </SettingsRow>
 
+        {/* testagent_change start - disable plugin toggle from UI
         <SettingsRow title="插件功能" description="关闭后插件系统将被禁用，所有插件功能将无法使用">
           <Switch
             checked={config().plugin_enable !== false}
@@ -166,6 +166,7 @@ const NormalSetting: Component = () => {
             hideLabel
           />
         </SettingsRow>
+        testagent_change end */}
 
         <SettingsRow title="终端 Shell" description="输入 agent 使用的默认终端路径，或点击下方列表中的项快速填入">
           <div style={{ display: "flex", "flex-direction": "column", gap: "6px", "min-width": "360px", "width": "100%" }}>
