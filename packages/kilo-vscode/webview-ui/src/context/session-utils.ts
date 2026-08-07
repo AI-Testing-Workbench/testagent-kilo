@@ -18,12 +18,15 @@ export type TimingMessage = {
 type TimingToolState = {
   status: string
   time?: { start: number; end?: number }
+  metadata?: { sessionId?: string }
 }
 
 /** Minimal tool part shape for timing extraction. */
 type TimingTaskPart = {
+  id?: string
   type: string
   tool?: string
+  metadata?: { sessionId?: string }
   state?: TimingToolState
 }
 
@@ -251,9 +254,6 @@ export function collapseCostBreakdown(
 /** Tools that wait for user input */
 const WAIT_TOOLS = new Set(["question", "invalid"])
 
-// debug: 模块级缓存 —— 仅当计时统计结果变化时打印明细，避免每 tick 刷屏
-let lastTimingDebugSig = ""
-
 export interface TimingInfo {
   total: number  // 总耗时 (ms)
   llm: number    // LLM 总耗时 (ms)
@@ -283,42 +283,37 @@ export function buildFamilyTiming(
   messages: Record<string, TimingMessage[]>,
   parts: Record<string, TimingTaskPart[]>,
   permissionWaits: Record<string, number> = {},
+  busySince: Record<string, number> = {},
 ): TimingInfo | undefined {
-  let total = 0
   let llm = 0
   let wait = 0
   let tool = 0
   let permissionWait = 0
   let questionWait = 0
   const toolBreakdown: Record<string, number> = {}
+  const seenMessages = new Set<string>()
+  const seenParts = new Set<string>()
+  const intervals: Array<[number, number]> = []
   let has = false
 
   for (const sid of family) {
+    if (busySince[sid]) intervals.push([busySince[sid], Date.now()])
     const msgs = messages[sid] ?? []
-    // debug: 检测本 sid 消息数组内是否有重复 mid（同一 mid 出现多次 → 会被重复累加导致虚高）
-    {
-      const seenMid = new Map<string, number>()
-      for (const m of msgs) {
-        if (m.role !== "assistant") continue
-        seenMid.set(m.id, (seenMid.get(m.id) ?? 0) + 1)
-      }
-      const dupMids = [...seenMid.entries()].filter(([, n]) => n > 1)
-      if (dupMids.length > 0) {
-        console.warn(
-          "[timing] duplicate mids in messages:",
-          JSON.stringify({ sid, dupMids }),
-        )
-      }
-    }
     for (const m of msgs) {
-      if (m.role !== "assistant") continue
+      if (m.role !== "assistant" || seenMessages.has(m.id)) continue
+      seenMessages.add(m.id)
       // LLM 耗时
       llm += m.time?.llm ?? 0
+      if (m.time?.completed && m.time.created) intervals.push([m.time.created, m.time.completed])
       has = true
 
       // 遍历此消息的 parts，统计等待工具和工具执行耗时
       const pList = parts[m.id] ?? []
       for (const p of pList) {
+        if (p.id && seenParts.has(p.id)) continue
+        if (p.id) seenParts.add(p.id)
+        const child = childID(p)
+        if (p.tool === "task" && child && family.has(child)) continue
         if (p.type === "tool" && p.state?.time?.start) {
           const dur = p.state.time.end
             ? p.state.time.end - p.state.time.start
@@ -336,53 +331,10 @@ export function buildFamilyTiming(
           }
         }
       }
-      // debug: 打印本消息的 tool part 明细 + 去重检测（同一 mid 下同 tool 多个 part 说明 store 有重复）
-      {
-        const toolParts = pList.filter((p) => p.type === "tool")
-        if (toolParts.length > 0) {
-          const rows = toolParts.map((p, i) => ({
-            i,
-            tool: p.tool,
-            status: p.state?.status,
-            start: p.state?.time?.start ?? null,
-            end: p.state?.time?.end ?? null,
-            dur: p.state?.time?.start
-              ? (p.state.time.end ?? Date.now()) - p.state.time.start
-              : null,
-          }))
-          const sig = JSON.stringify(rows)
-          if (sig !== lastTimingDebugSig) {
-            lastTimingDebugSig = sig
-            // 去重检测：同 tool + 同 start 的 part 出现多次 = 重复入 store
-            const seen = new Map<string, number>()
-            for (const r of rows) {
-              const key = `${r.tool}|${r.start}`
-              seen.set(key, (seen.get(key) ?? 0) + 1)
-            }
-            const dupes = [...seen.entries()].filter(([, n]) => n > 1)
-            console.warn(
-              "[timing] tool parts:",
-              JSON.stringify({
-                mid: m.id,
-                sid,
-                count: rows.length,
-                dupes,
-                rows,
-              }),
-            )
-          }
-        }
-      }
     }
     // 累加 permission 等待耗时
     wait += permissionWaits[sid] ?? 0
     permissionWait += permissionWaits[sid] ?? 0
-    // 找第一条和最后一条消息的时间确定总耗时
-    const first = msgs[0]
-    const last = msgs[msgs.length - 1]
-    if (first?.role === "user" && first.time?.created && last?.role === "assistant" && last.time?.completed) {
-      total = Math.max(total, last.time.completed - first.time.created)
-    }
   }
 
   // 旧会话可能只有 total（从 time.created/computed 算出），但没有 llm/tool/wait 细项
@@ -391,10 +343,17 @@ export function buildFamilyTiming(
 
   if (!has) return undefined
 
-  // 总计取累加和与墙上时钟的最大值，保证数据自洽
-  // 子会话与父会话时间重叠时，累加和 > 墙上时钟
   const accumulated = llm + tool + wait
-  const finalTotal = Math.max(total, accumulated)
+  const elapsed = intervals
+    .sort((a, b) => a[0] - b[0])
+    .reduce(
+      (sum, span) => ({
+        total: sum.total + Math.max(0, span[1] - Math.max(span[0], sum.end)),
+        end: Math.max(sum.end, span[1]),
+      }),
+      { total: 0, end: 0 },
+    ).total
+  const finalTotal = elapsed || accumulated
 
   const actual = Math.max(0, finalTotal - wait)
 

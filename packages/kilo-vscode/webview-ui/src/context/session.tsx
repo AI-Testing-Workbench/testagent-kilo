@@ -2309,6 +2309,7 @@ export const SessionProvider: ParentComponent = (props) => {
       store.messages as any,
       store.parts as any,
       permissionWaits(),
+      busySinceMap,
     )
   })
 
