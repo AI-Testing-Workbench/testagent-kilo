@@ -31,7 +31,6 @@ const TESTAGENT_PATH_REF_UNIX = "$TestAgent"
  */
 export async function ensureCliInPath(context: vscode.ExtensionContext): Promise<void> {
   const binDir = path.join(context.extensionPath, "bin")
-  const lastBinDir = context.globalState.get<string>(ENV_PATH_LAST_BIN_DIR_KEY)
 
   if (!fs.existsSync(binDir)) {
     console.warn("[TestAgent] bin directory not found:", binDir)
@@ -42,7 +41,7 @@ export async function ensureCliInPath(context: vscode.ExtensionContext): Promise
     if (process.platform === "win32") {
       await ensureCliInPathWindows(context, binDir)
     } else {
-      await ensureCliInPathUnix(context, binDir, lastBinDir)
+      await ensureCliInPathUnix(context, binDir)
     }
   } catch (err) {
     console.error("[TestAgent] Failed to configure CLI environment:", err)
@@ -70,15 +69,6 @@ $pathRef = '${TESTAGENT_PATH_REF_WIN}'
 
 # Add %TestAgent% reference to PATH if not already present
 $currentPath = [Environment]::GetEnvironmentVariable("PATH", "User")
-
-# Remove any paths containing "testagent" before adding the reference
-# but keep the %TestAgent% reference itself
-$pathArray = $currentPath -split ';' | Where-Object { $_ }
-$cleanedPathArray = $pathArray | Where-Object { $_ -notlike "*testagent*" -or $_ -like "*$pathRef*" }
-if ($pathArray.Count -ne $cleanedPathArray.Count) {
-  $currentPath = $cleanedPathArray -join ';'
-  Write-Output "removed_testagent_paths"
-}
 
 if ($currentPath -notlike "*$pathRef*") {
   $newPath = $currentPath + ";" + $pathRef
@@ -129,7 +119,6 @@ if ($currentPath -notlike "*$pathRef*") {
 async function ensureCliInPathUnix(
   context: vscode.ExtensionContext,
   binDir: string,
-  lastBinDir: string | undefined
 ): Promise<void> {
   const homeDir = os.homedir()
 
@@ -168,14 +157,6 @@ async function ensureCliInPathUnix(
       const hasMarker = content.includes(marker)
       const hasExport = content.includes(`export ${TESTAGENT_ENV_VAR}=`)
       const hasPathRef = content.includes(TESTAGENT_PATH_REF_UNIX)
-
-      if (lastBinDir && content.includes(lastBinDir)) {
-        const lines = content.split("\n")
-        const filtered = lines.filter((line) => !line.includes(lastBinDir) || line.includes(marker))
-        content = filtered.join("\n")
-        fileAnyUpdated = true
-        anyUpdated = true
-      }
 
       if (hasMarker) {
         const lines = content.split("\n")
