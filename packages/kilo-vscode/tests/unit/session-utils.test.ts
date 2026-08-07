@@ -6,6 +6,7 @@ import {
   buildFamilyCosts,
   buildFamilyLabels,
   buildCostBreakdown,
+  buildFamilyTiming,
   collapseCostBreakdown,
   childID,
 } from "../../webview-ui/src/context/session-utils"
@@ -409,5 +410,63 @@ describe("collapseCostBreakdown", () => {
     const aggregated = result[9]
     expect(aggregated.label).toBe("12 older sessions")
     expect(aggregated.cost).toBeCloseTo(0.05 * 12)
+  })
+})
+
+describe("buildFamilyTiming", () => {
+  it("excludes idle time between turns", () => {
+    const result = buildFamilyTiming(
+      new Set(["s1"]),
+      {
+        s1: [
+          { id: "u1", role: "user", time: { created: 1_000 } },
+          { id: "a1", role: "assistant", time: { created: 1_100, completed: 2_100, llm: 600 } },
+          { id: "u2", role: "user", time: { created: 100_000 } },
+          { id: "a2", role: "assistant", time: { created: 100_100, completed: 101_100, llm: 600 } },
+        ],
+      },
+      {},
+    )
+
+    expect(result?.total).toBe(2_000)
+  })
+
+  it("counts duplicate messages and tool parts once", () => {
+    const message = { id: "a1", role: "assistant", time: { created: 1_000, completed: 2_000, llm: 600 } }
+    const part = { id: "p1", type: "tool", tool: "read", state: { status: "completed", time: { start: 1_200, end: 1_400 } } }
+    const result = buildFamilyTiming(new Set(["s1"]), { s1: [message, message] }, { a1: [part, part] })
+
+    expect(result?.llm).toBe(600)
+    expect(result?.tool).toBe(200)
+    expect(result?.total).toBe(1_000)
+  })
+
+  it("does not count a task wrapper when its child session is included", () => {
+    const result = buildFamilyTiming(
+      new Set(["root", "child"]),
+      {
+        root: [{ id: "a1", role: "assistant", time: { created: 1_000, completed: 2_000, llm: 200 } }],
+        child: [{ id: "a2", role: "assistant", time: { created: 1_200, completed: 1_800, llm: 400 } }],
+      },
+      {
+        a1: [{ id: "p1", type: "tool", tool: "task", metadata: { sessionId: "child" }, state: { status: "completed", time: { start: 1_100, end: 1_900 } } }],
+      },
+    )
+
+    expect(result?.tool).toBe(0)
+    expect(result?.total).toBe(1_000)
+  })
+
+  it("does not count skill loading as tool execution", () => {
+    const result = buildFamilyTiming(
+      new Set(["s1"]),
+      { s1: [{ id: "a1", role: "assistant", time: { created: 1_000, completed: 2_000, llm: 600 } }] },
+      {
+        a1: [{ id: "p1", type: "tool", tool: "skill", state: { status: "completed", time: { start: 1_200, end: 1_500 } } }],
+      },
+    )
+
+    expect(result?.tool).toBe(0)
+    expect(result?.toolBreakdown).toEqual({})
   })
 })

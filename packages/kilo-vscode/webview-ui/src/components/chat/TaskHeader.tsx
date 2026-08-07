@@ -8,7 +8,7 @@
  * session activity) and a context window progress bar.
  */
 
-import { Component, For, Show, createMemo, createSignal, createEffect, onMount, onCleanup } from "solid-js"
+import { Component, For, Show, createMemo, createSignal, onMount, onCleanup } from "solid-js"
 import { IconButton } from "@kilocode/kilo-ui/icon-button"
 import { Tooltip } from "@kilocode/kilo-ui/tooltip"
 import { Icon } from "@kilocode/kilo-ui/icon"
@@ -68,56 +68,7 @@ export const TaskHeader: Component<TaskHeaderProps> = (props) => {
 
   const timing = createMemo(() => session.familyTiming())
 
-  // 实时计时器：只要存在消息就每秒 tick，保证耗时持续变动
-  const [now, setNow] = createSignal(Date.now())
-  createEffect(() => {
-    const id = setInterval(() => setNow(Date.now()), 1000)
-    onCleanup(() => clearInterval(id))
-  })
-
-  // 实时耗时：由 buildFamilyTiming 遍历 family 估算（含子会话的运行中工具）
-  // 仅活跃会话时用 Date.now() 实时计算，空闲时回退到静态数据
-  const liveTiming = createMemo(() => {
-    const t = timing()
-    const msgs = session.messages()
-    const isIdle = session.status() === "idle"
-
-    // 没有消息也没有数据时隐藏
-    if (msgs.length === 0 && !t) return undefined
-
-    // 空闲时直接返回静态数据
-    if (isIdle && t) return t
-
-    // 找第一条用户消息的时间作为 session 起点
-    let sessionStart: number | undefined
-    for (const m of msgs) {
-      if (m.role === "user" && m.time?.created) {
-        sessionStart = m.time.created
-        break
-      }
-    }
-
-    // 总计取累加和与墙上时钟的最大值，与 buildFamilyTiming 保持一致
-    const since = session.busySince()
-    const wallClock = since
-      ? Date.now() - since
-      : sessionStart
-        ? Date.now() - sessionStart
-        : (t?.total ?? 0)
-    const accumulated = (t?.llm ?? 0) + (t?.tool ?? 0) + (t?.wait ?? 0)
-    const total = Math.max(wallClock, accumulated, t?.total ?? 0)
-
-    return {
-      total,
-      llm: t?.llm ?? 0,
-      wait: t?.wait ?? 0,
-      actual: Math.max(total - (t?.wait ?? 0), 0),
-      tool: t?.tool ?? 0,
-      permissionWait: t?.permissionWait ?? 0,
-      questionWait: t?.questionWait ?? 0,
-      toolBreakdown: t?.toolBreakdown,
-    }
-  })
+  const liveTiming = timing
 
   const fmtNum = (n: number): string => {
     if (n >= 1_000_000) return `${(n / 1_000_000).toFixed(1)}M`
@@ -288,6 +239,36 @@ export const TaskHeader: Component<TaskHeaderProps> = (props) => {
             {(t) => {
               const segments = () => buildTimingSegments(t())
               const pct = (v: number) => t().total > 0 ? `(${((v / t().total) * 100).toFixed(1)}%)` : ""
+              const copyTiming = () => {
+                const info = t()
+                const overhead = info.total - info.llm - info.tool - info.wait
+                const lines = [
+                  `累计耗时统计: ${fmtDuration(info.total)}`,
+                  "累计各轮实际执行时间，不包含轮次间等待；重叠的父子会话时间只计一次",
+                  `实际执行: ${fmtDuration(info.actual)} ${pct(info.actual)}`,
+                  `工具执行: ${fmtDuration(info.tool)} ${pct(info.tool)}`,
+                  `LLM 耗时: ${fmtDuration(info.llm)} ${pct(info.llm)}`,
+                  "累计所有模型回复消息的模型处理时长，即模型开始生成到生成完成所用的时间",
+                ]
+                if (info.wait > 0) {
+                  lines.push(
+                    `等待用户: ${fmtDuration(info.wait)} ${pct(info.wait)}`,
+                    "累计所有需要用户回答或因输入无效而暂停的等待时间，并加上权限确认的等待时长",
+                  )
+                  if (info.permissionWait > 0) lines.push(`权限等待: ${fmtDuration(info.permissionWait)} ${pct(info.permissionWait)}`)
+                  if (info.questionWait > 0) lines.push(`问题等待: ${fmtDuration(info.questionWait)} ${pct(info.questionWait)}`)
+                }
+                if (overhead > 0) {
+                  lines.push(
+                    `其他开销: ${fmtDuration(overhead)} ${pct(overhead)}`,
+                    "通常包含网络延迟、消息存储、session 管理等其他未单独统计的开销",
+                  )
+                }
+                lines.push("LLM、工具和等待明细按每次执行分别累加，并行时分类之和可能高于累计耗时；本轮耗时仅统计当前一轮")
+                navigator.clipboard.writeText(lines.join("\n"))
+                setTimingCopied(true)
+                setTimeout(() => setTimingCopied(false), 2000)
+              }
               return (
                 <div class="task-header-tokens" style={{ "margin-top": "6px", "line-height": "1.4" }}>
                   <div style={{ display: "flex", "align-items": "center", gap: "4px", "flex-wrap": "wrap" }}>
@@ -343,9 +324,11 @@ export const TaskHeader: Component<TaskHeaderProps> = (props) => {
                     </For>
                     <span style={{ opacity: 0.4 }}>|</span>
                     <Tooltip
-                      value={
-                        <div style={{ "text-align": "left", "white-space": "nowrap" }}>
-                          <div>总耗时:       {fmtDuration(t().total)}</div>
+                      contentStyle={{ "max-width": "440px" }}
+                      value={timingCopied() ? "已复制" :
+                        <div style={{ "text-align": "left" }}>
+                          <div>累计耗时统计:     {fmtDuration(t().total)}</div>
+                          <div style={{ "font-size": "10px", opacity: 0.6, "margin-top": "4px", }}>累计各轮实际执行时间，不包含轮次间等待；重叠的父子会话时间只计一次</div>
                           <hr style={{ margin: "2px 0", border: "none", "border-top": "1px solid currentColor", opacity: 0.3 }} />
                           <div>● LLM 耗时:   {fmtDuration(t().llm)} {pct(t().llm)}</div>
                           <div>● 工具执行:   {fmtDuration(t().tool)} {pct(t().tool)}</div>
@@ -362,6 +345,10 @@ export const TaskHeader: Component<TaskHeaderProps> = (props) => {
                           <Show when={t().total > t().llm + t().tool + t().wait}>
                             <div>● 其他开销:   {fmtDuration(t().total - t().llm - t().tool - t().wait)} {pct(t().total - t().llm - t().tool - t().wait)}</div>
                           </Show>
+                          <hr style={{ margin: "4px 0", border: "none", "border-top": "1px solid currentColor", opacity: 0.3 }} />
+                          <div style={{ "font-size": "10px", opacity: 0.6, "margin-top": "4px", "text-wrap": "wrap" }}>
+                            LLM、工具和等待明细按每次执行分别累加，并行时分类之和可能高于累计耗时；本轮耗时仅统计当前一轮
+                          </div>
                         </div>
                       }
                       placement="bottom"
