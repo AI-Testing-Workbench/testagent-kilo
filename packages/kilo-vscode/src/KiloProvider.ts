@@ -3551,6 +3551,7 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
   private async handleSdtCommand(
     text: string,
     sessionID?: string,
+    draftID?: string,
     providerID?: string,
     modelID?: string,
     messageID?: string,
@@ -3566,7 +3567,7 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
       return
     }
 
-    const resolved = await this.resolveSession(sessionID)
+    const resolved = await this.resolveSession(sessionID, draftID)
     if (!resolved) {
       void vscode.window.showErrorMessage("TestAgent: Not connected to CLI backend")
       return
@@ -3612,7 +3613,12 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
   }
 
   // testagent_change start - task command handler (task-start / task-query)
-  private async handleTaskCommand(text: string, sessionID?: string, messageID?: string): Promise<void> {
+  private async handleTaskCommand(
+    text: string,
+    sessionID?: string,
+    messageID?: string,
+    draftID?: string,
+  ): Promise<void> {
     const parts = text.trim().split(/\s+/)
     const raw = parts[0].slice(6) // strip "/task-"
 
@@ -3621,7 +3627,7 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
       return
     }
 
-    const resolved = await this.resolveSession(sessionID)
+    const resolved = await this.resolveSession(sessionID, draftID)
     if (!resolved) {
       void vscode.window.showErrorMessage("TestAgent: Not connected to CLI backend")
       return
@@ -3654,13 +3660,13 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
     console.log(thinkingEnabled)
     // testagent_change start - intercept /sdt-* commands for testflow
     if (text.startsWith("/sdt-")) {
-      await this.handleSdtCommand(text, sessionID, providerID, modelID, messageID, agent)
+      await this.handleSdtCommand(text, sessionID, draftID, providerID, modelID, messageID, agent)
       return
     }
     // testagent_change end
     // testagent_change start - intercept /task-* commands
     if (text.startsWith("/task-")) {
-      await this.handleTaskCommand(text, sessionID, messageID)
+      await this.handleTaskCommand(text, sessionID, messageID, draftID)
       return
     }
     // testagent_change end
@@ -3745,13 +3751,21 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
   ): Promise<void> {
     // testagent_change start - intercept sdt-* commands for testflow
     if (command.startsWith("sdt-")) {
-      await this.handleSdtCommand(`/${command} ${args}`.trim(), sessionID, providerID, modelID, messageID, agent)
+      await this.handleSdtCommand(
+        `/${command} ${args}`.trim(),
+        sessionID,
+        draftID,
+        providerID,
+        modelID,
+        messageID,
+        agent,
+      )
       return
     }
     // testagent_change end
     // testagent_change start - intercept task-* commands
     if (command.startsWith("task-")) {
-      await this.handleTaskCommand(`/${command} ${args}`.trim(), sessionID, messageID)
+      await this.handleTaskCommand(`/${command} ${args}`.trim(), sessionID, messageID, draftID)
       return
     }
     // testagent_change end
