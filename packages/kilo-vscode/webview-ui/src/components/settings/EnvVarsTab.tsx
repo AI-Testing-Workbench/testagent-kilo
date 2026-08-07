@@ -15,10 +15,12 @@ const EnvVarsTab: Component = () => {
   const [systemVars, setSystemVars] = createSignal<EnvVar[]>([])
   const [customVars, setCustomVars] = createSignal<EnvVar[]>([])
   const [loadError, setLoadError] = createSignal("")
-  const [newKey, setNewKey] = createSignal("")
-  const [newValue, setNewValue] = createSignal("")
-  const [keyError, setKeyError] = createSignal("")
-  const [valueError, setValueError] = createSignal("")
+  // testagent_change start - disable adding env vars from UI
+  // const [newKey, setNewKey] = createSignal("")
+  // const [newValue, setNewValue] = createSignal("")
+  // const [keyError, setKeyError] = createSignal("")
+  // const [valueError, setValueError] = createSignal("")
+  // testagent_change end
   // 编辑状态：记录正在编辑的变量 key
   const [editingKey, setEditingKey] = createSignal<string | null>(null)
   const [editValue, setEditValue] = createSignal("")
@@ -42,37 +44,39 @@ const EnvVarsTab: Component = () => {
   })
   onCleanup(unsub)
 
-  const validateKey = (key: string) => {
-    if (!key) return "Key 不能为空"
-    if (!/^[a-zA-Z_][a-zA-Z0-9_]*$/.test(key)) {
-      return "Key 必须以字母或下划线开头，并且只能包含字母、数字和下划线"
-    }
-    if (customVars().some((v) => v.key === key)) {
-      return "Key 已存在"
-    }
-    return ""
-  }
+  // testagent_change start - disable adding env vars from UI
+  // const validateKey = (key: string) => {
+  //   if (!key) return "Key 不能为空"
+  //   if (!/^[a-zA-Z_][a-zA-Z0-9_]*$/.test(key)) {
+  //     return "Key 必须以字母或下划线开头，并且只能包含字母、数字和下划线"
+  //   }
+  //   if (customVars().some((v) => v.key === key)) {
+  //     return "Key 已存在"
+  //   }
+  //   return ""
+  // }
 
-  const handleAdd = () => {
-    const keyErr = validateKey(newKey())
-    const valueErr = !newValue() ? "Value 不能为空" : ""
-    
-    setKeyError(keyErr)
-    setValueError(valueErr)
-    
-    if (keyErr || valueErr) return
-    
-    vscode.postMessage({
-      type: "createEnvVar",
-      key: newKey(),
-      value: newValue(),
-    })
-    // 清空输入
-    setNewKey("")
-    setNewValue("")
-    setKeyError("")
-    setValueError("")
-  }
+  // const handleAdd = () => {
+  //   const keyErr = validateKey(newKey())
+  //   const valueErr = !newValue() ? "Value 不能为空" : ""
+  //
+  //   setKeyError(keyErr)
+  //   setValueError(valueErr)
+  //
+  //   if (keyErr || valueErr) return
+  //
+  //   vscode.postMessage({
+  //     type: "createEnvVar",
+  //     key: newKey(),
+  //     value: newValue(),
+  //   })
+  //   // 清空输入
+  //   setNewKey("")
+  //   setNewValue("")
+  //   setKeyError("")
+  //   setValueError("")
+  // }
+  // testagent_change end
 
   const handleDelete = (key: string) => {
     vscode.postMessage({ type: "deleteEnvVar", key })
@@ -106,6 +110,7 @@ const EnvVarsTab: Component = () => {
 
   return (
     <div style={{ display: "flex", "flex-direction": "column", gap: "12px" }}>
+      {/* testagent_change start - only show configured env vars, disable adding from UI
       <Show when={loadError()}>
         <Card style={{ "background-color": "var(--danger-bg)", border: "1px solid var(--danger)" }}>
           <div style={{ display: "flex", "flex-direction": "column", gap: "8px" }}>
@@ -113,10 +118,10 @@ const EnvVarsTab: Component = () => {
               <span style={{ color: "var(--danger)", "font-weight": "bold", "font-size": "16px" }}>⚠</span>
               <h4 style={{ margin: 0, color: "var(--danger)" }}>环境变量配置文件错误</h4>
             </div>
-            <pre style={{ 
-              margin: 0, 
-              padding: "12px", 
-              "background-color": "var(--bg-subtle)", 
+            <pre style={{
+              margin: 0,
+              padding: "12px",
+              "background-color": "var(--bg-subtle)",
               "border-radius": "4px",
               "white-space": "pre-wrap",
               "word-wrap": "break-word",
@@ -155,8 +160,8 @@ const EnvVarsTab: Component = () => {
           />
         </SettingsRow>
         <SettingsRow title="Value" description="变量值" last>
-          <TextField 
-            value={newValue()} 
+          <TextField
+            value={newValue()}
             onChange={setNewValue}
             validationState={valueError() ? "invalid" : undefined}
             error={valueError()}
@@ -167,6 +172,7 @@ const EnvVarsTab: Component = () => {
           保存环境变量
         </Button>
       </Card>
+      testagent_change end */}
 
       <div>
         <h4 style={{ margin: "0 0 4px" }}>已配置环境变量</h4>
