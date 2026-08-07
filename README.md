@@ -69,13 +69,21 @@ cd packages/testagent-core
 bun run bun:windows
 ```
 
+#### 步骤3： 构建 testflow 独立二进制 + 资源文件
+
+**Windows:**
 ```bash
 # 2. 构建 testflow 独立二进制 + 资源文件
 cd packages/kilo-vscode
-bun run build:testflow
+bun run build:testflow:windows
+```
+**Linux:**
+```bash
+cd packages/kilo-vscode
+bun run build:testflow:linux
 ```
 
-#### 步骤 3：打包 VSIX
+#### 步骤 4：打包 VSIX
 
 ```bash
 cd packages/kilo-vscode
@@ -135,7 +143,7 @@ bun run bun:mac  # 或 bun:windows
 
 # 构建 testflow 独立二进制 + 资源文件
 cd packages/kilo-vscode
-bun run build:testflow
+bun run build:testflow:windows
 ```
 
 ---

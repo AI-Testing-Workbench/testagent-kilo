@@ -1,18 +1,28 @@
-# testagent_change start - publish main automatically and allow manual runs
-name: publish
+# testagent_change start - manual trigger only
+name: testflow-test-build
 run-name: "Build ${{ inputs.platform || 'all platforms' }} from ${{ inputs.branch || github.ref_name }}"
 
 on:
   push:
     branches:
-      - main
+      - testflow
   workflow_dispatch:
     inputs:
       branch:
         description: "构建分支 (Branch to build from)"
         required: true
         type: string
-        default: "main"
+        default: "testflow"
+      testagent_core_branch:
+        description: "testagent-core 子模块分支 (testagent-core submodule branch)"
+        required: true
+        type: string
+        default: "dev"
+      testflow_branch:
+        description: "testflow 子模块分支 (testflow submodule branch)"
+        required: true
+        type: string
+        default: "dev"
       platform:
         description: "构建平台 (Platform to build)"
         required: true
@@ -53,7 +63,11 @@ jobs:
         run: |
           git config --global url."https://github.com/".insteadOf "git@github.com:"
           git submodule sync --recursive packages/testagent-core
-          git submodule update --init --remote --recursive packages/testagent-core
+          git submodule update --init packages/testagent-core
+          cd packages/testagent-core
+          git fetch origin
+          git checkout ${{ inputs.testagent_core_branch || 'dev' }}
+          cd ../..
 
       # testagent_change - root workspace install needs the testflow workspace
       - name: Update testflow submodule
@@ -167,7 +181,11 @@ jobs:
         run: |
           git config --global url."https://github.com/".insteadOf "git@github.com:"
           git submodule sync --recursive packages/testagent-core
-          git submodule update --init --remote --recursive packages/testagent-core
+          git submodule update --init packages/testagent-core
+          cd packages/testagent-core
+          git fetch origin
+          git checkout ${{ inputs.testagent_core_branch || 'dev' }}
+          cd ../..
 
       # testagent_change - use latest testflow commit for CLI builds (fix workspace missing error)
       - name: Update testflow submodule
@@ -191,7 +209,11 @@ jobs:
           fi
           git submodule init packages/testflow
           git config submodule.packages/testflow.url "https://${GITHUB_ACTOR}:${TESTFLOW_GITHUB_TOKEN}@github.com/Pluto-AI-Workbench/testflow.git"
-          git submodule update --remote --recursive packages/testflow
+          git submodule update --init packages/testflow
+          cd packages/testflow
+          git fetch origin
+          git checkout ${{ inputs.testflow_branch || 'dev' }}
+          cd ../..
 
       - uses: ./.github/actions/setup-bun
         if: steps.should_build.outputs.build == 'true'
@@ -301,7 +323,11 @@ jobs:
         run: |
           git config --global url."https://github.com/".insteadOf "git@github.com:"
           git submodule sync --recursive packages/testagent-core
-          git submodule update --init --remote --recursive packages/testagent-core
+          git submodule update --init packages/testagent-core
+          cd packages/testagent-core
+          git fetch origin
+          git checkout ${{ inputs.testagent_core_branch || 'dev' }}
+          cd ../..
 
       # testagent_change - use latest testflow commit for VSIX builds
       - name: Update testflow submodule
@@ -325,7 +351,11 @@ jobs:
           fi
           git submodule init packages/testflow
           git config submodule.packages/testflow.url "https://${GITHUB_ACTOR}:${TESTFLOW_GITHUB_TOKEN}@github.com/Pluto-AI-Workbench/testflow.git"
-          git submodule update --remote --recursive packages/testflow
+          git submodule update --init packages/testflow
+          cd packages/testflow
+          git fetch origin
+          git checkout ${{ inputs.testflow_branch || 'dev' }}
+          cd ../..
 
       - uses: ./.github/actions/setup-bun
         if: steps.should_build.outputs.build == 'true'
