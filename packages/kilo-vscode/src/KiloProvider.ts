@@ -904,6 +904,9 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
         case "sidebar.openSessions":
           for (const id of message.sessionIDs) this.trackedSessionIds.add(id)
           break
+        case "showWarningDialog":
+          vscode.window.showWarningMessage(message.message)
+          break
         // testagent_change end
         case "clearSession":
           this.contextSessionID = this.currentSession?.id ?? this.contextSessionID

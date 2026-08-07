@@ -1,9 +1,9 @@
-/* Settings save bar */
+/* Settings save bar — warning style mirrors the config warnings banner */
 .settings-save-bar-wrap {
   display: flex;
   flex-direction: column;
-  border-top: 1px solid var(--border-weak-base);
-  background: #85bbff9c;
+  border: 1px solid var(--vscode-inputValidation-warningBorder, #cc7a00);
+  background: var(--vscode-inputValidation-warningBackground, rgba(204, 122, 0, 0.1));
 }
 
 .settings-save-bar {

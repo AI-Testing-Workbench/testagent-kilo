@@ -13,7 +13,6 @@ import { useServer } from "./server"
 import { useSession } from "./session"
 import { useVSCode } from "./vscode"
 import { useLanguage } from "./language"
-import { showToast } from "@kilocode/kilo-ui/toast"
 import {
   MAX_TABS,
   PENDING_TAB_PREFIX,
@@ -83,7 +82,10 @@ export const LocalTabsProvider: ParentComponent = (props) => {
     if (active() !== next.active) setActive(next.active)
   }
   const notifyLimit = () => {
-    showToast({ title: language.t("session.tabs.limitReached", { limit: MAX_TABS }) })
+    vscode.postMessage({
+      type: "showWarningDialog",
+      message: language.t("session.tabs.limitReached", { limit: MAX_TABS }),
+    })
   }
   const applyTab = (next: LocalTabState) => {
     if (next.ids.length > MAX_TABS) {

@@ -1867,6 +1867,11 @@ export interface SidebarOpenSessionsRequest {
   type: "sidebar.openSessions"
   sessionIDs: string[]
 }
+
+export interface ShowWarningDialogMessage {
+  type: "showWarningDialog"
+  message: string
+}
 // testagent_change end
 
 export interface PermissionResponseRequest {
@@ -2847,6 +2852,7 @@ export type WebviewMessage =
   | RevertSessionRequest
   | UnrevertSessionRequest
   | SidebarOpenSessionsRequest // testagent_change: local tabs
+  | ShowWarningDialogMessage // testagent_change: local tabs
   | PermissionResponseRequest
   | CreateSessionRequest
   | ClearSessionRequest
