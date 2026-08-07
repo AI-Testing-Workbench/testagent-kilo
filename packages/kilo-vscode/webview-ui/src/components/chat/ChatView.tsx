@@ -110,7 +110,8 @@ export const ChatView: Component<ChatViewProps> = (props) => {
   const suggesting = () => isSuggesting(blocked(), familySuggestions().length)
   // Session is busy only because a question tool call is pending — prompt should behave as idle
   const questioning = () => isQuestioning(blocked(), familyQuestions().length)
-  const dock = () => !props.readonly || !!permissionRequest() || !!delegatedQuestionRequest()
+  // testagent_change - 检查点重置确认时也展示 dock 区域
+  const dock = () => !props.readonly || !!permissionRequest() || !!delegatedQuestionRequest() || !!session.revertConfirm()
 
   // When a bottom-dock permission disappears while the session is busy,
   // the scroll container grows taller. Dispatch a custom event so MessageList can
@@ -174,11 +175,6 @@ export const ChatView: Component<ChatViewProps> = (props) => {
         <SessionTabStrip />
       </Show>
       <TaskHeader readonly={props.readonly} />
-      {/* testagent_change start - 检查点重置确认dock */}
-      <Show when={session.revertConfirm()}>
-        <RevertConfirmDock />
-      </Show>
-      {/* testagent_change end */}
       <div class="chat-messages-wrapper">
         <div class="chat-messages">
           <MessageList
@@ -209,6 +205,11 @@ export const ChatView: Component<ChatViewProps> = (props) => {
           <Show when={delegatedQuestionRequest()} keyed>
             {(q) => <QuestionDock request={q} />}
           </Show>
+          {/* testagent_change start - 检查点重置确认dock，与权限确认弹窗位置一致 */}
+          <Show when={session.revertConfirm()}>
+            <RevertConfirmDock />
+          </Show>
+          {/* testagent_change end */}
           <Show when={!props.readonly && hasMessages() && idle() && !blocked() && !session.revertConfirm()}>
             <div class="new-task-button-wrapper">
               <div class="session-actions-row">
