@@ -3332,3 +3332,40 @@ html[data-theme="kilo-vscode"]
   }
 }
 /* testagent_change end */
+
+/* ============================================
+   Shell tool timeout — yellow warning card
+   (testagent_change start)
+   Mirrors the config-error-banner warning colors.
+   The whole card (header + title + background)
+   turns yellow when a bash command was terminated
+   on timeout, so it reads as a warning at a glance.
+   Selectors mirror basic-tool.css chains and add
+   the timeout variant so they always win.
+   ============================================ */
+html[data-theme="kilo-vscode"]
+  [data-component="tool-part-wrapper"][data-part-type="tool"][data-tool="bash"][data-variant="timeout"] {
+  border: 1px solid var(--vscode-inputValidation-warningBorder, #cc7a00);
+  background: var(--vscode-inputValidation-warningBackground, rgba(204, 122, 0, 0.16));
+}
+
+/* Header trigger (title row) — fill yellow, keep it yellow on hover */
+html[data-theme="kilo-vscode"]
+  [data-component="tool-part-wrapper"][data-part-type="tool"][data-tool="bash"][data-variant="timeout"]
+  [data-component="collapsible"].tool-collapsible
+  [data-slot="collapsible-trigger"] {
+  background-color: var(--vscode-inputValidation-warningBackground, rgba(204, 122, 0, 0.16));
+
+  &:hover {
+    background-color: var(--vscode-inputValidation-warningBackground, rgba(204, 122, 0, 0.16));
+  }
+}
+
+/* Title text — warning yellow */
+html[data-theme="kilo-vscode"]
+  [data-component="tool-part-wrapper"][data-part-type="tool"][data-tool="bash"][data-variant="timeout"]
+  [data-component="tool-trigger"]
+  [data-slot="basic-tool-tool-title"] {
+  color: var(--vscode-inputValidation-warningBorder, #cc7a00);
+}
+/* testagent_change end */

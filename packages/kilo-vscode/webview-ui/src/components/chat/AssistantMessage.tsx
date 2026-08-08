@@ -350,6 +350,12 @@ export const AssistantMessage: Component<AssistantMessageProps> = (props) => {
           // Active suggestion tool parts render the interactive SuggestBar inline
           const activeSuggestion = createMemo(() => matchToolRequest(part, "suggest", session.suggestions()))
 
+          // testagent_change: shell timeout renders the tool part with a yellow warning variant
+          const isTimedOut = createMemo(() => {
+            const state = (part as unknown as ToolPart).state
+            return state?.status === "completed" && state.metadata.timeout === true
+          })
+
           return (
             <Show when={isTestflow || isTestflowLog || isUpstreamSuppressed || activeQuestion() || activeSuggestion() || PART_MAPPING[part.type]}>
               {/* testagent_change start - testflow tools render outside tool-part-wrapper */}
@@ -370,7 +376,13 @@ export const AssistantMessage: Component<AssistantMessageProps> = (props) => {
                             ? "true"
                             : undefined
                         }
-                        data-variant={(part as unknown as ToolPart).state?.status === "error" ? "error" : undefined}
+                        data-variant={
+                          (part as unknown as ToolPart).state?.status === "error"
+                            ? "error"
+                            : isTimedOut()
+                              ? "timeout"
+                              : undefined
+                        }
                       >
                         <Show
                           when={activeSuggestion()}
