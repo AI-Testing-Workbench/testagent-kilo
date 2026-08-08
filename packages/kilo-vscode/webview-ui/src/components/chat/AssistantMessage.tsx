@@ -361,6 +361,15 @@ export const AssistantMessage: Component<AssistantMessageProps> = (props) => {
                       <div
                         data-component="tool-part-wrapper"
                         data-part-type={part.type}
+                        data-tool={part.type === "tool" ? (part as unknown as ToolPart).tool : undefined}
+                        data-running={
+                          part.type === "tool" &&
+                          ["pending", "running"].includes(
+                            (part as unknown as ToolPart).state?.status ?? "",
+                          )
+                            ? "true"
+                            : undefined
+                        }
                         data-variant={(part as unknown as ToolPart).state?.status === "error" ? "error" : undefined}
                       >
                         <Show

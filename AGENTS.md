@@ -23,6 +23,7 @@ The fork chain is: `opencode` → `kilo` → `testagent`
 
 - **Dev**: `bun run dev` (runs from root) or `bun run --cwd packages/testagent-core --conditions=browser src/index.ts`
 - **Extension**: `bun run extension` (build + launch VS Code with the extension in dev mode). Pass `--no-build` to skip the build.
+- **Extension packaging & install**: After completing a requirement, package the extension by running `bun run testagent-nodejs:vsix` from `packages/kilo-vscode/`. When the VSIX build succeeds, automatically install it into VS Code Insiders with `code-insiders --install-extension packages/kilo-vscode/testagent-nodejs-tscode.vsix` (or `testagent-nodejs-tscode-<target>.vsix` when a `--target` was used), then reload the window with `code-insiders --reuse-window`.
 - **Typecheck**: `bun turbo typecheck` (uses `tsgo`, not `tsc`)
 - **Test**: `bun test` from `packages/testagent-core/` (NOT from root -- root blocks tests)
 - **Single test**: `bun test test/tool/tool.test.ts` from `packages/testagent-core/`

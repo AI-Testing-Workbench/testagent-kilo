@@ -3284,3 +3284,69 @@ body.vscode-high-contrast-light {
     outline-offset: -1px;
   }
 }
+
+/* ============================================
+   Shell tool running — blue marquee border
+   (testagent_change start)
+   Rotating blue light band on the tool-part-wrapper
+   border while the bash command is pending/running.
+   Drawn via border-box background-clip so the
+   conic-gradient stays on the 1px border ring and
+   never covers the header/title content inside.
+   ============================================ */
+@property --ta-marquee-angle {
+  syntax: "<angle>";
+  inherits: false;
+  initial-value: 0deg;
+}
+
+@keyframes ta-marquee-spin {
+  to {
+    --ta-marquee-angle: 360deg;
+  }
+}
+
+html[data-theme="kilo-vscode"]
+  [data-component="tool-part-wrapper"][data-tool="bash"][data-running="true"] {
+  border: 1px solid transparent;
+  box-shadow: 0 0 0 1px var(--border-weak-base, var(--vscode-panel-border));
+  margin-bottom: 2px;
+  background:
+    linear-gradient(transparent, transparent) padding-box,
+    conic-gradient(
+        from var(--ta-marquee-angle),
+        #6cb3ff 0deg,
+        transparent 50deg,
+        transparent 360deg
+      )
+      border-box;
+  animation: ta-marquee-spin 4s linear infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  html[data-theme="kilo-vscode"]
+    [data-component="tool-part-wrapper"][data-tool="bash"][data-running="true"] {
+    animation: none;
+  }
+}
+
+/* While running, keep the header trigger background steady so the
+   grey hover tint never fights with the blue marquee border.
+   !important: overrides the upstream hover rule in basic-tool.css
+   which has higher specificity ([data-part-type="tool"] +
+   .tool-collapsible). */
+html[data-theme="kilo-vscode"]
+  [data-component="tool-part-wrapper"][data-tool="bash"][data-running="true"]
+  [data-slot="collapsible-trigger"]:hover {
+  background-color: var(--surface-inset-base, var(--vscode-sideBar-background)) !important;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  html[data-theme="kilo-vscode"]
+    [data-component="tool-part-wrapper"][data-tool="bash"][data-running="true"] {
+    animation: none;
+    border-color: #6cb3ff;
+    margin-bottom: 0;
+  }
+}
+/* testagent_change end */
