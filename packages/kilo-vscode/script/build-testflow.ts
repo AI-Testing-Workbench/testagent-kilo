@@ -15,8 +15,16 @@ function log(msg: string) {
 const targetArg = process.argv.find((arg: string) => arg.startsWith("--target="))
 const targetPlatform = targetArg ? targetArg.split("=")[1] : undefined
 
+// testagent_change - support build mode argument (production or dev)
+const modeArg = process.argv.find((arg: string) => arg.startsWith("--env="))
+const buildEnv = modeArg ? (modeArg.split("=")[1] || "production") : "production"
+
 if (!targetPlatform) {
   throw new Error("--target= argument is required. Use: linux-x64, linux-arm64, alpine-x64, alpine-arm64, darwin-x64, darwin-arm64, win32-x64")
+}
+
+if (!["production", "dev"].includes(buildEnv)) {
+  throw new Error(`Invalid build mode: ${buildEnv}. Use: production or dev`)
 }
 
 // Map VS Code target to Bun compile target
@@ -42,11 +50,12 @@ const binaryName = config.binaryName
 const testflowBin = join(binDir, binaryName)
 const testflowResDir = join(binDir, "testflow-res")
 
-log(`Building for target: ${targetPlatform} (${target})`)
+log(`Building for target: ${targetPlatform} (${target}), mode: ${buildEnv}`)
 
 // 1. build testflow dist (tsc)
-log("Building testflow dist...")
-await $`bun run build`.cwd(testflowDir)
+log(`Building testflow dist (${buildEnv} mode)...`)
+const buildScript = buildEnv === "dev" ? "build:dev" : "build"
+await $`bun run ${buildScript}`.cwd(testflowDir)
 
 // 2. compile standalone binary
 log(`Compiling testflow binary (${target})...`)
@@ -58,5 +67,13 @@ if (existsSync(testflowResDir)) rmSync(testflowResDir, { recursive: true })
 mkdirSync(testflowResDir, { recursive: true })
 cpSync(join(testflowDir, "dist", "config"), join(testflowResDir, "config"), { recursive: true })
 cpSync(join(testflowDir, "dist", "templates"), join(testflowResDir, "templates"), { recursive: true })
+const sourceEnvFile = buildEnv === "dev"
+  ? "env.dev.yaml"
+  : "env.production.yaml"
+
+cpSync(
+  join(testflowDir, "dist", sourceEnvFile),
+  join(testflowResDir, "env.yaml"),
+)
 
 log(`✅ Done. Binary: ${testflowBin}`)

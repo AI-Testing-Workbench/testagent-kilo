@@ -73,14 +73,21 @@ bun run bun:windows
 
 **Windows:**
 ```bash
-# 2. 构建 testflow 独立二进制 + 资源文件
+# 2. 构建 testflow 独立二进制 + 资源文件, windows版本，可以使用--env 指定编辑环境， 默认不传为production
 cd packages/kilo-vscode
 bun run build:testflow:windows
+
+bun run build:testflow:windows --env=dev
+bun run build:testflow:windows --env=production
 ```
 **Linux:**
 ```bash
+#构建 testflow 独立二进制 + 资源文件, linux版本，可以使用--env 指定编辑环境， 默认不传为production
 cd packages/kilo-vscode
 bun run build:testflow:linux
+
+bun run build:testflow:linux --env=dev
+bun run build:testflow:linux --env=production
 ```
 
 #### 步骤 4：打包 VSIX
