@@ -60,12 +60,12 @@
 /* Select dropdown content */
 [data-component="select-content"] {
   min-width: 200px !important;
-  border-radius: 2px;
+  border-radius: 6px;
   border: 1px solid var(--border-focus, var(--vscode-focusBorder, #007fd4));
   padding: 0;
   overflow: hidden;
   background-color: var(--background-stronger);
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.36);
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.15);
 
   [data-slot="select-select-content-list"] {
     max-height: 328px;

@@ -194,6 +194,12 @@ export function mockSessionValue(overrides?: {
     revertedCount: () => 0,
     summary: () => undefined,
     worktreeStats: () => undefined,
+    // testagent_change start - 检查点重置确认状态
+    revertConfirm: () => null,
+    requestRevert: noop,
+    cancelRevert: noop,
+    confirmRevert: noop,
+    // testagent_change end
     revertSession: noop,
     unrevertSession: noop,
     favoriteModels: () => [],
@@ -213,7 +219,7 @@ export function mockSessionValue(overrides?: {
     createSession: noop,
     clearCurrentSession: noop,
     loadSessions: noop,
-    loadOlderMessages: noop,
+    loadOlderMessages: () => false,
     selectSession: noop,
     deleteSession: noop,
     renameSession: noop,

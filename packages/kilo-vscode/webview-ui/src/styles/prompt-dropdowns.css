@@ -9,11 +9,12 @@
   right: 0;
   z-index: 10;
   background: var(--vscode-editorWidget-background, var(--vscode-input-background));
-  border: 1px solid var(--vscode-editorWidget-border, var(--vscode-input-border));
-  border-radius: 4px;
+  border: 1px solid var(--vscode-focusBorder, #007fd4);
+  border-radius: 6px;
   overflow: hidden;
   max-height: 200px;
   overflow-y: auto;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.15);
 }
 
 .file-mention-item {
@@ -74,12 +75,17 @@
   left: 0;
   right: 0;
   z-index: 10;
-  background: var(--vscode-editorWidget-background, var(--vscode-input-background));
-  border: 1px solid var(--vscode-editorWidget-border, var(--vscode-input-border));
-  border-radius: 4px;
+  background: #ffffff;
+  border: 1px solid #007fd4;
+  border-radius: 6px;
   overflow: hidden;
   max-height: 200px;
   overflow-y: auto;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.15);
+}
+
+body.vscode-dark .slash-command-dropdown {
+  background: var(--vscode-editorWidget-background, var(--vscode-input-background));
 }
 
 .slash-command-item {
@@ -149,11 +155,12 @@
   right: 0;
   z-index: 10;
   background: var(--vscode-editorWidget-background, var(--vscode-input-background));
-  border: 1px solid var(--vscode-editorWidget-border, var(--vscode-input-border));
-  border-radius: 4px;
+  border: 1px solid var(--vscode-focusBorder, #007fd4);
+  border-radius: 6px;
   overflow: hidden;
   max-height: 200px;
   overflow-y: auto;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.15);
 }
 
 .stages-item {

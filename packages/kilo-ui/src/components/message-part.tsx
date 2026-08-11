@@ -1262,7 +1262,12 @@ PART_MAPPING["tool"] = function ToolPartDisplay(props) {
 
   return (
     <Show when={!hideQuestion()}>
-      <div data-component="tool-part-wrapper" data-part-type="tool" data-tool={part.tool}>
+      <div
+        data-component="tool-part-wrapper"
+        data-part-type="tool"
+        data-tool={part.tool}
+        data-variant={part.state.status === "error" ? "error" : undefined}
+      >
         <Switch>
           <Match when={part.state.status === "error" && part.state.error}>
             {(error) => {
@@ -2128,9 +2133,7 @@ ToolRegistry.register({
         trigger={
           <div data-slot="basic-tool-tool-info-structured">
             <div data-slot="basic-tool-tool-info-main">
-              <span data-slot="basic-tool-tool-title">
-                <TextShimmer text={i18n.t("ui.tool.shell")} active={pending()} />
-              </span>
+              <span data-slot="basic-tool-tool-title">{i18n.t("ui.tool.shell")}</span>
               <Show when={subtitle()}>{(text) => <ShellText text={text()} animate={reveal()} />}</Show>
             </div>
           </div>

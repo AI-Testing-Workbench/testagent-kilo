@@ -297,7 +297,7 @@ const SimpleToolRow: Component<{
       }}
     >
       <div style={{ flex: 1, "min-width": 0 }}>
-        <div style={{ "font-size": "13px", color: "var(--text-strong-base, white)" }}>{toolTitle(props.id)}</div>
+        <div style={{ "font-size": "13px", color: "var(--text-strong, var(--vscode-foreground))" }}>{toolTitle(props.id)}</div>
         <div
           style={{
             "font-size": "12px",
@@ -352,7 +352,7 @@ const GranularToolRow: Component<{
       {/* Tool header with name and description */}
       <div style={{ display: "flex", gap: "24px", "align-items": "flex-start", "justify-content": "space-between" }}>
         <div style={{ flex: 1, "min-width": 0 }}>
-          <div style={{ "font-size": "13px", color: "var(--text-strong-base, white)" }}>{toolTitle(props.tool.id)}</div>
+          <div style={{ "font-size": "13px", color: "var(--text-strong, var(--vscode-foreground))" }}>{toolTitle(props.tool.id)}</div>
           <div
             style={{
               "font-size": "12px",

@@ -3,6 +3,33 @@ import type { Part, TokenUsage } from "../types/messages"
 /** Minimal message shape for cost breakdown helpers. */
 export type CostMessage = { id: string; role: string; cost?: number }
 
+/** Minimal message shape for timing helpers — includes time fields from backend */
+export type TimingMessage = {
+  id: string
+  role: string
+  time?: {
+    created: number
+    completed?: number
+    llm?: number
+  }
+}
+
+/** Tool state shape with time fields for timing computation */
+type TimingToolState = {
+  status: string
+  time?: { start: number; end?: number }
+  metadata?: { sessionId?: string }
+}
+
+/** Minimal tool part shape for timing extraction. */
+type TimingTaskPart = {
+  id?: string
+  type: string
+  tool?: string
+  metadata?: { sessionId?: string }
+  state?: TimingToolState
+}
+
 /** Minimal tool part shape for label extraction. */
 type ToolState = {
   input?: { description?: string; subagent_type?: string }
@@ -220,4 +247,143 @@ export function collapseCostBreakdown(
   const hidden = reversed.slice(VISIBLE_CHILDREN)
   const aggregated = hidden.reduce((sum, e) => sum + e.cost, 0)
   return [root, ...visible, { label: summaryLabel(hidden.length), cost: aggregated }]
+}
+
+// ── Timing ─────────────────────────────────────────────────────
+
+/** Tools that wait for user input */
+const WAIT_TOOLS = new Set(["question", "invalid"])
+
+export interface TimingInfo {
+  total: number  // 总耗时 (ms)
+  llm: number    // LLM 总耗时 (ms)
+  wait: number   // 等待用户耗时 (ms)
+  actual: number // 实际执行耗时 = total - wait (ms)
+  tool: number   // 工具执行耗时 (ms)
+  permissionWait: number // 权限等待耗时 (ms)
+  questionWait: number   // 问题等待耗时 (ms)
+  toolBreakdown?: Record<string, number> // 各工具名称的耗时明细
+}
+
+export interface TimingSegment {
+  key: string
+  label: string
+  duration: number
+  percent: number
+  width: number
+  color: string
+}
+
+/**
+ * Compute timing breakdown across a session family.
+ * Pure function — no store dependency.
+ */
+export function buildFamilyTiming(
+  family: Set<string>,
+  messages: Record<string, TimingMessage[]>,
+  parts: Record<string, TimingTaskPart[]>,
+  permissionWaits: Record<string, number> = {},
+  busySince: Record<string, number> = {},
+): TimingInfo | undefined {
+  let llm = 0
+  let wait = 0
+  let tool = 0
+  let permissionWait = 0
+  let questionWait = 0
+  const toolBreakdown: Record<string, number> = {}
+  const seenMessages = new Set<string>()
+  const seenParts = new Set<string>()
+  const intervals: Array<[number, number]> = []
+  let has = false
+
+  for (const sid of family) {
+    if (busySince[sid]) intervals.push([busySince[sid], Date.now()])
+    const msgs = messages[sid] ?? []
+    for (const m of msgs) {
+      if (m.role !== "assistant" || seenMessages.has(m.id)) continue
+      seenMessages.add(m.id)
+      // LLM 耗时
+      llm += m.time?.llm ?? 0
+      if (m.time?.completed && m.time.created) intervals.push([m.time.created, m.time.completed])
+      has = true
+
+      // 遍历此消息的 parts，统计等待工具和工具执行耗时
+      const pList = parts[m.id] ?? []
+      for (const p of pList) {
+        if (p.id && seenParts.has(p.id)) continue
+        if (p.id) seenParts.add(p.id)
+        const child = childID(p)
+        if (p.tool === "task" && child && family.has(child)) continue
+        if (p.type === "tool" && p.state?.time?.start) {
+          const dur = p.state.time.end
+            ? p.state.time.end - p.state.time.start
+            : Date.now() - p.state.time.start // 运行中的工具实时估算
+          if (p.tool && WAIT_TOOLS.has(p.tool)) {
+            wait += dur // question/invalid 只算等待，不算工具执行
+            if (p.tool === "question") {
+              questionWait += dur
+            }
+          } else {
+            tool += dur // 其他正常工具算工具执行
+            if (p.tool) {
+              toolBreakdown[p.tool] = (toolBreakdown[p.tool] ?? 0) + dur
+            }
+          }
+        }
+      }
+    }
+    // 累加 permission 等待耗时
+    wait += permissionWaits[sid] ?? 0
+    permissionWait += permissionWaits[sid] ?? 0
+  }
+
+  // 旧会话可能只有 total（从 time.created/computed 算出），但没有 llm/tool/wait 细项
+  // 这种情况不展示耗时面板
+  if (llm === 0) return undefined
+
+  if (!has) return undefined
+
+  const accumulated = llm + tool + wait
+  const elapsed = intervals
+    .sort((a, b) => a[0] - b[0])
+    .reduce(
+      (sum, span) => ({
+        total: sum.total + Math.max(0, span[1] - Math.max(span[0], sum.end)),
+        end: Math.max(sum.end, span[1]),
+      }),
+      { total: 0, end: 0 },
+    ).total
+  const finalTotal = elapsed || accumulated
+
+  const actual = Math.max(0, finalTotal - wait)
+
+  return { total: finalTotal, llm, wait, actual, tool, permissionWait, questionWait, toolBreakdown }
+}
+
+/**
+ * Compute timing segments for the breakdown bar display.
+ * Segments are: LLM, 工具执行, 等待用户, 其他开销.
+ * "实际执行" (total - wait) is only shown in tooltip, not as a bar segment.
+ */
+export function buildTimingSegments(info: Pick<TimingInfo, "total" | "llm" | "tool" | "wait">): TimingSegment[] {
+  const pct = (v: number) => (info.total > 0 ? (v / info.total) * 100 : 0)
+  const overhead = Math.max(0, info.total - info.llm - info.tool - info.wait)
+  return [
+    { key: "llm", label: "LLM", duration: info.llm, percent: pct(info.llm), width: pct(info.llm), color: "var(--syntax-property)" },
+    { key: "tool", label: "工具执行", duration: info.tool, percent: pct(info.tool), width: pct(info.tool), color: "var(--syntax-info)" },
+    { key: "wait", label: "等待用户", duration: info.wait, percent: pct(info.wait), width: pct(info.wait), color: "var(--syntax-warning, #d2a106)" },
+    { key: "overhead", label: "其他开销", duration: overhead, percent: pct(overhead), width: pct(overhead), color: "var(--syntax-muted, #888)" },
+  ].filter((s) => s.duration > 0)
+}
+
+/**
+ * Format milliseconds to a human-readable duration string.
+ */
+export function fmtDuration(ms: number): string {
+  if (!ms || ms < 0) return "0s"
+  if (ms < 1000) return `${ms}ms`
+  if (ms < 60000) return `${(ms / 1000).toFixed(1)}s`
+  const m = Math.floor(ms / 60000)
+  const s = Math.round((ms % 60000) / 1000)
+  return `${m}m ${s}s`
 }

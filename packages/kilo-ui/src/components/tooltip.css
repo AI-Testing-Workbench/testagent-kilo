@@ -1,9 +1,10 @@
 /* Kilo Tooltip overrides – sized to match @vscode/webview-ui-toolkit */
 
 [data-component="tooltip"] {
-  border-radius: 0;
+  border-radius: 6px;
   font-size: 13px;
   line-height: normal;
   font-weight: 400;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.36);
+  border: 1px solid var(--border-focus, var(--vscode-focusBorder, #007fd4));
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.15);
 }

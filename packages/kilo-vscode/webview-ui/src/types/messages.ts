@@ -21,9 +21,9 @@ export type SessionStatusInfo =
 // Tool state for tool parts
 export type ToolState =
   | { status: "pending"; input: Record<string, unknown> }
-  | { status: "running"; input: Record<string, unknown>; title?: string }
-  | { status: "completed"; input: Record<string, unknown>; output: string; title: string }
-  | { status: "error"; input: Record<string, unknown>; error: string }
+  | { status: "running"; input: Record<string, unknown>; title?: string; time?: { start: number } }
+  | { status: "completed"; input: Record<string, unknown>; output: string; title: string; time?: { start: number; end: number; compacted?: number } }
+  | { status: "error"; input: Record<string, unknown>; error: string; time?: { start: number; end: number } }
 
 // Base part interface - all parts have these fields
 export interface BasePart {
@@ -120,7 +120,7 @@ export interface Message {
   content?: string
   parts?: Part[]
   createdAt: string
-  time?: { created: number; completed?: number }
+  time?: { created: number; completed?: number; llm?: number }
   agent?: string
   model?: { providerID: string; modelID: string }
   providerID?: string
@@ -401,6 +401,7 @@ export interface AgentConfig {
   top_p?: number | null
   steps?: number | null
   permission?: PermissionConfig
+  options?: Record<string, unknown> // testagent_change - thinking 存储在 options.chat_template_kwargs.enable_thinking
 }
 
 export interface ProviderConfig {
@@ -494,6 +495,7 @@ export interface Config {
   mcp?: Record<string, McpConfig>
   command?: Record<string, CommandConfig>
   plugin?: PluginSpec[]
+  plugin_enable?: boolean
   plugin_origins?: PluginOrigin[]
   mcp_origins?: Record<string, string>
   mcp_scopes?: Record<string, "local" | "global">
@@ -558,8 +560,15 @@ export interface ConnectionStateMessage {
 export interface ErrorMessage {
   type: "error"
   message: string
+  detail?: string
   code?: string
   sessionID?: string
+}
+
+export interface ConfigWarningsMessage {
+  type: "configWarnings"
+  title: string
+  detail: string
 }
 
 export interface SendMessageFailedMessage {
@@ -618,6 +627,7 @@ export interface SessionCreatedMessage {
   type: "sessionCreated"
   session: SessionInfo
   draftID?: string
+  activate?: boolean // testagent_change: added for local tabs
 }
 
 export interface SessionForkedMessage {
@@ -1143,6 +1153,11 @@ export interface RecentsLoadedMessage {
 export interface FavoritesLoadedMessage {
   type: "favoritesLoaded"
   favorites: ModelSelection[]
+}
+
+export interface EnableThinkingsLoadedMessage {
+  type: "enableThinkingsLoaded"
+  enableThinkings: Record<string, boolean>
 }
 
 // Per-mode model selections loaded from model.json (extension → webview)
@@ -1672,6 +1687,7 @@ export type ExtensionMessage =
   | GitStatusMessage
   | ConnectionStateMessage
   | ErrorMessage
+  | ConfigWarningsMessage
   | SendMessageFailedMessage
   | PartUpdatedMessage
   | PartsUpdatedMessage
@@ -1767,6 +1783,7 @@ export type ExtensionMessage =
   | EnhancePromptResultMessage
   | EnhancePromptErrorMessage
   | ViewSubAgentSessionMessage
+  | { type: "envVarsData"; envVars: { system: Record<string, { key: string; value: string }>; custom: Record<string, { key: string; value: string }> } }
   | DiffViewerDiffsMessage
   | DiffViewerLoadingMessage
   | DiffViewerRevertFileResultMessage
@@ -1780,6 +1797,7 @@ export type ExtensionMessage =
   | CustomProviderModelsFetchedMessage
   | RecentsLoadedMessage
   | FavoritesLoadedMessage
+  | EnableThinkingsLoadedMessage
   | RuntimeResultMessage // testagent_change
   | ShellPathResolvedMessage // testagent_change
   | MemorySettingsLoadedMessage // testagent_change
@@ -1822,6 +1840,7 @@ export interface SendMessageRequest {
   modelID?: string
   agent?: string
   variant?: string
+  thinkingEnabled?: boolean
   files?: FileAttachment[]
 }
 
@@ -1842,6 +1861,18 @@ export interface UnrevertSessionRequest {
   type: "unrevertSession"
   sessionID: string
 }
+
+// testagent_change start - local tabs
+export interface SidebarOpenSessionsRequest {
+  type: "sidebar.openSessions"
+  sessionIDs: string[]
+}
+
+export interface ShowWarningDialogMessage {
+  type: "showWarningDialog"
+  message: string
+}
+// testagent_change end
 
 export interface PermissionResponseRequest {
   type: "permissionResponse"
@@ -1897,6 +1928,7 @@ export interface ImportAndSendMessage {
   modelID?: string
   agent?: string
   variant?: string
+  thinkingEnabled?: boolean
   files?: FileAttachment[]
   command?: string
   commandArgs?: string
@@ -2000,6 +2032,7 @@ export interface SendCommandRequest {
   modelID?: string
   agent?: string
   variant?: string
+  thinkingEnabled?: boolean
   files?: FileAttachment[]
 }
 
@@ -2010,6 +2043,7 @@ export interface ContinueTaskRequest {
   messageID?: string
   providerID?: string
   modelID?: string
+  thinkingEnabled?: boolean
 }
 // testagent_change end
 
@@ -2563,6 +2597,18 @@ export interface RequestVariantsMessage {
   type: "requestVariants"
 }
 
+// Enable thinking persistence (webview → extension)
+export interface PersistEnableThinkingRequest {
+  type: "persistEnableThinking"
+  key: string
+  enabled: boolean
+}
+
+// Request stored enableThinkings from extension (webview → extension)
+export interface RequestEnableThinkingsMessage {
+  type: "requestEnableThinkings"
+}
+
 // Enhance prompt request (webview → extension)
 export interface EnhancePromptRequest {
   type: "enhancePrompt"
@@ -2805,6 +2851,8 @@ export type WebviewMessage =
   | AbortRequest
   | RevertSessionRequest
   | UnrevertSessionRequest
+  | SidebarOpenSessionsRequest // testagent_change: local tabs
+  | ShowWarningDialogMessage // testagent_change: local tabs
   | PermissionResponseRequest
   | CreateSessionRequest
   | ClearSessionRequest
@@ -2897,9 +2945,15 @@ export type WebviewMessage =
   | SetTabOrderRequest
   | SetWorktreeOrderRequest
   | SetSessionsCollapsedRequest
+  | { type: "requestEnvVars" }
+  | { type: "createEnvVar"; key: string; value: string }
+  | { type: "updateEnvVar"; key: string; value: string }
+  | { type: "deleteEnvVar"; key: string }
   | SetReviewDiffStyleRequest
   | PersistVariantRequest
   | RequestVariantsMessage
+  | PersistEnableThinkingRequest
+  | RequestEnableThinkingsMessage
   | RequestCloudSessionDataMessage
   | ImportAndSendMessage
   | RequestBranchesMessage

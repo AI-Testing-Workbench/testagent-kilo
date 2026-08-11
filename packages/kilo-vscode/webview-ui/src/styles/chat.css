@@ -9,7 +9,10 @@
    Task Header Todos
    ============================================ */
 @import "./task-header.css";
+@import "./search-menu.css";
 @import "./chat-layout.css";
+@import "./prompt-rail.css";
+@import "./session-tabs.css";
 @import "./banners.css";
 @import "./session-actions.css";
 @import "./welcome.css";
@@ -358,6 +361,59 @@
   color: var(--text-muted, var(--vscode-descriptionForeground));
   font-style: italic;
   font-size: 11px;
+}
+
+/* ============================================
+   Revert Confirm Dock (testagent_change - 检查点重置确认)
+   ============================================ */
+
+.revert-confirm-dock {
+  margin: 8px 12px;
+  padding: 10px 12px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  border: 1px solid var(--vscode-inputValidation-errorBorder, #f14c4c);
+  border-radius: 4px;
+  background: var(--vscode-inputValidation-errorBackground, rgba(241, 76, 76, 0.1));
+  font-size: 12px;
+  flex-shrink: 0;
+}
+
+.revert-confirm-dock-content {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+}
+
+.revert-confirm-dock-content [data-component="icon"] {
+  color: var(--vscode-inputValidation-errorBorder, #f14c4c);
+  flex-shrink: 0;
+}
+
+.revert-confirm-dock-text {
+  color: var(--text-base, var(--vscode-foreground));
+  line-height: 1.4;
+  word-break: break-word;
+}
+
+.revert-confirm-dock-actions {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  flex-shrink: 0;
+}
+
+.revert-confirm-dock-actions > [data-component="button"][data-variant="primary"] {
+  color: var(--vscode-button-foreground);
+  background-color: var(--vscode-button-background);
+  border: 1px solid var(--vscode-button-border, transparent);
+
+  &:hover:not(:disabled) {
+    background-color: var(--vscode-button-hoverBackground);
+  }
 }
 
 /* ============================================
@@ -1036,12 +1092,16 @@
   left: 0;
   right: 0;
   z-index: 10;
-  background: var(--vscode-editorWidget-background, var(--vscode-input-background));
-  border: 1px solid var(--vscode-editorWidget-border, var(--vscode-input-border));
+  background: #ffffff;
+  border: 1px solid #007fd4;
   border-radius: 4px;
   overflow: hidden;
   max-height: 200px;
   overflow-y: auto;
+}
+
+body.vscode-dark .slash-command-dropdown {
+  background: var(--vscode-editorWidget-background, var(--vscode-input-background));
 }
 
 .slash-command-item {
@@ -2150,6 +2210,14 @@
   animation: ta-ring-pulse-bg 2s ease-in-out infinite;
 }
 
+.waiting-avatar {
+  width: 44px;
+  height: 44px;
+  flex-shrink: 0;
+  animation: ta-float 3.2s ease-in-out infinite;
+  overflow: visible;
+}
+
 .working-indicator {
   display: flex;
   align-items: center;
@@ -2219,6 +2287,29 @@
 [data-slot="task-header-title"] {
   display: flex;
   align-items: center;
+  gap: 6px;
+  min-width: 0;
+}
+
+.task-header-title-text {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.task-header-title-input {
+  flex: 1;
+  min-width: 0;
+}
+
+.task-header-title-edit[data-component="icon-button"] {
+  flex-shrink: 0;
+  opacity: 0.7;
+}
+
+.task-header-title-edit[data-component="icon-button"]:hover {
+  opacity: 1;
 }
 
 @keyframes home-blink {
@@ -2621,6 +2712,13 @@ body.vscode-light
   width: 100%;
 }
 
+.vscode-session-turn-user [data-slot="user-message-text"] {
+  background: color-mix(in srgb, var(--vscode-textLink-foreground, #3794ff) 8%, var(--surface-base));
+  border: 1px solid color-mix(in srgb, var(--vscode-textLink-foreground, #3794ff) 35%, transparent);
+  border-radius: 6px;
+  padding: 8px 12px;
+}
+
 .vscode-session-turn-user[data-revert-disabled] [data-component="icon-button"][data-icon="arrow-left"] {
   opacity: 0.4;
   cursor: not-allowed;
@@ -2660,7 +2758,8 @@ body.vscode-light
 
 [data-component="question-dock"] {
   margin: 8px;
-  background-color: var(--surface-base);
+  background-color: var(--surface-inset-base, var(--vscode-sideBar-background));
+  border: 1px solid var(--vscode-inputValidation-infoBorder, #3794ff);
   border-radius: 8px;
   overflow: hidden;
 
@@ -2670,8 +2769,10 @@ body.vscode-light
     align-items: center;
     justify-content: space-between;
     gap: 8px;
-    padding: 10px 10px 6px 14px;
+    padding: 10px 10px 8px 14px;
     cursor: pointer;
+    border-bottom: 1px solid var(--vscode-inputValidation-infoBorder, #3794ff);
+    background: rgb(234, 244, 254);
   }
 
   [data-slot="question-dock-header-content"] {
@@ -2687,7 +2788,7 @@ body.vscode-light
     font-size: 12px;
     font-weight: var(--font-weight-medium);
     line-height: var(--line-height-large);
-    color: var(--text-weak);
+    color: color-mix(in srgb, var(--vscode-textLink-foreground) 85%, black);
   }
 
   /* Shown only when collapsed — truncated question preview */
@@ -2810,7 +2911,7 @@ body.vscode-light
     transition: background-color 0.15s ease;
 
     &:hover:not([data-picked="true"]) {
-      background-color: var(--surface-raised-stronger-non-alpha);
+      background-color: var(--surface-base-hover);
     }
 
     &[data-picked="true"] {
@@ -2833,7 +2934,7 @@ body.vscode-light
     height: 16px;
     padding: 2px;
     border-radius: var(--radius-sm);
-    border: 1px solid var(--border-base);
+    border: 1px solid var(--vscode-button-background);
     display: inline-flex;
     align-items: center;
     justify-content: center;
@@ -2917,7 +3018,7 @@ body.vscode-light
     gap: 6px;
     padding: 6px 10px;
     margin: 0 4px;
-    background-color: var(--surface-raised-stronger-non-alpha);
+    background-color: var(--surface-inset-base, var(--vscode-sideBar-background));
     border: none;
     border-radius: 6px;
   }
@@ -2985,7 +3086,8 @@ body.vscode-light
     display: flex;
     align-items: center;
     justify-content: end;
-    padding: 6px 10px 10px;
+    padding: 10px 10px 10px;
+    border-top: 1px solid var(--border-base);
   }
 
   [data-slot="question-footer-actions"] {
@@ -2999,13 +3101,13 @@ body.vscode-light
     box-shadow: none;
   }
 
-  [data-slot="question-footer-actions"] > [data-component="button"][data-variant="primary"] {
-    color: var(--vscode-button-foreground);
-    background-color: var(--vscode-button-background);
-    border: 1px solid var(--vscode-button-border, transparent);
+  [data-slot="question-footer-actions"] > [data-component="button"] {
+    color: #fff;
+    background-color: var(--vscode-inputValidation-infoBorder, #3794ff);
+    border: 1px solid transparent;
 
     &:hover:not(:disabled) {
-      background-color: var(--vscode-button-hoverBackground);
+      background-color: color-mix(in srgb, var(--vscode-inputValidation-infoBorder, #3794ff) 85%, black);
     }
   }
 }
@@ -3182,3 +3284,101 @@ body.vscode-high-contrast-light {
     outline-offset: -1px;
   }
 }
+
+/* ============================================
+   Shell tool running — blue marquee border
+   (testagent_change start)
+   Rotating blue light band on the tool-part-wrapper
+   border while the bash command is pending/running.
+   Drawn via border-box background-clip so the
+   conic-gradient stays on the 1px border ring and
+   never covers the header/title content inside.
+   ============================================ */
+@property --ta-marquee-angle {
+  syntax: "<angle>";
+  inherits: false;
+  initial-value: 0deg;
+}
+
+@keyframes ta-marquee-spin {
+  to {
+    --ta-marquee-angle: 360deg;
+  }
+}
+
+html[data-theme="kilo-vscode"]
+  [data-component="tool-part-wrapper"][data-tool="bash"][data-running="true"] {
+  border: 1px solid transparent;
+  box-shadow: 0 0 0 1px var(--border-weak-base, var(--vscode-panel-border));
+  margin-bottom: 2px;
+  background:
+    linear-gradient(var(--surface-inset-base, var(--vscode-sideBar-background)), var(--surface-inset-base, var(--vscode-sideBar-background))) padding-box,
+    conic-gradient(
+        from var(--ta-marquee-angle),
+        #6cb3ff 0deg,
+        transparent 50deg,
+        transparent 360deg
+      )
+      border-box;
+  animation: ta-marquee-spin 4s linear infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  html[data-theme="kilo-vscode"]
+    [data-component="tool-part-wrapper"][data-tool="bash"][data-running="true"] {
+    animation: none;
+    border-color: #6cb3ff;
+    margin-bottom: 0;
+  }
+}
+/* testagent_change end */
+
+/* ============================================
+   Shell tool timeout — yellow warning card
+   (testagent_change start)
+   Mirrors the config-error-banner warning colors.
+   The whole card (header + title + background)
+   turns yellow when a bash command was terminated
+   on timeout, so it reads as a warning at a glance.
+   Selectors mirror basic-tool.css chains and add
+   the timeout variant so they always win.
+   ============================================ */
+html[data-theme="kilo-vscode"]
+  [data-component="tool-part-wrapper"][data-part-type="tool"][data-tool="bash"][data-variant="timeout"] {
+  border: 1px solid var(--vscode-inputValidation-warningBorder, #cc7a00);
+  background: var(--vscode-inputValidation-warningBackground, rgba(204, 122, 0, 0.16));
+}
+
+/* Header trigger (title row) — fill yellow, keep it yellow on hover */
+html[data-theme="kilo-vscode"]
+  [data-component="tool-part-wrapper"][data-part-type="tool"][data-tool="bash"][data-variant="timeout"]
+  [data-component="collapsible"].tool-collapsible
+  [data-slot="collapsible-trigger"] {
+  background-color: var(--vscode-inputValidation-warningBackground, rgba(204, 122, 0, 0.16));
+
+  &:hover {
+    background-color: var(--vscode-inputValidation-warningBackground, rgba(204, 122, 0, 0.16));
+  }
+}
+
+/* Title text — warning yellow */
+html[data-theme="kilo-vscode"]
+  [data-component="tool-part-wrapper"][data-part-type="tool"][data-tool="bash"][data-variant="timeout"]
+  [data-component="tool-trigger"]
+  [data-slot="basic-tool-tool-title"] {
+  color: var(--vscode-inputValidation-warningBorder, #cc7a00);
+}
+/* testagent_change end */
+
+/* ============================================
+   Revert Banner — warning card
+   (testagent_change start)
+   Mirrors the config-error-banner warning colors:
+   yellow border + background so the reverted
+   checkpoint state reads as a warning at a glance.
+   ============================================ */
+.revert-banner {
+  border: 1px solid var(--vscode-inputValidation-warningBorder, #cc7a00);
+  background: var(--vscode-inputValidation-warningBackground, rgba(204, 122, 0, 0.1));
+}
+/* testagent_change end */

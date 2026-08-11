@@ -350,15 +350,40 @@ export const AssistantMessage: Component<AssistantMessageProps> = (props) => {
           // Active suggestion tool parts render the interactive SuggestBar inline
           const activeSuggestion = createMemo(() => matchToolRequest(part, "suggest", session.suggestions()))
 
+          // testagent_change: shell timeout renders the tool part with a yellow warning variant
+          const isTimedOut = createMemo(() => {
+            const state = (part as unknown as ToolPart).state
+            return state?.status === "completed" && state.metadata.timeout === true
+          })
+
           return (
             <Show when={isTestflow || isTestflowLog || isUpstreamSuppressed || activeQuestion() || activeSuggestion() || PART_MAPPING[part.type]}>
               {/* testagent_change start - testflow tools render outside tool-part-wrapper */}
               <Show when={isTestflowLog} fallback={
                 <Show when={isTestflow} fallback={
-                  <div data-component="tool-part-wrapper" data-part-type={part.type}>
-                    <Show
-                      when={activeQuestion()}
-                      fallback={
+                  <Show
+                    when={activeQuestion()}
+                    fallback={
+                      <div
+                        data-component="tool-part-wrapper"
+                        data-part-type={part.type}
+                        data-tool={part.type === "tool" ? (part as unknown as ToolPart).tool : undefined}
+                        data-running={
+                          part.type === "tool" &&
+                          ["pending", "running"].includes(
+                            (part as unknown as ToolPart).state?.status ?? "",
+                          )
+                            ? "true"
+                            : undefined
+                        }
+                        data-variant={
+                          (part as unknown as ToolPart).state?.status === "error"
+                            ? "error"
+                            : isTimedOut()
+                              ? "timeout"
+                              : undefined
+                        }
+                      >
                         <Show
                           when={activeSuggestion()}
                           fallback={
@@ -383,11 +408,11 @@ export const AssistantMessage: Component<AssistantMessageProps> = (props) => {
                         >
                           {(req) => <SuggestBar request={req()} />}
                         </Show>
-                      }
-                    >
-                      {(req) => <QuestionDock request={req()} />}
-                    </Show>
-                  </div>
+                      </div>
+                    }
+                  >
+                    {(req) => <QuestionDock request={req()} />}
+                  </Show>
                 }>
                   <TestflowToolCard part={part as unknown as ToolPart} />
                 </Show>

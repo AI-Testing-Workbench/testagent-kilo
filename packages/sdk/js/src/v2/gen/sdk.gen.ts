@@ -21,7 +21,6 @@ import type {
   ConfigUpdateErrors,
   ConfigUpdateResponses,
   ConfigWarningsResponses,
-  EditorContext,
   EnhancePromptEnhanceErrors,
   EnhancePromptEnhanceResponses,
   EventSubscribeResponses,
@@ -187,6 +186,13 @@ import type {
   SyncStartResponses,
   SyncStealErrors,
   SyncStealResponses,
+  TestagentCustomEnvVarsBatchCreateResponses,
+  TestagentCustomEnvVarsBatchDeleteResponses,
+  TestagentCustomEnvVarsBatchUpdateResponses,
+  TestagentEnvVarsBatchQueryErrors,
+  TestagentEnvVarsBatchQueryResponses,
+  TestagentEnvVarsListErrors,
+  TestagentEnvVarsListResponses,
   TestagentUserSetResponses,
   TextPartInput,
   ToolIdsErrors,
@@ -654,10 +660,216 @@ export class User extends HeyApiClient {
   }
 }
 
+export class EnvVars extends HeyApiClient {
+  /**
+   * Get environment variables
+   *
+   * Get system auto-injected and custom environment variables separately.
+   */
+  public list<ThrowOnError extends boolean = false>(
+    parameters?: {
+      directory?: string
+      workspace?: string
+    },
+    options?: Options<never, ThrowOnError>,
+  ) {
+    const params = buildClientParams(
+      [parameters],
+      [
+        {
+          args: [
+            { in: "query", key: "directory" },
+            { in: "query", key: "workspace" },
+          ],
+        },
+      ],
+    )
+    return (options?.client ?? this.client).get<
+      TestagentEnvVarsListResponses,
+      TestagentEnvVarsListErrors,
+      ThrowOnError
+    >({
+      url: "/testagent/env-vars",
+      ...options,
+      ...params,
+    })
+  }
+
+  /**
+   * Query environment variables by keys
+   *
+   * Query environment variables by a list of keys. Returns system and custom groups with only matching keys.
+   */
+  public batchQuery<ThrowOnError extends boolean = false>(
+    parameters?: {
+      directory?: string
+      workspace?: string
+      body?: Array<string>
+    },
+    options?: Options<never, ThrowOnError>,
+  ) {
+    const params = buildClientParams(
+      [parameters],
+      [
+        {
+          args: [
+            { in: "query", key: "directory" },
+            { in: "query", key: "workspace" },
+            { key: "body", map: "body" },
+          ],
+        },
+      ],
+    )
+    return (options?.client ?? this.client).post<
+      TestagentEnvVarsBatchQueryResponses,
+      TestagentEnvVarsBatchQueryErrors,
+      ThrowOnError
+    >({
+      url: "/testagent/env-vars/query",
+      ...options,
+      ...params,
+      headers: {
+        "Content-Type": "application/json",
+        ...options?.headers,
+        ...params.headers,
+      },
+    })
+  }
+}
+
+export class CustomEnvVars extends HeyApiClient {
+  /**
+   * Batch delete custom environment variables
+   *
+   * Delete multiple custom environment variables. Non-existing keys are ignored.
+   */
+  public batchDelete<ThrowOnError extends boolean = false>(
+    parameters?: {
+      directory?: string
+      workspace?: string
+      body?: Array<string>
+    },
+    options?: Options<never, ThrowOnError>,
+  ) {
+    const params = buildClientParams(
+      [parameters],
+      [
+        {
+          args: [
+            { in: "query", key: "directory" },
+            { in: "query", key: "workspace" },
+            { key: "body", map: "body" },
+          ],
+        },
+      ],
+    )
+    return (options?.client ?? this.client).delete<TestagentCustomEnvVarsBatchDeleteResponses, unknown, ThrowOnError>({
+      url: "/testagent/env-vars/custom",
+      ...options,
+      ...params,
+      headers: {
+        "Content-Type": "application/json",
+        ...options?.headers,
+        ...params.headers,
+      },
+    })
+  }
+
+  /**
+   * Batch create custom environment variables
+   *
+   * Create multiple custom environment variables. Only non-existing keys with valid format will succeed.
+   */
+  public batchCreate<ThrowOnError extends boolean = false>(
+    parameters?: {
+      directory?: string
+      workspace?: string
+      body?: Array<{
+        key: string
+        value: string
+      }>
+    },
+    options?: Options<never, ThrowOnError>,
+  ) {
+    const params = buildClientParams(
+      [parameters],
+      [
+        {
+          args: [
+            { in: "query", key: "directory" },
+            { in: "query", key: "workspace" },
+            { key: "body", map: "body" },
+          ],
+        },
+      ],
+    )
+    return (options?.client ?? this.client).post<TestagentCustomEnvVarsBatchCreateResponses, unknown, ThrowOnError>({
+      url: "/testagent/env-vars/custom",
+      ...options,
+      ...params,
+      headers: {
+        "Content-Type": "application/json",
+        ...options?.headers,
+        ...params.headers,
+      },
+    })
+  }
+
+  /**
+   * Batch update custom environment variables
+   *
+   * Update multiple custom environment variables. Only existing custom keys with valid format will succeed.
+   */
+  public batchUpdate<ThrowOnError extends boolean = false>(
+    parameters?: {
+      directory?: string
+      workspace?: string
+      body?: Array<{
+        key: string
+        value: string
+      }>
+    },
+    options?: Options<never, ThrowOnError>,
+  ) {
+    const params = buildClientParams(
+      [parameters],
+      [
+        {
+          args: [
+            { in: "query", key: "directory" },
+            { in: "query", key: "workspace" },
+            { key: "body", map: "body" },
+          ],
+        },
+      ],
+    )
+    return (options?.client ?? this.client).put<TestagentCustomEnvVarsBatchUpdateResponses, unknown, ThrowOnError>({
+      url: "/testagent/env-vars/custom",
+      ...options,
+      ...params,
+      headers: {
+        "Content-Type": "application/json",
+        ...options?.headers,
+        ...params.headers,
+      },
+    })
+  }
+}
+
 export class Testagent extends HeyApiClient {
   private _user?: User
   get user(): User {
     return (this._user ??= new User({ client: this.client }))
+  }
+
+  private _envVars?: EnvVars
+  get envVars(): EnvVars {
+    return (this._envVars ??= new EnvVars({ client: this.client }))
+  }
+
+  private _customEnvVars?: CustomEnvVars
+  get customEnvVars(): CustomEnvVars {
+    return (this._customEnvVars ??= new CustomEnvVars({ client: this.client }))
   }
 }
 
@@ -3703,13 +3915,13 @@ export class Session2 extends HeyApiClient {
       }
       agent?: string
       noReply?: boolean
+      thinkingEnabled?: boolean
       tools?: {
         [key: string]: boolean
       }
       format?: OutputFormat
       system?: string
       variant?: string
-      editorContext?: EditorContext
       parts?: Array<TextPartInput | FilePartInput | AgentPartInput | SubtaskPartInput>
     },
     options?: Options<never, ThrowOnError>,
@@ -3726,11 +3938,11 @@ export class Session2 extends HeyApiClient {
             { in: "body", key: "model" },
             { in: "body", key: "agent" },
             { in: "body", key: "noReply" },
+            { in: "body", key: "thinkingEnabled" },
             { in: "body", key: "tools" },
             { in: "body", key: "format" },
             { in: "body", key: "system" },
             { in: "body", key: "variant" },
-            { in: "body", key: "editorContext" },
             { in: "body", key: "parts" },
           ],
         },
@@ -4065,13 +4277,13 @@ export class Session2 extends HeyApiClient {
       }
       agent?: string
       noReply?: boolean
+      thinkingEnabled?: boolean
       tools?: {
         [key: string]: boolean
       }
       format?: OutputFormat
       system?: string
       variant?: string
-      editorContext?: EditorContext
       parts?: Array<TextPartInput | FilePartInput | AgentPartInput | SubtaskPartInput>
     },
     options?: Options<never, ThrowOnError>,
@@ -4088,11 +4300,11 @@ export class Session2 extends HeyApiClient {
             { in: "body", key: "model" },
             { in: "body", key: "agent" },
             { in: "body", key: "noReply" },
+            { in: "body", key: "thinkingEnabled" },
             { in: "body", key: "tools" },
             { in: "body", key: "format" },
             { in: "body", key: "system" },
             { in: "body", key: "variant" },
-            { in: "body", key: "editorContext" },
             { in: "body", key: "parts" },
           ],
         },
@@ -4125,6 +4337,7 @@ export class Session2 extends HeyApiClient {
       model?: string
       arguments?: string
       command?: string
+      thinkingEnabled?: boolean
       variant?: string
       parts?: Array<{
         id?: string
@@ -4150,6 +4363,7 @@ export class Session2 extends HeyApiClient {
             { in: "body", key: "model" },
             { in: "body", key: "arguments" },
             { in: "body", key: "command" },
+            { in: "body", key: "thinkingEnabled" },
             { in: "body", key: "variant" },
             { in: "body", key: "parts" },
           ],
@@ -4300,6 +4514,7 @@ export class Session2 extends HeyApiClient {
       directory?: string
       workspace?: string
       messageID?: string
+      thinkingEnabled?: boolean
       model?: {
         providerID: string
         modelID: string
@@ -4316,6 +4531,7 @@ export class Session2 extends HeyApiClient {
             { in: "query", key: "directory" },
             { in: "query", key: "workspace" },
             { in: "body", key: "messageID" },
+            { in: "body", key: "thinkingEnabled" },
             { in: "body", key: "model" },
           ],
         },

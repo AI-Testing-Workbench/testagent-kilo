@@ -15,12 +15,13 @@ const SettingsRow: Component<{ title: string; description?: string; last?: boole
     <div data-slot="settings-row-label">
       <div
         data-slot="settings-row-label-title"
+        title={props.title}
         style={props.description === null || props.description === undefined ? { "margin-bottom": "0" } : {}}
       >
         {props.title}
       </div>
       {props.description !== null && props.description !== undefined && (
-        <div data-slot="settings-row-label-subtitle">{props.description}</div>
+        <div data-slot="settings-row-label-subtitle" title={props.description}>{props.description}</div>
       )}
     </div>
     <div data-slot="settings-row-input">{props.children}</div>
