@@ -104,12 +104,16 @@ export class TestflowMessageBridge {
       part: {
         type: "tool",
         id: partID,
+        callID: uid(),
+        sessionID: this.sessionID,
         messageID: this.asstMsgID,
         tool: "testflow-progress",
         state: {
           status: "completed",
           input: { taskName, stages, completedCount, totalCount, percent, nextHint, exceptionHint },
           title: `任务清单 [${taskName}]`,
+          metadata: {},
+          time: { start: Date.now(), end: Date.now() },
         },
       },
     })
@@ -211,6 +215,8 @@ export class TestflowMessageBridge {
       part: {
         type: "tool",
         id: uid(),
+        callID: uid(),
+        sessionID: this.sessionID,
         messageID: this.asstMsgID,
         tool: "testflow-result",
         state: {
@@ -218,6 +224,8 @@ export class TestflowMessageBridge {
           input: { kind, ...payload },
           output: JSON.stringify(payload, null, 2),
           title,
+          metadata: {},
+          time: { start: Date.now(), end: Date.now() },
         },
       },
     })
