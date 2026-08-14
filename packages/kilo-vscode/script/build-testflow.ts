@@ -54,8 +54,10 @@ log(`Building for target: ${targetPlatform} (${target}), mode: ${buildEnv}`)
 
 // 1. build testflow dist (tsc)
 log(`Building testflow dist (${buildEnv} mode)...`)
-const buildScript = buildEnv === "dev" ? "build:dev" : "build"
-await $`bun run ${buildScript}`.cwd(testflowDir)
+// 先注释掉区分环境打包的内容
+// const buildScript = buildEnv === "dev" ? "build:dev" : "build"
+// await $`bun run ${buildScript}`.cwd(testflowDir)
+await $`bun run build`.cwd(testflowDir)
 
 // 2. compile standalone binary
 log(`Compiling testflow binary (${target})...`)
@@ -67,13 +69,14 @@ if (existsSync(testflowResDir)) rmSync(testflowResDir, { recursive: true })
 mkdirSync(testflowResDir, { recursive: true })
 cpSync(join(testflowDir, "dist", "config"), join(testflowResDir, "config"), { recursive: true })
 cpSync(join(testflowDir, "dist", "templates"), join(testflowResDir, "templates"), { recursive: true })
-const sourceEnvFile = buildEnv === "dev"
-  ? "env.dev.yaml"
-  : "env.production.yaml"
+// 去掉环境打包拷贝env文件
+// const sourceEnvFile = buildEnv === "dev"
+//   ? "env.dev.yaml"
+//   : "env.production.yaml"
 
-cpSync(
-  join(testflowDir, "dist", sourceEnvFile),
-  join(testflowResDir, "env.yaml"),
-)
+// cpSync(
+//   join(testflowDir, "dist", sourceEnvFile),
+//   join(testflowResDir, "env.yaml"),
+// )
 
 log(`✅ Done. Binary: ${testflowBin}`)
