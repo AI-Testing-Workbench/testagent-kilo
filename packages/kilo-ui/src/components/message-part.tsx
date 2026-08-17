@@ -1414,11 +1414,15 @@ PART_MAPPING["text"] = function TextPartDisplay(props) {
     }
   }
 
-  const isCompaction = () => "mode" in props.message && props.message.mode === "compaction"
+  const isCompaction = () =>
+    "mode" in props.message && (props.message.mode === "compaction" || props.message.mode === "clear_context")
+  // testagent_change - clearContext 气泡显示"清空上下文"，compact 显示"压缩会话"
+  const compactionLabel = () =>
+    "mode" in props.message && props.message.mode === "clear_context" ? "清空上下文" : "压缩会话"
 
   return (
     <Show when={throttledText()}>
-      <Show when={!isCompaction()} fallback={<CompactionSummary text={displayText()} done={"finish" in props.message && props.message.finish === "stop"} />}>
+      <Show when={!isCompaction()} fallback={<CompactionSummary text={displayText()} done={"finish" in props.message && props.message.finish === "stop"} label={compactionLabel()} />}>
       <div data-component="text-part">
         <div data-slot="text-part-body">
           <Markdown text={throttledText()} cacheKey={part().id} onClick={handleMarkdownClick} />
@@ -1572,8 +1576,8 @@ PART_MAPPING["reasoning"] = function ReasoningPartDisplay(props: MessagePartProp
 }
 
 // Renders compaction summary in a collapsible block, similar to reasoning-part.
-// Triggered when the parent assistant message has mode === "compaction".
-function CompactionSummary(props: { text: string; done?: boolean }) {
+// Triggered when the parent assistant message has mode === "compaction" or "clear_context".
+function CompactionSummary(props: { text: string; done?: boolean; label: string }) {
   const [open, setOpen] = createSignal(!props.done)
 
   return (
@@ -1582,7 +1586,7 @@ function CompactionSummary(props: { text: string; done?: boolean }) {
         <Collapsible.Trigger>
           <div data-slot="compaction-summary-header">
             <Icon name="checklist" size="small" />
-            <span data-slot="compaction-summary-label">压缩会话</span>
+            <span data-slot="compaction-summary-label">{props.label}</span>
           </div>
           <Collapsible.Arrow />
         </Collapsible.Trigger>
@@ -1593,8 +1597,8 @@ function CompactionSummary(props: { text: string; done?: boolean }) {
         </Collapsible.Content>
       </Collapsible>
       <Show when={props.done}>
-        {/* 分隔符  居中显示“压缩会话完成，请输入后续操作” */}
-        <div data-slot="compaction-summary-separator">压缩会话完成</div>
+        {/* 分隔符  居中显示"{label}完成，请输入后续操作" */}
+        <div data-slot="compaction-summary-separator">{props.label}完成</div>
       </Show>
     </div>
   )
