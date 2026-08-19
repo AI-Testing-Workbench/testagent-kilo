@@ -1029,6 +1029,12 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
 
         case "retryConnection":
           console.log("[TestAgent]  🔄 Retrying connection...")
+          // testagent_change start - error for Node version on retry
+          const { isTestagentNodejs } = await import("./services/cli-backend/runtime")
+          if (isTestagentNodejs()) {
+            this.connectionService.dispose()
+          }
+          // testagent_change end
           this.initializeConnection().catch((e) => console.error("[TestAgent]  ❌ Retry connection failed:", e))
           break
         case "openSubAgentViewer":
