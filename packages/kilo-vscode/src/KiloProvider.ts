@@ -3746,9 +3746,6 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
       }
       parts.push({ type: "text", text })
 
-      const editorContext = await this.gatherEditorContext()
-      console.log("[TestAgent] 🔍 EditorContext collected:", JSON.stringify(editorContext, null, 2))
-
       if (messageID) {
         this.connectionService.recordMessageSessionId(messageID, resolved!.sid)
       }
@@ -4982,7 +4979,6 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
         sessionID?: string
       }
       const childId = childID(part)
-      console.log("[DEBUG] message.part.updated", { childId, tool: part.tool, type: part.type, sessionID })
       if (childId && !this.trackedSessionIds.has(childId)) {
         console.log("[TestAgent]  🔗 Auto-adopting child session from task tool", {
           childId,
