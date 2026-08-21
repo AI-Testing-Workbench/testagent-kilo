@@ -371,8 +371,8 @@
   margin: 8px 12px;
   padding: 8px 12px;
   border-radius: 4px;
-  background: var(--surface-secondary, var(--vscode-editorWidget-background, #252526));
-  border: 1px solid var(--border-warning, #c8a000);
+  background: var(--vscode-inputValidation-warningBackground, rgba(204, 122, 0, 0.1));
+  border: 1px solid var(--vscode-inputValidation-warningBorder, #cc7a00);
   font-size: 12px;
   display: flex;
   align-items: center;
