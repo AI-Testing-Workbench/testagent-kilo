@@ -364,6 +364,44 @@
 }
 
 /* ============================================
+   Skill Banner
+   ============================================ */
+
+.skill-banner {
+  margin: 8px 12px;
+  padding: 8px 12px;
+  border-radius: 4px;
+  background: var(--surface-secondary, var(--vscode-editorWidget-background, #252526));
+  border: 1px solid var(--border-warning, #c8a000);
+  font-size: 12px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  color: var(--text-muted, var(--vscode-descriptionForeground));
+}
+
+.skill-banner-text {
+  font-weight: 500;
+  flex: 1;
+}
+
+.skill-banner-close {
+  background: none;
+  border: none;
+  padding: 2px;
+  cursor: pointer;
+  color: var(--text-muted, var(--vscode-descriptionForeground));
+  border-radius: 3px;
+  display: flex;
+  align-items: center;
+  flex-shrink: 0;
+}
+
+.skill-banner-close:hover {
+  background: var(--surface-hover, var(--vscode-toolbar-hoverBackground, rgba(255,255,255,0.1)));
+}
+
+/* ============================================
    Revert Confirm Dock (testagent_change - 检查点重置确认)
    ============================================ */
 
