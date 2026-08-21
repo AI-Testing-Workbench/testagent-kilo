@@ -72,6 +72,7 @@ import { SdtRunner } from "./testagent/sdt-runner"
 import { runTaskCommand } from "./testagent/task-runner"
 import { handleInteractiveRun } from "./testagent/sdt-interactive-runner"
 import { handleRequestStages } from "./testagent/sdt-stages-handler"
+import { parseCommandArgs } from "./testagent/command-args"
 // testagent_change end
 // legacy-migration start
 import {
@@ -3612,8 +3613,8 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
     messageID?: string,
     agent?: string,
   ): Promise<void> {
-    const parts = text.trim().split(/\s+/)
-    const cmd = parts[0].slice(5) // strip "/sdt-"
+    const parts = parseCommandArgs(text)
+    const cmd = parts[0]?.slice(5) ?? ""
     const args = parts.slice(1)
 
     const serverConfig = this.connectionService.getServerConfig()
@@ -3669,8 +3670,8 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
 
   // testagent_change start - task command handler (task-start / task-query)
   private async handleTaskCommand(text: string, sessionID?: string, messageID?: string): Promise<void> {
-    const parts = text.trim().split(/\s+/)
-    const raw = parts[0].slice(6) // strip "/task-"
+    const parts = parseCommandArgs(text)
+    const raw = parts[0]?.slice(6) ?? ""
 
     if (raw !== "query") {
       void vscode.window.showErrorMessage(`TestAgent: 未知 task 命令 "${raw}"`)
