@@ -364,6 +364,44 @@
 }
 
 /* ============================================
+   Skill Banner
+   ============================================ */
+
+.skill-banner {
+  margin: 8px 12px;
+  padding: 8px 12px;
+  border-radius: 4px;
+  background: var(--vscode-inputValidation-warningBackground, rgba(204, 122, 0, 0.1));
+  border: 1px solid var(--vscode-inputValidation-warningBorder, #cc7a00);
+  font-size: 12px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  color: var(--text-muted, var(--vscode-descriptionForeground));
+}
+
+.skill-banner-text {
+  font-weight: 500;
+  flex: 1;
+}
+
+.skill-banner-close {
+  background: none;
+  border: none;
+  padding: 2px;
+  cursor: pointer;
+  color: var(--text-muted, var(--vscode-descriptionForeground));
+  border-radius: 3px;
+  display: flex;
+  align-items: center;
+  flex-shrink: 0;
+}
+
+.skill-banner-close:hover {
+  background: var(--surface-hover, var(--vscode-toolbar-hoverBackground, rgba(255,255,255,0.1)));
+}
+
+/* ============================================
    Revert Confirm Dock (testagent_change - 检查点重置确认)
    ============================================ */
 
@@ -3284,3 +3322,101 @@ body.vscode-high-contrast-light {
     outline-offset: -1px;
   }
 }
+
+/* ============================================
+   Shell tool running — blue marquee border
+   (testagent_change start)
+   Rotating blue light band on the tool-part-wrapper
+   border while the bash command is pending/running.
+   Drawn via border-box background-clip so the
+   conic-gradient stays on the 1px border ring and
+   never covers the header/title content inside.
+   ============================================ */
+@property --ta-marquee-angle {
+  syntax: "<angle>";
+  inherits: false;
+  initial-value: 0deg;
+}
+
+@keyframes ta-marquee-spin {
+  to {
+    --ta-marquee-angle: 360deg;
+  }
+}
+
+html[data-theme="kilo-vscode"]
+  [data-component="tool-part-wrapper"][data-tool="bash"][data-running="true"] {
+  border: 1px solid transparent;
+  box-shadow: 0 0 0 1px var(--border-weak-base, var(--vscode-panel-border));
+  margin-bottom: 2px;
+  background:
+    linear-gradient(var(--surface-inset-base, var(--vscode-sideBar-background)), var(--surface-inset-base, var(--vscode-sideBar-background))) padding-box,
+    conic-gradient(
+        from var(--ta-marquee-angle),
+        #6cb3ff 0deg,
+        transparent 50deg,
+        transparent 360deg
+      )
+      border-box;
+  animation: ta-marquee-spin 4s linear infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  html[data-theme="kilo-vscode"]
+    [data-component="tool-part-wrapper"][data-tool="bash"][data-running="true"] {
+    animation: none;
+    border-color: #6cb3ff;
+    margin-bottom: 0;
+  }
+}
+/* testagent_change end */
+
+/* ============================================
+   Shell tool timeout — yellow warning card
+   (testagent_change start)
+   Mirrors the config-error-banner warning colors.
+   The whole card (header + title + background)
+   turns yellow when a bash command was terminated
+   on timeout, so it reads as a warning at a glance.
+   Selectors mirror basic-tool.css chains and add
+   the timeout variant so they always win.
+   ============================================ */
+html[data-theme="kilo-vscode"]
+  [data-component="tool-part-wrapper"][data-part-type="tool"][data-tool="bash"][data-variant="timeout"] {
+  border: 1px solid var(--vscode-inputValidation-warningBorder, #cc7a00);
+  background: var(--vscode-inputValidation-warningBackground, rgba(204, 122, 0, 0.16));
+}
+
+/* Header trigger (title row) — fill yellow, keep it yellow on hover */
+html[data-theme="kilo-vscode"]
+  [data-component="tool-part-wrapper"][data-part-type="tool"][data-tool="bash"][data-variant="timeout"]
+  [data-component="collapsible"].tool-collapsible
+  [data-slot="collapsible-trigger"] {
+  background-color: var(--vscode-inputValidation-warningBackground, rgba(204, 122, 0, 0.16));
+
+  &:hover {
+    background-color: var(--vscode-inputValidation-warningBackground, rgba(204, 122, 0, 0.16));
+  }
+}
+
+/* Title text — warning yellow */
+html[data-theme="kilo-vscode"]
+  [data-component="tool-part-wrapper"][data-part-type="tool"][data-tool="bash"][data-variant="timeout"]
+  [data-component="tool-trigger"]
+  [data-slot="basic-tool-tool-title"] {
+  color: var(--vscode-inputValidation-warningBorder, #cc7a00);
+}
+/* testagent_change end */
+
+/* ============================================
+   Revert Banner — warning card
+   (testagent_change start)
+   Mirrors the config-error-banner warning colors:
+   yellow border + background so the reverted
+   checkpoint state reads as a warning at a glance.
+   ============================================ */
+.revert-banner {
+  border: 1px solid var(--vscode-inputValidation-warningBorder, #cc7a00);
+  background: var(--vscode-inputValidation-warningBackground, rgba(204, 122, 0, 0.1));
+}
+/* testagent_change end */

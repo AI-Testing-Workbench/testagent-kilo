@@ -37,6 +37,7 @@ const Settings: Component<SettingsProps> = (props) => {
   const [errorExpanded, setErrorExpanded] = createSignal(false)
   // memory 配置的独立保存状态
   const [memoryDirty, setMemoryDirty] = createSignal(false)
+  const [memorySaving, setMemorySaving] = createSignal(false)
   let memSave: (() => void) | null = null
   let memDiscard: (() => void) | null = null
 
@@ -61,6 +62,8 @@ const Settings: Component<SettingsProps> = (props) => {
   }
 
   // 统一保存：settings 和 memory 各自走自己的保存逻辑
+  const busy = () => saving() || memorySaving()
+
   const handleSaveAll = () => {
     if (isDirty()) handleSave()
     if (memoryDirty() && memSave) memSave()
@@ -95,7 +98,6 @@ const Settings: Component<SettingsProps> = (props) => {
 
   return (
     <div style={{ display: "flex", "flex-direction": "column", height: "100%", "min-height": 0 }}>
-
       {/* Header */}
       <div
         style={{
@@ -217,8 +219,13 @@ const Settings: Component<SettingsProps> = (props) => {
           <h3>记忆设置</h3>
           <MemorySettingTab
             onDirtyChange={setMemoryDirty}
-            onSaveReady={(fn) => { memSave = fn }}
-            onDiscardReady={(fn) => { memDiscard = fn }}
+            onSavingChange={setMemorySaving}
+            onSaveReady={(fn) => {
+              memSave = fn
+            }}
+            onDiscardReady={(fn) => {
+              memDiscard = fn
+            }}
           />
         </Tabs.Content>
         <Tabs.Content value="normalSetting">
@@ -250,8 +257,9 @@ const Settings: Component<SettingsProps> = (props) => {
                   aria-expanded={errorExpanded()}
                 >
                   <span
-                    class={`settings-save-bar-error-chevron${errorExpanded() ? " settings-save-bar-error-chevron-expanded" : ""
-                      }`}
+                    class={`settings-save-bar-error-chevron${
+                      errorExpanded() ? " settings-save-bar-error-chevron-expanded" : ""
+                    }`}
                   >
                     <Icon name="chevron-right" size="small" />
                   </span>
@@ -268,11 +276,11 @@ const Settings: Component<SettingsProps> = (props) => {
           </Show>
           <div class="settings-save-bar">
             <span class="settings-save-bar-label">{language.t("settings.saveBar.unsavedChanges")}</span>
-            <Button variant="ghost" size="small" onClick={handleDiscardAll} disabled={saving()}>
+            <Button variant="ghost" size="small" onClick={handleDiscardAll} disabled={busy()}>
               {language.t("settings.saveBar.discard")}
             </Button>
-            <Button variant="primary" size="small" onClick={handleSaveAll} disabled={saving()}>
-              {saving() ? language.t("settings.saveBar.saving") : language.t("settings.saveBar.save")}
+            <Button variant="primary" size="small" onClick={handleSaveAll} disabled={busy()}>
+              {busy() ? language.t("settings.saveBar.saving") : language.t("settings.saveBar.save")}
             </Button>
           </div>
         </div>

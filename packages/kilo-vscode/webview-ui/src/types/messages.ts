@@ -22,7 +22,13 @@ export type SessionStatusInfo =
 export type ToolState =
   | { status: "pending"; input: Record<string, unknown> }
   | { status: "running"; input: Record<string, unknown>; title?: string; time?: { start: number } }
-  | { status: "completed"; input: Record<string, unknown>; output: string; title: string; time?: { start: number; end: number; compacted?: number } }
+  | {
+      status: "completed"
+      input: Record<string, unknown>
+      output: string
+      title: string
+      time?: { start: number; end: number; compacted?: number }
+    }
   | { status: "error"; input: Record<string, unknown>; error: string; time?: { start: number; end: number } }
 
 // Base part interface - all parts have these fields
@@ -442,7 +448,6 @@ export interface CompactionConfig {
   auto?: boolean
   threshold_percent?: number | null
   prune?: boolean
-
 }
 
 export interface WatcherConfig {
@@ -1609,8 +1614,8 @@ export interface CustomProviderModelsFetchedMessage {
   models?: Array<{ id: string; name: string }>
   error?: string
   /** True when error was HTTP 401/403 — hints the user to check their API key */
-  auth?: boolean,
-  url?:string
+  auth?: boolean
+  url?: string
 }
 
 // testagent_change start - runtime switching messages
@@ -1633,12 +1638,15 @@ export interface MemorySettingsConfig {
     dream: boolean
   }
   memory: {
-    autoExtractMaxLength: number
-    autoExtractBufferSize: number
+    autoExtractBatchToken: number
+    autoExtractBatchSize: number
     personalMemoryEnable: boolean
     personalMemoryPrompt: string
     autoDreamEnable: boolean
     autoExtractEnable: boolean
+  }
+  similarAnswer: {
+    enable: boolean
   }
   recall: {
     recallEnable: boolean
@@ -1721,7 +1729,7 @@ export type ExtensionMessage =
   | AutocompleteSettingsLoadedMessage
   | ChatCompletionResultMessage
   | FileSearchResultMessage
-  | StagesResultMessage  // testagent_change  - /sdt-run 阶段列表查询消息类型
+  | StagesResultMessage // testagent_change  - /sdt-run 阶段列表查询消息类型
   | TerminalContextResultMessage
   | TerminalContextErrorMessage
   | QuestionRequestMessage
@@ -1783,7 +1791,13 @@ export type ExtensionMessage =
   | EnhancePromptResultMessage
   | EnhancePromptErrorMessage
   | ViewSubAgentSessionMessage
-  | { type: "envVarsData"; envVars: { system: Record<string, { key: string; value: string }>; custom: Record<string, { key: string; value: string }> } }
+  | {
+      type: "envVarsData"
+      envVars: {
+        system: Record<string, { key: string; value: string }>
+        custom: Record<string, { key: string; value: string }>
+      }
+    }
   | DiffViewerDiffsMessage
   | DiffViewerLoadingMessage
   | DiffViewerRevertFileResultMessage
@@ -1814,10 +1828,10 @@ export type ExtensionMessage =
   | RemoteStatusMessage
   | ShellPathResolvedMessage
   | AvailableTerminalsResultMessage // testagent_change
-  // testagent_change start - testflow messages
-  // (extension→webview dedicated message types are no longer used; testflow
-  //  renders via standard messageCreated / partUpdated events on the SSE pipeline)
-  // testagent_change end
+// testagent_change start - testflow messages
+// (extension→webview dedicated message types are no longer used; testflow
+//  renders via standard messageCreated / partUpdated events on the SSE pipeline)
+// testagent_change end
 
 // ============================================
 // Messages FROM webview TO extension
@@ -3027,7 +3041,7 @@ export type WebviewMessage =
   | UpdateMemorySettingsMessage // testagent_change
   // testagent_change start - testflow messages
   | TestflowSyncChildSessionMessage
-  // testagent_change end
+// testagent_change end
 
 // ============================================
 // testflow messages (webview → extension)
