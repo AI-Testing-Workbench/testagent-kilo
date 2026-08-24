@@ -34,6 +34,9 @@ export const TaskHeader: Component<TaskHeaderProps> = (props) => {
   const busy = createMemo(() => session.status() === "busy")
   const stop = () => session.abort()
 
+  // Skill banner dismiss state
+  const [dismissed, setDismissed] = createSignal(false)
+
   // Title editing state
   const [editing, setEditing] = createSignal(false)
   const [draft, setDraft] = createSignal("")
@@ -425,6 +428,19 @@ export const TaskHeader: Component<TaskHeaderProps> = (props) => {
                 </div>
               )
             }}
+          </Show>
+          <Show when={session.skills().length > 10 && !dismissed()}>
+            <div class="skill-banner">
+              <Icon name="warning" size="small" />
+              <span class="skill-banner-text">当前已加载{session.skills().length}个技能，请注意技能数量</span>
+              <button
+                class="skill-banner-close"
+                onClick={() => setDismissed(true)}
+                aria-label="关闭提示"
+              >
+                <Icon name="close" size="small" />
+              </button>
+            </div>
           </Show>
         </div>
       </Show>
