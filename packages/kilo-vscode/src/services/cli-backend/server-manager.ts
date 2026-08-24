@@ -2,15 +2,28 @@ import { type ChildProcess } from "child_process"
 import { spawn } from "../../util/process"
 import * as crypto from "crypto"
 import * as fs from "fs"
+import * as os from "os"
 import * as path from "path"
 import * as vscode from "vscode"
 import { t } from "./i18n"
 import { parseServerPort } from "./server-utils"
+import { isCloudMode } from "./cloud-mode"
+import {
+  clearServerState,
+  getServerDataDir,
+  getServerLogPath,
+  pickFreePort,
+  probeServer,
+  readServerState,
+  waitForServer,
+  writeServerState,
+  type ServerState,
+} from "./server-state"
 
 export interface ServerInstance {
   port: number
   password: string
-  process: ChildProcess
+  process?: ChildProcess
 }
 
 const STARTUP_TIMEOUT_SECONDS = 30
@@ -44,6 +57,16 @@ export class ServerManager {
       return this.startupPromise
     }
 
+    if (isCloudMode()) {
+      const adopted = await this.adoptExistingServer()
+      if (adopted) {
+        this.instance = adopted
+        console.log("[TestAgent] ServerManager: ✅ Adopted existing cloud server:", { port: adopted.port })
+        return adopted
+      }
+      console.log("[TestAgent] ServerManager: ☁️ No live cloud server found, spawning detached daemon")
+    }
+
     console.log("[TestAgent] ServerManager: 🚀 Starting new server instance...")
     this.startupPromise = this.startServer()
     try {
@@ -53,6 +76,29 @@ export class ServerManager {
     } finally {
       this.startupPromise = null
     }
+  }
+
+  /**
+   * Cloud mode: try to reconnect to an already-running detached daemon.
+   */
+  private async adoptExistingServer(): Promise<ServerInstance | null> {
+    const state = readServerState()
+    if (!state) return null
+
+    if (state.version && state.version !== this.context.extension.packageJSON.version) {
+      console.warn(
+        `[TestAgent] ServerManager: ⚠️ Cloud server version mismatch (server=${state.version}, extension=${this.context.extension.packageJSON.version}) — keeping existing daemon to avoid interrupting tasks`,
+      )
+    }
+
+    const alive = await probeServer(state)
+    if (!alive) {
+      console.log("[TestAgent] ServerManager: ♻️ Server state found but daemon not reachable, will respawn")
+      clearServerState()
+      return null
+    }
+
+    return { port: state.port, password: state.password }
   }
 
   private handleNotification(message: string) {
@@ -107,11 +153,14 @@ export class ServerManager {
 
     const meta = await this.getUserMeta()
     const claudeCompat = vscode.workspace.getConfiguration("testagent.new").get<boolean>("claudeCodeCompat", false)
-    const spawnCwd = vscode.workspace.workspaceFolders?.[0]?.uri.fsPath ?? process.env.HOME ?? require("os").homedir()
-    const args = ["serve", "--port", "0"]
+    const spawnCwd = vscode.workspace.workspaceFolders?.[0]?.uri.fsPath ?? process.env.HOME ?? os.homedir()
+
+    const cloud = isCloudMode()
+    const port = cloud ? await pickFreePort() : 0
+    const args = ["serve", "--port", String(port)]
     if (this.logLevel) args.push("--log-level", this.logLevel)
 
-    return this.runServer({ cliPath, password, spawnCwd, args, claudeCompat, meta })
+    return this.runServer({ cliPath, password, spawnCwd, args, claudeCompat, meta, cloud, port })
   }
 
   private async getUserMeta() {
@@ -137,6 +186,8 @@ export class ServerManager {
     spawnCwd: string
     args: string[]
     claudeCompat: boolean
+    cloud: boolean
+    port: number
     meta:
       | {
           userId?: string
@@ -154,37 +205,79 @@ export class ServerManager {
     console.log("[TestAgent] ServerManager: 🌐 Will set LANG to:", process.env.LANG || "en_US.UTF-8")
     console.log("[TestAgent] ServerManager: 🌐 Platform:", process.platform)
 
+    const env = this.buildServerEnv(input)
+    if (input.cloud) {
+      return this.runCloudServer(input, env)
+    }
+    return this.runLocalServer(input, env)
+  }
+
+  private buildServerEnv(input: {
+    cliPath: string
+    password: string
+    spawnCwd: string
+    args: string[]
+    claudeCompat: boolean
+    cloud: boolean
+    port: number
+    meta:
+      | {
+          userId?: string
+          userName?: string
+          sapId?: string
+          openId?: string
+          originPathId?: string
+          pathName?: string
+        }
+      | undefined
+  }): Record<string, string | undefined> {
+    return {
+      ...process.env,
+      LANG: process.env.LANG || "en_US.UTF-8",
+      LC_ALL: process.env.LC_ALL || "en_US.UTF-8",
+      ...(process.platform === "win32" && {
+        PYTHONIOENCODING: "utf-8",
+      }),
+      OPENCODE_SERVER_PASSWORD: input.password,
+      OPENCODE_SERVER_USERNAME: "opencode",
+      MIMALLOC_PURGE_DELAY: "0",
+      KILO_CLIENT: "vscode",
+      KILO_ENABLE_QUESTION_TOOL: "true",
+      KILOCODE_FEATURE: "vscode-extension",
+      KILO_TELEMETRY_LEVEL: vscode.env.isTelemetryEnabled ? "all" : "off",
+      KILO_APP_NAME: "testagent",
+      KILO_EDITOR_NAME: vscode.env.appName,
+      KILO_PLATFORM: "vscode",
+      KILO_MACHINE_ID: vscode.env.machineId,
+      KILO_APP_VERSION: this.context.extension.packageJSON.version,
+      KILO_VSCODE_VERSION: vscode.version,
+      KILOCODE_EDITOR_NAME: `${vscode.env.appName} ${vscode.version}`,
+      ...(!input.claudeCompat && { KILO_DISABLE_CLAUDE_CODE: "true" }),
+      ...(input.meta?.userId && { TESTAGENT_USER_ID: input.meta.userId }),
+      ...(input.meta?.userName && { TESTAGENT_USER_NAME: input.meta.userName }),
+      ...(input.meta?.sapId && { TESTAGENT_SAP_ID: input.meta.sapId }),
+      ...(input.meta?.openId && { TESTAGENT_OPEN_ID: input.meta.openId }),
+      ...(input.meta?.originPathId && { TESTAGENT_ORIGIN_PATH_ID: input.meta.originPathId }),
+      ...(input.meta?.pathName && { TESTAGENT_PATH_NAME: input.meta.pathName }),
+    }
+  }
+
+  private runLocalServer(
+    input: {
+      cliPath: string
+      password: string
+      spawnCwd: string
+      args: string[]
+      claudeCompat: boolean
+      cloud: boolean
+      port: number
+      meta: unknown
+    },
+    env: Record<string, string | undefined>,
+  ): Promise<ServerInstance> {
     const serverProcess = spawn(input.cliPath, input.args, {
       cwd: input.spawnCwd,
-      env: {
-        ...process.env,
-        LANG: process.env.LANG || "en_US.UTF-8",
-        LC_ALL: process.env.LC_ALL || "en_US.UTF-8",
-        ...(process.platform === "win32" && {
-          PYTHONIOENCODING: "utf-8",
-        }),
-        OPENCODE_SERVER_PASSWORD: input.password,
-        OPENCODE_SERVER_USERNAME: "opencode",
-        MIMALLOC_PURGE_DELAY: "0",
-        KILO_CLIENT: "vscode",
-        KILO_ENABLE_QUESTION_TOOL: "true",
-        KILOCODE_FEATURE: "vscode-extension",
-        KILO_TELEMETRY_LEVEL: vscode.env.isTelemetryEnabled ? "all" : "off",
-        KILO_APP_NAME: "testagent",
-        KILO_EDITOR_NAME: vscode.env.appName,
-        KILO_PLATFORM: "vscode",
-        KILO_MACHINE_ID: vscode.env.machineId,
-        KILO_APP_VERSION: this.context.extension.packageJSON.version,
-        KILO_VSCODE_VERSION: vscode.version,
-        KILOCODE_EDITOR_NAME: `${vscode.env.appName} ${vscode.version}`,
-        ...(!input.claudeCompat && { KILO_DISABLE_CLAUDE_CODE: "true" }),
-        ...(input.meta?.userId && { TESTAGENT_USER_ID: input.meta.userId }),
-        ...(input.meta?.userName && { TESTAGENT_USER_NAME: input.meta.userName }),
-        ...(input.meta?.sapId && { TESTAGENT_SAP_ID: input.meta.sapId }),
-        ...(input.meta?.openId && { TESTAGENT_OPEN_ID: input.meta.openId }),
-        ...(input.meta?.originPathId && { TESTAGENT_ORIGIN_PATH_ID: input.meta.originPathId }),
-        ...(input.meta?.pathName && { TESTAGENT_PATH_NAME: input.meta.pathName }),
-      },
+      env,
       stdio: ["ignore", "pipe", "pipe"],
       ...(process.platform !== "win32" && { detached: true }),
     })
@@ -246,6 +339,70 @@ export class ServerManager {
     })
   }
 
+  /**
+   * Cloud mode: spawn the server fully detached (own session, stdio → log file)
+   * so it survives the extension host. We wait for it to answer a health probe
+   * and persist the connection info to server.json for adoption on next launch.
+   */
+  private runCloudServer(input: {
+    cliPath: string
+    password: string
+    spawnCwd: string
+    args: string[]
+    claudeCompat: boolean
+    port: number
+    cloud: boolean
+    meta:
+      | {
+          userId?: string
+          userName?: string
+          sapId?: string
+          openId?: string
+          originPathId?: string
+          pathName?: string
+        }
+      | undefined
+  }, env: Record<string, string | undefined>): Promise<ServerInstance> {
+    const { port } = input
+
+    const logDir = getServerDataDir()
+    fs.mkdirSync(logDir, { recursive: true })
+    const logFile = getServerLogPath()
+    const outFd = fs.openSync(logFile, "a")
+    const serverProcess = spawn(input.cliPath, input.args, {
+      cwd: input.spawnCwd,
+      env,
+      stdio: ["ignore", outFd, outFd],
+      detached: true,
+    })
+    serverProcess.unref()
+    console.log("[TestAgent] ServerManager: ☁️ Cloud daemon spawned (PID:", serverProcess.pid, "), logging to:", logFile)
+
+    return (async () => {
+      const state: ServerState = {
+        port,
+        password: input.password,
+        pid: serverProcess.pid,
+        version: this.context.extension.packageJSON.version,
+        runtime: "bun",
+        startedAt: Date.now(),
+      }
+      const ready = await waitForServer(state, STARTUP_TIMEOUT_SECONDS * 1000)
+      if (!ready) {
+        clearServerState()
+        const { userMessage, userDetails } = toErrorMessage(
+          t("server.startupTimeout", { seconds: STARTUP_TIMEOUT_SECONDS }),
+          [],
+          input.cliPath,
+        )
+        throw new ServerStartupError(userMessage, userDetails)
+      }
+      writeServerState(state)
+      console.log("[TestAgent] ServerManager: ☁️ Cloud server ready:", { port })
+      return { port, password: input.password, process: serverProcess }
+    })()
+  }
+
   private getCliPath(): string {
     // Always use the bundled binary from the extension directory
     const binName = process.platform === "win32" ? "testagent.exe" : "testagent"
@@ -282,6 +439,15 @@ export class ServerManager {
     }
     const proc = this.instance.process
     this.instance = null
+
+    // Cloud mode: the daemon is intentionally detached from the extension host
+    // so tasks keep running after tscode closes. Do NOT kill it.
+    if (isCloudMode()) {
+      console.log("[TestAgent] ServerManager: ☁️ Cloud mode — leaving daemon running (detach), PID:", proc?.pid)
+      return
+    }
+
+    if (!proc) return
 
     console.log("[TestAgent] ServerManager: 🔴 Disposing — sending SIGTERM to process group, PID:", proc.pid)
     ServerManager.killProcess(proc, "SIGTERM")
