@@ -4,6 +4,9 @@
 
 import type { ProviderAuthAuthorization, ProviderAuthMethod } from "@kilocode/sdk/v2/client"
 import type { PartBatch, PartUpdate } from "../../../src/shared/stream-messages"
+// testagent_change start 增加sdt进度卡片
+import type { SdtFinishedMessage, SdtProgressMessage, SdtStartedMessage } from "./sdt"
+// testagent_change start 增加sdt进度卡片
 
 // Connection states
 export type ConnectionState = "connecting" | "connected" | "disconnected" | "error"
@@ -595,6 +598,12 @@ export interface SessionStatusMessage {
   message?: string
   next?: number
 }
+
+// testagent_change start 增加sdt进度卡片
+export type SdtStartedWebviewMessage = SdtStartedMessage
+export type SdtProgressWebviewMessage = SdtProgressMessage
+export type SdtFinishedWebviewMessage = SdtFinishedMessage
+// testagent_change end
 
 export interface SessionErrorMessage {
   type: "sessionError"
@@ -1692,6 +1701,9 @@ export type ExtensionMessage =
   | PartUpdatedMessage
   | PartsUpdatedMessage
   | SessionStatusMessage
+  | SdtStartedWebviewMessage // testagent_change start 增加sdt进度卡片
+  | SdtProgressWebviewMessage // testagent_change start 增加sdt进度卡片
+  | SdtFinishedWebviewMessage // testagent_change start 增加sdt进度卡片
   | SessionErrorMessage
   | PermissionRequestMessage
   | PermissionResolvedMessage
@@ -1814,10 +1826,10 @@ export type ExtensionMessage =
   | RemoteStatusMessage
   | ShellPathResolvedMessage
   | AvailableTerminalsResultMessage // testagent_change
-  // testagent_change start - testflow messages
-  // (extension→webview dedicated message types are no longer used; testflow
-  //  renders via standard messageCreated / partUpdated events on the SSE pipeline)
-  // testagent_change end
+// testagent_change start - testflow messages
+// (extension→webview dedicated message types are no longer used; testflow
+//  renders via standard messageCreated / partUpdated events on the SSE pipeline)
+// testagent_change end
 
 // ============================================
 // Messages FROM webview TO extension
@@ -3027,7 +3039,7 @@ export type WebviewMessage =
   | UpdateMemorySettingsMessage // testagent_change
   // testagent_change start - testflow messages
   | TestflowSyncChildSessionMessage
-  // testagent_change end
+// testagent_change end
 
 // ============================================
 // testflow messages (webview → extension)

@@ -182,6 +182,23 @@ export class SdtRunner {
           event.exception_hint as string | null,
         )
         break
+      case "sdt_progress":
+        this.bridge.receiveProgress(
+          event.task_name as string,
+          event.stages as unknown[],
+          event.completed_count as number,
+          event.total_count as number,
+          event.percent as number,
+          event.next_hint as string | null,
+          event.exception_hint as string | null,
+          event.current_stage_id as string | null,
+          event.current_stage_index as number | null,
+          event.error_message as string | null,
+        )
+        break
+      case "finished":
+        this.bridge.onFinished(event.status as "completed" | "failed" | "aborted", event.detail as string | null)
+        break
       case "text":
         this.bridge.onText(event.text as string)
         break

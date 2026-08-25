@@ -30,6 +30,7 @@
 @import "./high-contrast.css";
 /* testagent_change start - testflow integration */
 @import "./testflow.css";
+@import "./sdt/sdt-progress.css";
 /* testagent_change end */
 
 

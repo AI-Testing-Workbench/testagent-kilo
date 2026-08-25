@@ -53,7 +53,9 @@ import { resolveSessionAgent } from "./session-agent"
 import { queuedUserMessageIDs } from "./session-queue"
 import { PartStash } from "./part-stash"
 import { KILO_AUTO, parseModelString } from "../../../src/shared/provider-model"
-
+// testagent_change start 增加sdt进度卡片
+import type { SdtProgressState } from "../types/sdt"
+ // testagent_change end
 const RECENT_LIMIT = 5
 const MESSAGE_PAGE_LIMIT = 80
 
@@ -88,6 +90,7 @@ interface SessionStore {
   enableThinkings: Record<string, boolean> // "providerID" -> enabled
   recentModels: ModelSelection[]
   favoriteModels: ModelSelection[]
+  sdtProgress: Record<string, SdtProgressState | undefined> // testagent_change start 增加sdt进度卡片
 }
 
 interface SessionContextValue {
@@ -138,6 +141,9 @@ interface SessionContextValue {
   // Move stashed parts into the reactive store for the given message IDs.
   // Called by VscodeSessionTurn when the virtualizer renders a turn.
   hydrateParts: (messageIDs: string[]) => void
+
+  // testagent_change start 增加sdt进度卡片 SDT progress card state for current session
+  sdtProgress: Accessor<SdtProgressState | undefined>
 
   // Todos for current session
   todos: Accessor<TodoItem[]>
@@ -198,7 +204,7 @@ interface SessionContextValue {
   variantList: () => string[]
   currentVariant: () => string | undefined
   selectVariant: (value: string) => void
-  
+
   // Enable-thinking toggle for a provider
   enableThinkings: () => Record<string, boolean>
   isThinkingEnabledForProvider: (providerID?: string) => boolean
@@ -418,8 +424,15 @@ export const SessionProvider: ParentComponent = (props) => {
     enableThinkings: {},
     recentModels: [],
     favoriteModels: [],
+    sdtProgress: {}, // testagent_change start 增加sdt进度卡片
   })
 
+  // testagent_change start 增加sdt进度卡片
+  const sdtProgress = () => {
+    const id = currentSessionID()
+    return id ? store.sdtProgress[id] : undefined
+  }
+  // testagent_change end
   // Per-session agent selection
   const selectedAgentName = createMemo<string>(() => {
     const sessionID = currentSessionID()
@@ -785,8 +798,93 @@ export const SessionProvider: ParentComponent = (props) => {
 
     return false
   }
+  // testagent_change start 增加sdt进度卡片
+  function handleSdtMessage(
+    message: Extract<ExtensionMessage, { type: "sdt.started" | "sdt.progress" | "sdt.finished" }>,
+  ): void {
+    if (message.type === "sdt.started") {
+      setStore("sdtProgress", message.sessionID, {
+        sessionID: message.sessionID,
+        runID: message.runID,
+        taskName: message.taskName,
+        status: "starting",
+        sequence: 0,
+        startedAt: message.startedAt,
+        totalCount: 0,
+        completedCount: 0,
+        percent: 0,
+        currentStageID: null,
+        currentStageIndex: null,
+        stages: [],
+        nextHint: null,
+        exceptionHint: null,
+        errorMessage: null,
+        detail: null,
+      })
+      return
+    }
+
+    const current = store.sdtProgress[message.sessionID]
+    if (message.type === "sdt.progress") {
+      if (current && current.runID === message.runID && message.sequence <= current.sequence) return
+      const completedCount =
+        message.completedCount ||
+        message.stages.filter((stage) => stage.status === "completed" || stage.status === "skipped").length
+      const totalCount = message.totalCount || message.stages.length
+      setStore("sdtProgress", message.sessionID, {
+        sessionID: message.sessionID,
+        runID: message.runID,
+        taskName: message.taskName,
+        status: "running",
+        sequence: message.sequence,
+        startedAt: current?.runID === message.runID ? current.startedAt : Date.now(),
+        totalCount,
+        completedCount,
+        percent: message.percent,
+        currentStageID: message.currentStageID,
+        currentStageIndex: message.currentStageIndex,
+        stages: message.stages,
+        nextHint: message.nextHint,
+        exceptionHint: message.exceptionHint,
+        errorMessage: message.errorMessage,
+        detail: null,
+      })
+      return
+    }
+
+    if (!current || current.runID !== message.runID) return
+    const finishedCompletedCount = Number.isFinite(message.completedCount) ? message.completedCount : 0
+    const finishedTotalCount = Number.isFinite(message.totalCount) ? message.totalCount : 0
+    const finishedPercent = Number.isFinite(message.percent) ? message.percent : 0
+    const completedCount = Math.max(current.completedCount, finishedCompletedCount)
+    const totalCount = Math.max(current.totalCount, finishedTotalCount, message.stages.length)
+    const stages = message.stages.length > 0 ? message.stages : current.stages
+    const percent = Math.max(current.percent, finishedPercent)
+    setStore("sdtProgress", message.sessionID, {
+      ...current,
+      status: message.status,
+      finishedAt: message.finishedAt,
+      taskName: message.taskName || current.taskName,
+      totalCount,
+      completedCount,
+      percent,
+      currentStageID: message.currentStageID ?? current.currentStageID,
+      currentStageIndex: message.currentStageIndex ?? current.currentStageIndex,
+      stages,
+      errorMessage: message.errorMessage ?? message.detail ?? current.errorMessage,
+      detail: message.detail ?? current.detail,
+    })
+  }
+  // testagent_change end
 
   function handleExtensionMessage(message: ExtensionMessage): void {
+    // testagent_change start 增加sdt进度卡片
+    if (message.type === "sdt.started" || message.type === "sdt.progress" || message.type === "sdt.finished") {
+      handleSdtMessage(message)
+      return
+    }
+    // testagent_change end
+
     // Route suggestion messages (extracted to stay within complexity limit)
     routeSuggestionMessage(message)
     if (handleStreamMessage(message)) return
@@ -854,7 +952,7 @@ export const SessionProvider: ParentComponent = (props) => {
 
       case "sessionError": {
         // Skip AbortError and MessageAbortedError (user-initiated abort is not an error)
-        const isAbortError = 
+        const isAbortError =
           message.error?.name === "MessageAbortedError" || 
           (message.error?.name as string) === "AbortError"
         if (isAbortError) break
@@ -2134,6 +2232,7 @@ export const SessionProvider: ParentComponent = (props) => {
       next.delete(id)
       return next
     })
+    setStore("sdtProgress", id, undefined) // testagent_change start 增加sdt进度卡片
     vscode.postMessage({ type: "deleteSession", sessionID: id })
   }
 
@@ -2372,6 +2471,7 @@ export const SessionProvider: ParentComponent = (props) => {
     userMessages,
     getParts,
     hydrateParts,
+    sdtProgress,  // testagent_change start 增加sdt进度卡片
     todos,
     permissions,
     respondingPermissions,
