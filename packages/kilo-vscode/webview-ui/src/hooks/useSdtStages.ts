@@ -65,6 +65,19 @@ export function useSdtStages(vscode: VSCodeContext, sessionID?: () => string | u
     if (!showStages()) setStagesIndex(0)
   })
 
+  // 键盘移动高亮时，把当前项滚动进 dropdown 可视区
+  createEffect(() => {
+    if (!showStages()) return
+    stagesIndex()
+    if (typeof document === "undefined") return
+    queueMicrotask(() => {
+      const el = document.querySelector(
+        ".stages-dropdown .stages-item--active",
+      ) as HTMLElement | null
+      el?.scrollIntoView({ block: "nearest" })
+    })
+  })
+
   // 监听 extension 返回的阶段列表
   const unsubscribe = vscode.onMessage((message) => {
     if (message.type !== "stagesResult") return
