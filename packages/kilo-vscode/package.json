@@ -2,7 +2,7 @@
   "name": "TestAgent",
   "displayName": "TestAgent",
   "description": "TestAgent",
-  "version": "1.4.1",
+  "version": "1.4.2",
   "icon": "assets/icons/logo-outline-black.png",
   "galleryBanner": {
     "color": "#FFFFFF",
