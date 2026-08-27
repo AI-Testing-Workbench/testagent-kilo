@@ -942,6 +942,7 @@ export interface NotificationSettingsLoadedMessage {
     notifyQuestions: boolean
     notifyErrors: boolean
     notifySubagent: boolean
+    notifyZhAnswer: boolean // testagent_change
     soundAgent: string
     soundPermissions: string
     soundErrors: string

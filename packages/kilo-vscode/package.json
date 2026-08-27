@@ -532,6 +532,11 @@
           "default": false,
           "description": "Load CLAUDE.md instructions and skills from your Claude Code configuration directory into TestAgent sessions. Enable this if you want TestAgent to use your Claude Code instructions and skills."
         },
+        "testagent.zhRelayUrl": {
+          "type": "string",
+          "default": "",
+          "markdownDescription": "企业 ZH relay 服务地址（内网固定地址）。本地模式启动 serve 时注入 `ZH_RELAY_URL`，插件据此推送权限/提问卡片并轮询回复。留空使用扩展内置默认地址。"
+        },
         "testagent.new.browserAutomation.enabled": {
           "type": "boolean",
           "default": false,
@@ -571,6 +576,11 @@
           "type": "boolean",
           "default": false,
           "description": "Show notifications for sub-agent tasks (permissions, questions, errors)"
+        },
+        "testagent.new.notifications.zhAnswer": {
+          "type": "boolean",
+          "default": false,
+          "description": "开启企业 ZH 回答桥接：任务权限/提问推送企业 ZH，手机端即可回复（本地需同时配置 testagent.zhRelayUrl）"
         },
         "testagent.new.sounds.agent": {
           "type": "string",

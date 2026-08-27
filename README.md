@@ -29,12 +29,14 @@ bun run extension
 ```
 
 该命令会自动完成：
+
 1. 构建 CLI 二进制文件（`packages/testagent-core` → `packages/kilo-vscode/bin/`）
 2. 构建 testflow 独立二进制及资源文件（`packages/testflow` → `packages/kilo-vscode/bin/testflow.exe` + `testflow-res/`）
 3. 构建 VS Code 扩展（extension + webview + Agent Manager）
 4. 启动 VS Code 开发模式并加载扩展
 
 **跳过 CLI 构建**（当二进制文件已存在时）：
+
 ```bash
 bun run extension --no-build
 ```
@@ -57,6 +59,7 @@ bun run rebuild-sdk
 #### 步骤 2：构建 CLI 二进制文件
 
 **macOS / Linux:**
+
 ```bash
 # 1. 构建 testagent-core 二进制
 cd packages/testagent-core
@@ -64,6 +67,7 @@ bun run bun:mac
 ```
 
 **Windows:**
+
 ```bash
 cd packages/testagent-core
 bun run bun:windows
@@ -72,6 +76,7 @@ bun run bun:windows
 #### 步骤3： 构建 testflow 独立二进制 + 资源文件
 
 **Windows:**
+
 ```bash
 # 2. 构建 testflow 独立二进制 + 资源文件, windows版本，可以使用--env 指定编辑环境， 默认不传为production
 cd packages/kilo-vscode
@@ -80,7 +85,9 @@ bun run build:testflow:windows
 bun run build:testflow:windows --env=dev
 bun run build:testflow:windows --env=production
 ```
+
 **Linux:**
+
 ```bash
 #构建 testflow 独立二进制 + 资源文件, linux版本，可以使用--env 指定编辑环境， 默认不传为production
 cd packages/kilo-vscode
@@ -126,11 +133,13 @@ testagent插件版本依据`kilo-vscode`文件夹内`package.json`的`version`�
 CLI testagentVersion 依据`packages/testagent-core/packages/core/src/installation/version.ts`的`InstallationVersion`字段
 
 ### Q: 如何更新子模块？
+
 ```bash
 git submodule update --remote --merge
 ```
 
 ### Q: 如何清理构建产物？
+
 ```bash
 # 清理 CLI 构建
 cd packages/testagent-core && bun run clean
@@ -140,6 +149,7 @@ cd packages/kilo-vscode && bun run clean
 ```
 
 ### Q: 开发时修改了 CLI 或 testflow 代码，如何重新构建？
+
 ```bash
 # 方式 1：使用 extension 命令（推荐）
 bun run extension

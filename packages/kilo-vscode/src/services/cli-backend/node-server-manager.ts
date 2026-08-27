@@ -22,6 +22,10 @@ import { type ServerInstance, ServerStartupError, toErrorMessage } from "./serve
 
 const STARTUP_TIMEOUT_SECONDS = 30
 
+// testagent_change start - 企业 ZH relay 默认内网地址（未配置 testagent.zhRelayUrl 时使用）
+const DEFAULT_ZH_RELAY_URL = ""
+// testagent_change end
+
 /**
  * Server manager for the OpenCode Node.js backend.
  *
@@ -100,6 +104,18 @@ export class NodeServerManager {
     return { port: state.port, password: state.password }
   }
 
+  // testagent_change start - 读取本地模式 ZH relay 地址（设置优先，回退内置默认）
+  private resolveZhRelayUrl(): string {
+    const configured = vscode.workspace.getConfiguration("testagent").get<string>("zhRelayUrl", "")
+    return (configured ?? "").trim() || DEFAULT_ZH_RELAY_URL
+  }
+
+  // 设置页「通知」菜单的「招乎回答」开关（testagent.new.notifications.zhAnswer）
+  private isZhAnswerEnabled(): boolean {
+    return vscode.workspace.getConfiguration("testagent.new.notifications").get<boolean>("zhAnswer", false)
+  }
+  // testagent_change end
+
   private handleNotification(message: string) {
     const match = message.match(/\[TESTAGENT_NOTIFICATION\] (.+)/)
     if (!match) return
@@ -108,31 +124,52 @@ export class NodeServerManager {
       const notification = JSON.parse(match[1])
       if (notification.type !== "plugin-notification") return
 
-      const actions = Array.isArray(notification.actions) ? notification.actions : []
-      const list = actions
-        .map((item: unknown) => {
-          if (!item || typeof item !== "object" || !("label" in item)) return undefined
-          return typeof item.label === "string" ? item : undefined
-        })
-        .filter((item: unknown): item is { id?: string; label: string } => Boolean(item))
-      const action = list[0]
-      const label = action?.label
+      // testagent_change start - 按 action id 分发（保留 enable-auto-compaction）
+      const actions: Array<{ id?: string; label: string }> = (
+        Array.isArray(notification.actions) ? notification.actions : []
+      ).filter(
+        (item: unknown): item is { id?: string; label: string } =>
+          Boolean(item && typeof item === "object" && typeof (item as { label?: unknown }).label === "string"),
+      )
+      const labels = actions.map((item) => item.label)
       const show =
         notification.level === "error"
-          ? vscode.window.showErrorMessage(`TestAgent: ${notification.message}`, ...list.map((item) => item.label))
-          : vscode.window.showInformationMessage(
-              `TestAgent: ${notification.message}`,
-              ...list.map((item) => item.label),
-            )
+          ? vscode.window.showErrorMessage(`TestAgent: ${notification.message}`, ...labels)
+          : vscode.window.showInformationMessage(`TestAgent: ${notification.message}`, ...labels)
       void show.then((selected) => {
-        if (!action || selected !== label) return
-        console.log("[TestAgent] 用户点击了确定", action.id ? { actionID: action.id } : undefined)
-        this.onEnableAutoCompaction?.()
+        const action = actions.find((item) => item.label === selected)
+        if (!action) return
+        console.log("[TestAgent] 用户点击了通知按钮", action.id ? { actionID: action.id } : undefined)
+        if (action.id === "enable-auto-compaction") {
+          this.onEnableAutoCompaction?.()
+        }
       })
+      // testagent_change end
     } catch (err) {
       console.error("[TestAgent] NodeServerManager: Failed to parse notification:", err)
     }
   }
+
+  // testagent_change start - 回调 serve 切换「招乎回答」开关（设置页通知菜单 + 通知栏 action 共用）
+  async setZhAnswerEnabled(enabled: boolean): Promise<void> {
+    try {
+      const instance = this.instance
+      if (!instance) return
+      const url = `http://127.0.0.1:${instance.port}`
+      const resp = await fetch(`${url}/testagent/zh-answer`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Basic ${Buffer.from(`opencode:${instance.password}`).toString("base64")}`,
+        },
+        body: JSON.stringify({ enabled }),
+      })
+      console.log(`[TestAgent] 招乎回答 ${enabled ? "已开启" : "已关闭"}`, resp.status)
+    } catch (err) {
+      console.error("[TestAgent] 切换招乎回答失败:", err)
+    }
+  }
+  // testagent_change end
 
   private async startServer(): Promise<ServerInstance> {
     const password = crypto.randomBytes(32).toString("hex")
@@ -153,6 +190,11 @@ export class NodeServerManager {
 
     const cloud = isCloudMode()
     const port = cloud ? await pickFreePort() : 0
+    // testagent_change start - 本地模式注入 ZH relay 地址（用户身份/令牌由连接后 PUT /testagent/user 同步）
+    const zhRelayUrl = cloud ? "" : this.resolveZhRelayUrl()
+    // 设置页「通知」菜单开关决定 serve 启动时插件默认启停
+    const zhAnswerEnabled = this.isZhAnswerEnabled()
+    // testagent_change end
 
     return new Promise((resolve, reject) => {
       console.log("[TestAgent] NodeServerManager: 🎬 Spawning Node.js server")
@@ -189,6 +231,8 @@ export class NodeServerManager {
           KILO_APP_VERSION: this.context.extension.packageJSON.version,
           KILO_VSCODE_VERSION: vscode.version,
           KILOCODE_EDITOR_NAME: `${vscode.env.appName} ${vscode.version}`,
+          ...(zhRelayUrl && { ZH_RELAY_URL: zhRelayUrl }),
+          ...(zhAnswerEnabled && { TESTAGENT_ZH_ANSWER_ENABLED: "1" }),
         },
       }
 

@@ -131,6 +131,23 @@ export class KiloConnectionService {
     )
     // }
     // testagent_change end
+
+    // testagent_change start - 设置页「通知」菜单「招乎回答」开关：运行时热切换运行中的 serve
+    context.subscriptions.push(
+      vscode.workspace.onDidChangeConfiguration(async (e) => {
+        if (!e.affectsConfiguration("testagent.new.notifications.zhAnswer")) return
+        const enabled = vscode.workspace
+          .getConfiguration("testagent.new.notifications")
+          .get<boolean>("zhAnswer", false)
+        console.log(`[TestAgent] 招乎回答设置变更: ${enabled}`)
+        try {
+          await this.serverManager.setZhAnswerEnabled(enabled)
+        } catch (err) {
+          console.error("[TestAgent] 切换招乎回答失败:", err)
+        }
+      }),
+    )
+    // testagent_change end
   }
 
   /**

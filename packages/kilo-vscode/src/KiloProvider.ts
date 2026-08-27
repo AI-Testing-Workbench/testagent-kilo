@@ -3222,6 +3222,7 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
         notifyQuestions: notifications.get<boolean>("questions", true),
         notifyErrors: notifications.get<boolean>("errors", true),
         notifySubagent: notifications.get<boolean>("subagent", false),
+        notifyZhAnswer: notifications.get<boolean>("zhAnswer", false), // testagent_change
         soundAgent: sounds.get<string>("agent", "default"),
         soundPermissions: sounds.get<string>("permissions", "default"),
         soundErrors: sounds.get<string>("errors", "default"),
