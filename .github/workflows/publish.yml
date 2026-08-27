@@ -13,6 +13,11 @@ on:
         required: true
         type: string
         default: "main"
+      core_branch:
+        description: "testagent-core 子模块分支 (留空使用默认分支)"
+        required: false
+        type: string
+        default: ""
       platform:
         description: "构建平台 (Platform to build)"
         required: true
@@ -54,6 +59,11 @@ jobs:
           git config --global url."https://github.com/".insteadOf "git@github.com:"
           git submodule sync --recursive packages/testagent-core
           git submodule update --init --remote --recursive packages/testagent-core
+          if [ -n "${{ inputs.core_branch }}" ]; then
+            git -C packages/testagent-core fetch origin "${{ inputs.core_branch }}"
+            git -C packages/testagent-core checkout "FETCH_HEAD"
+            git -C packages/testagent-core submodule update --init --recursive
+          fi
 
       # testagent_change - root workspace install needs the testflow workspace
       - name: Update testflow submodule
@@ -168,6 +178,11 @@ jobs:
           git config --global url."https://github.com/".insteadOf "git@github.com:"
           git submodule sync --recursive packages/testagent-core
           git submodule update --init --remote --recursive packages/testagent-core
+          if [ -n "${{ inputs.core_branch }}" ]; then
+            git -C packages/testagent-core fetch origin "${{ inputs.core_branch }}"
+            git -C packages/testagent-core checkout "FETCH_HEAD"
+            git -C packages/testagent-core submodule update --init --recursive
+          fi
 
       # testagent_change - use latest testflow commit for CLI builds (fix workspace missing error)
       - name: Update testflow submodule
@@ -302,6 +317,11 @@ jobs:
           git config --global url."https://github.com/".insteadOf "git@github.com:"
           git submodule sync --recursive packages/testagent-core
           git submodule update --init --remote --recursive packages/testagent-core
+          if [ -n "${{ inputs.core_branch }}" ]; then
+            git -C packages/testagent-core fetch origin "${{ inputs.core_branch }}"
+            git -C packages/testagent-core checkout "FETCH_HEAD"
+            git -C packages/testagent-core submodule update --init --recursive
+          fi
 
       # testagent_change - use latest testflow commit for VSIX builds
       - name: Update testflow submodule
