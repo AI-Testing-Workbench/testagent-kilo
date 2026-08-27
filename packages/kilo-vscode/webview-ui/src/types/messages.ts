@@ -537,6 +537,7 @@ export interface ReadyMessage {
   workspaceDirectory?: string
   userId?: string // testagent_change
   webviewType?: "sidebar" | "panel" | "unknown" // testagent_change
+  cloudMode?: boolean // testagent_change
 }
 
 export interface GitStatusMessage {

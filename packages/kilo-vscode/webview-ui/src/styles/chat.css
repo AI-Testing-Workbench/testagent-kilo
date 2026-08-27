@@ -2379,6 +2379,23 @@ body.vscode-dark .slash-command-dropdown {
 .testagent-avatar-home .home-blink {
   animation: home-blink 4s ease-in-out infinite;
 }
+@keyframes cm-cloud-bob {
+  0%,
+  100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-1.6px);
+  }
+}
+.testagent-avatar-home .cm-cloud-bob,
+.testagent-avatar-inline .cm-cloud-bob {
+  animation: cm-cloud-bob 4s ease-in-out infinite;
+}
+.testagent-avatar-home .cm-cloud-front,
+.testagent-avatar-inline .cm-cloud-front {
+  animation-delay: 0.6s;
+}
 
 /* Session List (inside History View) */
 .session-list {

@@ -15,6 +15,7 @@ export function buildWebviewHtml(
     title: string
     port?: number
     extraStyles?: string
+    cloudMode?: boolean // testagent_change
   },
 ): string {
   const nonce = getNonce()
@@ -55,7 +56,7 @@ export function buildWebviewHtml(
 </head>
 <body>
   <div id="root"></div>
-  <script nonce="${nonce}">window.ICONS_BASE_URI = "${opts.iconsBaseUri}";</script>
+  <script nonce="${nonce}">window.ICONS_BASE_URI = "${opts.iconsBaseUri}"; window.CLOUD_MODE = ${opts.cloudMode === true};</script>
   <script nonce="${nonce}" src="${opts.scriptUri}"></script>
 </body>
 </html>`

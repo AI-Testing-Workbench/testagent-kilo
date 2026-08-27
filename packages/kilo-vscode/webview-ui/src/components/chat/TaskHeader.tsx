@@ -19,6 +19,7 @@ import { collapseCostBreakdown, buildTimingSegments, fmtDuration } from "../../c
 import { useLanguage } from "../../context/language"
 import { useVSCode } from "../../context/vscode"
 import { TaskTimeline } from "./TaskTimeline"
+import { CloudLogo } from "../shared/CloudLogo"
 import type { TodoItem, ExtensionMessage } from "../../types/messages"
 
 interface TaskHeaderProps {
@@ -145,19 +146,7 @@ export const TaskHeader: Component<TaskHeaderProps> = (props) => {
     <Show when={hasMessages()}>
       <div data-component="task-header">
         <div data-slot="task-header-title" title={title()}>
-          <svg class="testagent-avatar-inline" viewBox="-4 -4 32 32" xmlns="http://www.w3.org/2000/svg">
-            <defs>
-              <linearGradient id="th-rg" x1="0%" y1="0%" x2="100%" y2="100%">
-                <stop offset="0%" stop-color="#4fc3f7" />
-                <stop offset="50%" stop-color="#2979ff" />
-                <stop offset="100%" stop-color="#69f0ae" />
-              </linearGradient>
-            </defs>
-            <circle cx="12" cy="12" r="12" fill="#e8f4ff" />
-            <circle cx="12" cy="12" r="12.75" fill="none" stroke="url(#th-rg)" stroke-width="1.5" />
-            <ellipse class="th-blink" cx="8" cy="9.33" rx="1.63" ry="2.62" fill="#2979ff" />
-            <ellipse class="th-blink" cx="16" cy="9.33" rx="1.63" ry="2.62" fill="#2979ff" />
-          </svg>
+          <CloudLogo cloudId="th-cm" class="testagent-avatar-inline" blink="th-blink" />
           <Show when={editing()} fallback={<span class="task-header-title-text">{title()}</span>}>
             <InlineInput
               ref={(el) => requestAnimationFrame(() => el?.focus())}

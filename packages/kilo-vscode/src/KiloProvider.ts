@@ -51,6 +51,7 @@ import type { RemoteStatusService } from "./services/RemoteStatusService"
 import { resolveProjectDirectory } from "./project-directory"
 import { getBusySessionCount, seedSessionStatuses } from "./session-status"
 import { retry } from "./services/cli-backend/retry"
+import { isCloudMode } from "./services/cli-backend/cloud-mode" // testagent_change
 import { slimPart, slimParts } from "./kilo-provider/slim-metadata"
 import { handleContinueInWorktree } from "./kilo-provider/continue-worktree"
 import { parseMessageFiles, type MessageFile } from "./kilo-provider/message-files"
@@ -572,6 +573,7 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
         languageOverride: langConfig.get<string>("language"),
         workspaceDirectory: this.getProjectDirectory(this.currentSession?.id),
         webviewType: this.webviewType, // testagent_change
+        cloudMode: isCloudMode(), // testagent_change
       })
     } else {
       console.log("[TestAgent]  ⚠️ Skipping ready message (no serverInfo)")
@@ -1764,6 +1766,7 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
           languageOverride: langConfig.get<string>("language"),
           workspaceDirectory: this.getProjectDirectory(this.currentSession?.id),
           userId, // testagent_change
+          cloudMode: isCloudMode(), // testagent_change
         })
       }
 
@@ -5264,6 +5267,7 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
       iconsBaseUri: webview.asWebviewUri(vscode.Uri.joinPath(this.extensionUri, "assets", "icons")),
       title: "TestAgent",
       port: this.connectionService.getServerInfo()?.port,
+      cloudMode: isCloudMode(), // testagent_change
       extraStyles: `.container { height: 100%; display: flex; flex-direction: column; height: 100vh; border-right: 1px solid var(--border-weak-base); }`,
     })
   }
