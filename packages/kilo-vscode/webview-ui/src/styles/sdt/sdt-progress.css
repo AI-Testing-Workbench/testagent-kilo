@@ -101,7 +101,7 @@
   outline: 1px solid var(--vscode-focusBorder);
   outline-offset: -1px;
 }
-.sdt-progress-card:not(.sdt-progress-card--terminal) .sdt-progress-card__metrics {
+.sdt-progress-card__metrics {
   color: var(--vscode-progressBar-background);
   font-weight: 500;
 }
