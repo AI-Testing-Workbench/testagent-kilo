@@ -270,7 +270,8 @@ export class ServerManager {
   }): Record<string, string | undefined> {
     // testagent_change start - 本地模式注入 ZH relay 地址（用户身份/令牌由连接后 PUT /testagent/user 同步）
     const zhRelayUrl = input.cloud ? "" : this.resolveZhRelayUrl()
-    // 设置页「通知」菜单开关决定 serve 启动时插件默认启停
+    // 启动时环境变量激活源：开关开启注入 TESTAGENT_ZH_ANSWER_ENABLED=1（与运行时按钮切换相互独立）。
+    // 运行中按钮切换走 /testagent/zh-answer 热切换，不写环境变量。
     const zhAnswerEnabled = this.isZhAnswerEnabled()
     // testagent_change end
     return {
