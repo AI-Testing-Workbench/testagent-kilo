@@ -274,6 +274,19 @@ export interface TimingSegment {
   color: string
 }
 
+/** 时间区间并集总时长（ms）：重叠区间只计一次 */
+function union(spans: Array<[number, number]>): number {
+  return spans
+    .sort((a, b) => a[0] - b[0])
+    .reduce(
+      (sum, span) => ({
+        total: sum.total + Math.max(0, span[1] - Math.max(span[0], sum.end)),
+        end: Math.max(sum.end, span[1]),
+      }),
+      { total: 0, end: 0 },
+    ).total
+}
+
 /**
  * Compute timing breakdown across a session family.
  * Pure function — no store dependency.
@@ -294,6 +307,10 @@ export function buildFamilyTiming(
   const seenMessages = new Set<string>()
   const seenParts = new Set<string>()
   const intervals: Array<[number, number]> = []
+  // 每条消息的 LLM 流近似区间 [created, created+llm]，用于并行去重
+  const llmSpans: Array<[number, number]> = []
+  // 工具执行区间，用于并行去重
+  const toolSpans: Array<[number, number]> = []
   let has = false
 
   for (const sid of family) {
@@ -302,8 +319,13 @@ export function buildFamilyTiming(
     for (const m of msgs) {
       if (m.role !== "assistant" || seenMessages.has(m.id)) continue
       seenMessages.add(m.id)
-      // LLM 耗时
-      llm += m.time?.llm ?? 0
+      // LLM 耗时：按区间并集去重，父子会话并行的流重叠只计一次
+      // 每条 assistant 消息约对应一次流，流约从 created 开始、持续 llm 毫秒，不晚于 completed
+      const span = m.time?.llm ?? 0
+      if (m.time?.created && span > 0) {
+        const end = m.time.completed ? Math.min(m.time.completed, m.time.created + span) : m.time.created + span
+        llmSpans.push([m.time.created, end])
+      }
       if (m.time?.completed && m.time.created) intervals.push([m.time.created, m.time.completed])
       has = true
 
@@ -325,6 +347,7 @@ export function buildFamilyTiming(
             }
           } else {
             tool += dur // 其他正常工具算工具执行
+            toolSpans.push([p.state.time.start, p.state.time.end ?? Date.now()])
             if (p.tool) {
               toolBreakdown[p.tool] = (toolBreakdown[p.tool] ?? 0) + dur
             }
@@ -339,9 +362,12 @@ export function buildFamilyTiming(
 
   // 旧会话可能只有 total（从 time.created/computed 算出），但没有 llm/tool/wait 细项
   // 这种情况不展示耗时面板
-  if (llm === 0) return undefined
-
   if (!has) return undefined
+
+  // LLM/工具按时间区间并集去重：并行/嵌套会话重叠的执行时间只计一次
+  llm = union(llmSpans)
+  tool = union(toolSpans)
+  if (llm === 0) return undefined
 
   const accumulated = llm + tool + wait
   const elapsed = intervals
