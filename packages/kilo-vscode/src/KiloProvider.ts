@@ -1381,6 +1381,16 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
         case "requestBrowserSettings":
           this.sendBrowserSettings()
           break
+        case "requestChatTips":
+          this.sendChatTips()
+          break
+        case "chatTipAction":
+          if (message.command) {
+            void vscode.commands.executeCommand(message.command).then(undefined, (err) => {
+              vscode.window.showWarningMessage(`TestAgent 提示命令执行失败: ${err}`)
+            })
+          }
+          break
         case "requestClaudeCompatSetting":
           this.sendClaudeCompatSetting()
           break
@@ -1794,6 +1804,7 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
       this.postMessage({ type: "gitStatus", repo: this.cachedGitRepo })
       this.sendNotificationSettings()
       this.sendTimelineSetting()
+      this.sendChatTips()
       this.postMessage({ type: "extensionDataReady" })
 
       // 技能等服务是异步加载的，可能在第一次 checkConfigWarnings 之后才完成，
@@ -4645,6 +4656,7 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
     this.sendBrowserSettings()
     this.sendNotificationSettings()
     this.sendTimelineSetting()
+    this.sendChatTips()
     await ModelState.reset(this.client, (msg) => this.postMessage(msg))
 
     // Re-send globalState items to the webview
@@ -4670,6 +4682,20 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
         useSystemChrome: config.get<boolean>("useSystemChrome", true),
         headless: config.get<boolean>("headless", false),
       },
+    })
+  }
+
+  /**
+   * Read the chat tips from `testagent.new.chatTips` and push them to the webview.
+   */
+  private sendChatTips(): void {
+    const config = vscode.workspace.getConfiguration("testagent.new")
+    this.postMessage({
+      type: "chatTipsLoaded",
+      tips: config.get<Array<{ id?: string; content?: string }>>("chatTips", []).map((tip) => ({
+        id: tip.id,
+        content: tip.content ?? "",
+      })),
     })
   }
 

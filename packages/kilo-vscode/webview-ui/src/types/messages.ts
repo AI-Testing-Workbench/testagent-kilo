@@ -1740,6 +1740,7 @@ export type ExtensionMessage =
   | SuggestionResolvedMessage
   | SuggestionErrorMessage
   | BrowserSettingsLoadedMessage
+  | ChatTipsLoadedMessage
   | ClaudeCompatSettingLoadedMessage
   | GitInstalledResultMessage
   | ConfigLoadedMessage
@@ -2202,6 +2203,26 @@ export interface RequestTimelineSettingMessage {
 
 export interface RequestBrowserSettingsMessage {
   type: "requestBrowserSettings"
+}
+
+// Chat tip (configured via `testagent.new.chatTips`)
+export interface ChatTipItem {
+  id?: string
+  content: string
+}
+
+export interface ChatTipsLoadedMessage {
+  type: "chatTipsLoaded"
+  tips: ChatTipItem[]
+}
+
+export interface RequestChatTipsMessage {
+  type: "requestChatTips"
+}
+
+export interface ChatTipActionMessage {
+  type: "chatTipAction"
+  command: string
 }
 
 export interface RequestClaudeCompatSettingMessage {
@@ -2919,6 +2940,8 @@ export type WebviewMessage =
   | UpdateSettingRequest
   | RequestTimelineSettingMessage
   | RequestBrowserSettingsMessage
+  | RequestChatTipsMessage
+  | ChatTipActionMessage
   | RequestClaudeCompatSettingMessage
   | RequestConfigMessage
   | RequestGlobalConfigMessage

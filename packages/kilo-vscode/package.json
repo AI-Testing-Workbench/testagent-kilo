@@ -613,6 +613,27 @@
           "type": "boolean",
           "default": true,
           "description": "Show the task timeline graph in the chat header"
+        },
+        "testagent.new.chatTips": {
+          "type": "array",
+          "default": [],
+          "markdownDescription": "Markdown tip shown above the chat input, mirroring the VS Code Copilot chat tip widget. Use `[label](command:commandId)` links to run a VS Code command when clicked, e.g. `[开启浏览器自动化](command:workbench.action.openSettings)`.",
+          "items": {
+            "type": "object",
+            "properties": {
+              "id": {
+                "type": "string",
+                "description": "Unique tip id used to remember dismissal."
+              },
+              "content": {
+                "type": "string",
+                "markdownDescription": "Tip content in markdown. Supports `[label](command:commandId)` links that run VS Code commands."
+              }
+            },
+            "required": [
+              "content"
+            ]
+          }
         }
       }
     }
