@@ -142,7 +142,27 @@
 .sdt-progress-card__stage--completed .sdt-progress-card__stage-icon {
   color: var(--vscode-testing-iconPassed, var(--vscode-terminal-ansiGreen));
 }
-.sdt-progress-card__stage--exception .sdt-progress-card__stage-icon {
+.sdt-progress-card__stage--exception,
+.sdt-progress-card__stage--user_abort {
+  background: var(--vscode-inputValidation-errorBackground);
+  border-radius: 3px;
+  padding: 2px 4px;
+  margin: -2px -4px;
+}
+
+.sdt-progress-card__stage--exception .sdt-progress-card__stage-icon,
+.sdt-progress-card__stage--user_abort .sdt-progress-card__stage-icon {
+  color: var(--vscode-errorForeground);
+}
+
+.sdt-progress-card__stage--exception .sdt-progress-card__stage-name,
+.sdt-progress-card__stage--user_abort .sdt-progress-card__stage-name {
+  color: var(--vscode-errorForeground);
+  font-weight: 500;
+}
+
+.sdt-progress-card__stage--exception .sdt-progress-card__stage-status,
+.sdt-progress-card__stage--user_abort .sdt-progress-card__stage-status {
   color: var(--vscode-errorForeground);
 }
 .sdt-progress-card__stage--executing .sdt-progress-card__stage-icon,
