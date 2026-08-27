@@ -6,6 +6,12 @@
   border-radius: 6px;
   background: var(--vscode-editorWidget-background);
   color: var(--vscode-foreground);
+  transform-origin: bottom center;
+  animation: sdt-card-slide-in 900ms cubic-bezier(0.25, 0.46, 0.45, 0.94) forwards;
+}
+
+.sdt-progress-card--exiting {
+  animation: sdt-card-slide-out 500ms cubic-bezier(0.55, 0.06, 0.68, 0.19) forwards;
 }
 
 .sdt-progress-card__summary {
@@ -226,7 +232,67 @@
   }
 }
 
+/* 进入动画：从下方滑入 + 淡入 + 动态阴影 */
+@keyframes sdt-card-slide-in {
+  0% {
+    transform: translateY(100%) scale(0.95);
+    opacity: 0;
+    box-shadow: 0 0 0 rgba(0, 0, 0, 0);
+  }
+  40% {
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.25), 0 4px 8px rgba(0, 0, 0, 0.15);
+  }
+  100% {
+    transform: translateY(0) scale(1);
+    opacity: 1;
+    box-shadow: 0 0 0 rgba(0, 0, 0, 0);
+  }
+}
+
+/* 退出动画：滑出到下方 + 淡出 + 动态阴影 */
+@keyframes sdt-card-slide-out {
+  0% {
+    transform: translateY(0) scale(1);
+    opacity: 1;
+    box-shadow: 0 0 0 rgba(0, 0, 0, 0);
+  }
+  30% {
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.25), 0 4px 8px rgba(0, 0, 0, 0.15);
+  }
+  100% {
+    transform: translateY(100%) scale(0.95);
+    opacity: 0;
+    box-shadow: 0 0 0 rgba(0, 0, 0, 0);
+  }
+}
+
 @media (prefers-reduced-motion: reduce) {
+  .sdt-progress-card {
+    animation: sdt-card-slide-in-reduced 200ms ease-out forwards;
+  }
+  
+  .sdt-progress-card--exiting {
+    animation: sdt-card-slide-out-reduced 150ms ease-in forwards;
+  }
+  
+  @keyframes sdt-card-slide-in-reduced {
+    from {
+      opacity: 0;
+    }
+    to {
+      opacity: 1;
+    }
+  }
+  
+  @keyframes sdt-card-slide-out-reduced {
+    from {
+      opacity: 1;
+    }
+    to {
+      opacity: 0;
+    }
+  }
+
   .sdt-progress-card__indicator--running,
   .sdt-progress-card__stage-icon--running {
     animation: none;

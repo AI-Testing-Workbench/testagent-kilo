@@ -30,6 +30,16 @@ const statusLabel = (status: SdtProgressState["status"]) => {
 
 export const SdtProgressCard: Component<SdtProgressCardProps> = (props) => {
   const [expanded, setExpanded] = createSignal(false)
+  const [exiting, setExiting] = createSignal(false)
+  
+  const handleDismiss = () => {
+    setExiting(true)
+    setTimeout(() => {
+      props.onDismiss?.()
+      setExiting(false)
+    }, 500)
+  }
+  
   const currentStage = createMemo(() => {
     const byID = props.progress.currentStageID
       ? props.progress.stages.find((stage) => stage.stage_id === props.progress.currentStageID)
@@ -68,6 +78,7 @@ export const SdtProgressCard: Component<SdtProgressCardProps> = (props) => {
       class="sdt-progress-card"
       classList={{
         "sdt-progress-card--terminal": props.progress.status !== "starting" && props.progress.status !== "running",
+        "sdt-progress-card--exiting": exiting(),
       }}
     >
       <button
@@ -103,7 +114,7 @@ export const SdtProgressCard: Component<SdtProgressCardProps> = (props) => {
             title="关闭面板"
             onClick={(e) => {
               e.stopPropagation()
-              props.onDismiss?.()
+              handleDismiss()
             }}
           >
             <Icon name="close" style={{ width: '14px', height: '14px' }} />
