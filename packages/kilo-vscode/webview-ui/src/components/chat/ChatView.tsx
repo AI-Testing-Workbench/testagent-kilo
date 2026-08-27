@@ -95,9 +95,7 @@ export const ChatView: Component<ChatViewProps> = (props) => {
   // Tool-linked questions render inline at their tool part position via AssistantMessage.
   // Only this session's own standalone questions render in the message list — questions
   // from child subagents surface in the bottom dock instead (mirroring PermissionDock).
-  const standaloneQuestions = createMemo(() =>
-    familyQuestions().filter((q) => !q.tool && q.sessionID === id()),
-  )
+  const standaloneQuestions = createMemo(() => familyQuestions().filter((q) => !q.tool && q.sessionID === id()))
   const standaloneSuggestions = createMemo(() => familySuggestions().filter((s) => !s.tool))
   const permissionRequest = () => familyPermissions().find((p) => p.sessionID === id()) ?? familyPermissions()[0]
   // A pending question from a child subagent. The child's message list isn't visible
@@ -112,7 +110,8 @@ export const ChatView: Component<ChatViewProps> = (props) => {
   // Session is busy only because a question tool call is pending — prompt should behave as idle
   const questioning = () => isQuestioning(blocked(), familyQuestions().length)
   // testagent_change - 检查点重置确认时也展示 dock 区域
-  const dock = () => !props.readonly || !!permissionRequest() || !!delegatedQuestionRequest() || !!session.revertConfirm()
+  const dock = () =>
+    !props.readonly || !!permissionRequest() || !!delegatedQuestionRequest() || !!session.revertConfirm()
 
   // When a bottom-dock permission disappears while the session is busy,
   // the scroll container grows taller. Dispatch a custom event so MessageList can
@@ -297,7 +296,7 @@ export const ChatView: Component<ChatViewProps> = (props) => {
           </Show>
           <ConfigWarningsBanner />
           <Show when={session.sdtProgress()}>
-            {(progress) => <SdtProgressCard progress={progress()} />}
+            {(progress) => <SdtProgressCard progress={progress()} onDismiss={session.dismissSdtProgress} />}
           </Show>
           <Show when={!props.readonly}>
             <PromptInput

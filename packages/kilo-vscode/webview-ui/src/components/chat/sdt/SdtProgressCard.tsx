@@ -6,6 +6,7 @@ import { LoadingSpinner } from "./LoadingSpinner"
 
 interface SdtProgressCardProps {
   progress: SdtProgressState
+  onDismiss?: () => void
 }
 
 const stageIcon = (status: SdtProgressState["stages"][number]["status"]): IconProps["name"] => {
@@ -95,6 +96,19 @@ export const SdtProgressCard: Component<SdtProgressCardProps> = (props) => {
           class="sdt-progress-card__chevron"
           classList={{ "sdt-progress-card__chevron--expanded": expanded() }}
         />
+        <Show when={props.onDismiss}>
+          <button
+            class="sdt-progress-card__close"
+            type="button"
+            title="关闭面板"
+            onClick={(e) => {
+              e.stopPropagation()
+              props.onDismiss?.()
+            }}
+          >
+            <Icon name="close" style={{ width: '14px', height: '14px' }} />
+          </button>
+        </Show>
         <span class="sdt-progress-card__stage-summary">{currentStageLabel()}</span>
         <Show when={errorMessage()}>
           <span class="sdt-progress-card__error" title={errorMessage()!}>
@@ -123,12 +137,7 @@ export const SdtProgressCard: Component<SdtProgressCardProps> = (props) => {
               <div class="sdt-progress-card__stage" classList={{ [`sdt-progress-card__stage--${stage.status}`]: true }}>
                 <Show
                   when={stage.status === "executing"}
-                  fallback={
-                    <Icon
-                      name={stageIcon(stage.status)}
-                      class="sdt-progress-card__stage-icon"
-                    />
-                  }
+                  fallback={<Icon name={stageIcon(stage.status)} class="sdt-progress-card__stage-icon" />}
                 >
                   <LoadingSpinner class="sdt-progress-card__stage-icon" />
                 </Show>
