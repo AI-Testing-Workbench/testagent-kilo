@@ -2,16 +2,21 @@
 import { Icon, type IconProps } from "@kilocode/kilo-ui/icon"
 import { For, Show, createMemo, createSignal, type Component } from "solid-js"
 import type { SdtProgressState } from "../../../types/sdt"
+import { LoadingSpinner } from "./LoadingSpinner"
 
 interface SdtProgressCardProps {
   progress: SdtProgressState
 }
 
 const stageIcon = (status: SdtProgressState["stages"][number]["status"]): IconProps["name"] => {
+  if (status === "pending") return "history"
+  if (status === "awaiting_access") return "shield"
+  if (status === "executing") return "reset"
+  if (status === "awaiting_check") return "review"
   if (status === "completed") return "circle-check"
   if (status === "skipped") return "dash"
   if (status === "exception" || status === "user_abort") return "circle-x"
-  return "history"
+  return "dash"
 }
 
 const statusLabel = (status: SdtProgressState["status"]) => {
@@ -37,7 +42,10 @@ export const SdtProgressCard: Component<SdtProgressCardProps> = (props) => {
       (stage) => !["completed", "skipped", "exception", "user_abort"].includes(stage.status),
     )
   })
-  const errorMessage = createMemo(() => props.progress.errorMessage ?? props.progress.exceptionHint)
+  const errorMessage = createMemo(() => {
+    const msg = props.progress.errorMessage ?? props.progress.exceptionHint
+    return msg?.trim()
+  })
   const currentStageLabel = createMemo(() => {
     if (currentStage()) {
       return `当前阶段：${currentStage()!.stage_name}(${currentStage()!.stage_id}) · ${currentStage()!.status_text}`
@@ -113,16 +121,17 @@ export const SdtProgressCard: Component<SdtProgressCardProps> = (props) => {
           <For each={props.progress.stages}>
             {(stage) => (
               <div class="sdt-progress-card__stage" classList={{ [`sdt-progress-card__stage--${stage.status}`]: true }}>
-                <Icon
-                  name={stageIcon(stage.status)}
-                  class="sdt-progress-card__stage-icon"
-                  classList={{
-                    "sdt-progress-card__stage-icon--running":
-                      stage.status === "executing" ||
-                      stage.status === "awaiting_access" ||
-                      stage.status === "awaiting_check",
-                  }}
-                />
+                <Show
+                  when={stage.status === "executing"}
+                  fallback={
+                    <Icon
+                      name={stageIcon(stage.status)}
+                      class="sdt-progress-card__stage-icon"
+                    />
+                  }
+                >
+                  <LoadingSpinner class="sdt-progress-card__stage-icon" />
+                </Show>
                 <span class="sdt-progress-card__stage-name" title={`${stage.stage_name}(${stage.stage_id})`}>
                   {stage.stage_name}({stage.stage_id})
                 </span>

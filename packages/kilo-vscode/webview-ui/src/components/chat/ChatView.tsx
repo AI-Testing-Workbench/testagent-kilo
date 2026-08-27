@@ -296,7 +296,9 @@ export const ChatView: Component<ChatViewProps> = (props) => {
             </div>
           </Show>
           <ConfigWarningsBanner />
-          <Show when={session.sdtProgress()}>{(progress) => <SdtProgressCard progress={progress()} />}</Show>
+          <Show when={session.sdtProgress()}>
+            {(progress) => <SdtProgressCard progress={progress()} />}
+          </Show>
           <Show when={!props.readonly}>
             <PromptInput
               blocked={blocked}
