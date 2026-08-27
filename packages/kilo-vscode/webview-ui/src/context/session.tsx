@@ -1916,6 +1916,15 @@ export const SessionProvider: ParentComponent = (props) => {
     for (const q of scopedQuestions(sid)) {
       rejectQuestion(q.id)
     }
+    // testagent_change start - 如果不是 /sdt- 指令，自动关闭当前的 SDT 面板
+    const isSdtCommand = /^\/sdt-/i.test(text.trim())
+    if (!isSdtCommand && sid) {
+      const currentProgress = store.sdtProgress[sid]
+      if (currentProgress && !store.dismissedSdtRuns.has(currentProgress.runID)) {
+        setStore("dismissedSdtRuns", (prev) => new Set([...prev, currentProgress.runID]))
+      }
+    }
+    // testagent_change end
     if (sid) addOptimistic(sid, messageID, text, files)
 
     const agent = selectedAgentName() !== defaultAgent() ? selectedAgentName() : undefined
@@ -1976,6 +1985,15 @@ export const SessionProvider: ParentComponent = (props) => {
     for (const q of scopedQuestions(sid)) {
       rejectQuestion(q.id)
     }
+    // testagent_change start - 如果不是 sdt- 开头的命令，自动关闭当前的 SDT 面板
+    const isSdtCommand = /^sdt-/i.test(command)
+    if (!isSdtCommand && sid) {
+      const currentProgress = store.sdtProgress[sid]
+      if (currentProgress && !store.dismissedSdtRuns.has(currentProgress.runID)) {
+        setStore("dismissedSdtRuns", (prev) => new Set([...prev, currentProgress.runID]))
+      }
+    }
+    // testagent_change end
 
     if (sid) addOptimistic(sid, messageID, `/${command} ${args}`.trim(), files)
 
