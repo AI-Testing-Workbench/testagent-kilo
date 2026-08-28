@@ -67,7 +67,23 @@ export const SdtProgressCard: Component<SdtProgressCardProps> = (props) => {
     return "当前阶段：等待执行"
   })
   const progress = () => Math.max(0, Math.min(100, props.progress.percent))
-  const stageCount = () => props.progress.currentStageIndex ?? props.progress.completedCount
+  const stageCount = () => {
+    const completed = props.progress.completedCount
+    // 优先判断任务状态：如果任务已经终止（completed/failed/aborted），直接返回已完成数
+    if (props.progress.status === "completed" || props.progress.status === "failed" || props.progress.status === "aborted") {
+      return completed
+    }
+    // 如果有正在执行的阶段（currentStageIndex 有值），说明当前有 1 个阶段在执行
+    // 所以总共应该显示：已完成数 + 1
+    if (props.progress.currentStageIndex !== null && props.progress.currentStageIndex > 0) {
+      return completed + 1
+    }
+    // 如果还在运行中且还有未完成的阶段，显示下一个要执行的
+    if (completed < props.progress.totalCount) {
+      return completed + 1
+    }
+    return props.progress.totalCount
+  }
   const isActive = createMemo(() => {
     if (props.progress.status !== "starting" && props.progress.status !== "running") return false
     return currentStage() !== undefined
