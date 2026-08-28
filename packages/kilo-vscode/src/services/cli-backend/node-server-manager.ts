@@ -22,10 +22,6 @@ import { type ServerInstance, ServerStartupError, toErrorMessage } from "./serve
 
 const STARTUP_TIMEOUT_SECONDS = 30
 
-// testagent_change start - 企业 ZH relay 默认内网地址（未配置 testagent.zhRelayUrl 时使用）
-const DEFAULT_ZH_RELAY_URL = ""
-// testagent_change end
-
 /**
  * Server manager for the OpenCode Node.js backend.
  *
@@ -102,12 +98,6 @@ export class NodeServerManager {
     }
 
     return { port: state.port, password: state.password }
-  }
-
-  // testagent_change start - 读取本地模式 ZH relay 地址（设置优先，回退内置默认）
-  private resolveZhRelayUrl(): string {
-    const configured = vscode.workspace.getConfiguration("testagent").get<string>("zhRelayUrl", "")
-    return (configured ?? "").trim() || DEFAULT_ZH_RELAY_URL
   }
 
   // 设置页「通知」菜单的「招乎回答」开关（testagent.new.notifications.zhAnswer）
@@ -190,10 +180,9 @@ export class NodeServerManager {
 
     const cloud = isCloudMode()
     const port = cloud ? await pickFreePort() : 0
-    // testagent_change start - 本地模式注入 ZH relay 地址（用户身份/令牌由连接后 PUT /testagent/user 同步）
-    const zhRelayUrl = cloud ? "" : this.resolveZhRelayUrl()
-    // 启动时环境变量激活源：开关开启注入 TESTAGENT_ZH_ANSWER_ENABLED=1（与运行时按钮切换相互独立）。
+    // testagent_change start - 启动时环境变量激活源：开关开启注入 TESTAGENT_ZH_ANSWER_ENABLED=1（与运行时按钮切换相互独立）。
     // 运行中按钮切换走 /testagent/zh-answer 热切换，不写环境变量。
+    // 企业 ZH relay 地址不再由扩展配置注入：serve 进程通过 ...process.env 透传环境变量 ZH_RELAY_URL，否则插件使用内置默认地址。
     const zhAnswerEnabled = this.isZhAnswerEnabled()
     // testagent_change end
 
@@ -232,7 +221,6 @@ export class NodeServerManager {
           KILO_APP_VERSION: this.context.extension.packageJSON.version,
           KILO_VSCODE_VERSION: vscode.version,
           KILOCODE_EDITOR_NAME: `${vscode.env.appName} ${vscode.version}`,
-          ...(zhRelayUrl && { ZH_RELAY_URL: zhRelayUrl }),
           ...(zhAnswerEnabled && { TESTAGENT_ZH_ANSWER_ENABLED: "1" }),
         },
       }

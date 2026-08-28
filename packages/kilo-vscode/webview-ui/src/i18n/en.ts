@@ -1117,8 +1117,8 @@ export const dict = {
   "settings.notifications.errors.description": "Show notification on errors",
   "settings.notifications.subagent.title": "Sub-tasks",
   "settings.notifications.subagent.description": "Show notifications for sub-agent tasks",
-  "settings.notifications.zhAnswer.title": "Enterprise ZH Answer", // testagent_change
-  "settings.notifications.zhAnswer.description": "Push permission/question asks to enterprise ZH so you can reply from your phone (local mode also requires testagent.zhRelayUrl)", // testagent_change
+  "settings.notifications.zhAnswer.title": "ZH Answer", // testagent_change
+  "settings.notifications.zhAnswer.description": "Push permission/question asks to ZH so you can reply from your phone", // testagent_change
   "settings.notifications.sounds": "Sounds",
   "settings.notifications.agentSound.title": "Agent Completion Sound",
   "settings.notifications.agentSound.description": "Sound to play when agent completes",
