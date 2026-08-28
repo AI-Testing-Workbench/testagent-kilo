@@ -1,21 +1,19 @@
 /**
  * ChatTip
- * Shows a configurable markdown tip above the chat input, mirroring the
- * VS Code Copilot chat tip widget. Tips come from `testagent.new.chatTips`.
- * Supports `[label](command:commandId)` links that run VS Code commands,
- * plus previous/next navigation when multiple tips are configured.
+ * Shows a markdown tip above the chat input, mirroring the VS Code Copilot
+ * chat tip widget. Tips come from `testagent.new.chatTipsUrl` (fetched by the
+ * extension at startup). Supports `[label](command:commandId)` links that run
+ * VS Code commands, plus previous/next navigation when multiple tips exist.
+ * The "已读" action persists the current tip as read (it will not be shown
+ * again) and closes the whole bubble for this session.
  */
 
-import { Component, Show, createMemo, createSignal, onCleanup, onMount } from "solid-js"
+import { Component, Show, createEffect, createMemo, createSignal, onCleanup, onMount } from "solid-js"
 import { IconButton } from "@kilocode/kilo-ui/icon-button"
 import { Tooltip } from "@kilocode/kilo-ui/tooltip"
 import { Markdown } from "@kilocode/kilo-ui/markdown"
 import { useVSCode } from "../../context/vscode"
 import type { ChatTipItem } from "../../types/messages"
-
-interface VscodeState {
-  dismissedTips?: string[]
-}
 
 const commandLink = /\[([^\]]+)\]\(command:([^\s)]+)\)/g
 
@@ -29,12 +27,11 @@ function linkifyCommands(md: string): string {
 export const ChatTip: Component = () => {
   const vscode = useVSCode()
   const [tips, setTips] = createSignal<ChatTipItem[]>([])
-  const [dismissed, setDismissed] = createSignal<Set<string>>(new Set())
   const [idx, setIdx] = createSignal(0)
+  const [closed, setClosed] = createSignal(false)
+  const [viewed, setViewed] = createSignal<Set<string>>(new Set())
 
   onMount(() => {
-    const saved = vscode.getState<VscodeState>()?.dismissedTips
-    if (saved) setDismissed(new Set(saved))
     vscode.postMessage({ type: "requestChatTips" })
   })
 
@@ -44,39 +41,44 @@ export const ChatTip: Component = () => {
   })
   onCleanup(unsubscribe)
 
-  const visible = createMemo(() => {
-    const ignored = dismissed()
-    return tips().filter((tip) => !ignored.has(tip.id ?? tip.content))
-  })
-
   const current = createMemo(() => {
-    const list = visible()
+    const list = tips()
     if (list.length === 0) return undefined
     return list[idx() % list.length]
   })
 
-  const multiple = createMemo(() => visible().length > 1)
+  // Remember every tip the user has seen (initial + prev/next pages) so the
+  // "已读" action can record them all.
+  createEffect(() => {
+    const tip = current()
+    if (!tip) return
+    const key = tip.id ?? tip.content
+    setViewed((prev) => {
+      if (prev.has(key)) return prev
+      const next = new Set(prev)
+      next.add(key)
+      return next
+    })
+  })
+
+  const multiple = createMemo(() => tips().length > 1)
 
   const prev = () => {
-    const list = visible()
+    const list = tips()
     if (list.length === 0) return
     setIdx((idx() - 1 + list.length) % list.length)
   }
 
   const next = () => {
-    const list = visible()
+    const list = tips()
     if (list.length === 0) return
     setIdx((idx() + 1) % list.length)
   }
 
-  const dismiss = () => {
-    const tip = current()
-    if (!tip) return
-    const key = tip.id ?? tip.content
-    const next = new Set(dismissed())
-    next.add(key)
-    setDismissed(next)
-    vscode.setState<VscodeState>({ dismissedTips: [...next] })
+  const read = () => {
+    const ids = [...viewed()]
+    if (ids.length > 0) vscode.postMessage({ type: "chatTipReadMany", ids })
+    setClosed(true)
   }
 
   const click = (e: MouseEvent) => {
@@ -91,27 +93,29 @@ export const ChatTip: Component = () => {
   }
 
   return (
-    <Show when={current()} keyed>
-      {(tip) => (
-        <div class="chat-tip-widget" data-component="chat-tip" onClick={click}>
-          <div class="chat-tip-content">
-            <Markdown text={linkifyCommands(tip.content)} />
-          </div>
-          <div class="chat-tip-toolbar">
-            <Show when={multiple()}>
-              <Tooltip value="上一条提示" placement="top">
-                <IconButton icon="chevron-left" size="small" variant="ghost" aria-label="上一条提示" onClick={prev} />
+    <Show when={!closed()}>
+      <Show when={current()} keyed>
+        {(tip) => (
+          <div class="chat-tip-widget" data-component="chat-tip" onClick={click}>
+            <div class="chat-tip-content">
+              <Markdown text={linkifyCommands(tip.content)} />
+            </div>
+            <div class="chat-tip-toolbar">
+              <Show when={multiple()}>
+                <Tooltip value="上一条提示" placement="top">
+                  <IconButton icon="chevron-left" size="small" variant="ghost" aria-label="上一条提示" onClick={prev} />
+                </Tooltip>
+                <Tooltip value="下一条提示" placement="top">
+                  <IconButton icon="chevron-right" size="small" variant="ghost" aria-label="下一条提示" onClick={next} />
+                </Tooltip>
+              </Show>
+              <Tooltip value="已读" placement="top">
+                <IconButton icon="check" size="small" variant="ghost" aria-label="已读" onClick={read} />
               </Tooltip>
-              <Tooltip value="下一条提示" placement="top">
-                <IconButton icon="chevron-right" size="small" variant="ghost" aria-label="下一条提示" onClick={next} />
-              </Tooltip>
-            </Show>
-            <Tooltip value="关闭提示" placement="top">
-              <IconButton icon="close" size="small" variant="ghost" aria-label="关闭提示" onClick={dismiss} />
-            </Tooltip>
+            </div>
           </div>
-        </div>
-      )}
+        )}
+      </Show>
     </Show>
   )
 }

@@ -2225,6 +2225,11 @@ export interface ChatTipActionMessage {
   command: string
 }
 
+export interface ChatTipReadManyMessage {
+  type: "chatTipReadMany"
+  ids: string[]
+}
+
 export interface RequestClaudeCompatSettingMessage {
   type: "requestClaudeCompatSetting"
 }
@@ -2942,6 +2947,7 @@ export type WebviewMessage =
   | RequestBrowserSettingsMessage
   | RequestChatTipsMessage
   | ChatTipActionMessage
+  | ChatTipReadManyMessage
   | RequestClaudeCompatSettingMessage
   | RequestConfigMessage
   | RequestGlobalConfigMessage
