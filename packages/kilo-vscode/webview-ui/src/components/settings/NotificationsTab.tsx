@@ -26,6 +26,7 @@ const NotificationsTab: Component = () => {
   const [questionNotify, setQuestionNotify] = createSignal(true)
   const [errorNotify, setErrorNotify] = createSignal(true)
   const [subagentNotify, setSubagentNotify] = createSignal(true)
+  const [zhAnswerNotify, setZhAnswerNotify] = createSignal(false) // testagent_change
   const [agentSound, setAgentSound] = createSignal("default")
   const [permSound, setPermSound] = createSignal("default")
   const [errorSound, setErrorSound] = createSignal("default")
@@ -40,6 +41,7 @@ const NotificationsTab: Component = () => {
     setQuestionNotify(s.notifyQuestions ?? true)
     setErrorNotify(s.notifyErrors)
     setSubagentNotify(s.notifySubagent ?? false)
+    setZhAnswerNotify(s.notifyZhAnswer ?? false) // testagent_change
     setAgentSound(s.soundAgent)
     setPermSound(s.soundPermissions)
     setErrorSound(s.soundErrors)
@@ -118,7 +120,6 @@ const NotificationsTab: Component = () => {
         <SettingsRow
           title={language.t("settings.notifications.subagent.title")}
           description={language.t("settings.notifications.subagent.description")}
-          last
         >
           <Switch
             checked={subagentNotify()}
@@ -131,6 +132,24 @@ const NotificationsTab: Component = () => {
             {language.t("settings.notifications.subagent.title")}
           </Switch>
         </SettingsRow>
+        {/* testagent_change start - 企业 ZH 回答桥接开关 */}
+        <SettingsRow
+          title={language.t("settings.notifications.zhAnswer.title")}
+          description={language.t("settings.notifications.zhAnswer.description")}
+          last
+        >
+          <Switch
+            checked={zhAnswerNotify()}
+            onChange={(checked) => {
+              setZhAnswerNotify(checked)
+              save("notifications.zhAnswer", checked)
+            }}
+            hideLabel
+          >
+            {language.t("settings.notifications.zhAnswer.title")}
+          </Switch>
+        </SettingsRow>
+        {/* testagent_change end */}
       </Card>
 
       <h4 style={{ "margin-top": "16px", "margin-bottom": "8px" }}>{language.t("settings.notifications.sounds")}</h4>

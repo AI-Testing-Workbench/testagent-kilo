@@ -300,6 +300,48 @@ function removeNulls(obj: Record<string, unknown>): Record<string, unknown> {
   return result
 }
 
+// Default chat tips endpoint, base64-encoded so the URL is not plaintext in
+// the bundle. A `testagent.new.chatTipsUrl` value in settings.json (if any)
+// is treated the same way and overrides the default.
+const chatTipsUrlEncoded =
+  "aHR0cHM6Ly90ZXN0YWdlbnQtZ2F0ZXdheS5wYWFzdWF0LmNtYmNoaW5hLmNuL2NoYXRUaXBz"
+
+function decodeChatTipsUrl(configured: string): string {
+  return Buffer.from(configured || chatTipsUrlEncoded, "base64").toString("utf8")
+}
+
+// Fisher-Yates shuffle so tips appear in a random order rather than the
+// order the remote server returned them.
+function shuffle<T>(list: T[]): T[] {
+  const arr = [...list]
+  for (let i = arr.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1))
+    ;[arr[i], arr[j]] = [arr[j], arr[i]]
+  }
+  return arr
+}
+
+// Parse the remote chat tips response: a plain array, or an object with a
+// `tips` / `data` array. Entries without a string `content` are dropped.
+function extractChatTips(body: unknown): Array<{ id?: string; content: string }> {
+  const raw = Array.isArray(body)
+    ? body
+    : body && typeof body === "object"
+      ? Array.isArray((body as Record<string, unknown>).tips)
+        ? ((body as Record<string, unknown>).tips as unknown[])
+        : Array.isArray((body as Record<string, unknown>).data)
+          ? ((body as Record<string, unknown>).data as unknown[])
+          : []
+      : []
+
+  return raw.flatMap((item): Array<{ id?: string; content: string }> => {
+    if (typeof item !== "object" || item === null) return []
+    const tip = item as Record<string, unknown>
+    if (typeof tip.content !== "string") return []
+    return [{ id: typeof tip.id === "string" ? tip.id : undefined, content: tip.content }]
+  })
+}
+
 // // testagent_change: Structured log channel for config write operations
 // const configLog = vscode.window.createOutputChannel("TestAgent Config", { log: true })
 
@@ -338,6 +380,9 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
     vscode.extensions.getExtension("testagent.testagent-tscode")?.packageJSON?.version ?? "unknown"
   /** Cached providersLoaded payload so requestProviders can be served before client is ready */
   private cachedProvidersMessage: unknown = null
+  private cachedChatTipsMessage: unknown = null
+  private chatTipsFetched = false
+  private readChatTipIds = new Set<string>()
   /** Coalesce provider refreshes — at most one follow-up rerun when a request lands mid-flight. */
   private providersRefresh: Promise<void> | null = null
   private providersQueued = false
@@ -1383,6 +1428,19 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
         case "requestBrowserSettings":
           this.sendBrowserSettings()
           break
+        case "requestChatTips":
+          if (this.cachedChatTipsMessage) this.postMessage(this.cachedChatTipsMessage)
+          break
+        case "chatTipAction":
+          if (message.command) {
+            void vscode.commands.executeCommand(message.command).then(undefined, (err) => {
+              vscode.window.showWarningMessage(`TestAgent 提示命令执行失败: ${err}`)
+            })
+          }
+          break
+        case "chatTipReadMany":
+          this.markChatTipsRead(message.ids)
+          break
         case "requestClaudeCompatSetting":
           this.sendClaudeCompatSetting()
           break
@@ -1797,6 +1855,7 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
       this.postMessage({ type: "gitStatus", repo: this.cachedGitRepo })
       this.sendNotificationSettings()
       this.sendTimelineSetting()
+      this.fetchChatTips()
       this.postMessage({ type: "extensionDataReady" })
 
       // 技能等服务是异步加载的，可能在第一次 checkConfigWarnings 之后才完成，
@@ -3225,6 +3284,7 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
         notifyQuestions: notifications.get<boolean>("questions", true),
         notifyErrors: notifications.get<boolean>("errors", true),
         notifySubagent: notifications.get<boolean>("subagent", false),
+        notifyZhAnswer: notifications.get<boolean>("zhAnswer", false), // testagent_change
         soundAgent: sounds.get<string>("agent", "default"),
         soundPermissions: sounds.get<string>("permissions", "default"),
         soundErrors: sounds.get<string>("errors", "default"),
@@ -4647,6 +4707,7 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
     this.sendBrowserSettings()
     this.sendNotificationSettings()
     this.sendTimelineSetting()
+    if (this.cachedChatTipsMessage) this.postMessage(this.cachedChatTipsMessage)
     await ModelState.reset(this.client, (msg) => this.postMessage(msg))
 
     // Re-send globalState items to the webview
@@ -4673,6 +4734,57 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
         headless: config.get<boolean>("headless", false),
       },
     })
+  }
+
+  /**
+   * Fetch chat tips from the configured remote URL once at startup and push
+   * them to the webview. Fire-and-forget so it never blocks startup; a failed
+   * or empty response simply means no tip is shown. Tips already marked as
+   * read are filtered out.
+   */
+  private fetchChatTips(): void {
+    if (this.chatTipsFetched) return
+    this.chatTipsFetched = true
+    const saved = this.extensionContext?.globalState.get<string[]>("chatTipsRead", [])
+    this.readChatTipIds = new Set(saved)
+    const configured = vscode.workspace.getConfiguration("testagent.new").get<string>("chatTipsUrl", "")
+    const url = decodeChatTipsUrl(configured)
+
+    const controller = new AbortController()
+    const timer = setTimeout(() => controller.abort(), 5000)
+    void fetch(url, { signal: controller.signal })
+      .then((res) => (res.ok ? res.json() : Promise.reject(new Error(`HTTP ${res.status}`))))
+      .then((body) => {
+        const tips = shuffle(extractChatTips(body)).filter(
+          (tip) => !this.readChatTipIds.has(tip.id ?? tip.content),
+        )
+        const message = { type: "chatTipsLoaded", tips }
+        this.cachedChatTipsMessage = message
+        this.postMessage(message)
+      })
+      .catch((err) => {
+        console.error("[TestAgent]  ❌ Failed to fetch chat tips:", err)
+      })
+      .finally(() => clearTimeout(timer))
+  }
+
+  /**
+   * Persist a batch of tips as read so they are not shown again, and drop
+   * them from the cached list so late-connecting webviews see them filtered.
+   */
+  private markChatTipsRead(ids: string[]): void {
+    if (ids.length === 0) return
+    for (const id of ids) {
+      if (id) this.readChatTipIds.add(id)
+    }
+    void this.extensionContext?.globalState.update("chatTipsRead", [...this.readChatTipIds])
+    const cached = this.cachedChatTipsMessage as
+      | { type: string; tips: Array<{ id?: string; content: string }> }
+      | null
+    if (cached && cached.type === "chatTipsLoaded") {
+      cached.tips = cached.tips.filter((tip) => !this.readChatTipIds.has(tip.id ?? tip.content))
+      this.postMessage(cached)
+    }
   }
 
   /**

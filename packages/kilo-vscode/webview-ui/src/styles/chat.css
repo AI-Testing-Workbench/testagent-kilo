@@ -32,9 +32,6 @@
 @import "./testflow.css";
 /* testagent_change end */
 
-
-
-
 /* ============================================
    Kilo Logo (empty state)
    ============================================ */
@@ -398,7 +395,80 @@
 }
 
 .skill-banner-close:hover {
-  background: var(--surface-hover, var(--vscode-toolbar-hoverBackground, rgba(255,255,255,0.1)));
+  background: var(--surface-hover, var(--vscode-toolbar-hoverBackground, rgba(255, 255, 255, 0.1)));
+}
+
+/* ============================================
+   Chat Tip (testagent_change - 项目功能介绍提示)
+   Mirrors the VS Code Copilot chat tip widget.
+   ============================================ */
+
+.chat-tip-widget {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 8px 12px 0;
+  padding: 8px 12px;
+  border: 1px solid var(--vscode-editorWidget-border, var(--vscode-input-border, #3c3c3c));
+  border-bottom: none;
+  border-radius: 0.25rem 0.25rem 0 0;
+  background: var(--vscode-editorWidget-background, var(--vscode-input-background, #3c3c3c));
+  font-size: 12px;
+  color: var(--vscode-descriptionForeground);
+  flex-shrink: 0;
+  position: relative;
+}
+
+.chat-tip-content {
+  flex: 1;
+  min-width: 0;
+}
+
+.chat-tip-content [data-component="markdown"] p {
+  margin: 0;
+  line-height: 1.5;
+  word-break: break-word;
+}
+
+.chat-tip-content a {
+  color: var(--vscode-textLink-foreground);
+  cursor: pointer;
+}
+
+.chat-tip-content a:hover,
+.chat-tip-content a:active {
+  color: var(--vscode-textLink-activeForeground);
+}
+
+/* The tip is a floating bubble docked flush onto the input's top edge: the
+   input keeps its full outline, and the tip's borderless bottom sits on the
+   input's top border so the two outlines read as one continuous shape. */
+.chat-tip-widget + .prompt-input-container {
+  margin-top: 0;
+}
+
+.chat-tip-toolbar {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  flex-shrink: 0;
+  position: absolute;
+  top: -26px;
+  right: 8px;
+  padding: 2px;
+  background-color: var(--vscode-editorWidget-background);
+  border: 1px solid var(--vscode-panel-border, var(--vscode-input-border));
+  border-radius: 4px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.1s ease-in-out;
+}
+
+.chat-tip-widget:hover .chat-tip-toolbar,
+.chat-tip-widget:focus-within .chat-tip-toolbar {
+  opacity: 1;
+  pointer-events: auto;
 }
 
 /* ============================================
@@ -3223,7 +3293,6 @@ body.vscode-light
   animation: enhance-spin 1s linear infinite;
 }
 
-
 /* Wider inputs inside cards with data-variant="wide-input" (e.g. edit mode config) */
 [data-variant="wide-input"] [data-slot="settings-row-input"] {
   flex: 1 1 0%;
@@ -3361,26 +3430,22 @@ body.vscode-high-contrast-light {
   }
 }
 
-html[data-theme="kilo-vscode"]
-  [data-component="tool-part-wrapper"][data-tool="bash"][data-running="true"] {
+html[data-theme="kilo-vscode"] [data-component="tool-part-wrapper"][data-tool="bash"][data-running="true"] {
   border: 1px solid transparent;
   box-shadow: 0 0 0 1px var(--border-weak-base, var(--vscode-panel-border));
   margin-bottom: 2px;
   background:
-    linear-gradient(var(--surface-inset-base, var(--vscode-sideBar-background)), var(--surface-inset-base, var(--vscode-sideBar-background))) padding-box,
-    conic-gradient(
-        from var(--ta-marquee-angle),
-        #6cb3ff 0deg,
-        transparent 50deg,
-        transparent 360deg
+    linear-gradient(
+        var(--surface-inset-base, var(--vscode-sideBar-background)),
+        var(--surface-inset-base, var(--vscode-sideBar-background))
       )
-      border-box;
+      padding-box,
+    conic-gradient(from var(--ta-marquee-angle), #6cb3ff 0deg, transparent 50deg, transparent 360deg) border-box;
   animation: ta-marquee-spin 4s linear infinite;
 }
 
 @media (prefers-reduced-motion: reduce) {
-  html[data-theme="kilo-vscode"]
-    [data-component="tool-part-wrapper"][data-tool="bash"][data-running="true"] {
+  html[data-theme="kilo-vscode"] [data-component="tool-part-wrapper"][data-tool="bash"][data-running="true"] {
     animation: none;
     border-color: #6cb3ff;
     margin-bottom: 0;
