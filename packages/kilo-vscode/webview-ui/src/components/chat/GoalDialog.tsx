@@ -43,7 +43,6 @@ export const GoalDialog = (props: GoalDialogProps) => {
         <TextField
           label="Goal 目标"
           multiline
-          placeholder="例如：完成 /sdt-run case-design 并分析失败原因"
           value={text()}
           onChange={setText}
         />
