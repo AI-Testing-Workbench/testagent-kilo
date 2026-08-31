@@ -17,11 +17,15 @@ import type { ChatTipItem } from "../../types/messages"
 
 const commandLink = /\[([^\]]+)\]\(command:([^\s)]+)\)/g
 
+// Links like `[label](command:cmdId?key=value)` carry `?` query args that are
+// forwarded as positional arguments to `executeCommand`.
 function linkifyCommands(md: string): string {
-  return md.replace(
-    commandLink,
-    '<a href="#" data-tip-command="$2" class="tip-command-link">$1</a>',
-  )
+  return md.replace(commandLink, (_, label: string, target: string) => {
+    const [command, query = ""] = target.split("?")
+    const args = [...new URLSearchParams(query).values()].filter((value) => value !== "")
+    const argsAttr = args.length > 0 ? ` data-tip-args='${JSON.stringify(args)}'` : ""
+    return `<a href="#" data-tip-command="${command}"${argsAttr} class="tip-command-link">${label}</a>`
+  })
 }
 
 export const ChatTip: Component = () => {
@@ -89,7 +93,13 @@ export const ChatTip: Component = () => {
     const command = anchor.getAttribute("data-tip-command")
     if (!command) return
     e.preventDefault()
-    vscode.postMessage({ type: "chatTipAction", command })
+    const raw = anchor.getAttribute("data-tip-args")
+    let args: string[] = []
+    if (raw) {
+      const parsed: unknown = JSON.parse(raw)
+      if (Array.isArray(parsed)) args = parsed.filter((value): value is string => typeof value === "string")
+    }
+    vscode.postMessage({ type: "chatTipAction", command, args })
   }
 
   return (
@@ -106,7 +116,13 @@ export const ChatTip: Component = () => {
                   <IconButton icon="chevron-left" size="small" variant="ghost" aria-label="上一条提示" onClick={prev} />
                 </Tooltip>
                 <Tooltip value="下一条提示" placement="top">
-                  <IconButton icon="chevron-right" size="small" variant="ghost" aria-label="下一条提示" onClick={next} />
+                  <IconButton
+                    icon="chevron-right"
+                    size="small"
+                    variant="ghost"
+                    aria-label="下一条提示"
+                    onClick={next}
+                  />
                 </Tooltip>
               </Show>
               <Tooltip value="已读" placement="top">

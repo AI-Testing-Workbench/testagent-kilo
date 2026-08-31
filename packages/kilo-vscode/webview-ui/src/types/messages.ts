@@ -2209,6 +2209,7 @@ export interface RequestChatTipsMessage {
 export interface ChatTipActionMessage {
   type: "chatTipAction"
   command: string
+  args?: string[]
 }
 
 export interface ChatTipReadManyMessage {

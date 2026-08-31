@@ -308,6 +308,11 @@
         "category": "TestAgent"
       },
       {
+        "command": "testagent.new.toggleZhAnswer",
+        "title": "Toggle ZH Answer",
+        "category": "TestAgent"
+      },
+      {
         "command": "testagent.new.generateTerminalCommand",
         "title": "Generate Terminal Command",
         "category": "TestAgent"
@@ -575,7 +580,7 @@
         "testagent.new.notifications.zhAnswer": {
           "type": "boolean",
           "default": false,
-          "description": "开启企业 ZH 回答桥接：任务权限/提问推送企业 ZH，手机端即可回复"
+          "description": "Enable ZH Answer"
         },
         "testagent.new.sounds.agent": {
           "type": "string",

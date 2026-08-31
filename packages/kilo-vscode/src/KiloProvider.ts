@@ -303,8 +303,7 @@ function removeNulls(obj: Record<string, unknown>): Record<string, unknown> {
 // Default chat tips endpoint, base64-encoded so the URL is not plaintext in
 // the bundle. A `testagent.new.chatTipsUrl` value in settings.json (if any)
 // is treated the same way and overrides the default.
-const chatTipsUrlEncoded =
-  "aHR0cHM6Ly90ZXN0YWdlbnQtZ2F0ZXdheS5wYWFzdWF0LmNtYmNoaW5hLmNuL2NoYXRUaXBz"
+const chatTipsUrlEncoded = "aHR0cHM6Ly90ZXN0YWdlbnQtZ2F0ZXdheS5wYWFzdWF0LmNtYmNoaW5hLmNuL2NoYXRUaXBz"
 
 function decodeChatTipsUrl(configured: string): string {
   return Buffer.from(configured || chatTipsUrlEncoded, "base64").toString("utf8")
@@ -1378,7 +1377,8 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
           break
         case "chatTipAction":
           if (message.command) {
-            void vscode.commands.executeCommand(message.command).then(undefined, (err) => {
+            const args = message.args ?? []
+            void vscode.commands.executeCommand(message.command, ...args).then(undefined, (err) => {
               vscode.window.showWarningMessage(`TestAgent 提示命令执行失败: ${err}`)
             })
           }
@@ -4700,9 +4700,7 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
     void fetch(url, { signal: controller.signal })
       .then((res) => (res.ok ? res.json() : Promise.reject(new Error(`HTTP ${res.status}`))))
       .then((body) => {
-        const tips = shuffle(extractChatTips(body)).filter(
-          (tip) => !this.readChatTipIds.has(tip.id ?? tip.content),
-        )
+        const tips = shuffle(extractChatTips(body)).filter((tip) => !this.readChatTipIds.has(tip.id ?? tip.content))
         const message = { type: "chatTipsLoaded", tips }
         this.cachedChatTipsMessage = message
         this.postMessage(message)
@@ -4723,9 +4721,7 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
       if (id) this.readChatTipIds.add(id)
     }
     void this.extensionContext?.globalState.update("chatTipsRead", [...this.readChatTipIds])
-    const cached = this.cachedChatTipsMessage as
-      | { type: string; tips: Array<{ id?: string; content: string }> }
-      | null
+    const cached = this.cachedChatTipsMessage as { type: string; tips: Array<{ id?: string; content: string }> } | null
     if (cached && cached.type === "chatTipsLoaded") {
       cached.tips = cached.tips.filter((tip) => !this.readChatTipIds.has(tip.id ?? tip.content))
       this.postMessage(cached)
