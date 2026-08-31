@@ -24,23 +24,17 @@ const RUNTIME_OPTIONS: SelectOption[] = [
   { value: "bun", label: "Bun" },
 ]
 
-const INTERNAL_NPM_REGISTRY = `${decodeURIComponent(atob("aHR0cCUzQSUyRiUyRmNlbnRyYWwuamFmLmNtYmNoaW5hLmNu"))}/artifactory/api/npm/group-npm`
-
 const NormalSetting: Component = () => {
   const { config, updateConfig } = useConfig()
   const vscode = useVSCode()
   const [gitInstalled, setGitInstalled] = createSignal<boolean | null>(null)
   const [runtime, setRuntime] = createSignal<"bun" | "nodejs">("nodejs")
-  const [npmRegistry, setNpmRegistry] = createSignal("")
-  const [npmRegistryLoading, setNpmRegistryLoading] = createSignal(true)
   const [availableTerminals, setAvailableTerminals] = createSignal<AvailableTerminalInfo[]>([])
 
   onMount(() => {
     vscode.postMessage({ type: "checkGitInstalled" })
     // Load runtime from VS Code config
     vscode.postMessage({ type: "getRuntime" })
-    // Load current npm registry
-    vscode.postMessage({ type: "getNpmRegistry" })
     // Load available terminals
     vscode.postMessage({ type: "getAvailableTerminals" })
   })
@@ -65,10 +59,6 @@ const NormalSetting: Component = () => {
     }
     if (msg.type === "runtimeResult") {
       setRuntime(msg.runtime)
-    }
-    if (msg.type === "npmRegistryResult") {
-      setNpmRegistry(msg.registry)
-      setNpmRegistryLoading(false)
     }
     if (msg.type === "availableTerminalsResult") {
       setAvailableTerminals(msg.terminals)
@@ -105,43 +95,10 @@ const NormalSetting: Component = () => {
     })
   }
 
-  const currentNpmOption = (): SelectOption | undefined => {
-    return npmRegistry().includes('artifactory/api/npm/group-npm')
-      ? { value: INTERNAL_NPM_REGISTRY, label: "内网源" }
-      : undefined
-  }
-
-  const handleNpmChange = (option: SelectOption | undefined) => {
-    const value = option?.value ?? ""
-    const current = npmRegistry()
-
-    if (value === current) return
-
-    vscode.postMessage({ type: "setNpmRegistry", registry: value })
-    showToast({
-      variant: "success",
-      title: "npm 源已更新",
-      description: "已切换到内网源",
-    })
-  }
-
   return (
     <div>
-      {/* npm 源设置 */}
+      {/* testagent_change: npm源已在后端强制配置，前端不再展示 */}
       <Card style={{ "margin-bottom": "12px" }}>
-        <SettingsRow title="npm源" description="选择npm源">
-          <Select
-            options={[{ value: INTERNAL_NPM_REGISTRY, label: "内网源" }]}
-            current={currentNpmOption()}
-            value={(opt) => opt.value}
-            label={(opt) => opt.label}
-            onSelect={handleNpmChange}
-            variant="secondary"
-            size="small"
-            triggerVariant="settings"
-            disabled={npmRegistryLoading()}
-          />
-        </SettingsRow>
         <SettingsRow
           title="后端服务运行时"
           description={`选择后端运行时 (当前: ${runtime() === "bun" ? "Bun" : "Node.js"})`}
