@@ -38,6 +38,11 @@ on:
         required: false
         type: boolean
         default: true
+      workbench_branch:
+        description: "test-workbench-vscode 构建分支 (Branch to build, default main)"
+        required: false
+        type: string
+        default: "main"
 
 concurrency: ${{ github.workflow }}-${{ github.ref }}-${{ inputs.platform || 'all' }}
 # testagent_change end
@@ -649,9 +654,9 @@ jobs:
         run: |
           gh workflow run release.yml \
             --repo AI-Testing-Workbench/test-workbench-vscode \
-            --ref main \
+            --ref ${{ inputs.workbench_branch || 'main' }} \
             -f platforms=${{ steps.workbench_platform.outputs.platforms }}
-          echo "✅ Triggered test-workbench-vscode release.yml (platforms=${{ steps.workbench_platform.outputs.platforms }})"
+          echo "✅ Triggered test-workbench-vscode release.yml (platforms=${{ steps.workbench_platform.outputs.platforms }}, branch=${{ inputs.workbench_branch || 'main' }})"
         env:
           GH_TOKEN: ${{ secrets.WORKBENCH_TOKEN }}
   # testagent_change end
