@@ -25,10 +25,6 @@ on:
         options:
           - all
           - linux-x64
-          - linux-arm64
-          - alpine-x64
-          - alpine-arm64
-          - darwin-x64
           - darwin-arm64
           - win32-x64
         default: "all"
@@ -133,22 +129,6 @@ jobs:
             script: bun:linux
             binary: testagent
             output_dir: testagent-linux-x64
-          - target: linux-arm64
-            script: bun:linux-arm64
-            binary: testagent
-            output_dir: testagent-linux-arm64
-          - target: alpine-x64
-            script: bun:alpine
-            binary: testagent
-            output_dir: testagent-linux-x64-musl
-          - target: alpine-arm64
-            script: bun:alpine-arm64
-            binary: testagent
-            output_dir: testagent-linux-arm64-musl
-          - target: darwin-x64
-            script: bun:mac
-            binary: testagent
-            output_dir: testagent-darwin-x64
           - target: darwin-arm64
             script: bun:mac-arm64
             binary: testagent
@@ -279,18 +259,6 @@ jobs:
         include:
           - target: linux-x64
             cli_target: linux-x64
-            binary: testagent
-          - target: linux-arm64
-            cli_target: linux-arm64
-            binary: testagent
-          - target: alpine-x64
-            cli_target: alpine-x64
-            binary: testagent
-          - target: alpine-arm64
-            cli_target: alpine-arm64
-            binary: testagent
-          - target: darwin-x64
-            cli_target: darwin-x64
             binary: testagent
           - target: darwin-arm64
             cli_target: darwin-arm64
@@ -529,8 +497,6 @@ jobs:
             case "$target" in
               win32-x64)   plat="testagent-windows-x64-baseline" ;;
               win32-arm64) plat="testagent-windows-arm64" ;;
-              alpine-x64)  plat="testagent-linux-x64-musl" ;;
-              alpine-arm64) plat="testagent-linux-arm64-musl" ;;
               *)           plat="testagent-${target}" ;;
             esac
 
@@ -618,11 +584,8 @@ jobs:
             fi
           }
           stage linux-x64 linux x64
-          stage linux-arm64 linux arm64
-          stage darwin-x64 darwin x64
           stage darwin-arm64 darwin arm64
           stage win32-x64 win32 x64
-          # alpine variants are not consumed by the workbench release, so they are skipped
           echo "Staged VSIX files:"
           find prebuilt -name "*.vsix" | sort || true
 
@@ -643,8 +606,8 @@ jobs:
         run: |
           case "${{ inputs.platform }}" in
             win32-x64) PLATFORMS="win32-x64" ;;
-            linux-x64|linux-arm64|alpine-x64|alpine-arm64) PLATFORMS="linux" ;;
-            darwin-x64|darwin-arm64) PLATFORMS="darwin" ;;
+            linux-x64) PLATFORMS="linux" ;;
+            darwin-arm64) PLATFORMS="darwin" ;;
             *) PLATFORMS="all" ;;
           esac
           echo "platforms=$PLATFORMS" >> "$GITHUB_OUTPUT"
