@@ -1252,61 +1252,6 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
           break
         }
         // testagent_change end
-        // testagent_change start - npm registry
-        case "getNpmRegistry": {
-          try {
-            const { execSync } = require("child_process")
-            const registry = execSync("npm config get registry", { encoding: "utf-8", timeout: 5000 }).trim()
-            this.webview?.postMessage({ type: "npmRegistryResult", registry })
-          } catch (err) {
-            this.webview?.postMessage({ type: "npmRegistryResult", registry: "https://registry.npmjs.org/" })
-          }
-          break
-        }
-        case "setNpmRegistry": {
-          const { registry } = message
-          try {
-            const npmrcPath = path.join(os.homedir(), ".npmrc")
-            let content = ""
-            try {
-              content = fs.readFileSync(npmrcPath, "utf-8")
-            } catch {
-              // file doesn't exist yet
-            }
-
-            if (!registry) {
-              // 选择"系统默认源" → 删除 ~/.npmrc 中的 registry= 行
-              content = content
-                .replace(/^registry\s*=.*$/m, "")
-                .replace(/\n{2,}/g, "\n")
-                .trim()
-              if (!content) {
-                try {
-                  fs.unlinkSync(npmrcPath)
-                } catch {}
-              } else {
-                fs.writeFileSync(npmrcPath, content + "\n", "utf-8")
-              }
-              // 重新读取实际生效的默认值
-              const { execSync } = require("child_process")
-              const defaultRegistry = execSync("npm config get registry", { encoding: "utf-8", timeout: 5000 }).trim()
-              this.webview?.postMessage({ type: "npmRegistryResult", registry: defaultRegistry })
-            } else {
-              if (content.match(/^registry\s*=/m)) {
-                content = content.replace(/^registry\s*=.*$/m, `registry=${registry}`)
-              } else {
-                content += (content ? "\n" : "") + `registry=${registry}`
-              }
-              fs.writeFileSync(npmrcPath, content, "utf-8")
-              this.webview?.postMessage({ type: "npmRegistryResult", registry })
-            }
-          } catch (err) {
-            console.error("[TestAgent] Failed to set npm registry:", err)
-            vscode.window.showErrorMessage(`设置 npm 源失败: ${err}`)
-          }
-          break
-        }
-        // testagent_change end
         // testagent_change start - runtime switching
         case "getRuntime": {
           if (!this.extensionContext) {

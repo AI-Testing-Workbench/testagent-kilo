@@ -1676,20 +1676,6 @@ export interface MemorySettingsFailedMessage {
   type: "memorySettingsFailed"
   message: string
 }
-
-export interface GetNpmRegistryMessage {
-  type: "getNpmRegistry"
-}
-
-export interface SetNpmRegistryMessage {
-  type: "setNpmRegistry"
-  registry: string
-}
-
-export interface NpmRegistryResultMessage {
-  type: "npmRegistryResult"
-  registry: string
-}
 // testagent_change end
 
 export type ExtensionMessage =
@@ -1820,7 +1806,6 @@ export type ExtensionMessage =
   | MemorySettingsLoadedMessage // testagent_change
   | MemorySettingsSavedMessage // testagent_change
   | MemorySettingsFailedMessage // testagent_change
-  | NpmRegistryResultMessage // testagent_change
   | ModelSelectionsLoadedMessage
   | LanguageChangedMessage
   | ContinueInWorktreeProgressMessage
@@ -3066,8 +3051,6 @@ export type WebviewMessage =
   | GetAvailableTerminalsMessage // testagent_change
   | GetRuntimeRequest // testagent_change
   | ChangeRuntimeRequest // testagent_change
-  | GetNpmRegistryMessage // testagent_change
-  | SetNpmRegistryMessage // testagent_change
   | RequestMemorySettingsMessage // testagent_change
   | UpdateMemorySettingsMessage // testagent_change
   // testagent_change start - testflow messages
