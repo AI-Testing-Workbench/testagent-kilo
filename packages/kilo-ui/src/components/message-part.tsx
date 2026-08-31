@@ -55,6 +55,30 @@ import { ContextToolGroupHeader, ContextToolExpandedList, ContextToolRollingResu
 import { ShellRollingResults } from "./shell-rolling-results"
 import { extractFilePathFromHref } from "../file-path"
 
+async function writeClipboard(text: string): Promise<boolean> {
+  const body = typeof document === "undefined" ? undefined : document.body
+  if (body) {
+    const textarea = document.createElement("textarea")
+    textarea.value = text
+    textarea.setAttribute("readonly", "")
+    textarea.style.position = "fixed"
+    textarea.style.opacity = "0"
+    textarea.style.pointerEvents = "none"
+    body.appendChild(textarea)
+    textarea.select()
+    const copied = document.execCommand("copy")
+    body.removeChild(textarea)
+    if (copied) return true
+  }
+
+  const clipboard = typeof navigator === "undefined" ? undefined : navigator.clipboard
+  if (!clipboard?.writeText) return false
+  return clipboard.writeText(text).then(
+    () => true,
+    () => false,
+  )
+}
+
 // Windows CLI tools (e.g. winget) use \r to overwrite progress bars in-place.
 // Without this, every progress frame renders as a separate visual line.
 function processCarriageReturns(input: string): string {
@@ -783,9 +807,10 @@ export function UserMessageDisplay(props: {
   const handleCopy = async () => {
     const content = text()
     if (!content) return
-    await navigator.clipboard.writeText(content)
-    setCopied(true)
-    setTimeout(() => setCopied(false), 2000)
+    if (await writeClipboard(content)) {
+      setCopied(true)
+      setTimeout(() => setCopied(false), 2000)
+    }
   }
 
   return (
@@ -1381,9 +1406,10 @@ PART_MAPPING["text"] = function TextPartDisplay(props) {
   const handleCopy = async () => {
     const content = displayText()
     if (!content) return
-    await navigator.clipboard.writeText(content)
-    setCopied(true)
-    setTimeout(() => setCopied(false), 2000)
+    if (await writeClipboard(content)) {
+      setCopied(true)
+      setTimeout(() => setCopied(false), 2000)
+    }
   }
 
   const handleMarkdownClick = (e: MouseEvent) => {
@@ -2117,11 +2143,12 @@ ToolRegistry.register({
 
     const handleCopy = async () => {
       const command = cmd()
-      if (!command) return
-      const content = out() ? `${command}\n\n${out()}` : command
-      await navigator.clipboard.writeText(content)
-      setCopied(true)
-      setTimeout(() => setCopied(false), 2000)
+        if (!command) return
+        const content = out() ? `${command}\n\n${out()}` : command
+      if (await writeClipboard(content)) {
+        setCopied(true)
+        setTimeout(() => setCopied(false), 2000)
+      }
     }
 
     return (
