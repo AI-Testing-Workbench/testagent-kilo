@@ -18,6 +18,7 @@ import { RevertConfirmDock } from "./RevertConfirmDock"
 import { StartupErrorBanner } from "./StartupErrorBanner"
 import { SessionTabStrip } from "./SessionTabStrip"
 import { ConfigWarningsBanner } from "./ConfigWarningsBanner"
+import { ChatTip } from "./ChatTip"
 import { useSession } from "../../context/session"
 import { useLocalTabs } from "../../context/local-tabs"
 import { useVSCode } from "../../context/vscode"
@@ -299,6 +300,7 @@ export const ChatView: Component<ChatViewProps> = (props) => {
             {(progress) => <SdtProgressCard progress={progress()} onDismiss={session.dismissSdtProgress} />}
           </Show>
           <Show when={!props.readonly}>
+            <ChatTip />
             <PromptInput
               blocked={blocked}
               suggesting={suggesting}

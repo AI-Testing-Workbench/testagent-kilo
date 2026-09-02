@@ -7,7 +7,7 @@
  * Shows recent sessions in the empty state for quick resumption.
  */
 
-import { Component, For, Show, createEffect, createMemo, createSignal, on, onCleanup, JSX } from "solid-js"
+import { Component, For, Show, createEffect, createMemo, createSignal, on, onCleanup } from "solid-js"
 import { Icon } from "@kilocode/kilo-ui/icon"
 import { Spinner } from "@kilocode/kilo-ui/spinner"
 import { useDialog } from "@kilocode/kilo-ui/context/dialog"
@@ -23,6 +23,7 @@ import { AccountSwitcher } from "../shared/AccountSwitcher"
 import { KiloNotifications } from "./KiloNotifications"
 import { WorkingIndicator } from "../shared/WorkingIndicator"
 import { QuestionDock } from "./QuestionDock"
+import { CloudLogo } from "../shared/CloudLogo"
 import { Virtualizer, type VirtualizerHandle } from "virtua/solid"
 import { SuggestBar } from "./SuggestBar"
 import {
@@ -40,26 +41,6 @@ import {
   type PromptRailEntry,
   type PromptRailItem,
 } from "./prompt-rail"
-
-const KiloLogo = (): JSX.Element => {
-  return (
-    <div class="kilo-logo" style={{ width: "auto" }}>
-      <svg class="testagent-avatar-home" viewBox="-4 -4 32 32" xmlns="http://www.w3.org/2000/svg">
-        <defs>
-          <linearGradient id="home-rg" x1="0%" y1="0%" x2="100%" y2="100%">
-            <stop offset="0%" stop-color="#4fc3f7" />
-            <stop offset="50%" stop-color="#2979ff" />
-            <stop offset="100%" stop-color="#69f0ae" />
-          </linearGradient>
-        </defs>
-        <circle cx="12" cy="12" r="12" fill="#e8f4ff" />
-        <circle cx="12" cy="12" r="12.75" fill="none" stroke="url(#home-rg)" stroke-width="1.5" />
-        <ellipse class="home-blink" cx="8" cy="9.33" rx="1.63" ry="2.62" fill="#2979ff" />
-        <ellipse class="home-blink" cx="16" cy="9.33" rx="1.63" ry="2.62" fill="#2979ff" />
-      </svg>
-    </div>
-  )
-}
 
 interface MessageListProps {
   onSelectSession?: (id: string) => void
@@ -360,7 +341,7 @@ export const MessageList: Component<MessageListProps> = (props) => {
           </Show>
           <Show when={isEmpty() && !props.readonly}>
             <div class="message-list-empty">
-              <KiloLogo />
+              <CloudLogo cloudId="home-cm" class="testagent-avatar-home" blink="home-blink" />
               <p class="kilo-about-text">{language.t("session.messages.welcome")}</p>
               <Show when={recent().length > 0 && props.onSelectSession}>
                 <div class="recent-sessions">

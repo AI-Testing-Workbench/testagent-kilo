@@ -6,6 +6,18 @@ import * as path from "path"
 import * as vscode from "vscode"
 import { t } from "./i18n"
 import { parseServerPort } from "./server-utils"
+import { isCloudMode } from "./cloud-mode"
+import {
+  clearServerState,
+  getServerDataDir,
+  getServerLogPath,
+  pickFreePort,
+  probeServer,
+  readServerState,
+  waitForServer,
+  writeServerState,
+  type ServerState,
+} from "./server-state"
 import { type ServerInstance, ServerStartupError, toErrorMessage } from "./server-manager"
 
 const STARTUP_TIMEOUT_SECONDS = 30
@@ -44,6 +56,16 @@ export class NodeServerManager {
       return this.startupPromise
     }
 
+    if (isCloudMode()) {
+      const adopted = await this.adoptExistingServer()
+      if (adopted) {
+        this.instance = adopted
+        console.log("[TestAgent] NodeServerManager: ✅ Adopted existing cloud server:", { port: adopted.port })
+        return adopted
+      }
+      console.log("[TestAgent] NodeServerManager: ☁️ No live cloud server found, spawning detached daemon")
+    }
+
     console.log("[TestAgent] NodeServerManager: 🚀 Starting new server instance...")
     this.startupPromise = this.startServer()
     try {
@@ -55,6 +77,35 @@ export class NodeServerManager {
     }
   }
 
+  /**
+   * Cloud mode: try to reconnect to an already-running detached daemon.
+   */
+  private async adoptExistingServer(): Promise<ServerInstance | null> {
+    const state = readServerState()
+    if (!state) return null
+
+    if (state.version && state.version !== this.context.extension.packageJSON.version) {
+      console.warn(
+        `[TestAgent] NodeServerManager: ⚠️ Cloud server version mismatch (server=${state.version}, extension=${this.context.extension.packageJSON.version}) — keeping existing daemon to avoid interrupting tasks`,
+      )
+    }
+
+    const alive = await probeServer(state)
+    if (!alive) {
+      console.log("[TestAgent] NodeServerManager: ♻️ Server state found but daemon not reachable, will respawn")
+      clearServerState()
+      return null
+    }
+
+    return { port: state.port, password: state.password }
+  }
+
+  // 设置页「通知」菜单的「招乎回答」开关（testagent.new.notifications.zhAnswer）
+  private isZhAnswerEnabled(): boolean {
+    return vscode.workspace.getConfiguration("testagent.new.notifications").get<boolean>("zhAnswer", false)
+  }
+  // testagent_change end
+
   private handleNotification(message: string) {
     const match = message.match(/\[TESTAGENT_NOTIFICATION\] (.+)/)
     if (!match) return
@@ -63,31 +114,52 @@ export class NodeServerManager {
       const notification = JSON.parse(match[1])
       if (notification.type !== "plugin-notification") return
 
-      const actions = Array.isArray(notification.actions) ? notification.actions : []
-      const list = actions
-        .map((item: unknown) => {
-          if (!item || typeof item !== "object" || !("label" in item)) return undefined
-          return typeof item.label === "string" ? item : undefined
-        })
-        .filter((item: unknown): item is { id?: string; label: string } => Boolean(item))
-      const action = list[0]
-      const label = action?.label
+      // testagent_change start - 按 action id 分发（保留 enable-auto-compaction）
+      const actions: Array<{ id?: string; label: string }> = (
+        Array.isArray(notification.actions) ? notification.actions : []
+      ).filter(
+        (item: unknown): item is { id?: string; label: string } =>
+          Boolean(item && typeof item === "object" && typeof (item as { label?: unknown }).label === "string"),
+      )
+      const labels = actions.map((item) => item.label)
       const show =
         notification.level === "error"
-          ? vscode.window.showErrorMessage(`TestAgent: ${notification.message}`, ...list.map((item) => item.label))
-          : vscode.window.showInformationMessage(
-              `TestAgent: ${notification.message}`,
-              ...list.map((item) => item.label),
-            )
+          ? vscode.window.showErrorMessage(`TestAgent: ${notification.message}`, ...labels)
+          : vscode.window.showInformationMessage(`TestAgent: ${notification.message}`, ...labels)
       void show.then((selected) => {
-        if (!action || selected !== label) return
-        console.log("[TestAgent] 用户点击了确定", action.id ? { actionID: action.id } : undefined)
-        this.onEnableAutoCompaction?.()
+        const action = actions.find((item) => item.label === selected)
+        if (!action) return
+        console.log("[TestAgent] 用户点击了通知按钮", action.id ? { actionID: action.id } : undefined)
+        if (action.id === "enable-auto-compaction") {
+          this.onEnableAutoCompaction?.()
+        }
       })
+      // testagent_change end
     } catch (err) {
       console.error("[TestAgent] NodeServerManager: Failed to parse notification:", err)
     }
   }
+
+  // testagent_change start - 回调 serve 切换「招乎回答」开关（设置页通知菜单 + 通知栏 action 共用）
+  async setZhAnswerEnabled(enabled: boolean): Promise<void> {
+    try {
+      const instance = this.instance
+      if (!instance) return
+      const url = `http://127.0.0.1:${instance.port}`
+      const resp = await fetch(`${url}/testagent/zh-answer`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Basic ${Buffer.from(`opencode:${instance.password}`).toString("base64")}`,
+        },
+        body: JSON.stringify({ enabled }),
+      })
+      console.log(`[TestAgent] 招乎回答 ${enabled ? "已开启" : "已关闭"}`, resp.status)
+    } catch (err) {
+      console.error("[TestAgent] 切换招乎回答失败:", err)
+    }
+  }
+  // testagent_change end
 
   private async startServer(): Promise<ServerInstance> {
     const password = crypto.randomBytes(32).toString("hex")
@@ -106,12 +178,29 @@ export class NodeServerManager {
 
     const spawnCwd = vscode.workspace.workspaceFolders?.[0]?.uri.fsPath ?? process.env.HOME ?? require("os").homedir()
 
+    const cloud = isCloudMode()
+    const port = cloud ? await pickFreePort() : 0
+    // testagent_change start - 启动时环境变量激活源：开关开启注入 TESTAGENT_ZH_ANSWER_ENABLED=1（与运行时按钮切换相互独立）。
+    // 运行中按钮切换走 /testagent/zh-answer 热切换，不写环境变量。
+    // 企业 ZH relay 地址不再由扩展配置注入：serve 进程通过 ...process.env 透传环境变量 ZH_RELAY_URL，否则插件使用内置默认地址。
+    const zhAnswerEnabled = this.isZhAnswerEnabled()
+    // testagent_change end
+
     return new Promise((resolve, reject) => {
       console.log("[TestAgent] NodeServerManager: 🎬 Spawning Node.js server")
 
-      const args = ["--experimental-sqlite", entry, "--port", "0", "--password", password, "--hostname", "127.0.0.1"]
+      const args = [
+        "--experimental-sqlite",
+        entry,
+        "--port",
+        String(port),
+        "--password",
+        password,
+        "--hostname",
+        "127.0.0.1",
+      ]
 
-      const proc = spawn(nodePath, args, {
+      const commonSpawnOpts = {
         cwd: spawnCwd,
         env: {
           ...process.env,
@@ -132,7 +221,18 @@ export class NodeServerManager {
           KILO_APP_VERSION: this.context.extension.packageJSON.version,
           KILO_VSCODE_VERSION: vscode.version,
           KILOCODE_EDITOR_NAME: `${vscode.env.appName} ${vscode.version}`,
+          ...(zhAnswerEnabled && { TESTAGENT_ZH_ANSWER_ENABLED: "1" }),
         },
+      }
+
+      if (cloud) {
+        return void this.runCloudServer({ entry, nodePath, password, port, spawnCwd, args }, commonSpawnOpts)
+          .then(resolve)
+          .catch(reject)
+      }
+
+      const proc = spawn(nodePath, args, {
+        ...commonSpawnOpts,
         stdio: ["ignore", "pipe", "pipe"],
         // Note: detached is removed to prevent console window flash on Windows
         // windowsHide is already set by the spawn() wrapper in util/process.ts
@@ -205,6 +305,55 @@ export class NodeServerManager {
         }
       }, STARTUP_TIMEOUT_SECONDS * 1000)
     })
+  }
+
+  /**
+   * Cloud mode: spawn the Node.js server fully detached (own session, stdio →
+   * log file) so it survives the extension host. We wait for it to answer a
+   * health probe and persist the connection info to server.json for adoption
+   * on the next launch.
+   */
+  private async runCloudServer(
+    input: { entry: string; nodePath: string; password: string; port: number; spawnCwd: string; args: string[] },
+    spawnOpts: { cwd: string; env: NodeJS.ProcessEnv },
+  ): Promise<ServerInstance> {
+    const { entry, nodePath, password, port, spawnCwd, args } = input
+
+    const logDir = getServerDataDir()
+    fs.mkdirSync(logDir, { recursive: true })
+    const logFile = getServerLogPath()
+    const outFd = fs.openSync(logFile, "a")
+
+    const proc = spawn(nodePath, args, {
+      ...spawnOpts,
+      cwd: spawnCwd,
+      stdio: ["ignore", outFd, outFd],
+      detached: true,
+    })
+    proc.unref()
+    console.log("[TestAgent] NodeServerManager: ☁️ Cloud daemon spawned (PID:", proc.pid, "), logging to:", logFile)
+
+    const state: ServerState = {
+      port,
+      password,
+      pid: proc.pid,
+      version: this.context.extension.packageJSON.version,
+      runtime: "nodejs",
+      startedAt: Date.now(),
+    }
+    const ready = await waitForServer(state, STARTUP_TIMEOUT_SECONDS * 1000)
+    if (!ready) {
+      clearServerState()
+      const { userMessage, userDetails } = toErrorMessage(
+        t("server.startupTimeout", { seconds: STARTUP_TIMEOUT_SECONDS }),
+        [],
+        nodePath,
+      )
+      throw new ServerStartupError(userMessage, userDetails)
+    }
+    writeServerState(state)
+    console.log("[TestAgent] NodeServerManager: ☁️ Cloud server ready:", { port })
+    return { port, password, process: proc }
   }
 
   /**
@@ -376,9 +525,20 @@ export class NodeServerManager {
   }
 
   dispose(): void {
-    if (!this.instance) return
+    if (!this.instance) {
+      return
+    }
     const proc = this.instance.process
     this.instance = null
+
+    // Cloud mode: the daemon is intentionally detached from the extension host
+    // so tasks keep running after tscode closes. Do NOT kill it.
+    if (isCloudMode()) {
+      console.log("[TestAgent] NodeServerManager: ☁️ Cloud mode — leaving daemon running (detach), PID:", proc?.pid)
+      return
+    }
+
+    if (!proc) return
 
     console.log("[TestAgent] NodeServerManager: 🔴 Disposing — sending SIGTERM, PID:", proc.pid)
     NodeServerManager.killProcess(proc, "SIGTERM")

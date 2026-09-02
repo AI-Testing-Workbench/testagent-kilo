@@ -1101,6 +1101,8 @@ export const dict = {
   "settings.notifications.errors.description": "发生错误时显示通知",
   "settings.notifications.subagent.title": "子Agent通知",
   "settings.notifications.subagent.description": "子Agent的权限、问答、错误也显示通知",
+  "settings.notifications.zhAnswer.title": "招乎回答", // testagent_change
+  "settings.notifications.zhAnswer.description": "任务权限/提问推送到招乎，手机端可回复", // testagent_change
   "settings.notifications.sounds": "声音",
   "settings.notifications.agentSound.title": "智能体完成提示音",
   "settings.notifications.agentSound.description": "智能体完成时播放的声音",

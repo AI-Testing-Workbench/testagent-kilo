@@ -90,7 +90,11 @@ export function getConfigErrorMessage(error: unknown): string {
   if (data?.path && data?.message) {
     return `Config file at ${data.path} is not valid JSON(C):\n${data.message}`
   }
-  return getErrorMessage(error)
+  const message = getErrorMessage(error)
+  if (data?.path) {
+    return `Config file at ${data.path} is not valid JSON(C):\n${message}`
+  }
+  return message
 }
 // testagent_change end
 
