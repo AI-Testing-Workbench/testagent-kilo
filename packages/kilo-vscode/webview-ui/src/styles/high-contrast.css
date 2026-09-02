@@ -60,6 +60,11 @@ body.vscode-high-contrast-light {
     border-color: var(--vscode-contrastBorder, var(--vscode-editorWidget-border));
   }
 
+  /* Skill banner */
+  .skill-banner {
+    border-color: var(--vscode-contrastBorder, var(--vscode-editorWidget-border));
+  }
+
   /* Image attachments */
   .image-attachment img {
     border-color: var(--vscode-contrastBorder, var(--vscode-widget-border));

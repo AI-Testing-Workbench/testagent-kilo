@@ -36,7 +36,8 @@ export function activate(context: vscode.ExtensionContext) {
   // testagent_change start - Initialize Python interpreter service
   console.log("[TestAgent] Initializing Python interpreter service...")
   const pythonInterpreterService = new PythonInterpreterService(context)
-  pythonInterpreterService.start()
+  pythonInterpreterService
+    .start()
     .then(() => {
       console.log("[TestAgent] Python interpreter service initialized successfully")
     })
@@ -306,19 +307,19 @@ export function activate(context: vscode.ExtensionContext) {
       try {
         const config = await connectionService.client.config.get()
         const enabled = config.data?.experimental?.agent_manager ?? false
-        
+
         if (!enabled) {
           const result = await vscode.window.showInformationMessage(
             "Agent Manager 是实验性功能，需要在设置中启用。是否现在打开设置？",
             "打开设置",
-            "取消"
+            "取消",
           )
           if (result === "打开设置") {
             vscode.commands.executeCommand("testagent.new.settingsButtonClicked")
           }
           return
         }
-        
+
         agentManagerProvider.openPanel()
       } catch (error) {
         // If config fetch fails, allow opening (fail-open for better UX)
@@ -356,6 +357,12 @@ export function activate(context: vscode.ExtensionContext) {
     // }), // testagent_change
     vscode.commands.registerCommand("testagent.new.settingsButtonClicked", (tab?: string) => {
       settingsEditorProvider.openPanel("settings", tab)
+    }),
+    vscode.commands.registerCommand("testagent.new.toggleZhAnswer", async () => {
+      const config = vscode.workspace.getConfiguration("testagent.new.notifications")
+      const enabled = config.get<boolean>("zhAnswer", false)
+      await config.update("zhAnswer", !enabled, vscode.ConfigurationTarget.Global)
+      vscode.window.showInformationMessage(`招乎回答已${enabled ? "关闭" : "开启"}`)
     }),
     // legacy-migration start
     vscode.commands.registerCommand("testagent.new.openMigrationWizard", () => {

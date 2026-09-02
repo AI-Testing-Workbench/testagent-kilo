@@ -353,7 +353,7 @@ export const AssistantMessage: Component<AssistantMessageProps> = (props) => {
           // testagent_change: shell timeout renders the tool part with a yellow warning variant
           const isTimedOut = createMemo(() => {
             const state = (part as unknown as ToolPart).state
-            return state?.status === "completed" && state.metadata.timeout === true
+            return state?.status === "completed" && state?.metadata?.timeout === true
           })
 
           return (

@@ -22,6 +22,7 @@ interface ServerContextValue {
   workspaceDirectory: Accessor<string>
   gitInstalled: Accessor<boolean>
   userId: Accessor<string | undefined> // testagent_change
+  cloudMode: Accessor<boolean> // testagent_change
   configWarningsTitle: Accessor<string | undefined>
   configWarningsDetail: Accessor<string | undefined>
   dismissConfigWarnings: () => void
@@ -48,6 +49,9 @@ export const ServerProvider: ParentComponent = (props) => {
   const [workspaceDirectory, setWorkspaceDirectory] = createSignal<string>("")
   const [gitInstalled, setGitInstalled] = createSignal<boolean>(false)
   const [userId, setUserId] = createSignal<string | undefined>() // testagent_change
+  const [cloudMode, setCloudMode] = createSignal(
+    (window as { CLOUD_MODE?: boolean }).CLOUD_MODE === true, // testagent_change
+  ) // testagent_change
 
   const gitSub = vscode.onMessage((m: ExtensionMessage) => {
     if (m.type === "gitStatus") setGitInstalled(m.repo)
@@ -67,6 +71,7 @@ export const ServerProvider: ParentComponent = (props) => {
     if (message.languageOverride) setLanguageOverride(message.languageOverride)
     if (message.workspaceDirectory) setWorkspaceDirectory(message.workspaceDirectory)
     if (message.userId) setUserId(message.userId)
+    if (message.cloudMode) setCloudMode(message.cloudMode)
   }
   // testagent_change end
 
@@ -185,6 +190,7 @@ export const ServerProvider: ParentComponent = (props) => {
     workspaceDirectory,
     gitInstalled,
     userId, // testagent_change
+    cloudMode, // testagent_change
     configWarningsTitle,
     configWarningsDetail,
     dismissConfigWarnings,

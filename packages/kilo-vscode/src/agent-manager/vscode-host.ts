@@ -11,6 +11,7 @@ import type { KiloConnectionService } from "../services/cli-backend"
 import { KiloProvider } from "../KiloProvider"
 import { DiffVirtualProvider } from "../DiffVirtualProvider"
 import { buildWebviewHtml } from "../utils"
+import { isCloudMode } from "../services/cli-backend/cloud-mode" // testagent_change
 import { openFileInEditor, getWorkspaceRoot } from "../review-utils"
 import { TelemetryProxy, type TelemetryEventName } from "../services/telemetry"
 
@@ -76,6 +77,7 @@ export class VscodeHost implements Host {
       iconsBaseUri: panel.webview.asWebviewUri(vscode.Uri.joinPath(this.extensionUri, "assets", "icons")),
       title: "Agent Manager",
       port,
+      cloudMode: isCloudMode(), // testagent_change
     })
 
     const provider = new KiloProvider(this.extensionUri, this.connectionService, this.context, {

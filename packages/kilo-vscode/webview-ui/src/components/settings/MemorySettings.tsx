@@ -13,6 +13,7 @@ interface MemorySettingsProps {
   onDirtyChange?: (dirty: boolean) => void
   onSaveReady?: (fn: () => void) => void
   onDiscardReady?: (fn: () => void) => void
+  onSavingChange?: (saving: boolean) => void
 }
 
 const defaults: MemorySettingsConfig = {
@@ -23,12 +24,15 @@ const defaults: MemorySettingsConfig = {
     dream: true,
   },
   memory: {
-    autoExtractMaxLength: 10000,
-    autoExtractBufferSize: 10,
+    autoExtractBatchToken: 10000,
+    autoExtractBatchSize: 10,
     personalMemoryEnable: true,
     personalMemoryPrompt: "",
     autoDreamEnable: true,
     autoExtractEnable: true,
+  },
+  similarAnswer: {
+    enable: false,
   },
   recall: {
     recallEnable: true,
@@ -62,6 +66,9 @@ const MemorySettings: Component<MemorySettingsProps> = (props) => {
 
   // 向上报告 dirty 状态
   createEffect(() => props.onDirtyChange?.(dirty()))
+
+  // 向上报告 memory 保存状态
+  createEffect(() => props.onSavingChange?.(saving()))
 
   // 向上注册 save / discard 方法
   onMount(() => {
@@ -104,7 +111,7 @@ const MemorySettings: Component<MemorySettingsProps> = (props) => {
   const update = (patch: Partial<MemorySettingsConfig>) => {
     setCfg((prev) => ({ ...prev, ...patch }))
     // testagent_change start - update memory agent configurations when enable changes
-    if ('enable' in patch && patch.enable !== undefined) {
+    if ("enable" in patch && patch.enable !== undefined) {
       updateMemoryAgentsConfig(patch.enable)
     }
     // testagent_change end
@@ -116,6 +123,10 @@ const MemorySettings: Component<MemorySettingsProps> = (props) => {
 
   const memory = (patch: Partial<MemorySettingsConfig["memory"]>) => {
     setCfg((prev) => ({ ...prev, memory: { ...prev.memory, ...patch } }))
+  }
+
+  const similar = (patch: Partial<MemorySettingsConfig["similarAnswer"]>) => {
+    setCfg((prev) => ({ ...prev, similarAnswer: { ...prev.similarAnswer, ...patch } }))
   }
 
   const recall = (patch: Partial<MemorySettingsConfig["recall"]>) => {
@@ -142,20 +153,20 @@ const MemorySettings: Component<MemorySettingsProps> = (props) => {
         mode: "subagent" as const,
         description: "负责整理合并项目记忆，输出标准个人全局记忆",
         permission: {
-          "memory_save": "deny" as const,
-          "memory_delete": "deny" as const,
-          "memory_read": "allow" as const,
-          "memory_personal_read": "allow" as const,
-          "memory_list": "allow" as const,
-          "memory_personal_save": "allow" as const,
+          memory_save: "deny" as const,
+          memory_delete: "deny" as const,
+          memory_read: "allow" as const,
+          memory_personal_read: "allow" as const,
+          memory_list: "allow" as const,
+          memory_personal_save: "allow" as const,
         },
         tools: {
-          "memory_save": false,
-          "memory_delete": false,
-          "memory_read": true,
-          "memory_personal_read": true,
-          "memory_list": true,
-          "memory_personal_save": true,
+          memory_save: false,
+          memory_delete: false,
+          memory_read: true,
+          memory_personal_read: true,
+          memory_list: true,
+          memory_personal_save: true,
         },
         disable: !enable,
       },
@@ -164,17 +175,18 @@ const MemorySettings: Component<MemorySettingsProps> = (props) => {
         mode: "subagent" as const,
         description: "You are a file/memory matching engine.",
         permission: {
-          "grep": "deny" as const,
-          "glob": "deny" as const,
-          "memory_search": "deny" as const,
+          grep: "deny" as const,
+          glob: "deny" as const,
+          memory_search: "deny" as const,
         },
-        prompt: "You are a file/memory matching engine. Select the top 5 most semantically relevant items from [memories List] that match the [Query].You may only match based on filename / name / description / type",
+        prompt:
+          "You are a file/memory matching engine. Select the top 5 most semantically relevant items from [memories List] that match the [Query].You may only match based on filename / name / description / type",
         disable: !enable,
       },
     }
 
     const existingAgents = config().agent || {}
-    const updatedAgents: Record<string, any> = {} 
+    const updatedAgents: Record<string, any> = {}
 
     // Update memory-related agents
     for (const [agentName, agentConfig] of Object.entries(memoryAgentConfigs)) {
@@ -197,7 +209,7 @@ const MemorySettings: Component<MemorySettingsProps> = (props) => {
         // Agent exists in config
         const current = existingAgents[agentName]
         const currentPermission = current.permission || {}
-        
+
         // Enable: add deny permissions; Disable: use null sentinel to remove
         updatedAgents[agentName] = {
           ...current,
@@ -211,14 +223,14 @@ const MemorySettings: Component<MemorySettingsProps> = (props) => {
         // Agent doesn't exist and memory is enabled: create agent with deny permissions
         updatedAgents[agentName] = {
           permission: {
-            "memory_personal_read": "deny" as const,
-            "memory_personal_save": "deny" as const,
+            memory_personal_read: "deny" as const,
+            memory_personal_save: "deny" as const,
           },
         }
       }
       // If agent doesn't exist and memory is disabled, do nothing
     }
-    updateConfig({ agent: {...existingAgents, ...updatedAgents} })
+    updateConfig({ agent: { ...existingAgents, ...updatedAgents } })
   }
   // testagent_change end
 
@@ -230,7 +242,7 @@ const MemorySettings: Component<MemorySettingsProps> = (props) => {
       return
     }
     // testagent_change end
-    
+
     setSaving(true)
     vscode.postMessage({ type: "updateMemorySettings", settings: cfg() })
   }
@@ -270,26 +282,34 @@ const MemorySettings: Component<MemorySettingsProps> = (props) => {
 
       <Card data-variant="wide-input">
         <SettingsRow title="自动提取" description="会话空闲后按缓存大小触发记忆提取。">
-          <Switch checked={cfg().memory.autoExtractEnable} onChange={(checked) => memory({ autoExtractEnable: checked })} hideLabel>
+          <Switch
+            checked={cfg().memory.autoExtractEnable}
+            onChange={(checked) => memory({ autoExtractEnable: checked })}
+            hideLabel
+          >
             自动提取
           </Switch>
         </SettingsRow>
         <SettingsRow title="提取缓存大小" description="缓存消息数量达到该值后才允许自动提取。">
           <TextField
             type="number"
-            value={cfg().memory.autoExtractBufferSize.toString()}
-            onChange={(value) => memory({ autoExtractBufferSize: num(value, cfg().memory.autoExtractBufferSize) })}
+            value={cfg().memory.autoExtractBatchSize.toString()}
+            onChange={(value) => memory({ autoExtractBatchSize: num(value, cfg().memory.autoExtractBatchSize) })}
           />
         </SettingsRow>
         <SettingsRow title="提取最大长度" description="单次记忆提取可处理的最大字符数。">
           <TextField
             type="number"
-            value={cfg().memory.autoExtractMaxLength.toString()}
-            onChange={(value) => memory({ autoExtractMaxLength: num(value, cfg().memory.autoExtractMaxLength) })}
+            value={cfg().memory.autoExtractBatchToken.toString()}
+            onChange={(value) => memory({ autoExtractBatchToken: num(value, cfg().memory.autoExtractBatchToken) })}
           />
         </SettingsRow>
         <SettingsRow title="自动整理" description="达到整理轮次后运行 Auto Dream。">
-          <Switch checked={cfg().memory.autoDreamEnable} onChange={(checked) => memory({ autoDreamEnable: checked })} hideLabel>
+          <Switch
+            checked={cfg().memory.autoDreamEnable}
+            onChange={(checked) => memory({ autoDreamEnable: checked })}
+            hideLabel
+          >
             自动整理
           </Switch>
         </SettingsRow>
@@ -300,6 +320,11 @@ const MemorySettings: Component<MemorySettingsProps> = (props) => {
             hideLabel
           >
             个人全局记忆
+          </Switch>
+        </SettingsRow>
+        <SettingsRow title="根据项目内历史回答推荐question答案" description="启用根据项目内历史回答推荐question答案">
+          <Switch checked={cfg().similarAnswer.enable} onChange={(checked) => similar({ enable: checked })} hideLabel>
+            根据项目内历史回答推荐question答案
           </Switch>
         </SettingsRow>
         <SettingsRow title="个人记忆提示词" description="留空时使用插件内置提示词。" last>
@@ -314,7 +339,11 @@ const MemorySettings: Component<MemorySettingsProps> = (props) => {
 
       <Card data-variant="wide-input">
         <SettingsRow title="记忆召回" description="在对话中召回历史记忆。">
-          <Switch checked={cfg().recall.recallEnable} onChange={(checked) => recall({ recallEnable: checked })} hideLabel>
+          <Switch
+            checked={cfg().recall.recallEnable}
+            onChange={(checked) => recall({ recallEnable: checked })}
+            hideLabel
+          >
             记忆召回
           </Switch>
         </SettingsRow>
@@ -324,13 +353,20 @@ const MemorySettings: Component<MemorySettingsProps> = (props) => {
           </Switch>
         </SettingsRow>
         <SettingsRow title="Provider ID" description="语义召回使用的 LLM 服务提供商 ID。">
-          <TextField value={cfg().recall.providerID} placeholder="默认使用当前模型" onChange={(value) => recall({ providerID: value })} />
+          <TextField
+            value={cfg().recall.providerID}
+            placeholder="默认使用当前模型"
+            onChange={(value) => recall({ providerID: value })}
+          />
         </SettingsRow>
         <SettingsRow title="Model ID" description="语义召回使用的 LLM 模型 ID。" last>
-          <TextField value={cfg().recall.modelID} placeholder="默认使用当前模型" onChange={(value) => recall({ modelID: value })} />
+          <TextField
+            value={cfg().recall.modelID}
+            placeholder="默认使用当前模型"
+            onChange={(value) => recall({ modelID: value })}
+          />
         </SettingsRow>
       </Card>
-
     </div>
   )
 }

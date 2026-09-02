@@ -200,9 +200,9 @@ export function validateCustomProvider(input: ValidateArgs): ValidateResult {
       ? input.t("provider.custom.error.baseURL.format")
       : undefined
 
-  // testagent_change start: Validate jisuan model ID
+  // testagent_change start: Validate jisuan model ID only in create mode
   const jisuanModelIdError =
-    input.form.isJisuan && !input.form.jisuanModelId.trim()
+    !input.editing && input.form.isJisuan && !input.form.jisuanModelId.trim()
       ? input.t("provider.custom.error.required")
       : undefined
   // testagent_change end

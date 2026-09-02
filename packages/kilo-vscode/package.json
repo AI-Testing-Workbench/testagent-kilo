@@ -1,8 +1,8 @@
 {
   "name": "TestAgent",
   "displayName": "TestAgent",
-  "description": "TestAgent Code Extension",
-  "version": "1.4.0",
+  "description": "TestAgent",
+  "version": "1.4.2",
   "icon": "assets/icons/logo-outline-black.png",
   "galleryBanner": {
     "color": "#FFFFFF",
@@ -308,6 +308,11 @@
         "category": "TestAgent"
       },
       {
+        "command": "testagent.new.toggleZhAnswer",
+        "title": "Toggle ZH Answer",
+        "category": "TestAgent"
+      },
+      {
         "command": "testagent.new.generateTerminalCommand",
         "title": "Generate Terminal Command",
         "category": "TestAgent"
@@ -571,6 +576,11 @@
           "type": "boolean",
           "default": false,
           "description": "Show notifications for sub-agent tasks (permissions, questions, errors)"
+        },
+        "testagent.new.notifications.zhAnswer": {
+          "type": "boolean",
+          "default": false,
+          "description": "Enable ZH Answer"
         },
         "testagent.new.sounds.agent": {
           "type": "string",

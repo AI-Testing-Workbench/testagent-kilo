@@ -25,7 +25,13 @@ export type SessionStatusInfo =
 export type ToolState =
   | { status: "pending"; input: Record<string, unknown> }
   | { status: "running"; input: Record<string, unknown>; title?: string; time?: { start: number } }
-  | { status: "completed"; input: Record<string, unknown>; output: string; title: string; time?: { start: number; end: number; compacted?: number } }
+  | {
+      status: "completed"
+      input: Record<string, unknown>
+      output: string
+      title: string
+      time?: { start: number; end: number; compacted?: number }
+    }
   | { status: "error"; input: Record<string, unknown>; error: string; time?: { start: number; end: number } }
 
 // Base part interface - all parts have these fields
@@ -445,7 +451,6 @@ export interface CompactionConfig {
   auto?: boolean
   threshold_percent?: number | null
   prune?: boolean
-
 }
 
 export interface WatcherConfig {
@@ -535,6 +540,7 @@ export interface ReadyMessage {
   workspaceDirectory?: string
   userId?: string // testagent_change
   webviewType?: "sidebar" | "panel" | "unknown" // testagent_change
+  cloudMode?: boolean // testagent_change
 }
 
 export interface GitStatusMessage {
@@ -946,6 +952,7 @@ export interface NotificationSettingsLoadedMessage {
     notifyQuestions: boolean
     notifyErrors: boolean
     notifySubagent: boolean
+    notifyZhAnswer: boolean // testagent_change
     soundAgent: string
     soundPermissions: string
     soundErrors: string
@@ -1618,8 +1625,8 @@ export interface CustomProviderModelsFetchedMessage {
   models?: Array<{ id: string; name: string }>
   error?: string
   /** True when error was HTTP 401/403 — hints the user to check their API key */
-  auth?: boolean,
-  url?:string
+  auth?: boolean
+  url?: string
 }
 
 // testagent_change start - runtime switching messages
@@ -1642,12 +1649,15 @@ export interface MemorySettingsConfig {
     dream: boolean
   }
   memory: {
-    autoExtractMaxLength: number
-    autoExtractBufferSize: number
+    autoExtractBatchToken: number
+    autoExtractBatchSize: number
     personalMemoryEnable: boolean
     personalMemoryPrompt: string
     autoDreamEnable: boolean
     autoExtractEnable: boolean
+  }
+  similarAnswer: {
+    enable: boolean
   }
   recall: {
     recallEnable: boolean
@@ -1674,20 +1684,6 @@ export interface MemorySettingsSavedMessage {
 export interface MemorySettingsFailedMessage {
   type: "memorySettingsFailed"
   message: string
-}
-
-export interface GetNpmRegistryMessage {
-  type: "getNpmRegistry"
-}
-
-export interface SetNpmRegistryMessage {
-  type: "setNpmRegistry"
-  registry: string
-}
-
-export interface NpmRegistryResultMessage {
-  type: "npmRegistryResult"
-  registry: string
 }
 // testagent_change end
 
@@ -1733,7 +1729,7 @@ export type ExtensionMessage =
   | AutocompleteSettingsLoadedMessage
   | ChatCompletionResultMessage
   | FileSearchResultMessage
-  | StagesResultMessage  // testagent_change  - /sdt-run 阶段列表查询消息类型
+  | StagesResultMessage // testagent_change  - /sdt-run 阶段列表查询消息类型
   | TerminalContextResultMessage
   | TerminalContextErrorMessage
   | QuestionRequestMessage
@@ -1743,6 +1739,7 @@ export type ExtensionMessage =
   | SuggestionResolvedMessage
   | SuggestionErrorMessage
   | BrowserSettingsLoadedMessage
+  | ChatTipsLoadedMessage
   | ClaudeCompatSettingLoadedMessage
   | GitInstalledResultMessage
   | ConfigLoadedMessage
@@ -1795,7 +1792,13 @@ export type ExtensionMessage =
   | EnhancePromptResultMessage
   | EnhancePromptErrorMessage
   | ViewSubAgentSessionMessage
-  | { type: "envVarsData"; envVars: { system: Record<string, { key: string; value: string }>; custom: Record<string, { key: string; value: string }> } }
+  | {
+      type: "envVarsData"
+      envVars: {
+        system: Record<string, { key: string; value: string }>
+        custom: Record<string, { key: string; value: string }>
+      }
+    }
   | DiffViewerDiffsMessage
   | DiffViewerLoadingMessage
   | DiffViewerRevertFileResultMessage
@@ -1815,7 +1818,6 @@ export type ExtensionMessage =
   | MemorySettingsLoadedMessage // testagent_change
   | MemorySettingsSavedMessage // testagent_change
   | MemorySettingsFailedMessage // testagent_change
-  | NpmRegistryResultMessage // testagent_change
   | ModelSelectionsLoadedMessage
   | LanguageChangedMessage
   | ContinueInWorktreeProgressMessage
@@ -2199,6 +2201,32 @@ export interface RequestTimelineSettingMessage {
 
 export interface RequestBrowserSettingsMessage {
   type: "requestBrowserSettings"
+}
+
+// Chat tip (configured via `testagent.new.chatTips`)
+export interface ChatTipItem {
+  id?: string
+  content: string
+}
+
+export interface ChatTipsLoadedMessage {
+  type: "chatTipsLoaded"
+  tips: ChatTipItem[]
+}
+
+export interface RequestChatTipsMessage {
+  type: "requestChatTips"
+}
+
+export interface ChatTipActionMessage {
+  type: "chatTipAction"
+  command: string
+  args?: string[]
+}
+
+export interface ChatTipReadManyMessage {
+  type: "chatTipReadMany"
+  ids: string[]
 }
 
 export interface RequestClaudeCompatSettingMessage {
@@ -2916,6 +2944,9 @@ export type WebviewMessage =
   | UpdateSettingRequest
   | RequestTimelineSettingMessage
   | RequestBrowserSettingsMessage
+  | RequestChatTipsMessage
+  | ChatTipActionMessage
+  | ChatTipReadManyMessage
   | RequestClaudeCompatSettingMessage
   | RequestConfigMessage
   | RequestGlobalConfigMessage
@@ -3033,8 +3064,6 @@ export type WebviewMessage =
   | GetAvailableTerminalsMessage // testagent_change
   | GetRuntimeRequest // testagent_change
   | ChangeRuntimeRequest // testagent_change
-  | GetNpmRegistryMessage // testagent_change
-  | SetNpmRegistryMessage // testagent_change
   | RequestMemorySettingsMessage // testagent_change
   | UpdateMemorySettingsMessage // testagent_change
   // testagent_change start - testflow messages

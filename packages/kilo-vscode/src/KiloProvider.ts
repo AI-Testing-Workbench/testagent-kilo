@@ -51,6 +51,7 @@ import type { RemoteStatusService } from "./services/RemoteStatusService"
 import { resolveProjectDirectory } from "./project-directory"
 import { getBusySessionCount, seedSessionStatuses } from "./session-status"
 import { retry } from "./services/cli-backend/retry"
+import { isCloudMode } from "./services/cli-backend/cloud-mode" // testagent_change
 import { slimPart, slimParts } from "./kilo-provider/slim-metadata"
 import { handleContinueInWorktree } from "./kilo-provider/continue-worktree"
 import { parseMessageFiles, type MessageFile } from "./kilo-provider/message-files"
@@ -152,12 +153,15 @@ type MemorySettingsConfig = {
     dream: boolean
   }
   memory: {
-    autoExtractMaxLength: number
-    autoExtractBufferSize: number
+    autoExtractBatchToken: number
+    autoExtractBatchSize: number
     personalMemoryEnable: boolean
     personalMemoryPrompt: string
     autoDreamEnable: boolean
     autoExtractEnable: boolean
+  }
+  similarAnswer: {
+    enable: boolean
   }
   recall: {
     recallEnable: boolean
@@ -175,12 +179,15 @@ const memoryDefaults: MemorySettingsConfig = {
     dream: true,
   },
   memory: {
-    autoExtractMaxLength: 10000,
-    autoExtractBufferSize: 10,
+    autoExtractBatchToken: 10000,
+    autoExtractBatchSize: 10,
     personalMemoryEnable: true,
     personalMemoryPrompt: "",
     autoDreamEnable: true,
     autoExtractEnable: true,
+  },
+  similarAnswer: {
+    enable: false,
   },
   recall: {
     recallEnable: true,
@@ -202,14 +209,14 @@ const memorySettings = (input: unknown): MemorySettingsConfig => {
       dream: typeof cfg.cmd?.dream === "boolean" ? cfg.cmd.dream : memoryDefaults.cmd.dream,
     },
     memory: {
-      autoExtractMaxLength:
-        typeof cfg.memory?.autoExtractMaxLength === "number"
-          ? cfg.memory.autoExtractMaxLength
-          : memoryDefaults.memory.autoExtractMaxLength,
-      autoExtractBufferSize:
-        typeof cfg.memory?.autoExtractBufferSize === "number"
-          ? cfg.memory.autoExtractBufferSize
-          : memoryDefaults.memory.autoExtractBufferSize,
+      autoExtractBatchToken:
+        typeof cfg.memory?.autoExtractBatchToken === "number"
+          ? cfg.memory.autoExtractBatchToken
+          : memoryDefaults.memory.autoExtractBatchToken,
+      autoExtractBatchSize:
+        typeof cfg.memory?.autoExtractBatchSize === "number"
+          ? cfg.memory.autoExtractBatchSize
+          : memoryDefaults.memory.autoExtractBatchSize,
       personalMemoryEnable:
         typeof cfg.memory?.personalMemoryEnable === "boolean"
           ? cfg.memory.personalMemoryEnable
@@ -226,6 +233,10 @@ const memorySettings = (input: unknown): MemorySettingsConfig => {
         typeof cfg.memory?.autoExtractEnable === "boolean"
           ? cfg.memory.autoExtractEnable
           : memoryDefaults.memory.autoExtractEnable,
+    },
+    similarAnswer: {
+      enable:
+        typeof cfg.similarAnswer?.enable === "boolean" ? cfg.similarAnswer.enable : memoryDefaults.similarAnswer.enable,
     },
     recall: {
       recallEnable:
@@ -255,9 +266,18 @@ const mapAgent = (a: Agent) => ({
 function deepMerge(target: Record<string, unknown>, source: Record<string, unknown>): Record<string, unknown> {
   const result = { ...target }
   for (const [key, val] of Object.entries(source)) {
-    if (val === null) { delete result[key]; continue }
-    if (typeof val === "object" && !Array.isArray(val) && val !== null &&
-        typeof result[key] === "object" && !Array.isArray(result[key]) && result[key] !== null) {
+    if (val === null) {
+      delete result[key]
+      continue
+    }
+    if (
+      typeof val === "object" &&
+      !Array.isArray(val) &&
+      val !== null &&
+      typeof result[key] === "object" &&
+      !Array.isArray(result[key]) &&
+      result[key] !== null
+    ) {
       result[key] = deepMerge(result[key] as Record<string, unknown>, val as Record<string, unknown>)
     } else {
       result[key] = val
@@ -278,6 +298,47 @@ function removeNulls(obj: Record<string, unknown>): Record<string, unknown> {
     }
   }
   return result
+}
+
+// Default chat tips endpoint, base64-encoded so the URL is not plaintext in
+// the bundle. A `testagent.new.chatTipsUrl` value in settings.json (if any)
+// is treated the same way and overrides the default.
+const chatTipsUrlEncoded = "aHR0cHM6Ly90ZXN0YWdlbnQtZ2F0ZXdheS5wYWFzdWF0LmNtYmNoaW5hLmNuL2NoYXRUaXBz"
+
+function decodeChatTipsUrl(configured: string): string {
+  return Buffer.from(configured || chatTipsUrlEncoded, "base64").toString("utf8")
+}
+
+// Fisher-Yates shuffle so tips appear in a random order rather than the
+// order the remote server returned them.
+function shuffle<T>(list: T[]): T[] {
+  const arr = [...list]
+  for (let i = arr.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1))
+    ;[arr[i], arr[j]] = [arr[j], arr[i]]
+  }
+  return arr
+}
+
+// Parse the remote chat tips response: a plain array, or an object with a
+// `tips` / `data` array. Entries without a string `content` are dropped.
+function extractChatTips(body: unknown): Array<{ id?: string; content: string }> {
+  const raw = Array.isArray(body)
+    ? body
+    : body && typeof body === "object"
+      ? Array.isArray((body as Record<string, unknown>).tips)
+        ? ((body as Record<string, unknown>).tips as unknown[])
+        : Array.isArray((body as Record<string, unknown>).data)
+          ? ((body as Record<string, unknown>).data as unknown[])
+          : []
+      : []
+
+  return raw.flatMap((item): Array<{ id?: string; content: string }> => {
+    if (typeof item !== "object" || item === null) return []
+    const tip = item as Record<string, unknown>
+    if (typeof tip.content !== "string") return []
+    return [{ id: typeof tip.id === "string" ? tip.id : undefined, content: tip.content }]
+  })
 }
 
 // // testagent_change: Structured log channel for config write operations
@@ -318,6 +379,9 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
     vscode.extensions.getExtension("testagent.testagent-tscode")?.packageJSON?.version ?? "unknown"
   /** Cached providersLoaded payload so requestProviders can be served before client is ready */
   private cachedProvidersMessage: unknown = null
+  private cachedChatTipsMessage: unknown = null
+  private chatTipsFetched = false
+  private readChatTipIds = new Set<string>()
   /** Coalesce provider refreshes — at most one follow-up rerun when a request lands mid-flight. */
   private providersRefresh: Promise<void> | null = null
   private providersQueued = false
@@ -376,10 +440,13 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
   // testagent_change start - testflow integration
   private readonly sdtRunners = new Map<string, SdtRunner>()
   /** 本地 question 的 deferred 映射表（用于 /sdt-run 交互式阶段选择） */
-  private readonly localQuestionMap = new Map<string, {
-    deferred: { resolve: (value: string) => void; reject: (reason?: any) => void }
-    timeout: NodeJS.Timeout
-  }>()
+  private readonly localQuestionMap = new Map<
+    string,
+    {
+      deferred: { resolve: (value: string) => void; reject: (reason?: any) => void }
+      timeout: NodeJS.Timeout
+    }
+  >()
   // testagent_change end
   private viewStateDisposable: vscode.Disposable | null = null
   private visibilityDisposable: vscode.Disposable | null = null
@@ -550,6 +617,7 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
         languageOverride: langConfig.get<string>("language"),
         workspaceDirectory: this.getProjectDirectory(this.currentSession?.id),
         webviewType: this.webviewType, // testagent_change
+        cloudMode: isCloudMode(), // testagent_change
       })
     } else {
       console.log("[TestAgent]  ⚠️ Skipping ready message (no serverInfo)")
@@ -866,7 +934,13 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
         }
         // testagent_change start - 添加继续任务处理
         case "continueTask":
-          await this.handleContinueTask(message.sessionID, message.messageID, message.providerID, message.modelID, message.thinkingEnabled)
+          await this.handleContinueTask(
+            message.sessionID,
+            message.messageID,
+            message.providerID,
+            message.modelID,
+            message.thinkingEnabled,
+          )
           break
         // testagent_change end
         case "abort":
@@ -1002,6 +1076,12 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
 
         case "retryConnection":
           console.log("[TestAgent]  🔄 Retrying connection...")
+          // testagent_change start - error for Node version on retry
+          const { isTestagentNodejs } = await import("./services/cli-backend/runtime")
+          if (isTestagentNodejs()) {
+            this.connectionService.dispose()
+          }
+          // testagent_change end
           this.initializeConnection().catch((e) => console.error("[TestAgent]  ❌ Retry connection failed:", e))
           break
         case "openSubAgentViewer":
@@ -1080,14 +1160,14 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
 
         case "questionReply":
           // testagent_change start - 本地 question（sdt-local: 前缀）不走 server
-          if (typeof message.requestID === 'string' && message.requestID.startsWith('sdt-local:')) {
+          if (typeof message.requestID === "string" && message.requestID.startsWith("sdt-local:")) {
             const entry = this.localQuestionMap.get(message.requestID)
             if (entry) {
               const label = message.answers?.[0]?.[0]
               if (label) {
                 entry.deferred.resolve(label)
               } else {
-                entry.deferred.reject(new Error('未选择阶段'))
+                entry.deferred.reject(new Error("未选择阶段"))
               }
             }
             break
@@ -1100,10 +1180,10 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
           break
         case "questionReject":
           // testagent_change start - 本地 question（sdt-local: 前缀）不走 server
-          if (typeof message.requestID === 'string' && message.requestID.startsWith('sdt-local:')) {
+          if (typeof message.requestID === "string" && message.requestID.startsWith("sdt-local:")) {
             const entry = this.localQuestionMap.get(message.requestID)
             if (entry) {
-              entry.deferred.reject(new Error('用户取消了选择'))
+              entry.deferred.reject(new Error("用户取消了选择"))
             }
             break
           }
@@ -1168,56 +1248,6 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
         case "getAvailableTerminals": {
           const terminals = await this.getAvailableTerminals()
           this.webview?.postMessage({ type: "availableTerminalsResult", terminals })
-          break
-        }
-        // testagent_change end
-        // testagent_change start - npm registry
-        case "getNpmRegistry": {
-          try {
-            const { execSync } = require("child_process")
-            const registry = execSync("npm config get registry", { encoding: "utf-8", timeout: 5000 }).trim()
-            this.webview?.postMessage({ type: "npmRegistryResult", registry })
-          } catch (err) {
-            this.webview?.postMessage({ type: "npmRegistryResult", registry: "https://registry.npmjs.org/" })
-          }
-          break
-        }
-        case "setNpmRegistry": {
-          const { registry } = message
-          try {
-            const npmrcPath = path.join(os.homedir(), ".npmrc")
-            let content = ""
-            try {
-              content = fs.readFileSync(npmrcPath, "utf-8")
-            } catch {
-              // file doesn't exist yet
-            }
-
-            if (!registry) {
-              // 选择"系统默认源" → 删除 ~/.npmrc 中的 registry= 行
-              content = content.replace(/^registry\s*=.*$/m, "").replace(/\n{2,}/g, "\n").trim()
-              if (!content) {
-                try { fs.unlinkSync(npmrcPath) } catch {}
-              } else {
-                fs.writeFileSync(npmrcPath, content + "\n", "utf-8")
-              }
-              // 重新读取实际生效的默认值
-              const { execSync } = require("child_process")
-              const defaultRegistry = execSync("npm config get registry", { encoding: "utf-8", timeout: 5000 }).trim()
-              this.webview?.postMessage({ type: "npmRegistryResult", registry: defaultRegistry })
-            } else {
-              if (content.match(/^registry\s*=/m)) {
-                content = content.replace(/^registry\s*=.*$/m, `registry=${registry}`)
-              } else {
-                content += (content ? "\n" : "") + `registry=${registry}`
-              }
-              fs.writeFileSync(npmrcPath, content, "utf-8")
-              this.webview?.postMessage({ type: "npmRegistryResult", registry })
-            }
-          } catch (err) {
-            console.error("[TestAgent] Failed to set npm registry:", err)
-            vscode.window.showErrorMessage(`设置 npm 源失败: ${err}`)
-          }
           break
         }
         // testagent_change end
@@ -1342,6 +1372,20 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
         case "requestBrowserSettings":
           this.sendBrowserSettings()
           break
+        case "requestChatTips":
+          if (this.cachedChatTipsMessage) this.postMessage(this.cachedChatTipsMessage)
+          break
+        case "chatTipAction":
+          if (message.command) {
+            const args = message.args ?? []
+            void vscode.commands.executeCommand(message.command, ...args).then(undefined, (err) => {
+              vscode.window.showWarningMessage(`TestAgent 提示命令执行失败: ${err}`)
+            })
+          }
+          break
+        case "chatTipReadMany":
+          this.markChatTipsRead(message.ids)
+          break
         case "requestClaudeCompatSetting":
           this.sendClaudeCompatSetting()
           break
@@ -1415,7 +1459,8 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
           break
         }
         case "requestEnableThinkings": {
-          const enableThinkings = this.extensionContext?.globalState.get<Record<string, boolean>>("enableThinkings") ?? {}
+          const enableThinkings =
+            this.extensionContext?.globalState.get<Record<string, boolean>>("enableThinkings") ?? {}
           this.postMessage({ type: "enableThinkingsLoaded", enableThinkings })
           break
         }
@@ -1724,6 +1769,7 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
           languageOverride: langConfig.get<string>("language"),
           workspaceDirectory: this.getProjectDirectory(this.currentSession?.id),
           userId, // testagent_change
+          cloudMode: isCloudMode(), // testagent_change
         })
       }
 
@@ -1754,6 +1800,7 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
       this.postMessage({ type: "gitStatus", repo: this.cachedGitRepo })
       this.sendNotificationSettings()
       this.sendTimelineSetting()
+      this.fetchChatTips()
       this.postMessage({ type: "extensionDataReady" })
 
       // 技能等服务是异步加载的，可能在第一次 checkConfigWarnings 之后才完成，
@@ -2324,7 +2371,7 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
     await this.fetchAndSendSkills()
     await this.fetchAndSendCommands()
     // testagent_change end
-     vscode.window.showInformationMessage("skills已重新加载")
+    vscode.window.showInformationMessage("skills已重新加载")
     console.log("[TestAgent] Skills and commands reloaded successfully")
   }
 
@@ -3182,6 +3229,7 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
         notifyQuestions: notifications.get<boolean>("questions", true),
         notifyErrors: notifications.get<boolean>("errors", true),
         notifySubagent: notifications.get<boolean>("subagent", false),
+        notifyZhAnswer: notifications.get<boolean>("zhAnswer", false), // testagent_change
         soundAgent: sounds.get<string>("agent", "default"),
         soundPermissions: sounds.get<string>("permissions", "default"),
         soundErrors: sounds.get<string>("errors", "default"),
@@ -3211,7 +3259,8 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
     type FileContent = { file: string; parsed: Record<string, unknown> }
     const found: FileContent[] = []
     for (const subdir of [".testagent", ".opencode"]) {
-      const names = subdir === ".testagent" ? ["testagent.jsonc", "testagent.json"] : ["opencode.jsonc", "opencode.json"]
+      const names =
+        subdir === ".testagent" ? ["testagent.jsonc", "testagent.json"] : ["opencode.jsonc", "opencode.json"]
       let current = dir
       while (true) {
         for (const name of names) {
@@ -3266,14 +3315,18 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
       }
 
       // Nested object: split entries by whether they exist in the project file.
-      const src = existing && typeof existing === "object" && !Array.isArray(existing) ? (existing as Record<string, unknown>) : {}
+      const src =
+        existing && typeof existing === "object" && !Array.isArray(existing)
+          ? (existing as Record<string, unknown>)
+          : {}
       const projectPart: Record<string, unknown> = {}
       const globalPart: Record<string, unknown> = {}
       // testagent_change start - route all mcp entries to project when mcp key already exists in a project file
       const isMcp = key === "mcp"
       // testagent_change end
       for (const [nested, nestedVal] of Object.entries(value as Record<string, unknown>)) {
-        if (nested in src || isMcp) { // testagent_change
+        if (nested in src || isMcp) {
+          // testagent_change
           projectPart[nested] = nestedVal
         } else {
           globalPart[nested] = nestedVal
@@ -3282,11 +3335,18 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
 
       if (Object.keys(projectPart).length > 0) {
         project[file]![key] = projectPart
-        console.info("[TestAgent] routeConfigToSource routed to project (nested)", { file, key, entries: Object.keys(projectPart) })
+        console.info("[TestAgent] routeConfigToSource routed to project (nested)", {
+          file,
+          key,
+          entries: Object.keys(projectPart),
+        })
       }
       if (Object.keys(globalPart).length > 0) {
         global[key] = { ...((global[key] as Record<string, unknown>) ?? {}), ...globalPart }
-        console.info("[TestAgent] routeConfigToSource kept in global (nested)", { key, entries: Object.keys(globalPart) })
+        console.info("[TestAgent] routeConfigToSource kept in global (nested)", {
+          key,
+          entries: Object.keys(globalPart),
+        })
       }
     }
 
@@ -3301,9 +3361,11 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
   private async writeConfigFile(file: string, patch: Record<string, unknown>): Promise<void> {
     const raw = await fs.promises.readFile(file, "utf-8")
     let existing: Record<string, unknown> = {}
-    try { existing = (jsonc.parse(raw) ?? {}) as Record<string, unknown> } catch (e) {
+    try {
+      existing = (jsonc.parse(raw) ?? {}) as Record<string, unknown>
+    } catch (e) {
       console.warn("[TestAgent] writeConfigFile parse failed", { file, error: String(e) })
-    } 
+    }
     console.info("[TestAgent] writeConfigFile writing", { file, patchKeys: Object.keys(patch) })
     if (typeof existing !== "object" || Array.isArray(existing)) existing = {}
     const merged = deepMerge(existing, patch)
@@ -3323,7 +3385,10 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
    * and to global config for the rest. Then pushes the merged config back.
    */
   private async handleUpdateConfig(partial: ConfigPatch): Promise<void> {
-    console.info("[TestAgent] === handleUpdateConfig CALLED ===", { keys: Object.keys(partial), hasMcp: partial.mcp !== undefined })
+    console.info("[TestAgent] === handleUpdateConfig CALLED ===", {
+      keys: Object.keys(partial),
+      hasMcp: partial.mcp !== undefined,
+    })
 
     if (!this.client || this.connectionState !== "connected") {
       this.postMessage({ type: "configUpdateFailed", message: "Not connected to CLI backend" })
@@ -3351,7 +3416,10 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
     // Phase 1: write. Route keys to project or global based on where they live.
     try {
       const dir = this.getWorkspaceDirectory()
-      console.info("[TestAgent] handleUpdateConfig routing writes", { dir, keys: Object.keys(partial as Record<string, unknown>) })
+      console.info("[TestAgent] handleUpdateConfig routing writes", {
+        dir,
+        keys: Object.keys(partial as Record<string, unknown>),
+      })
       const { project, global } = await this.routeConfigToSource(partial as Record<string, unknown>, dir)
 
       for (const [file, patch] of Object.entries(project)) {
@@ -3407,7 +3475,9 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
           this.postMessage({ type: "configUpdated", config: base })
         } else {
           const dir = this.getWorkspaceDirectory()
-          const { data: merged } = await retry(() => this.client!.config.get({ directory: dir }, { throwOnError: true }))
+          const { data: merged } = await retry(() =>
+            this.client!.config.get({ directory: dir }, { throwOnError: true }),
+          )
           this.cachedConfigMessage = { type: "configLoaded", config: merged }
           this.postMessage({ type: "configUpdated", config: merged })
         }
@@ -3914,7 +3984,7 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
     }
 
     try {
-      console.log('触发了abort  掉后端接口')
+      console.log("触发了abort  掉后端接口")
       await abortSession({
         client: this.client,
         sessionID: targetSessionID,
@@ -4582,6 +4652,7 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
     this.sendBrowserSettings()
     this.sendNotificationSettings()
     this.sendTimelineSetting()
+    if (this.cachedChatTipsMessage) this.postMessage(this.cachedChatTipsMessage)
     await ModelState.reset(this.client, (msg) => this.postMessage(msg))
 
     // Re-send globalState items to the webview
@@ -4611,6 +4682,53 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
   }
 
   /**
+   * Fetch chat tips from the configured remote URL once at startup and push
+   * them to the webview. Fire-and-forget so it never blocks startup; a failed
+   * or empty response simply means no tip is shown. Tips already marked as
+   * read are filtered out.
+   */
+  private fetchChatTips(): void {
+    if (this.chatTipsFetched) return
+    this.chatTipsFetched = true
+    const saved = this.extensionContext?.globalState.get<string[]>("chatTipsRead", [])
+    this.readChatTipIds = new Set(saved)
+    const configured = vscode.workspace.getConfiguration("testagent.new").get<string>("chatTipsUrl", "")
+    const url = decodeChatTipsUrl(configured)
+
+    const controller = new AbortController()
+    const timer = setTimeout(() => controller.abort(), 5000)
+    void fetch(url, { signal: controller.signal })
+      .then((res) => (res.ok ? res.json() : Promise.reject(new Error(`HTTP ${res.status}`))))
+      .then((body) => {
+        const tips = shuffle(extractChatTips(body)).filter((tip) => !this.readChatTipIds.has(tip.id ?? tip.content))
+        const message = { type: "chatTipsLoaded", tips }
+        this.cachedChatTipsMessage = message
+        this.postMessage(message)
+      })
+      .catch((err) => {
+        console.error("[TestAgent]  ❌ Failed to fetch chat tips:", err)
+      })
+      .finally(() => clearTimeout(timer))
+  }
+
+  /**
+   * Persist a batch of tips as read so they are not shown again, and drop
+   * them from the cached list so late-connecting webviews see them filtered.
+   */
+  private markChatTipsRead(ids: string[]): void {
+    if (ids.length === 0) return
+    for (const id of ids) {
+      if (id) this.readChatTipIds.add(id)
+    }
+    void this.extensionContext?.globalState.update("chatTipsRead", [...this.readChatTipIds])
+    const cached = this.cachedChatTipsMessage as { type: string; tips: Array<{ id?: string; content: string }> } | null
+    if (cached && cached.type === "chatTipsLoaded") {
+      cached.tips = cached.tips.filter((tip) => !this.readChatTipIds.has(tip.id ?? tip.content))
+      this.postMessage(cached)
+    }
+  }
+
+  /**
    * Read the current Claude Code compatibility setting and push it to the webview.
    */
   private sendClaudeCompatSetting(): void {
@@ -4634,7 +4752,7 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
       this.cachedConfigMessage = null
       this.cachedMcpStatusMessage = null
       this.clearCommandsCache()
-      
+
       // Clear backend instance cache to force complete reload
       // instance.dispose() will invalidate ALL backend caches including:
       // - Config (with warnings)
@@ -4652,9 +4770,9 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
         // Wait for backend to fully dispose the instance
         await new Promise((resolve) => setTimeout(resolve, 300))
       }
-      
+
       // await this.connectionService.restart(this.getWorkspaceDirectory(), logLevel)
-      
+
       // 重新初始化连接：重新订阅 SSE、拉取 providers/agents/skills/config、
       // 检查配置警告（含 init-late / init-late-timeout 异步兜底）。
       // 复用 doInitializeConnection 全流程，避免手动重复。
@@ -4713,7 +4831,6 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
     // trackedSessionIds guard so the Settings panel's allStatusMap stays current for the
     // busy-session warning on Save.
     if (event.type === "session.status") {
-
       const sid = event.properties.sessionID
       const prevStatus = this.sessionStatusMap.get(sid)
       const newStatus = event.properties.status.type
@@ -4732,7 +4849,11 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
         if (parent) {
           parentWithChildren.delete(parent)
           if (reason === "user_abort") {
-            console.log("[TestAgent]  🧹 Child abort cleanup:", { childId: sid, parent, parentWithChildrenSize: parentWithChildren.size })
+            console.log("[TestAgent]  🧹 Child abort cleanup:", {
+              childId: sid,
+              parent,
+              parentWithChildrenSize: parentWithChildren.size,
+            })
           }
         }
         // testagent_change end
@@ -4803,9 +4924,10 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
           setTimeout(() => notifiedEventIds.delete(event.id), 1000)
 
           // When multiple questions are asked, combine them into a summary
-          const header = qs.length > 1
-            ? qs.map((q: { header?: string; question?: string }) => q.header || q.question).join(", ")
-            : (qs[0].header || qs[0].question)
+          const header =
+            qs.length > 1
+              ? qs.map((q: { header?: string; question?: string }) => q.header || q.question).join(", ")
+              : qs[0].header || qs[0].question
           this.maybeShowQuestionNotification(sid, header)
         }
       }
@@ -4820,7 +4942,10 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
         typeof error === "string"
           ? error
           : typeof error === "object" && error !== null && "data" in error
-            ? typeof error.data === "object" && error.data !== null && "message" in error.data && typeof error.data.message === "string"
+            ? typeof error.data === "object" &&
+              error.data !== null &&
+              "message" in error.data &&
+              typeof error.data.message === "string"
               ? error.data.message
               : "发生错误"
             : "发生错误"
@@ -4833,9 +4958,9 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
 
         // Skip notification for MessageAbortedError or AbortError (user-initiated abort is not an error)
         const isAbortError =
-          typeof error === "object" && 
-          error !== null && 
-          "name" in error && 
+          typeof error === "object" &&
+          error !== null &&
+          "name" in error &&
           ((error.name as string) === "MessageAbortedError" || (error.name as string) === "AbortError")
         if (isAbortError) {
           return
@@ -4892,17 +5017,17 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
     // Forward relevant events to webview
     // Side effects that must happen before the webview message is sent
     if (event.type === "session.created" && !this.currentSession) {
-      console.log('event==============info', event.properties.info)
+      console.log("event==============info", event.properties.info)
       this.currentSession = event.properties.info
       this.contextSessionID = event.properties.info.id
       this.trackedSessionIds.add(event.properties.info.id)
     }
     if (event.type === "session.updated" && this.currentSession?.id === event.properties.info.id) {
-        console.log("[DEBUG] session.updated for currentSession", {                                              
-        id: event.properties.info.id,                                                                          
-        title: event.properties.info.title,                                                                    
-        agent: event.properties.info.agent,                                                                    
-      })  
+      console.log("[DEBUG] session.updated for currentSession", {
+        id: event.properties.info.id,
+        title: event.properties.info.title,
+        agent: event.properties.info.agent,
+      })
       this.currentSession = event.properties.info
       this.contextSessionID = event.properties.info.id
     }
@@ -4920,9 +5045,12 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
         sessionID?: string
       }
       const childId = childID(part)
-        console.log("[DEBUG] message.part.updated", { childId, tool: part.tool, type: part.type, sessionID })
+      console.log("[DEBUG] message.part.updated", { childId, tool: part.tool, type: part.type, sessionID })
       if (childId && !this.trackedSessionIds.has(childId)) {
-        console.log("[TestAgent]  🔗 Auto-adopting child session from task tool", { childId, parentId: part.sessionID ?? sessionID! })
+        console.log("[TestAgent]  🔗 Auto-adopting child session from task tool", {
+          childId,
+          parentId: part.sessionID ?? sessionID!,
+        })
         parentWithChildren.add(sessionID!)
         childToParent.set(childId, part.sessionID ?? sessionID!)
         void this.handleSyncSession(childId, part.sessionID ?? sessionID!)
@@ -5192,6 +5320,7 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
       iconsBaseUri: webview.asWebviewUri(vscode.Uri.joinPath(this.extensionUri, "assets", "icons")),
       title: "TestAgent",
       port: this.connectionService.getServerInfo()?.port,
+      cloudMode: isCloudMode(), // testagent_change
       extraStyles: `.container { height: 100%; display: flex; flex-direction: column; height: 100vh; border-right: 1px solid var(--border-weak-base); }`,
     })
   }
@@ -5351,10 +5480,7 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
       }
 
       // PowerShell 7+
-      const ps7Paths = [
-        "C:/Program Files/PowerShell/7/pwsh.exe",
-        "C:/Program Files (x86)/PowerShell/7/pwsh.exe",
-      ]
+      const ps7Paths = ["C:/Program Files/PowerShell/7/pwsh.exe", "C:/Program Files (x86)/PowerShell/7/pwsh.exe"]
       for (const p of ps7Paths) {
         if (fs.existsSync(p)) {
           result.push({ name: "PowerShell 7", path: p, description: "PowerShell Core 7+" })
@@ -5380,7 +5506,6 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
           break
         }
       }
-
     } else {
       // macOS / Linux — read available shells from /etc/shells
       try {

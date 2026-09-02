@@ -13,6 +13,11 @@ on:
         required: true
         type: string
         default: "main"
+      core_branch:
+        description: "testagent-core 子模块分支 (留空使用默认分支)"
+        required: false
+        type: string
+        default: ""
       platform:
         description: "构建平台 (Platform to build)"
         required: true
@@ -20,13 +25,20 @@ on:
         options:
           - all
           - linux-x64
-          - linux-arm64
-          - alpine-x64
-          - alpine-arm64
-          - darwin-x64
           - darwin-arm64
           - win32-x64
         default: "all"
+      # testagent_change - optionally skip pushing VSIX to the workbench prebuilt repo
+      trigger_workbench:
+        description: "构建后推送 VSIX 到 test-workbench-vsix 并触发 test-workbench-vscode 构建"
+        required: false
+        type: boolean
+        default: true
+      workbench_branch:
+        description: "test-workbench-vscode 构建分支 (Branch to build, default main)"
+        required: false
+        type: string
+        default: "main"
 
 concurrency: ${{ github.workflow }}-${{ github.ref }}-${{ inputs.platform || 'all' }}
 # testagent_change end
@@ -54,6 +66,11 @@ jobs:
           git config --global url."https://github.com/".insteadOf "git@github.com:"
           git submodule sync --recursive packages/testagent-core
           git submodule update --init --remote --recursive packages/testagent-core
+          if [ -n "${{ inputs.core_branch }}" ]; then
+            git -C packages/testagent-core fetch origin "${{ inputs.core_branch }}"
+            git -C packages/testagent-core checkout "FETCH_HEAD"
+            git -C packages/testagent-core submodule update --init --recursive
+          fi
 
       # testagent_change - root workspace install needs the testflow workspace
       - name: Update testflow submodule
@@ -112,22 +129,6 @@ jobs:
             script: bun:linux
             binary: testagent
             output_dir: testagent-linux-x64
-          - target: linux-arm64
-            script: bun:linux-arm64
-            binary: testagent
-            output_dir: testagent-linux-arm64
-          - target: alpine-x64
-            script: bun:alpine
-            binary: testagent
-            output_dir: testagent-linux-x64-musl
-          - target: alpine-arm64
-            script: bun:alpine-arm64
-            binary: testagent
-            output_dir: testagent-linux-arm64-musl
-          - target: darwin-x64
-            script: bun:mac
-            binary: testagent
-            output_dir: testagent-darwin-x64
           - target: darwin-arm64
             script: bun:mac-arm64
             binary: testagent
@@ -168,6 +169,11 @@ jobs:
           git config --global url."https://github.com/".insteadOf "git@github.com:"
           git submodule sync --recursive packages/testagent-core
           git submodule update --init --remote --recursive packages/testagent-core
+          if [ -n "${{ inputs.core_branch }}" ]; then
+            git -C packages/testagent-core fetch origin "${{ inputs.core_branch }}"
+            git -C packages/testagent-core checkout "FETCH_HEAD"
+            git -C packages/testagent-core submodule update --init --recursive
+          fi
 
       # testagent_change - use latest testflow commit for CLI builds (fix workspace missing error)
       - name: Update testflow submodule
@@ -254,18 +260,6 @@ jobs:
           - target: linux-x64
             cli_target: linux-x64
             binary: testagent
-          - target: linux-arm64
-            cli_target: linux-arm64
-            binary: testagent
-          - target: alpine-x64
-            cli_target: alpine-x64
-            binary: testagent
-          - target: alpine-arm64
-            cli_target: alpine-arm64
-            binary: testagent
-          - target: darwin-x64
-            cli_target: darwin-x64
-            binary: testagent
           - target: darwin-arm64
             cli_target: darwin-arm64
             binary: testagent
@@ -302,6 +296,11 @@ jobs:
           git config --global url."https://github.com/".insteadOf "git@github.com:"
           git submodule sync --recursive packages/testagent-core
           git submodule update --init --remote --recursive packages/testagent-core
+          if [ -n "${{ inputs.core_branch }}" ]; then
+            git -C packages/testagent-core fetch origin "${{ inputs.core_branch }}"
+            git -C packages/testagent-core checkout "FETCH_HEAD"
+            git -C packages/testagent-core submodule update --init --recursive
+          fi
 
       # testagent_change - use latest testflow commit for VSIX builds
       - name: Update testflow submodule
@@ -498,8 +497,6 @@ jobs:
             case "$target" in
               win32-x64)   plat="testagent-windows-x64-baseline" ;;
               win32-arm64) plat="testagent-windows-arm64" ;;
-              alpine-x64)  plat="testagent-linux-x64-musl" ;;
-              alpine-arm64) plat="testagent-linux-arm64-musl" ;;
               *)           plat="testagent-${target}" ;;
             esac
 
@@ -550,3 +547,79 @@ jobs:
           echo "✅ VSIX files uploaded successfully"
         env:
           GH_TOKEN: ${{ github.token }}
+
+  # testagent_change start - push built VSIX to the workbench prebuilt repo and trigger its release build
+  publish-prebuilt:
+    name: Push VSIX and trigger workbench build
+    needs:
+      - version
+      - publish
+    runs-on: ubuntu-24.04
+    if: always() && needs.publish.result == 'success'
+    steps:
+      - name: Clone test-workbench-vsix repo
+        run: |
+          if [ -z "$WORKBENCH_TOKEN" ]; then
+            echo "::error::WORKBENCH_TOKEN secret is required to push to lulujs/test-workbench-vsix"
+            exit 1
+          fi
+          git config --global user.name "testagent-kilo[bot]"
+          git config --global user.email "testagent-kilo[bot]@users.noreply.github.com"
+          git clone --depth 1 "https://x-access-token:${WORKBENCH_TOKEN}@github.com/lulujs/test-workbench-vsix.git" prebuilt
+        env:
+          WORKBENCH_TOKEN: ${{ secrets.WORKBENCH_TOKEN }}
+
+      - uses: actions/download-artifact@v4
+        with:
+          pattern: testagent-vscode-*
+          path: vsix
+
+      - name: Copy VSIX files into platform directories
+        run: |
+          stage() {
+            local target="$1" plat="$2" arch="$3"
+            if [ -d "vsix/testagent-vscode-${target}" ]; then
+              mkdir -p "prebuilt/${plat}/${arch}"
+              find "vsix/testagent-vscode-${target}" -name "*.vsix" -exec cp -f {} "prebuilt/${plat}/${arch}/" \;
+            fi
+          }
+          stage linux-x64 linux x64
+          stage darwin-arm64 darwin arm64
+          stage win32-x64 win32 x64
+          echo "Staged VSIX files:"
+          find prebuilt -name "*.vsix" | sort || true
+
+      - name: Commit and push
+        run: |
+          cd prebuilt
+          git add -A
+          if git diff --cached --quiet; then
+            echo "No VSIX changes to push"
+          else
+            git commit -m "Update testagent VSIX from testagent-kilo ${GITHUB_SHA::7} (v${{ needs.version.outputs.version }})"
+            git pull --rebase --autostash origin main
+            git push origin HEAD:main
+          fi
+
+      - name: Determine workbench platforms
+        id: workbench_platform
+        run: |
+          case "${{ inputs.platform }}" in
+            win32-x64) PLATFORMS="win32-x64" ;;
+            linux-x64) PLATFORMS="linux" ;;
+            darwin-arm64) PLATFORMS="darwin" ;;
+            *) PLATFORMS="all" ;;
+          esac
+          echo "platforms=$PLATFORMS" >> "$GITHUB_OUTPUT"
+
+      - name: Trigger test-workbench-vscode release
+        if: github.event_name == 'push' || inputs.trigger_workbench == true
+        run: |
+          gh workflow run release.yml \
+            --repo AI-Testing-Workbench/test-workbench-vscode \
+            --ref ${{ inputs.workbench_branch || 'main' }} \
+            -f platforms=${{ steps.workbench_platform.outputs.platforms }}
+          echo "✅ Triggered test-workbench-vscode release.yml (platforms=${{ steps.workbench_platform.outputs.platforms }}, branch=${{ inputs.workbench_branch || 'main' }})"
+        env:
+          GH_TOKEN: ${{ secrets.WORKBENCH_TOKEN }}
+  # testagent_change end

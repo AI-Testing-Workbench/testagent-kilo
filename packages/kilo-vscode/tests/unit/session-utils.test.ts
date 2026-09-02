@@ -456,4 +456,25 @@ describe("buildFamilyTiming", () => {
     expect(result?.tool).toBe(0)
     expect(result?.total).toBe(1_000)
   })
+
+  it("dedupes overlapping llm and tool time across parallel sessions", () => {
+    const result = buildFamilyTiming(
+      new Set(["root", "c1", "c2"]),
+      {
+        root: [{ id: "a1", role: "assistant", time: { created: 1_000, completed: 5_000, llm: 2_000 } }],
+        c1: [{ id: "a2", role: "assistant", time: { created: 2_000, completed: 4_000, llm: 1_500 } }],
+        c2: [{ id: "a3", role: "assistant", time: { created: 2_500, completed: 4_500, llm: 1_500 } }],
+      },
+      {
+        a2: [{ id: "p1", type: "tool", tool: "bash", state: { status: "completed", time: { start: 3_500, end: 4_000 } } }],
+        a3: [{ id: "p2", type: "tool", tool: "bash", state: { status: "completed", time: { start: 3_800, end: 4_300 } } }],
+      },
+    )
+
+    // llm spans: [1000,3000] ∪ [2000,3500] ∪ [2500,4000] = 3000（Σ=5000 被去重）
+    expect(result?.llm).toBe(3_000)
+    // tool spans: [3500,4000] ∪ [3800,4300] = 800（Σ=1000 被去重）
+    expect(result?.tool).toBe(800)
+    expect(result?.total).toBe(4_000)
+  })
 })
