@@ -20,11 +20,19 @@ export interface StageOption {
   description: string
 }
 
+export interface StagesError {
+  code: string
+  message: string
+  detail?: string
+}
+
 export interface SdtStages {
   stagesResults: () => StageOption[]
   stagesIndex: () => number
   showStages: () => boolean
   loading: () => boolean
+  error: () => StagesError | undefined
+  retry: () => void
   onInput: (val: string, cursor: number) => void
   onKeyDown: (
     e: KeyboardEvent,
@@ -56,6 +64,7 @@ export function useSdtStages(vscode: VSCodeContext, sessionID?: () => string | u
   const [stagesIndex, setStagesIndex] = createSignal(0)
   const [showStages, setShowStages] = createSignal(false)
   const [loading, setLoading] = createSignal(false)
+  const [error, setError] = createSignal<StagesError>()
 
   let searchTimer: ReturnType<typeof setTimeout> | undefined
   let searchCounter = 0
@@ -83,12 +92,10 @@ export function useSdtStages(vscode: VSCodeContext, sessionID?: () => string | u
     if (message.type !== "stagesResult") return
     if (message.requestId === `stages-search-${searchCounter}`) {
       setStagesResults(message.stages ?? [])
+      setError(message.ok ? undefined : (message.error ?? { code: "command-failed", message: "阶段列表查询失败" }))
       setLoading(false)
       setStagesIndex(0)
-      // 仅在查询到阶段列表时才显示下拉框
-      if (message.stages && message.stages.length > 0) {
-        setShowStages(true)
-      }
+      setShowStages(true)
     }
   })
 
@@ -100,6 +107,8 @@ export function useSdtStages(vscode: VSCodeContext, sessionID?: () => string | u
   // 向 extension 请求阶段列表
   const requestStages = () => {
     if (searchTimer) clearTimeout(searchTimer)
+    setError(undefined)
+    setShowStages(true)
     searchTimer = setTimeout(() => {
       searchCounter++
       setLoading(true)
@@ -112,9 +121,16 @@ export function useSdtStages(vscode: VSCodeContext, sessionID?: () => string | u
     }, STAGES_DEBOUNCE_MS)
   }
 
+  const retry = () => {
+    setStagesResults([])
+    setLoading(false)
+    requestStages()
+  }
+
   const closeStages = () => {
     setShowStages(false)
     setStagesResults([])
+    setError(undefined)
     setLoading(false)
     // testagent_change start - cancelPending:
     // 递增 counter，使所有 in-flight 响应的 requestId 失效
@@ -216,6 +232,8 @@ export function useSdtStages(vscode: VSCodeContext, sessionID?: () => string | u
     stagesIndex,
     showStages,
     loading,
+    error,
+    retry,
     onInput,
     onKeyDown,
     selectStage,

@@ -207,5 +207,43 @@ body.vscode-dark .slash-command-dropdown {
   color: var(--vscode-descriptionForeground);
   text-align: center;
 }
+.stages-error {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  padding: 10px;
+  color: var(--vscode-errorForeground);
+  font-size: 12px;
+}
+
+.stages-error-content {
+  flex: 1;
+  min-width: 0;
+}
+
+.stages-error-message {
+  font-weight: 500;
+}
+
+.stages-error-detail {
+  margin-top: 4px;
+  color: var(--vscode-descriptionForeground);
+  line-height: 1.4;
+  overflow-wrap: anywhere;
+}
+
+.stages-error-retry {
+  flex-shrink: 0;
+  border: 1px solid var(--vscode-button-border, transparent);
+  border-radius: 3px;
+  padding: 2px 8px;
+  color: var(--vscode-button-foreground);
+  background: var(--vscode-button-background);
+  cursor: pointer;
+}
+
+.stages-error-retry:hover {
+  background: var(--vscode-button-hoverBackground);
+}
 
 /* testagent_change end - /sdt-run 阶段选择下拉框 */

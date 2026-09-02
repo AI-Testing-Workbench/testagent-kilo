@@ -855,9 +855,15 @@ export interface FileSearchResultMessage {
 /** 阶段列表查询结果（extension → webview） */
 export interface StagesResultMessage {
   type: "stagesResult"
+  ok: boolean
   stages: { stage_id: string; stage_name: string; description: string }[]
   taskName: string
   requestId: string
+  error?: {
+    code: "workspace-unavailable" | "default-task-missing" | "task-not-found" | "config-invalid" | "command-failed"
+    message: string
+    detail?: string
+  }
 }
 // testagent_change end
 
