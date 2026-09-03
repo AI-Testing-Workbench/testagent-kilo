@@ -256,6 +256,9 @@ export const QuestionDock: Component<{ request: QuestionRequest }> = (props) => 
       const answers = [...store.answers]
       answers[store.tab] = next
       setStore("answers", answers)
+      const inputs = [...store.custom]
+      inputs[store.tab] = value
+      setStore("custom", inputs)
       const kinds = [...store.kinds]
       const current = { ...(kinds[store.tab] ?? {}) }
       current[value] = "custom"
