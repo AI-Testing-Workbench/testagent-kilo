@@ -61,8 +61,10 @@ export const QuestionDock: Component<{ request: QuestionRequest }> = (props) => 
   const input = createMemo(() => store.custom[store.tab] ?? "")
   const multi = createMemo(() => question()?.multiple === true)
   const customPicked = createMemo(() => {
+    if (!multi() && store.editing) return true
     const value = input()
     if (!value) return false
+    if (store.kinds[store.tab]?.[value] !== "custom") return false
     return store.answers[store.tab]?.includes(value) ?? false
   })
 
@@ -200,11 +202,29 @@ export const QuestionDock: Component<{ request: QuestionRequest }> = (props) => 
     setStore("editing", false)
   }
 
+  const selectCustom = () => {
+    if (store.sending) return
+    if (!multi()) {
+      const answer = store.answers[store.tab]?.[0]
+      if (answer && store.kinds[store.tab]?.[answer] !== "custom") {
+        const answers = [...store.answers]
+        answers[store.tab] = []
+        setStore("answers", answers)
+
+        const kinds = [...store.kinds]
+        kinds[store.tab] = {}
+        setStore("kinds", kinds)
+        syncAgent(answers, kinds)
+      }
+    }
+    setStore("editing", true)
+  }
+
   const selectOption = (optIndex: number) => {
     if (store.sending) return
 
     if (optIndex === options().length) {
-      setStore("editing", true)
+      selectCustom()
       return
     }
 
@@ -214,6 +234,7 @@ export const QuestionDock: Component<{ request: QuestionRequest }> = (props) => 
       toggle(opt.label)
       return
     }
+    setStore("editing", false)
     pick(opt.label)
   }
 
@@ -256,9 +277,6 @@ export const QuestionDock: Component<{ request: QuestionRequest }> = (props) => 
       const answers = [...store.answers]
       answers[store.tab] = next
       setStore("answers", answers)
-      const inputs = [...store.custom]
-      inputs[store.tab] = value
-      setStore("custom", inputs)
       const kinds = [...store.kinds]
       const current = { ...(kinds[store.tab] ?? {}) }
       current[value] = "custom"
@@ -463,6 +481,7 @@ export const QuestionDock: Component<{ request: QuestionRequest }> = (props) => 
                       placeholder={language.t("ui.question.custom.placeholder")}
                       value={input()}
                       disabled={store.sending}
+                      onFocus={selectCustom}
                       onInput={(e) => {
                         const inputs = [...store.custom]
                         inputs[store.tab] = e.currentTarget.value
