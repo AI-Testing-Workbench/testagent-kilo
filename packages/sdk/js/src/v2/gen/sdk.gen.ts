@@ -186,6 +186,8 @@ import type {
   SyncStartResponses,
   SyncStealErrors,
   SyncStealResponses,
+  TestagentAgentOverrideClearResponses,
+  TestagentAgentOverrideSetResponses,
   TestagentCustomEnvVarsBatchCreateResponses,
   TestagentCustomEnvVarsBatchDeleteResponses,
   TestagentCustomEnvVarsBatchUpdateResponses,
@@ -194,6 +196,7 @@ import type {
   TestagentEnvVarsListErrors,
   TestagentEnvVarsListResponses,
   TestagentUserSetResponses,
+  TestagentZhAnswerSetResponses,
   TextPartInput,
   ToolIdsErrors,
   ToolIdsResponses,
@@ -856,6 +859,142 @@ export class CustomEnvVars extends HeyApiClient {
   }
 }
 
+export class ZhAnswer extends HeyApiClient {
+  /**
+   * Toggle ZH answer bridging
+   *
+   * Enable or disable bridging of permission/question asks to enterprise ZH via relay.
+   */
+  public set<ThrowOnError extends boolean = false>(
+    parameters?: {
+      directory?: string
+      workspace?: string
+      enabled?: boolean
+    },
+    options?: Options<never, ThrowOnError>,
+  ) {
+    const params = buildClientParams(
+      [parameters],
+      [
+        {
+          args: [
+            { in: "query", key: "directory" },
+            { in: "query", key: "workspace" },
+            { in: "body", key: "enabled" },
+          ],
+        },
+      ],
+    )
+    return (options?.client ?? this.client).post<TestagentZhAnswerSetResponses, unknown, ThrowOnError>({
+      url: "/testagent/zh-answer",
+      ...options,
+      ...params,
+      headers: {
+        "Content-Type": "application/json",
+        ...options?.headers,
+        ...params.headers,
+      },
+    })
+  }
+}
+
+export class Override extends HeyApiClient {
+  /**
+   * Clear per-stage subagent override for a session
+   *
+   * Remove the transient override for the given session, restoring default sdt behavior.
+   */
+  public clear<ThrowOnError extends boolean = false>(
+    parameters?: {
+      directory?: string
+      workspace?: string
+      sessionID?: string
+    },
+    options?: Options<never, ThrowOnError>,
+  ) {
+    const params = buildClientParams(
+      [parameters],
+      [
+        {
+          args: [
+            { in: "query", key: "directory" },
+            { in: "query", key: "workspace" },
+            { in: "body", key: "sessionID" },
+          ],
+        },
+      ],
+    )
+    return (options?.client ?? this.client).delete<TestagentAgentOverrideClearResponses, unknown, ThrowOnError>({
+      url: "/testagent/agent/override",
+      ...options,
+      ...params,
+      headers: {
+        "Content-Type": "application/json",
+        ...options?.headers,
+        ...params.headers,
+      },
+    })
+  }
+
+  /**
+   * Set per-stage subagent override for a session
+   *
+   * Override the prompt and/or permission rules of the sdt subagent for the given session.
+   */
+  public set<ThrowOnError extends boolean = false>(
+    parameters?: {
+      directory?: string
+      workspace?: string
+      sessionID?: string
+      prompt?: string
+      permission?: Array<{
+        permission: string
+        pattern: string
+        action: "allow" | "deny" | "ask"
+      }>
+      temperature?: number
+      topP?: number
+      steps?: number
+    },
+    options?: Options<never, ThrowOnError>,
+  ) {
+    const params = buildClientParams(
+      [parameters],
+      [
+        {
+          args: [
+            { in: "query", key: "directory" },
+            { in: "query", key: "workspace" },
+            { in: "body", key: "sessionID" },
+            { in: "body", key: "prompt" },
+            { in: "body", key: "permission" },
+            { in: "body", key: "temperature" },
+            { in: "body", key: "topP" },
+            { in: "body", key: "steps" },
+          ],
+        },
+      ],
+    )
+    return (options?.client ?? this.client).post<TestagentAgentOverrideSetResponses, unknown, ThrowOnError>({
+      url: "/testagent/agent/override",
+      ...options,
+      ...params,
+      headers: {
+        "Content-Type": "application/json",
+        ...options?.headers,
+        ...params.headers,
+      },
+    })
+  }
+}
+
+export class Agent extends HeyApiClient {
+  private _override?: Override
+  get override(): Override {
+    return (this._override ??= new Override({ client: this.client }))
+  }
+}
+
 export class Testagent extends HeyApiClient {
   private _user?: User
   get user(): User {
@@ -870,6 +1009,16 @@ export class Testagent extends HeyApiClient {
   private _customEnvVars?: CustomEnvVars
   get customEnvVars(): CustomEnvVars {
     return (this._customEnvVars ??= new CustomEnvVars({ client: this.client }))
+  }
+
+  private _zhAnswer?: ZhAnswer
+  get zhAnswer(): ZhAnswer {
+    return (this._zhAnswer ??= new ZhAnswer({ client: this.client }))
+  }
+
+  private _agent?: Agent
+  get agent(): Agent {
+    return (this._agent ??= new Agent({ client: this.client }))
   }
 }
 
