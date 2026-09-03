@@ -1,0 +1,305 @@
+/*testagent_change - new file */
+.sdt-progress-card {
+  margin: 8px 12px 0;
+  overflow: hidden;
+  border: 1px solid var(--vscode-panel-border);
+  border-radius: 6px;
+  background: var(--vscode-editorWidget-background);
+  color: var(--vscode-foreground);
+  transform-origin: bottom center;
+  animation: sdt-card-slide-in 900ms cubic-bezier(0.25, 0.46, 0.45, 0.94) forwards;
+}
+
+.sdt-progress-card--exiting {
+  animation: sdt-card-slide-out 500ms cubic-bezier(0.55, 0.06, 0.68, 0.19) forwards;
+}
+
+.sdt-progress-card__summary {
+  display: grid;
+  grid-template-columns: 8px minmax(0, 1fr) auto auto 16px;
+  align-items: center;
+  gap: 3px 8px;
+  width: 100%;
+  padding: 9px 12px 8px;
+  border: 0;
+  background: transparent;
+  color: inherit;
+  cursor: pointer;
+  font: inherit;
+  text-align: left;
+}
+
+.sdt-progress-card__indicator {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--vscode-disabledForeground);
+}
+
+.sdt-progress-card__indicator--running {
+  background: var(--vscode-progressBar-background);
+  animation: sdt-progress-pulse 1.2s ease-in-out infinite;
+}
+
+.sdt-progress-card__indicator--completed {
+  background: var(--vscode-testing-iconPassed, var(--vscode-terminal-ansiGreen));
+}
+.sdt-progress-card__indicator--failed,
+.sdt-progress-card__indicator--aborted {
+  background: var(--vscode-errorForeground);
+}
+.sdt-progress-card__title,
+.sdt-progress-card__metrics,
+.sdt-progress-card__stage-summary,
+.sdt-progress-card__stage-name,
+.sdt-progress-card__stage-status {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.sdt-progress-card__title {
+  grid-column: 2;
+  grid-row: 1;
+  font-size: 12px;
+  font-weight: 600;
+}
+.sdt-progress-card__metrics,
+.sdt-progress-card__stage-summary,
+.sdt-progress-card__error {
+  font-size: 11px;
+  line-height: 14px;
+}
+.sdt-progress-card__metrics {
+  grid-column: 3;
+  grid-row: 1;
+  color: var(--vscode-descriptionForeground);
+}
+.sdt-progress-card__close {
+  grid-column: 5;
+  grid-row: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 20px;
+  height: 20px;
+  padding: 0;
+  background: none;
+  border: none;
+  border-radius: 3px;
+  cursor: pointer;
+  color: var(--vscode-foreground);
+  opacity: 0.6;
+  transition:
+    opacity 0.2s,
+    background-color 0.2s;
+}
+.sdt-progress-card__close:hover {
+  opacity: 1;
+  background-color: var(--vscode-toolbar-hoverBackground);
+}
+.sdt-progress-card__close:focus {
+  outline: 1px solid var(--vscode-focusBorder);
+  outline-offset: -1px;
+}
+.sdt-progress-card__metrics {
+  color: var(--vscode-progressBar-background);
+  font-weight: 500;
+}
+.sdt-progress-card__stage-summary {
+  grid-column: 2 / 6;
+  grid-row: 2;
+  color: var(--vscode-foreground);
+}
+.sdt-progress-card__error {
+  grid-column: 2 / 6;
+  grid-row: 3;
+  color: var(--vscode-errorForeground);
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+.sdt-progress-card__chevron {
+  grid-column: 4;
+  grid-row: 1;
+  width: 16px;
+  height: 16px;
+  color: var(--vscode-descriptionForeground);
+  transition: transform 120ms ease;
+}
+.sdt-progress-card__chevron--expanded {
+  transform: rotate(180deg);
+}
+.sdt-progress-card__bar {
+  height: 4px;
+  margin: 0 12px 8px;
+  overflow: hidden;
+  border-radius: 999px;
+  background: var(--vscode-editorWidget-border);
+}
+.sdt-progress-card__bar-value {
+  display: block;
+  height: 100%;
+  border-radius: inherit;
+  background: var(--vscode-progressBar-background);
+  transition: width 160ms ease-out;
+}
+.sdt-progress-card__bar-activity {
+  position: absolute;
+  top: 0;
+  left: -30%;
+  width: 30%;
+  height: 100%;
+  border-radius: inherit;
+  background: var(--vscode-progressBar-background);
+  animation: sdt-progress-slide 1.2s ease-in-out infinite;
+}
+.sdt-progress-card__bar--active {
+  position: relative;
+}
+.sdt-progress-card__stages {
+  display: grid;
+  gap: 6px;
+  padding: 10px 12px;
+}
+.sdt-progress-card__stage {
+  display: grid;
+  grid-template-columns: 14px minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 6px;
+  font-size: 11px;
+}
+.sdt-progress-card__stage-icon {
+  width: 14px;
+  height: 14px;
+  color: var(--vscode-disabledForeground);
+}
+.sdt-progress-card__stage--completed .sdt-progress-card__stage-icon {
+  color: var(--vscode-testing-iconPassed, var(--vscode-terminal-ansiGreen));
+}
+.sdt-progress-card__stage--exception,
+.sdt-progress-card__stage--user_abort {
+  background: var(--vscode-inputValidation-errorBackground);
+  border-radius: 3px;
+  padding: 2px 4px;
+  margin: -2px -4px;
+}
+
+.sdt-progress-card__stage--exception .sdt-progress-card__stage-icon,
+.sdt-progress-card__stage--user_abort .sdt-progress-card__stage-icon {
+  color: var(--vscode-errorForeground);
+}
+
+.sdt-progress-card__stage--exception .sdt-progress-card__stage-name,
+.sdt-progress-card__stage--user_abort .sdt-progress-card__stage-name {
+  color: var(--vscode-errorForeground);
+  font-weight: 500;
+}
+
+.sdt-progress-card__stage--exception .sdt-progress-card__stage-status,
+.sdt-progress-card__stage--user_abort .sdt-progress-card__stage-status {
+  color: var(--vscode-errorForeground);
+}
+.sdt-progress-card__stage--executing .sdt-progress-card__stage-icon,
+.sdt-progress-card__stage--awaiting_access .sdt-progress-card__stage-icon,
+.sdt-progress-card__stage--awaiting_check .sdt-progress-card__stage-icon {
+  color: var(--vscode-progressBar-background);
+}
+.sdt-progress-card__stage--executing {
+  background: var(--vscode-inputOption-activeBackground);
+  border-radius: 3px;
+  padding: 2px 4px;
+  margin: -2px -4px;
+}
+.sdt-progress-card__stage-icon--running {
+  animation: sdt-progress-spin 900ms linear infinite;
+}
+
+@keyframes sdt-progress-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+@keyframes sdt-progress-slide {
+  from {
+    transform: translateX(0);
+  }
+  to {
+    transform: translateX(433%);
+  }
+}
+@keyframes sdt-progress-pulse {
+  50% {
+    opacity: 0.35;
+  }
+}
+
+/* 进入动画：从下方滑入 + 淡入 + 动态阴影 */
+@keyframes sdt-card-slide-in {
+  0% {
+    transform: translateY(100%) scale(0.95);
+    opacity: 0;
+    box-shadow: 0 0 0 rgba(0, 0, 0, 0);
+  }
+  40% {
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.25), 0 4px 8px rgba(0, 0, 0, 0.15);
+  }
+  100% {
+    transform: translateY(0) scale(1);
+    opacity: 1;
+    box-shadow: 0 0 0 rgba(0, 0, 0, 0);
+  }
+}
+
+/* 退出动画：滑出到下方 + 淡出 + 动态阴影 */
+@keyframes sdt-card-slide-out {
+  0% {
+    transform: translateY(0) scale(1);
+    opacity: 1;
+    box-shadow: 0 0 0 rgba(0, 0, 0, 0);
+  }
+  30% {
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.25), 0 4px 8px rgba(0, 0, 0, 0.15);
+  }
+  100% {
+    transform: translateY(100%) scale(0.95);
+    opacity: 0;
+    box-shadow: 0 0 0 rgba(0, 0, 0, 0);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .sdt-progress-card {
+    animation: sdt-card-slide-in-reduced 200ms ease-out forwards;
+  }
+  
+  .sdt-progress-card--exiting {
+    animation: sdt-card-slide-out-reduced 150ms ease-in forwards;
+  }
+  
+  @keyframes sdt-card-slide-in-reduced {
+    from {
+      opacity: 0;
+    }
+    to {
+      opacity: 1;
+    }
+  }
+  
+  @keyframes sdt-card-slide-out-reduced {
+    from {
+      opacity: 1;
+    }
+    to {
+      opacity: 0;
+    }
+  }
+
+  .sdt-progress-card__indicator--running,
+  .sdt-progress-card__stage-icon--running {
+    animation: none;
+  }
+
+  /* Progress movement communicates an active task rather than decoration. */
+  .sdt-progress-card__bar-activity {
+    animation: sdt-progress-slide 1.2s ease-in-out infinite;
+  }
+}

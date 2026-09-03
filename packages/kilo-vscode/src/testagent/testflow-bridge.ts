@@ -34,6 +34,22 @@ export class TestflowMessageBridge {
   private asstMsgID = ""
   private logPartID = ""
   private logText = ""
+  private runID = ""
+  private sequence = 0
+  private startedAt = 0
+  private latestProgress: {
+    taskName: string
+    totalCount: number
+    completedCount: number
+    percent: number
+    currentStageID: string | null
+    currentStageIndex: number | null
+    stages: unknown[]
+    nextHint: string | null
+    exceptionHint: string | null
+    errorMessage: string | null
+  } | null = null
+  private finished = false
   private post: ((msg: unknown) => void) | null = null
 
   start(opts: BridgeOpts): void {
@@ -41,8 +57,21 @@ export class TestflowMessageBridge {
     this.post = opts.post
     this.logPartID = ""
     this.logText = ""
+    this.runID = uid()
+    this.sequence = 0
+    this.startedAt = Date.now()
+    this.latestProgress = null
+    this.finished = false
 
-    const now = Date.now()
+    this.post({
+      type: "sdt.started",
+      sessionID: opts.sessionID,
+      runID: this.runID,
+      taskName: opts.userText,
+      startedAt: this.startedAt,
+    })
+
+    const now = this.startedAt
     this.userMsgID = opts.userMessageID ?? uid()
     this.asstMsgID = uid()
 
@@ -119,6 +148,71 @@ export class TestflowMessageBridge {
     })
   }
 
+  receiveProgress(
+    taskName: string,
+    stages: unknown[],
+    completedCount: number,
+    totalCount: number,
+    percent: number,
+    nextHint: string | null,
+    exceptionHint: string | null,
+    currentStageID: string | null = null,
+    currentStageIndex: number | null = null,
+    errorMessage: string | null = null,
+  ): void {
+    this.latestProgress = {
+      taskName,
+      stages,
+      completedCount,
+      totalCount,
+      percent,
+      nextHint,
+      exceptionHint,
+      currentStageID,
+      currentStageIndex,
+      errorMessage,
+    }
+    this.sequence += 1
+    this.post?.({
+      type: "sdt.progress",
+      sessionID: this.sessionID,
+      runID: this.runID,
+      sequence: this.sequence,
+      taskName,
+      totalCount,
+      completedCount,
+      percent,
+      currentStageID,
+      currentStageIndex,
+      stages,
+      nextHint,
+      exceptionHint,
+      errorMessage,
+    })
+  }
+
+  onFinished(status: "completed" | "failed" | "aborted", detail: string | null = null): void {
+    if (this.finished) return
+    this.finished = true
+    const latest = this.latestProgress
+    this.post?.({
+      type: "sdt.finished",
+      sessionID: this.sessionID,
+      runID: this.runID,
+      status,
+      finishedAt: Date.now(),
+      taskName: latest?.taskName ?? "",
+      totalCount: latest?.totalCount ?? 0,
+      currentStageID: latest?.currentStageID ?? null,
+      currentStageIndex: latest?.currentStageIndex ?? null,
+      completedCount: latest?.completedCount ?? 0,
+      percent: latest?.percent ?? 0,
+      stages: latest?.stages ?? [],
+      detail,
+      errorMessage: latest?.errorMessage ?? detail,
+    })
+  }
+
   onNewAssistant(): void {
     const now = Date.now()
     // Close the current assistant message
@@ -154,6 +248,8 @@ export class TestflowMessageBridge {
   }
 
   onResponsePart(sessionID: string, messageID: string, sequence: number, part: any): void {
+    void sessionID
+    void messageID
     // Check if this is a task tool part - trigger child session sync if so
     if (part.type === 'tool' && part.tool === 'task') {
       const childSessionId = part.state?.metadata?.sessionId
@@ -233,6 +329,7 @@ export class TestflowMessageBridge {
 
   onDone(exitCode: number, summary?: string): void {
     if (summary) this.appendLog(summary)
+    this.onFinished(exitCode === 0 ? "completed" : "failed", summary ?? null)
 
     const now = Date.now()
     // Close the assistant message with a completed timestamp

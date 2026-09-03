@@ -4,6 +4,9 @@
 
 import type { ProviderAuthAuthorization, ProviderAuthMethod } from "@kilocode/sdk/v2/client"
 import type { PartBatch, PartUpdate } from "../../../src/shared/stream-messages"
+// testagent_change start 增加sdt进度卡片
+import type { SdtFinishedMessage, SdtProgressMessage, SdtStartedMessage } from "./sdt"
+// testagent_change start 增加sdt进度卡片
 
 // Connection states
 export type ConnectionState = "connecting" | "connected" | "disconnected" | "error"
@@ -602,6 +605,12 @@ export interface SessionStatusMessage {
   next?: number
 }
 
+// testagent_change start 增加sdt进度卡片
+export type SdtStartedWebviewMessage = SdtStartedMessage
+export type SdtProgressWebviewMessage = SdtProgressMessage
+export type SdtFinishedWebviewMessage = SdtFinishedMessage
+// testagent_change end
+
 export interface SessionErrorMessage {
   type: "sessionError"
   sessionID?: string
@@ -852,9 +861,15 @@ export interface FileSearchResultMessage {
 /** 阶段列表查询结果（extension → webview） */
 export interface StagesResultMessage {
   type: "stagesResult"
+  ok: boolean
   stages: { stage_id: string; stage_name: string; description: string }[]
   taskName: string
   requestId: string
+  error?: {
+    code: "workspace-unavailable" | "default-task-missing" | "task-not-found" | "config-invalid" | "command-failed"
+    message: string
+    detail?: string
+  }
 }
 // testagent_change end
 
@@ -1688,6 +1703,9 @@ export type ExtensionMessage =
   | PartUpdatedMessage
   | PartsUpdatedMessage
   | SessionStatusMessage
+  | SdtStartedWebviewMessage // testagent_change start 增加sdt进度卡片
+  | SdtProgressWebviewMessage // testagent_change start 增加sdt进度卡片
+  | SdtFinishedWebviewMessage // testagent_change start 增加sdt进度卡片
   | SessionErrorMessage
   | PermissionRequestMessage
   | PermissionResolvedMessage

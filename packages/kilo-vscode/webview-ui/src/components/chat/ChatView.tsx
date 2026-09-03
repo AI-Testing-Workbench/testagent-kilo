@@ -26,6 +26,7 @@ import { useLanguage } from "../../context/language"
 import { useWorktreeMode } from "../../context/worktree-mode"
 import { useServer } from "../../context/server"
 import { isPromptBlocked, isSuggesting, isQuestioning } from "./prompt-input-utils"
+import { SdtProgressCard } from "./sdt/SdtProgressCard"
 
 interface ChatViewProps {
   onSelectSession?: (id: string) => void
@@ -295,6 +296,9 @@ export const ChatView: Component<ChatViewProps> = (props) => {
             </div>
           </Show>
           <ConfigWarningsBanner />
+          <Show when={session.sdtProgress()}>
+            {(progress) => <SdtProgressCard progress={progress()} onDismiss={session.dismissSdtProgress} />}
+          </Show>
           <Show when={!props.readonly}>
             <ChatTip />
             <PromptInput

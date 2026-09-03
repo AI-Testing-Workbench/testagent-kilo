@@ -53,7 +53,9 @@ import { resolveSessionAgent } from "./session-agent"
 import { queuedUserMessageIDs } from "./session-queue"
 import { PartStash } from "./part-stash"
 import { KILO_AUTO, parseModelString } from "../../../src/shared/provider-model"
-
+// testagent_change start 增加sdt进度卡片
+import type { SdtProgressState } from "../types/sdt"
+// testagent_change end
 const RECENT_LIMIT = 5
 const MESSAGE_PAGE_LIMIT = 80
 
@@ -88,6 +90,8 @@ interface SessionStore {
   enableThinkings: Record<string, boolean> // "providerID" -> enabled
   recentModels: ModelSelection[]
   favoriteModels: ModelSelection[]
+  sdtProgress: Record<string, SdtProgressState | undefined> // testagent_change start 增加sdt进度卡片
+  dismissedSdtRuns: Set<string> // testagent_change - 记录被用户关闭的 runID
 }
 
 interface SessionContextValue {
@@ -138,6 +142,12 @@ interface SessionContextValue {
   // Move stashed parts into the reactive store for the given message IDs.
   // Called by VscodeSessionTurn when the virtualizer renders a turn.
   hydrateParts: (messageIDs: string[]) => void
+
+  // testagent_change start 增加sdt进度卡片 SDT progress card state for current session
+  // testagent_change start 增加sdt进度卡片
+  sdtProgress: Accessor<SdtProgressState | undefined>
+  dismissSdtProgress: () => void
+  // testagent_change end
 
   // Todos for current session
   todos: Accessor<TodoItem[]>
@@ -198,7 +208,7 @@ interface SessionContextValue {
   variantList: () => string[]
   currentVariant: () => string | undefined
   selectVariant: (value: string) => void
-  
+
   // Enable-thinking toggle for a provider
   enableThinkings: () => Record<string, boolean>
   isThinkingEnabledForProvider: (providerID?: string) => boolean
@@ -236,7 +246,7 @@ interface SessionContextValue {
     files?: FileAttachment[],
     draftID?: string,
   ) => void
-  continueTask: () => void  // testagent_change - 添加继续任务方法
+  continueTask: () => void // testagent_change - 添加继续任务方法
   abort: (sessionID?: string) => void
   compact: () => void
   respondToPermission: (
@@ -418,8 +428,33 @@ export const SessionProvider: ParentComponent = (props) => {
     enableThinkings: {},
     recentModels: [],
     favoriteModels: [],
+    sdtProgress: {}, // testagent_change start 增加sdt进度卡片
+    dismissedSdtRuns: new Set(), // testagent_change - 记录被关闭的 runID
   })
 
+  // testagent_change start 增加sdt进度卡片
+  const sdtProgress = () => {
+    const id = currentSessionID()
+    if (!id) return undefined
+
+    const progress = store.sdtProgress[id]
+    // 如果该 runID 已被用户关闭，返回 undefined（不显示面板）
+    if (progress && store.dismissedSdtRuns.has(progress.runID)) {
+      return undefined
+    }
+    return progress
+  }
+
+  const dismissSdtProgress = () => {
+    const id = currentSessionID()
+    if (!id) return
+
+    const progress = store.sdtProgress[id]
+    if (progress) {
+      setStore("dismissedSdtRuns", (prev) => new Set([...prev, progress.runID]))
+    }
+  }
+  // testagent_change end
   // Per-session agent selection
   const selectedAgentName = createMemo<string>(() => {
     const sessionID = currentSessionID()
@@ -785,8 +820,103 @@ export const SessionProvider: ParentComponent = (props) => {
 
     return false
   }
+  // testagent_change start 增加sdt进度卡片
+  function handleSdtMessage(
+    message: Extract<ExtensionMessage, { type: "sdt.started" | "sdt.progress" | "sdt.finished" }>,
+  ): void {
+    if (message.type === "sdt.started") {
+      // 新任务开始时，清除该 session 的关闭标记
+      const oldProgress = store.sdtProgress[message.sessionID]
+      if (oldProgress) {
+        setStore("dismissedSdtRuns", (prev) => {
+          const next = new Set(prev)
+          next.delete(oldProgress.runID)
+          return next
+        })
+      }
+
+      setStore("sdtProgress", message.sessionID, {
+        sessionID: message.sessionID,
+        runID: message.runID,
+        taskName: message.taskName,
+        status: "starting",
+        sequence: 0,
+        startedAt: message.startedAt,
+        totalCount: 0,
+        completedCount: 0,
+        percent: 0,
+        currentStageID: null,
+        currentStageIndex: null,
+        stages: [],
+        nextHint: null,
+        exceptionHint: null,
+        errorMessage: null,
+        detail: null,
+      })
+      return
+    }
+
+    const current = store.sdtProgress[message.sessionID]
+    if (message.type === "sdt.progress") {
+      if (current && current.runID === message.runID && message.sequence <= current.sequence) return
+      const completedCount =
+        message.completedCount ||
+        message.stages.filter((stage) => stage.status === "completed" || stage.status === "skipped").length
+      const totalCount = message.totalCount || message.stages.length
+      setStore("sdtProgress", message.sessionID, {
+        sessionID: message.sessionID,
+        runID: message.runID,
+        taskName: message.taskName,
+        status: "running",
+        sequence: message.sequence,
+        startedAt: current?.runID === message.runID ? current.startedAt : Date.now(),
+        totalCount,
+        completedCount,
+        percent: message.percent,
+        currentStageID: message.currentStageID,
+        currentStageIndex: message.currentStageIndex,
+        stages: message.stages,
+        nextHint: message.nextHint,
+        exceptionHint: message.exceptionHint,
+        errorMessage: message.errorMessage,
+        detail: null,
+      })
+      return
+    }
+
+    if (!current || current.runID !== message.runID) return
+    const finishedCompletedCount = Number.isFinite(message.completedCount) ? message.completedCount : 0
+    const finishedTotalCount = Number.isFinite(message.totalCount) ? message.totalCount : 0
+    const finishedPercent = Number.isFinite(message.percent) ? message.percent : 0
+    const completedCount = Math.max(current.completedCount, finishedCompletedCount)
+    const totalCount = Math.max(current.totalCount, finishedTotalCount, message.stages.length)
+    const stages = message.stages.length > 0 ? message.stages : current.stages
+    const percent = Math.max(current.percent, finishedPercent)
+    setStore("sdtProgress", message.sessionID, {
+      ...current,
+      status: message.status,
+      finishedAt: message.finishedAt,
+      taskName: message.taskName || current.taskName,
+      totalCount,
+      completedCount,
+      percent,
+      currentStageID: message.currentStageID ?? current.currentStageID,
+      currentStageIndex: message.currentStageIndex ?? current.currentStageIndex,
+      stages,
+      errorMessage: message.errorMessage ?? message.detail ?? current.errorMessage,
+      detail: message.detail ?? current.detail,
+    })
+  }
+  // testagent_change end
 
   function handleExtensionMessage(message: ExtensionMessage): void {
+    // testagent_change start 增加sdt进度卡片
+    if (message.type === "sdt.started" || message.type === "sdt.progress" || message.type === "sdt.finished") {
+      handleSdtMessage(message)
+      return
+    }
+    // testagent_change end
+
     // Route suggestion messages (extracted to stay within complexity limit)
     routeSuggestionMessage(message)
     if (handleStreamMessage(message)) return
@@ -854,9 +984,8 @@ export const SessionProvider: ParentComponent = (props) => {
 
       case "sessionError": {
         // Skip AbortError and MessageAbortedError (user-initiated abort is not an error)
-        const isAbortError = 
-          message.error?.name === "MessageAbortedError" || 
-          (message.error?.name as string) === "AbortError"
+        const isAbortError =
+          message.error?.name === "MessageAbortedError" || (message.error?.name as string) === "AbortError"
         if (isAbortError) break
         const sid = message.sessionID ?? currentSessionID()
         if (!sid) break
@@ -1787,6 +1916,15 @@ export const SessionProvider: ParentComponent = (props) => {
     for (const q of scopedQuestions(sid)) {
       rejectQuestion(q.id)
     }
+    // testagent_change start - 如果不是 /sdt- 指令，自动关闭当前的 SDT 面板
+    const isSdtCommand = /^\/sdt-/i.test(text.trim())
+    if (!isSdtCommand && sid) {
+      const currentProgress = store.sdtProgress[sid]
+      if (currentProgress && !store.dismissedSdtRuns.has(currentProgress.runID)) {
+        setStore("dismissedSdtRuns", (prev) => new Set([...prev, currentProgress.runID]))
+      }
+    }
+    // testagent_change end
     if (sid) addOptimistic(sid, messageID, text, files)
 
     const agent = selectedAgentName() !== defaultAgent() ? selectedAgentName() : undefined
@@ -1847,6 +1985,15 @@ export const SessionProvider: ParentComponent = (props) => {
     for (const q of scopedQuestions(sid)) {
       rejectQuestion(q.id)
     }
+    // testagent_change start - 如果不是 sdt- 开头的命令，自动关闭当前的 SDT 面板
+    const isSdtCommand = /^sdt-/i.test(command)
+    if (!isSdtCommand && sid) {
+      const currentProgress = store.sdtProgress[sid]
+      if (currentProgress && !store.dismissedSdtRuns.has(currentProgress.runID)) {
+        setStore("dismissedSdtRuns", (prev) => new Set([...prev, currentProgress.runID]))
+      }
+    }
+    // testagent_change end
 
     if (sid) addOptimistic(sid, messageID, `/${command} ${args}`.trim(), files)
 
@@ -2048,7 +2195,7 @@ export const SessionProvider: ParentComponent = (props) => {
     setCurrentSessionID(undefined)
     setDraftSessionID(undefined)
     setCloudPreviewId(null)
-    setRevertConfirm(null)  // testagent_change - 清除会话时清除检查点重置确认
+    setRevertConfirm(null) // testagent_change - 清除会话时清除检查点重置确认
     setLoading(false)
     setPendingAgentSelection(defaultAgent())
     vscode.postMessage({ type: "clearSession" })
@@ -2092,7 +2239,7 @@ export const SessionProvider: ParentComponent = (props) => {
     const ready = loaded().has(id)
     setCurrentSessionID(id)
     setDraftSessionID(id)
-    setRevertConfirm(null)  // testagent_change - 切换会话时清除检查点重置确认
+    setRevertConfirm(null) // testagent_change - 切换会话时清除检查点重置确认
     setLoading(!ready)
     if (ready) {
       vscode.postMessage({ type: "loadMessages", sessionID: id, mode: "focus" })
@@ -2111,7 +2258,7 @@ export const SessionProvider: ParentComponent = (props) => {
     setCloudPreviewId(cloudSessionId)
     setCurrentSessionID(key)
     setDraftSessionID(key)
-    setRevertConfirm(null)  // testagent_change - 切换会话时清除检查点重置确认
+    setRevertConfirm(null) // testagent_change - 切换会话时清除检查点重置确认
     setLoading(true)
     vscode.postMessage({ type: "requestCloudSessionData", sessionId: cloudSessionId })
   }
@@ -2134,6 +2281,7 @@ export const SessionProvider: ParentComponent = (props) => {
       next.delete(id)
       return next
     })
+    setStore("sdtProgress", id, undefined) // testagent_change start 增加sdt进度卡片
     vscode.postMessage({ type: "deleteSession", sessionID: id })
   }
 
@@ -2372,6 +2520,7 @@ export const SessionProvider: ParentComponent = (props) => {
     userMessages,
     getParts,
     hydrateParts,
+    sdtProgress, // testagent_change start 增加sdt进度卡片
     todos,
     permissions,
     respondingPermissions,
@@ -2450,7 +2599,7 @@ export const SessionProvider: ParentComponent = (props) => {
     unrevertSession,
     sendMessage,
     sendCommand,
-    continueTask,  // testagent_change - 添加继续任务方法
+    continueTask, // testagent_change - 添加继续任务方法
     abort,
     compact,
     respondToPermission,
@@ -2470,6 +2619,8 @@ export const SessionProvider: ParentComponent = (props) => {
     selectCloudSession,
     draftSessionID,
     setDraftSessionID,
+    sdtProgress, // testagent_change - 添加到返回值
+    dismissSdtProgress, // testagent_change
   }
 
   return <SessionContext.Provider value={value}>{props.children}</SessionContext.Provider>

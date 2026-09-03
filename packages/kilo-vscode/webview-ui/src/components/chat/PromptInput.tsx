@@ -147,7 +147,7 @@ export const PromptInput: Component<PromptInputProps> = (props) => {
   const [codeContexts, setCodeContexts] = createSignal<CodeContext[]>([])
   const [reviewComments, setReviewComments] = createSignal<ReviewComment[]>([])
   const [enhancing, setEnhancing] = createSignal(false)
- 
+
   let enhanceCounter = 0
   let preEnhanceText: string | null = null
 
@@ -418,8 +418,8 @@ export const PromptInput: Component<PromptInputProps> = (props) => {
 
     if (message.type === "triggerTask") {
       if (isDisabled()) return
-const sel = session.selected()
-    if (!sel) return
+      const sel = session.selected()
+      if (!sel) return
       session.sendMessage(message.text, sel?.providerID, sel?.modelID)
     }
 
@@ -942,36 +942,61 @@ const sel = session.selected()
       { /* testagent_change start - /sdt-run 阶段选择下拉框 */ }
       <Show when={sdtStages.showStages()}>
         <div class="stages-dropdown">
-          <Show
-            when={sdtStages.loading() && sdtStages.stagesResults().length === 0}
-            fallback={
-              <Show
-                when={sdtStages.stagesResults().length > 0}
-                fallback={<div class="stages-empty">未找到阶段列表</div>}
-              >
-                <For each={sdtStages.stagesResults()}>
-                  {(stage, index) => (
-                    <div
-                      class="stages-item"
-                      classList={{ "stages-item--active": index() === sdtStages.stagesIndex() }}
-                      onMouseDown={(e) => {
-                        e.preventDefault()
-                        if (textareaRef) sdtStages.selectStage(stage, textareaRef, setText, adjustHeight)
-                      }}
-                      onMouseEnter={() => sdtStages.setStagesIndex(index())}
-                    >
-                      <span class="stages-item-name">{stage.stage_name}</span>
-                      <span class="stages-item-id">{stage.stage_id}</span>
-                      <Show when={stage.description}>
-                        <span class="stages-item-desc">{stage.description}</span>
-                      </Show>
-                    </div>
-                  )}
-                </For>
-              </Show>
-            }
-          >
-            <div class="stages-empty">查询阶段中…</div>
+          <Show when={sdtStages.error()}>
+            {(stagesError) => (
+              <div class="stages-error" role="alert">
+                <Icon name="circle-x" size="small" />
+                <div class="stages-error-content">
+                  <div class="stages-error-message">{stagesError().message}</div>
+                  <Show when={stagesError().detail}>
+                    <div class="stages-error-detail">{stagesError().detail}</div>
+                  </Show>
+                </div>
+                <button
+                  class="stages-error-retry"
+                  type="button"
+                  onMouseDown={(e) => {
+                    e.preventDefault()
+                    sdtStages.retry()
+                  }}
+                >
+                  重试
+                </button>
+              </div>
+            )}
+          </Show>
+          <Show when={!sdtStages.error()}>
+            <Show
+              when={sdtStages.loading() && sdtStages.stagesResults().length === 0}
+              fallback={
+                <Show
+                  when={sdtStages.stagesResults().length > 0}
+                  fallback={<div class="stages-empty">未找到阶段列表</div>}
+                >
+                  <For each={sdtStages.stagesResults()}>
+                    {(stage, index) => (
+                      <div
+                        class="stages-item"
+                        classList={{ "stages-item--active": index() === sdtStages.stagesIndex() }}
+                        onMouseDown={(e) => {
+                          e.preventDefault()
+                          if (textareaRef) sdtStages.selectStage(stage, textareaRef, setText, adjustHeight)
+                        }}
+                        onMouseEnter={() => sdtStages.setStagesIndex(index())}
+                      >
+                        <span class="stages-item-name">{stage.stage_name}</span>
+                        <span class="stages-item-id">{stage.stage_id}</span>
+                        <Show when={stage.description}>
+                          <span class="stages-item-desc">{stage.description}</span>
+                        </Show>
+                      </div>
+                    )}
+                  </For>
+                </Show>
+              }
+            >
+              <div class="stages-empty">查询阶段中…</div>
+            </Show>
           </Show>
         </div>
       </Show>
