@@ -95,8 +95,6 @@ if ($currentPath -notlike "*$pathRef*") {
 
     if (addedRef) {
       console.log(`[TestAgent] Added ${TESTAGENT_PATH_REF_WIN} to user PATH`)
-      // const message = "TestAgent CLI 已添加到你的 PATH 中，重启终端后可使用 'testagent' 命令。"
-      // vscode.window.showInformationMessage(message)
     } else if (refExists) {
       console.log(`[TestAgent] ${TESTAGENT_PATH_REF_WIN} already in PATH, ${TESTAGENT_ENV_VAR}=${binDir}`)
     }
@@ -244,14 +242,7 @@ async function ensureCliInPathUnix(
   context.globalState.update(ENV_PATH_ADDED_KEY, true)
   context.globalState.update(ENV_PATH_LAST_BIN_DIR_KEY, binDir)
 
-  if (anyAdded) {
-    const shellFiles = existingConfigs.map((f) => path.basename(f)).join(", ")
-    const message = `TestAgent CLI 已添加到你的 shell 配置 (${shellFiles})，重启终端后可使用 'testagent' 命令。`
-    vscode.window.showInformationMessage(message)
-  } else if (anyUpdated) {
-    const message = "TestAgent CLI 路径已更新，重启终端后生效。"
-    vscode.window.showInformationMessage(message)
-  } else {
+  if (!anyAdded && !anyUpdated) {
     console.log(`[TestAgent] CLI already configured: ${TESTAGENT_ENV_VAR}=${binDir}`)
   }
 }
