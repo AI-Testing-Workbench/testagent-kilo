@@ -77,9 +77,17 @@ describe("Extension — package.json command sync", () => {
    * All declared commands must use the testagent.new. prefix.
    * The legacy kilo-code.* namespace (without .new.) belongs to the old
    * extension and must not be reintroduced.
+   *
+   * Exception: the public automation API (append/clear/send prompt input) is
+   * intentionally namespaced as `testagent.*` so external tools can call it.
    */
   it("all declared commands use the testagent.new. prefix", () => {
-    const bad = declared.filter((cmd) => !cmd.startsWith("testagent.new."))
+    const publicApi = new Set([
+      "testagent.appendToPromptInput",
+      "testagent.clearPromptInput",
+      "testagent.sendPromptInput",
+    ])
+    const bad = declared.filter((cmd) => !cmd.startsWith("testagent.new.") && !publicApi.has(cmd))
     expect(
       bad,
       `Commands without "testagent.new." prefix — use the namespaced form:\n` + bad.map((b) => `  - ${b}`).join("\n"),

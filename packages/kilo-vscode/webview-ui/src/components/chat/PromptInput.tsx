@@ -383,6 +383,12 @@ export const PromptInput: Component<PromptInputProps> = (props) => {
     textareaRef?.focus()
   })
 
+  // Trigger the chat box send action (e.g. from the testagent.sendPromptInput command)
+  const unsubscribeSend = vscode.onMessage((message) => {
+    if (message.type !== "sendChatBoxMessage") return
+    void handleSend()
+  })
+
   const unsubscribe = vscode.onMessage((message) => {
     if (message.type === "setChatBoxMessage") {
       setText(message.text)
@@ -504,6 +510,7 @@ export const PromptInput: Component<PromptInputProps> = (props) => {
     // Persist current draft before unmounting
     saveDraft(draftKey(), text(), codeContexts(), reviewComments(), imageAttach.images())
     unsubscribeCode()
+    unsubscribeSend()
     unsubscribe()
   })
 

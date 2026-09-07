@@ -326,6 +326,11 @@
         "command": "testagent.clearPromptInput",
         "title": "Clear Prompt Input",
         "category": "TestAgent"
+      },
+      {
+        "command": "testagent.sendPromptInput",
+        "title": "Send Prompt Input",
+        "category": "TestAgent"
       }
     ],
     "submenus": [

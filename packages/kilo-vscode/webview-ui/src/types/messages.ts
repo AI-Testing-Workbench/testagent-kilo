@@ -738,6 +738,10 @@ export interface AppendChatBoxMessage {
   text: string
 }
 
+export interface SendChatBoxMessage {
+  type: "sendChatBoxMessage"
+}
+
 export interface CodeContext {
   id: string
   file: string
@@ -1768,6 +1772,7 @@ export type ExtensionMessage =
   | AgentManagerSendInitialMessage
   | SetChatBoxMessage
   | AppendChatBoxMessage
+  | SendChatBoxMessage
   | AppendCodeContextMessage
   | AppendReviewCommentsMessage
   | TriggerTaskMessage

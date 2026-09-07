@@ -568,7 +568,7 @@ export function activate(context: vscode.ExtensionContext) {
   registerCodeActions(context, provider, agentManagerProvider)
   registerTerminalActions(context, provider, agentManagerProvider)
 
-  // Register public API for external plugins to append or clear prompt input
+  // Register public API for external plugins to append, clear or send prompt input
   context.subscriptions.push(
     vscode.commands.registerCommand("testagent.appendToPromptInput", async (content: string) => {
       if (!content || typeof content !== "string") {
@@ -587,6 +587,13 @@ export function activate(context: vscode.ExtensionContext) {
         type: "setChatBoxMessage",
         text: "",
       })
+    }),
+    vscode.commands.registerCommand("testagent.sendPromptInput", (content?: string) => {
+      const target = agentManagerProvider?.isActive() ? agentManagerProvider : provider
+      if (typeof content === "string" && content.trim()) {
+        target.postMessage({ type: "appendChatBoxMessage", text: content })
+      }
+      target.postMessage({ type: "sendChatBoxMessage" })
     }),
   )
 
