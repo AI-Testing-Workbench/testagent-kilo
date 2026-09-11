@@ -877,6 +877,29 @@ export interface StagesResultMessage {
 }
 // testagent_change end
 
+// testagent_change start - YOLO 模式开关消息类型（全局开关，与 session 无关）
+/** YOLO 模式状态回包（extension → webview） */
+export interface YoloStatusMessage {
+  type: "yoloStatus"
+  ok: boolean
+  enabled: boolean
+  requestId: string
+  error?: string
+}
+
+/** 切换 YOLO 全局开关（webview → extension） */
+export interface RequestYoloToggleMessage {
+  type: "requestYoloToggle"
+  enabled: boolean
+}
+
+/** 查询 YOLO 全局状态（webview → extension） */
+export interface RequestYoloStatusMessage {
+  type: "requestYoloStatus"
+  requestId: string
+}
+// testagent_change end
+
 export interface TerminalContextResultMessage {
   type: "terminalContextResult"
   requestId: string
@@ -1740,6 +1763,7 @@ export type ExtensionMessage =
   | ChatCompletionResultMessage
   | FileSearchResultMessage
   | StagesResultMessage // testagent_change  - /sdt-run 阶段列表查询消息类型
+  | YoloStatusMessage // testagent_change - YOLO 模式状态
   | TerminalContextResultMessage
   | TerminalContextErrorMessage
   | QuestionRequestMessage
@@ -2950,6 +2974,8 @@ export type WebviewMessage =
   | RequestChatCompletionMessage
   | RequestFileSearchMessage
   | RequestStagesMessage
+  | RequestYoloToggleMessage // testagent_change - YOLO 模式开关
+  | RequestYoloStatusMessage // testagent_change - YOLO 模式状态查询
   | RequestTerminalContextMessage
   | ChatCompletionAcceptedMessage
   | UpdateSettingRequest
