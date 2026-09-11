@@ -3,6 +3,7 @@ import * as path from "path"
 import * as net from "net" // testagent_change - import net at top level
 import { isTestagentBun } from "./services/cli-backend/runtime"
 import { KiloProvider } from "./KiloProvider"
+import { isCloudMode } from "./services/cli-backend/cloud-mode" // testagent_change
 import { AgentManagerProvider } from "./agent-manager/AgentManagerProvider"
 import { VscodeHost } from "./agent-manager/vscode-host"
 // testagent_change - KiloClaw disabled
@@ -292,6 +293,20 @@ export function activate(context: vscode.ExtensionContext) {
         }
       }
     }),
+    // testagent_change start - 外部插件命令：开启/关闭 YOLO 模式（广播到所有 provider 实例）
+    vscode.commands.registerCommand("testagent.new.setYolo", async (enabled?: boolean) => {
+      // if (!isCloudMode()) {
+      //   return { success: false, error: "YOLO 模式仅在云端环境可用" }
+      // }
+      if (typeof enabled !== "boolean") {
+        return { success: false, error: "缺少参数 enabled（boolean）" }
+      }
+      for (const instance of KiloProvider.instances) {
+        await instance.handleYoloToggle(enabled)
+      }
+      return { success: true, enabled }
+    }),
+    // testagent_change end
     // testagent_change start - Broadcast enableThinkings updates to all webviews
     // Internal command triggered by KiloProvider after saving enableThinkings to globalState
     vscode.commands.registerCommand("testagent.internal.broadcastEnableThinkings", async () => {

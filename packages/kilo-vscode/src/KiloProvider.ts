@@ -360,6 +360,9 @@ const notifiedEventIds: Set<string> = new Set()
 
 export class KiloProvider implements vscode.WebviewViewProvider, TelemetryPropertiesProvider {
   public static readonly viewType = "testagent.SidebarProvider" // testagent_change
+  // testagent_change start - 所有存活实例，供外部命令广播 yolo 等全局状态
+  public static readonly instances = new Set<KiloProvider>()
+  // testagent_change end
   private readonly instanceId = crypto.randomUUID()
   private webviewType: "sidebar" | "panel" | "unknown" = "unknown" // testagent_change
 
@@ -488,6 +491,7 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
   ) {
     this.projectDirectory = options?.projectDirectory
     this.slimEditMetadata = options?.slimEditMetadata ?? true
+    KiloProvider.instances.add(this) // testagent_change
 
     TelemetryProxy.getInstance().setProvider(this)
 
@@ -2115,8 +2119,8 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
   // 同时双写后端 server（reload window 后 webview 重挂载时从后端恢复，保证不断档）。
   private yoloEnabled = false
 
-  /** 切换 YOLO 全局开关，并把最新状态回推给 webview */
-  private async handleYoloToggle(enabled: boolean): Promise<void> {
+  /** 切换 YOLO 全局开关，并把最新状态回推给 webview（public：供外部命令调用） */
+  public async handleYoloToggle(enabled: boolean): Promise<void> {
     this.yoloEnabled = enabled
     this.postMessage({ type: "yoloStatus", ok: true, enabled, requestId: "" })
     const client = this.client
@@ -5437,6 +5441,7 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
    * Does NOT kill the server — that's the connection service's job.
    */
   dispose(): void {
+    KiloProvider.instances.delete(this) // testagent_change
     this.unsubscribeRemote?.()
     this.focusSession()
     this.statsPoller?.stop()

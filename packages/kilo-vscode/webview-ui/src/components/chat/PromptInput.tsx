@@ -1172,28 +1172,30 @@ export const PromptInput: Component<PromptInputProps> = (props) => {
         </div>
         <div class="prompt-input-hint-actions">
           <ContextRing />
-          {/* testagent_change start - YOLO 模式开关 */}
-          <Tooltip
-            value={
-              yolo.enabled()
-                ? "YOLO 模式已开启：所有会话的所有权限自动放行（含 deny 规则），question 工具不可用，智能体全程自主执行"
-                : "开启 YOLO 模式：所有会话跳过权限审批、不允许向用户提问，智能体全程自主执行（无人值守，重启 VS Code 后重置）"
-            }
-            placement="top"
-          >
-            <Button
-              variant="ghost"
-              size="small"
-              class={`prompt-input-yolo ${yolo.enabled() ? "prompt-input-yolo--active" : ""}`}
-              onClick={() => yolo.toggle(!yolo.enabled())}
-              disabled={yolo.busy()}
-              aria-label="YOLO 模式"
-              aria-pressed={yolo.enabled()}
+          {/* testagent_change start - YOLO 模式开关（仅云端模式展示） */}
+          <Show when={server.cloudMode()}>
+            <Tooltip
+              value={
+                yolo.enabled()
+                  ? "YOLO 模式已开启：所有会话的所有权限自动放行（含 deny 规则），question 工具不可用，智能体全程自主执行"
+                  : "开启 YOLO 模式：所有会话跳过权限审批、不允许向用户提问，智能体全程自主执行（无人值守，重启 VS Code 后重置）"
+              }
+              placement="top"
             >
-              <ShieldCheck size={16} />
-              <span class="prompt-input-yolo-tag">YOLO</span>
-            </Button>
-          </Tooltip>
+              <Button
+                variant="ghost"
+                size="small"
+                class={`prompt-input-yolo ${yolo.enabled() ? "prompt-input-yolo--active" : ""}`}
+                onClick={() => yolo.toggle(!yolo.enabled())}
+                disabled={yolo.busy()}
+                aria-label="YOLO 模式"
+                aria-pressed={yolo.enabled()}
+              >
+                <ShieldCheck size={16} />
+                <span class="prompt-input-yolo-tag">YOLO</span>
+              </Button>
+            </Tooltip>
+          </Show>
           {/* testagent_change end */}
           <Show when={goal()}>
             <Tooltip value="Goal 控制" placement="top">
