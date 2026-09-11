@@ -6662,6 +6662,55 @@ export type SessionClearContextResponses = {
 
 export type SessionClearContextResponse = SessionClearContextResponses[keyof SessionClearContextResponses]
 
+export type SessionContextExtractData = {
+  body?: never
+  path: {
+    sessionID: string
+  }
+  query?: {
+    directory?: string
+    workspace?: string
+    reasoning?: "true" | "false"
+  }
+  url: "/session/{sessionID}/context-extract"
+}
+
+export type SessionContextExtractErrors = {
+  /**
+   * Bad request
+   */
+  400: BadRequestError
+  /**
+   * NotFoundError
+   */
+  404: NotFoundError
+}
+
+export type SessionContextExtractError = SessionContextExtractErrors[keyof SessionContextExtractErrors]
+
+export type SessionContextExtractResponses = {
+  /**
+   * Extracted context blocks (main + subagent)
+   */
+  200: Array<{
+    scope: "main" | "subagent"
+    sessionID?: string
+    agent?: string
+    title?: string
+    entries: Array<{
+      role: "user" | "assistant"
+      type: "text" | "reasoning" | "question"
+      text?: string
+      state?: {
+        questions: Array<unknown>
+        answers: Array<Array<string>>
+      }
+    }>
+  }>
+}
+
+export type SessionContextExtractResponse = SessionContextExtractResponses[keyof SessionContextExtractResponses]
+
 export type PermissionRespondData = {
   body?: {
     response: "once" | "always" | "reject"
