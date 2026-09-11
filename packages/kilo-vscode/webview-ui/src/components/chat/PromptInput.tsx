@@ -27,6 +27,9 @@ import { useFileMention } from "../../hooks/useFileMention"
 // testagent_change start - /sdt-run 交互式阶段选择
 import { useSdtStages } from "../../hooks/useSdtStages"
 // testagent_change end
+// testagent_change start - YOLO 模式
+import { useYolo } from "../../hooks/useYolo"
+// testagent_change end
 import { useTerminalContext } from "../../hooks/useTerminalContext"
 import { hasTerminalMention } from "../../hooks/terminal-context-utils"
 import { useSlashCommand } from "../../hooks/useSlashCommand"
@@ -34,7 +37,7 @@ import { useGhostText } from "../../hooks/useGhostText"
 import { useImageAttachments, type ImageAttachment } from "../../hooks/useImageAttachments"
 import { convertToMentionPath } from "../../utils/path-mentions"
 import { usePromptHistory } from "../../hooks/usePromptHistory"
-import { Target, WandSparkles } from "@kilocode/kilo-ui/lucide"
+import { Target, WandSparkles, ShieldCheck } from "@kilocode/kilo-ui/lucide" // testagent_change - ShieldCheck for YOLO mode
 import { fileName, dirName, buildHighlightSegments, atEnd, isPromptBusy } from "./prompt-input-utils"
 import type { CodeContext, ReviewComment, TextPart } from "../../types/messages"
 import { formatReviewCommentsMarkdown } from "../../utils/review-comment-markdown"
@@ -94,6 +97,9 @@ export const PromptInput: Component<PromptInputProps> = (props) => {
     vscode,
     () => session.currentSessionID() ?? pending() ?? session.draftSessionID(),
   )
+  // testagent_change end
+  // testagent_change start - YOLO 模式开关
+  const yolo = useYolo(vscode, session)
   // testagent_change end
   const terminal = useTerminalContext(vscode)
   const slash = useSlashCommand(vscode)
@@ -1166,6 +1172,29 @@ export const PromptInput: Component<PromptInputProps> = (props) => {
         </div>
         <div class="prompt-input-hint-actions">
           <ContextRing />
+          {/* testagent_change start - YOLO 模式开关 */}
+          <Tooltip
+            value={
+              yolo.enabled()
+                ? "YOLO 模式已开启：所有会话的所有权限自动放行（含 deny 规则），question 工具不可用，智能体全程自主执行"
+                : "开启 YOLO 模式：所有会话跳过权限审批、不允许向用户提问，智能体全程自主执行（无人值守，重启 VS Code 后重置）"
+            }
+            placement="top"
+          >
+            <Button
+              variant="ghost"
+              size="small"
+              class={`prompt-input-yolo ${yolo.enabled() ? "prompt-input-yolo--active" : ""}`}
+              onClick={() => yolo.toggle(!yolo.enabled())}
+              disabled={yolo.busy()}
+              aria-label="YOLO 模式"
+              aria-pressed={yolo.enabled()}
+            >
+              <ShieldCheck size={16} />
+              <span class="prompt-input-yolo-tag">YOLO</span>
+            </Button>
+          </Tooltip>
+          {/* testagent_change end */}
           <Show when={goal()}>
             <Tooltip value="Goal 控制" placement="top">
               <Button

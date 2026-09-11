@@ -196,6 +196,8 @@ import type {
   TestagentEnvVarsListErrors,
   TestagentEnvVarsListResponses,
   TestagentUserSetResponses,
+  TestagentYoloGetResponses,
+  TestagentYoloSetResponses,
   TestagentZhAnswerSetResponses,
   TextPartInput,
   ToolIdsErrors,
@@ -995,6 +997,75 @@ export class Agent extends HeyApiClient {
   }
 }
 
+export class Yolo extends HeyApiClient {
+  /**
+   * Get YOLO mode (global)
+   *
+   * Query whether YOLO mode is currently enabled.
+   */
+  public get<ThrowOnError extends boolean = false>(
+    parameters?: {
+      directory?: string
+      workspace?: string
+    },
+    options?: Options<never, ThrowOnError>,
+  ) {
+    const params = buildClientParams(
+      [parameters],
+      [
+        {
+          args: [
+            { in: "query", key: "directory" },
+            { in: "query", key: "workspace" },
+          ],
+        },
+      ],
+    )
+    return (options?.client ?? this.client).get<TestagentYoloGetResponses, unknown, ThrowOnError>({
+      url: "/testagent/yolo",
+      ...options,
+      ...params,
+    })
+  }
+
+  /**
+   * Toggle YOLO mode (global)
+   *
+   * Enable or disable YOLO mode globally. When enabled, all sessions run unattended: every permission rule (including deny) is bypassed and the question tool becomes unavailable, mirroring cline's yolo mode. State resets on server restart.
+   */
+  public set<ThrowOnError extends boolean = false>(
+    parameters?: {
+      directory?: string
+      workspace?: string
+      enabled?: boolean
+    },
+    options?: Options<never, ThrowOnError>,
+  ) {
+    const params = buildClientParams(
+      [parameters],
+      [
+        {
+          args: [
+            { in: "query", key: "directory" },
+            { in: "query", key: "workspace" },
+            { in: "body", key: "enabled" },
+          ],
+        },
+      ],
+    )
+    return (options?.client ?? this.client).put<TestagentYoloSetResponses, unknown, ThrowOnError>({
+      url: "/testagent/yolo",
+      ...options,
+      ...params,
+      headers: {
+        "Content-Type": "application/json",
+        ...options?.headers,
+        ...params.headers,
+      },
+    })
+  }
+}
+
 export class Testagent extends HeyApiClient {
   private _user?: User
   get user(): User {
@@ -1019,6 +1090,11 @@ export class Testagent extends HeyApiClient {
   private _agent?: Agent
   get agent(): Agent {
     return (this._agent ??= new Agent({ client: this.client }))
+  }
+
+  private _yolo?: Yolo
+  get yolo(): Yolo {
+    return (this._yolo ??= new Yolo({ client: this.client }))
   }
 }
 

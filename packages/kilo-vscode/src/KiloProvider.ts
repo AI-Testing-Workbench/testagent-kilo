@@ -1338,6 +1338,14 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
           )
           break
         // testagent_change end
+        // testagent_change start - YOLO 模式开关
+        case "requestYoloToggle":
+          await this.handleYoloToggle(message.enabled)
+          break
+        case "requestYoloStatus":
+          void this.handleYoloStatus(message.requestId)
+          break
+        // testagent_change end
         case "requestTerminalContext":
           void this.handleTerminalContext(message.requestId)
           break
@@ -2101,6 +2109,40 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
     }
     this.pendingSessionRefresh = ctx.pendingSessionRefresh
   }
+
+  // testagent_change start - YOLO 模式开关（全局开关，与 session 无关）
+  // 状态设计：extension host 内存持有为事实源（VS Code 重启才重置），
+  // 同时双写后端 server（reload window 后 webview 重挂载时从后端恢复，保证不断档）。
+  private yoloEnabled = false
+
+  /** 切换 YOLO 全局开关，并把最新状态回推给 webview */
+  private async handleYoloToggle(enabled: boolean): Promise<void> {
+    this.yoloEnabled = enabled
+    this.postMessage({ type: "yoloStatus", ok: true, enabled, requestId: "" })
+    const client = this.client
+    if (!client) return
+    try {
+      await client.testagent.yolo.set({ directory: this.getWorkspaceDirectory(), enabled })
+    } catch (error) {
+      console.error("[TestAgent] yolo sync to server failed:", error)
+    }
+  }
+
+  /** 查询 YOLO 状态：extension 内存优先，未初始化/查询失败时回退后端 */
+  private async handleYoloStatus(requestId: string): Promise<void> {
+    const client = this.client
+    if (!client) return
+    try {
+      const res = await client.testagent.yolo.get({ directory: this.getWorkspaceDirectory() })
+      const serverEnabled = res.data?.enabled ?? false
+      // 后端比 extension 新（例如 CLI 侧直接调用 API 改过状态）时以后端为准
+      this.yoloEnabled = this.yoloEnabled || serverEnabled
+      this.postMessage({ type: "yoloStatus", ok: true, enabled: this.yoloEnabled, requestId })
+    } catch (error) {
+      this.postMessage({ type: "yoloStatus", ok: true, enabled: this.yoloEnabled, requestId })
+    }
+  }
+  // testagent_change end
 
   private async handleTerminalContext(requestId: string): Promise<void> {
     try {
