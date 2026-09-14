@@ -952,7 +952,7 @@ export const PromptInput: Component<PromptInputProps> = (props) => {
           </Show>
         </div>
       </Show>
-      { /* testagent_change start - /sdt-run 阶段选择下拉框 */ }
+      { /* testagent_change start - /sdt-run 阶段选择下拉框 */}
       <Show when={sdtStages.showStages()}>
         <div class="stages-dropdown">
           <Show when={sdtStages.error()}>
@@ -1178,7 +1178,7 @@ export const PromptInput: Component<PromptInputProps> = (props) => {
               value={
                 yolo.enabled()
                   ? "YOLO 模式已开启：所有会话的所有权限自动放行（含 deny 规则），question 工具不可用，智能体全程自主执行"
-                  : "开启 YOLO 模式：所有会话跳过权限审批、不允许向用户提问，智能体全程自主执行（无人值守，重启 VS Code 后重置）"
+                  : "开启 YOLO 模式：所有会话跳过权限审批、不允许向用户提问，智能体全程自主执行"
               }
               placement="top"
             >
