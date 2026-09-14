@@ -1984,6 +1984,12 @@ export interface OpenBeeEyesRequest {
 }
 // testagent_change end
 
+// testagent_change start
+export interface OpenTaskQueryRequest {
+  type: "openTaskQuery"
+}
+// testagent_change end
+
 export interface OpenFileRequest {
   type: "openFile"
   filePath: string
@@ -2916,6 +2922,7 @@ export type WebviewMessage =
   | RefreshProfileRequest
   | OpenExternalRequest
   | OpenBeeEyesRequest // testagent_change
+  | OpenTaskQueryRequest // testagent_change
   | OpenSettingsPanelRequest
   | OpenConfigFileRequest
   | OpenVSCodeSettingsRequest

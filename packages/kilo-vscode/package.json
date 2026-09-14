@@ -2,7 +2,7 @@
   "name": "TestAgent",
   "displayName": "TestAgent",
   "description": "TestAgent",
-  "version": "1.4.4",
+  "version": "1.4.5",
   "icon": "assets/icons/logo-outline-black.png",
   "galleryBanner": {
     "color": "#FFFFFF",
@@ -11,7 +11,7 @@
   "publisher": "test-tech",
   "repository": {
     "type": "git",
-    "url": "https://github.com/Kilo-Org/kilocode.git",
+    "url": "",
     "directory": "packages/kilo-vscode"
   },
   "engines": {
