@@ -135,6 +135,8 @@ import type {
   SessionClearContextResponses,
   SessionCommandErrors,
   SessionCommandResponses,
+  SessionContextExtractErrors,
+  SessionContextExtractResponses,
   SessionCreateErrors,
   SessionCreateResponses,
   SessionDeleteErrors,
@@ -4730,6 +4732,44 @@ export class Session2 extends HeyApiClient {
         ...params,
       },
     )
+  }
+
+  /**
+   * Extract session context (for testflow)
+   *
+   * Return a lightweight projection of the active context (messages after the last compaction), split into blocks by session: the main session first, then one layer of direct subagent sessions. Keeps only user/assistant text, optional assistant reasoning, and question-tool Q&A; drops base64/diffs/tool outputs. Provided specifically for testflow to analyze user behavior without large payloads.
+   */
+  public contextExtract<ThrowOnError extends boolean = false>(
+    parameters: {
+      sessionID: string
+      directory?: string
+      workspace?: string
+      reasoning?: "true" | "false"
+    },
+    options?: Options<never, ThrowOnError>,
+  ) {
+    const params = buildClientParams(
+      [parameters],
+      [
+        {
+          args: [
+            { in: "path", key: "sessionID" },
+            { in: "query", key: "directory" },
+            { in: "query", key: "workspace" },
+            { in: "query", key: "reasoning" },
+          ],
+        },
+      ],
+    )
+    return (options?.client ?? this.client).get<
+      SessionContextExtractResponses,
+      SessionContextExtractErrors,
+      ThrowOnError
+    >({
+      url: "/session/{sessionID}/context-extract",
+      ...options,
+      ...params,
+    })
   }
 }
 
