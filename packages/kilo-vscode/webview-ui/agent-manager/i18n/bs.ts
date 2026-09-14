@@ -166,6 +166,8 @@ export const dict = {
   "agentManager.review.metaFile": "Datoteka",
   "agentManager.review.metaLine": "Linija",
   "agentManager.review.metaComment": "Komentar korisnika",
+  "agentManager.review.scope.session": "Ova sesija",
+  "agentManager.review.scope.worktree": "Sve izmjene",
   "agentManager.review.collapsedOnly": "{{count}} sažeto",
   "agentManager.review.collapsedWithLarge": "{{collapsed}} sažeto, {{large}} velikih",
   "agentManager.review.largeFileCollapsed": "Velika datoteka (sažeto)",

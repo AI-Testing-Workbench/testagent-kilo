@@ -1,6 +1,6 @@
 import * as fs from "fs/promises"
 import * as path from "path"
-import type { GitOps } from "./GitOps"
+import { countLines, type GitOps } from "./GitOps"
 import type { WorktreeDiffEntry } from "./types"
 
 type Status = "added" | "deleted" | "modified"
@@ -37,6 +37,12 @@ export const MAX_DETAIL_BYTES = 20_000_000
  *
  * All git calls go through `GitOps.execGit()` → `child_process.spawn` with
  * `windowsHide: true` and the shared semaphore. No Bun involvement.
+ *
+ * Every git call and file read for one diff runs from the repo root
+ * (`GitOps.root`), so entries are keyed on root-relative paths — the shape the
+ * server, `session.diff`, and the revert/apply flows expect. Running from a
+ * subdirectory would report `git diff` paths relative to the root but
+ * `git ls-files --others` paths relative to that subdirectory.
  */
 
 /** Ported from `packages/opencode/src/file/ignore.ts` — identical patterns,
@@ -92,6 +98,11 @@ export function generatedLike(file: string): boolean {
 
 const BASE_CANDIDATES = ["main", "master", "dev", "develop"]
 
+/** `git show` returns the blob as stored (LF) while the working tree file may
+ *  use CRLF. Aligning both keeps the rendered diff from reporting every line as
+ *  changed on Windows checkouts. Mirrors the server's `worktree-diff` reader. */
+const normalize = (text: string) => text.replace(/\r\n/g, "\n")
+
 export async function resolveBase(git: GitOps, dir: string, base: string): Promise<string> {
   // If the caller gave an explicit base, honor it. Return it as-is so merge-base
   // fails loudly on a stale/misspelled ref instead of silently diffing against
@@ -115,7 +126,7 @@ async function ancestor(git: GitOps, dir: string, base: string, log?: Log): Prom
 }
 
 async function numstat(git: GitOps, dir: string, base: string, file?: string) {
-  const args = ["-c", "core.quotepath=false", "diff", "--numstat", "--no-renames", base]
+  const args = ["-c", "core.quotepath=false", "diff", "--numstat", "--no-renames", "--ignore-cr-at-eol", base]
   if (file) args.push("--", file)
   const result = await git.execGit(args, dir)
   const map = new Map<string, { additions: number; deletions: number }>()
@@ -146,9 +157,7 @@ async function lineCount(file: string): Promise<number> {
   if (!stat || stat.size === 0) return 0
   if (stat.size > MAX_UNTRACKED_BYTES) return 0
   const content = await fs.readFile(file, "utf-8").catch(() => "")
-  if (!content) return 0
-  if (content.endsWith("\n")) return content.split("\n").length - 1
-  return content.split("\n").length
+  return countLines(content)
 }
 
 function statusFromCode(code: string): Status {
@@ -179,7 +188,11 @@ async function list(git: GitOps, dir: string, anc: string, log?: Log): Promise<M
     if (!file || !code) continue
     seen.add(file)
     const status = statusFromCode(code)
-    const stat = counts.get(file) ?? { additions: 0, deletions: 0 }
+    // `--name-status` lists a file whenever the raw bytes differ, even if the only
+    // difference is the line ending. `--numstat` (run with `--ignore-cr-at-eol`)
+    // reports nothing in that case, so dropping the row matches `git diff --stat`.
+    const stat = counts.get(file)
+    if (!stat) continue
     result.push({
       file,
       additions: stat.additions,
@@ -242,9 +255,10 @@ function summarize(meta: Meta): WorktreeDiffEntry {
  * `WorktreeDiff.summary` emits.
  */
 export async function diffSummary(git: GitOps, dir: string, base: string, log?: Log): Promise<WorktreeDiffEntry[]> {
-  const anc = await ancestor(git, dir, base, log)
+  const root = await git.root(dir)
+  const anc = await ancestor(git, root, base, log)
   if (!anc) return []
-  const items = await list(git, dir, anc, log)
+  const items = await list(git, root, anc, log)
   return items.map(summarize)
 }
 
@@ -305,7 +319,7 @@ async function fileSize(dir: string, file: string): Promise<number> {
 async function readBefore(git: GitOps, dir: string, anc: string, file: string, status: Status): Promise<string> {
   if (status === "added") return ""
   const result = await git.execGit(["show", `${anc}:${file}`], dir)
-  return result.code === 0 ? result.stdout : ""
+  return result.code === 0 ? normalize(result.stdout) : ""
 }
 
 async function readAfter(dir: string, file: string, status: Status): Promise<string> {
@@ -313,20 +327,15 @@ async function readAfter(dir: string, file: string, status: Status): Promise<str
   const full = path.join(dir, file)
   const exists = await fs.stat(full).catch(() => undefined)
   if (!exists) return ""
-  return fs.readFile(full, "utf-8").catch(() => "")
+  return normalize(await fs.readFile(full, "utf-8").catch(() => ""))
 }
 
 async function unifiedPatch(git: GitOps, dir: string, anc: string, file: string): Promise<string> {
   const result = await git.execGit(
-    ["-c", "core.quotepath=false", "diff", "--no-ext-diff", "--no-renames", anc, "--", file],
+    ["-c", "core.quotepath=false", "diff", "--no-ext-diff", "--no-renames", "--ignore-cr-at-eol", anc, "--", file],
     dir,
   )
   return result.code === 0 ? result.stdout : ""
-}
-
-function linesOf(text: string): number {
-  if (!text) return 0
-  return text.endsWith("\n") ? text.split("\n").length - 1 : text.split("\n").length
 }
 
 /**
@@ -341,16 +350,17 @@ export async function diffFile(
   file: string,
   log?: Log,
 ): Promise<WorktreeDiffEntry | null> {
-  const anc = await ancestor(git, dir, base, log)
+  const root = await git.root(dir)
+  const anc = await ancestor(git, root, base, log)
   if (!anc) return null
-  const meta = await detailMeta(git, dir, anc, file)
+  const meta = await detailMeta(git, root, anc, file)
   if (!meta) return null
 
   // Cheap size probe before materializing content — protects the extension
   // host from OOM on huge tracked files. `git cat-file -s` returns the blob
   // size without streaming its contents, and `fs.stat` is a plain syscall.
-  const beforeBytes = meta.status === "added" ? 0 : await blobSize(git, dir, anc, meta.file)
-  const afterBytes = meta.status === "deleted" ? 0 : await fileSize(dir, meta.file)
+  const beforeBytes = meta.status === "added" ? 0 : await blobSize(git, root, anc, meta.file)
+  const afterBytes = meta.status === "deleted" ? 0 : await fileSize(root, meta.file)
   if (beforeBytes > MAX_DETAIL_BYTES || afterBytes > MAX_DETAIL_BYTES) {
     log?.("diffFile: file too large for detail view, returning summarized entry", {
       file: meta.file,
@@ -361,10 +371,10 @@ export async function diffFile(
     return summarize(meta)
   }
 
-  const before = await readBefore(git, dir, anc, meta.file, meta.status)
-  const after = await readAfter(dir, meta.file, meta.status)
-  const patch = meta.tracked ? await unifiedPatch(git, dir, anc, meta.file) : buildUntrackedPatch(meta.file, after)
-  const additions = meta.status === "added" && meta.additions === 0 && !meta.tracked ? linesOf(after) : meta.additions
+  const before = await readBefore(git, root, anc, meta.file, meta.status)
+  const after = await readAfter(root, meta.file, meta.status)
+  const patch = meta.tracked ? await unifiedPatch(git, root, anc, meta.file) : buildUntrackedPatch(meta.file, after)
+  const additions = meta.status === "added" && meta.additions === 0 && !meta.tracked ? countLines(after) : meta.additions
   return {
     file: meta.file,
     patch,

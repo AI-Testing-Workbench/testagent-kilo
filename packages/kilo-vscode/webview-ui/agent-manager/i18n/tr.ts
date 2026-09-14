@@ -172,6 +172,8 @@ export const dict = {
   "agentManager.review.metaFile": "Dosya",
   "agentManager.review.metaLine": "Satır",
   "agentManager.review.metaComment": "Kullanıcı yorumu",
+  "agentManager.review.scope.session": "Bu oturum",
+  "agentManager.review.scope.worktree": "Tüm değişiklikler",
   "agentManager.review.collapsedOnly": "{{count}} daraltıldı",
   "agentManager.review.collapsedWithLarge": "{{collapsed}} daraltıldı, {{large}} büyük",
   "agentManager.review.largeFileCollapsed": "Büyük dosya (daraltıldı)",

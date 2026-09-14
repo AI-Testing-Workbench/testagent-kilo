@@ -171,6 +171,8 @@ export const dict = {
   "agentManager.review.metaFile": "Bestand",
   "agentManager.review.metaLine": "Regel",
   "agentManager.review.metaComment": "Gebruikersopmerking",
+  "agentManager.review.scope.session": "Deze sessie",
+  "agentManager.review.scope.worktree": "Alle wijzigingen",
   "agentManager.review.collapsedOnly": "{{count}} ingeklapt",
   "agentManager.review.collapsedWithLarge": "{{collapsed}} ingeklapt, {{large}} groot",
   "agentManager.review.largeFileCollapsed": "Groot bestand (ingeklapt)",

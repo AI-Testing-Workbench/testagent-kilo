@@ -11,7 +11,7 @@ import { IconButton } from "@kilocode/kilo-ui/icon-button"
 import { Spinner } from "@kilocode/kilo-ui/spinner"
 import { Tooltip, TooltipKeybind } from "@kilocode/kilo-ui/tooltip"
 import type { DiffLineAnnotation, AnnotationSide, SelectedLineRange } from "@pierre/diffs"
-import type { WorktreeFileDiff } from "../src/types/messages"
+import type { WorktreeFileDiff, DiffScope } from "../src/types/messages"
 import { KILO_FILE_PATH_MIME } from "../src/utils/path-mentions"
 import { useLanguage } from "../src/context/language"
 import { getDirectory, getFilename, lineCount, sanitizeReviewComments, type ReviewComment } from "./review-comments"
@@ -24,6 +24,7 @@ import {
 import { LONG_DIFF_MARKER_FILE_COUNT, initialOpenFiles, isLargeDiffFile } from "./diff-open-policy"
 import { DiffEndMarker } from "./DiffEndMarker"
 import { treeOrder } from "./file-tree-utils"
+import { LOCAL } from "./navigate"
 
 // --- Data model ---
 
@@ -35,6 +36,8 @@ interface DiffPanelProps {
   sessionKey?: string
   diffStyle?: "unified" | "split"
   onDiffStyleChange?: (style: "unified" | "split") => void
+  diffScope?: DiffScope
+  onDiffScopeChange?: (scope: DiffScope) => void
   comments: ReviewComment[]
   onCommentsChange: (comments: ReviewComment[]) => void
   onSendAll?: () => void
@@ -328,6 +331,23 @@ export const DiffPanel: Component<DiffPanelProps> = (props) => {
       <div class="am-diff-header">
         <div class="am-diff-header-main">
           <span class="am-diff-header-title">{t("session.review.change.other")}</span>
+          <Show when={props.onDiffScopeChange && props.sessionId && props.sessionId !== LOCAL}>
+            <RadioGroup
+              options={["session", "worktree"] as const}
+              current={props.diffScope ?? "session"}
+              size="small"
+              value={(scope) => scope}
+              label={(scope) =>
+                scope === "session"
+                  ? t("agentManager.review.scope.session")
+                  : t("agentManager.review.scope.worktree")
+              }
+              onSelect={(scope) => {
+                if (!scope) return
+                props.onDiffScopeChange?.(scope)
+              }}
+            />
+          </Show>
           <Show when={props.diffs.length > 0}>
             <>
               <RadioGroup
@@ -408,7 +428,11 @@ export const DiffPanel: Component<DiffPanelProps> = (props) => {
 
       <Show when={!props.loading && props.diffs.length === 0}>
         <div class="am-diff-empty">
-          <span>{t("session.review.noChanges")}</span>
+          <span>
+            {props.diffScope === "session" && props.sessionId && props.sessionId !== LOCAL
+              ? `${t("agentManager.review.scope.session")}: ${t("session.review.noChanges")}`
+              : t("session.review.noChanges")}
+          </span>
         </div>
       </Show>
 

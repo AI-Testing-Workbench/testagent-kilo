@@ -163,6 +163,8 @@ export const dict = {
   "agentManager.review.metaFile": "الملف",
   "agentManager.review.metaLine": "السطر",
   "agentManager.review.metaComment": "تعليق المستخدم",
+  "agentManager.review.scope.session": "هذه الجلسة",
+  "agentManager.review.scope.worktree": "كل التغييرات",
   "agentManager.review.collapsedOnly": "{{count}} مطوي",
   "agentManager.review.collapsedWithLarge": "{{collapsed}} مطوي، {{large}} كبير",
   "agentManager.review.largeFileCollapsed": "ملف كبير (مطوي)",

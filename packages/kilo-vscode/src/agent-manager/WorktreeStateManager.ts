@@ -72,6 +72,7 @@ interface StateFile {
   worktreeOrder?: string[]
   sessionsCollapsed?: boolean
   reviewDiffStyle?: "unified" | "split"
+  diffScope?: "session" | "worktree"
   defaultBaseBranch?: string
 }
 
@@ -94,6 +95,7 @@ export class WorktreeStateManager {
   private worktreeOrder: string[] = []
   private collapsed = false
   private reviewDiffStyle: "unified" | "split" = "unified"
+  private diffScope: "session" | "worktree" = "session"
   private defaultBase: string | undefined
   private readonly log: (msg: string) => void
   private saving: Promise<void> | undefined
@@ -490,6 +492,19 @@ export class WorktreeStateManager {
   }
 
   // ---------------------------------------------------------------------------
+  // Review diff scope
+  // ---------------------------------------------------------------------------
+
+  getDiffScope(): "session" | "worktree" {
+    return this.diffScope
+  }
+
+  setDiffScope(value: "session" | "worktree"): void {
+    this.diffScope = value
+    void this.save()
+  }
+
+  // ---------------------------------------------------------------------------
   // Default base branch
   // ---------------------------------------------------------------------------
 
@@ -522,6 +537,7 @@ export class WorktreeStateManager {
       this.tabOrder = {}
       this.worktreeOrder = []
       this.reviewDiffStyle = "unified"
+      this.diffScope = "session"
 
       for (const [id, wt] of Object.entries(data.worktrees ?? {})) {
         // Rewrite stale .kilocode paths while preserving the separator style already stored.
@@ -558,6 +574,9 @@ export class WorktreeStateManager {
       this.collapsed = data.sessionsCollapsed ?? false
       if (data.reviewDiffStyle === "split") {
         this.reviewDiffStyle = "split"
+      }
+      if (data.diffScope === "worktree") {
+        this.diffScope = "worktree"
       }
       this.defaultBase = data.defaultBaseBranch
       this.log(`Loaded state: ${this.worktrees.size} worktrees, ${this.sessions.size} sessions`)
@@ -659,6 +678,7 @@ export class WorktreeStateManager {
     if (this.reviewDiffStyle === "split") {
       data.reviewDiffStyle = "split"
     }
+    data.diffScope = this.diffScope
     if (this.defaultBase) {
       data.defaultBaseBranch = this.defaultBase
     }

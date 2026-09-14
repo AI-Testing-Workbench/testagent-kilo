@@ -47,6 +47,21 @@ export class ServerManager {
    */
   async getServer(): Promise<ServerInstance> {
     console.log("[TestAgent] ServerManager: 🔍 getServer called")
+
+    // testagent_change start - debug mode: connect to existing server instead of spawning
+    const debugPort = process.env["KILO_DEBUG_SERVER_PORT"]
+    const debugPassword = process.env["KILO_DEBUG_SERVER_PASSWORD"] || "debug123"
+    if (debugPort) {
+      console.log("[TestAgent] ServerManager: 🐛 Debug mode detected, connecting to existing server at port:", debugPort)
+      this.instance = {
+        port: parseInt(debugPort, 10),
+        password: debugPassword,
+        process: { pid: undefined, kill: () => {} } as any,
+      }
+      return this.instance
+    }
+    // testagent_change end
+
     if (this.instance) {
       console.log("[TestAgent] ServerManager: ♻️ Returning existing instance:", { port: this.instance.port })
       return this.instance

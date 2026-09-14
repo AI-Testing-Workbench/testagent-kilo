@@ -1,4 +1,4 @@
-import { createSignal, onCleanup } from "solid-js"
+import { createMemo, createSignal, onCleanup } from "solid-js"
 import type { Component } from "solid-js"
 import { DialogProvider } from "@kilocode/kilo-ui/context/dialog"
 import { CodeComponentProvider } from "@kilocode/kilo-ui/context/code"
@@ -11,10 +11,11 @@ import { File } from "@kilocode/kilo-ui/file"
 import { ThemeProvider } from "@kilocode/kilo-ui/theme"
 import { Toast } from "@kilocode/kilo-ui/toast"
 import { FullScreenDiffView } from "../agent-manager/FullScreenDiffView"
+import { mergeWorktreeDiffs } from "../agent-manager/diff-state"
 import { LanguageProvider } from "../src/context/language"
 import { ServerProvider, useServer } from "../src/context/server"
 import { getVSCodeAPI, VSCodeProvider, useVSCode } from "../src/context/vscode"
-import type { ReviewComment, WorktreeFileDiff } from "../src/types/messages"
+import type { DiffScope, ReviewComment, WorktreeFileDiff } from "../src/types/messages"
 
 type DiffStyle = "unified" | "split"
 
@@ -24,8 +25,11 @@ const DiffViewerContent: Component = () => {
   const vscode = useVSCode()
   const [diffs, setDiffs] = createSignal<WorktreeFileDiff[]>([])
   const [loading, setLoading] = createSignal(true)
+  const [pendingFiles, setPendingFiles] = createSignal<Record<string, true>>({})
   const [comments, setComments] = createSignal<ReviewComment[]>([])
   const [diffStyle, setDiffStyle] = createSignal<DiffStyle>("unified")
+  const [sessionId, setSessionId] = createSignal<string | undefined>(undefined)
+  const [diffScope, setDiffScope] = createSignal<DiffScope>("session")
   const [reverting, setReverting] = createSignal<Set<string>>(new Set())
 
   const markReverting = (file: string, active: boolean) => {
@@ -37,9 +41,55 @@ const DiffViewerContent: Component = () => {
     })
   }
 
+  const markPending = (file: string, active: boolean) => {
+    setPendingFiles((prev) => {
+      if (active) {
+        if (prev[file]) return prev
+        return { ...prev, [file]: true }
+      }
+
+      if (!prev[file]) return prev
+      const next = { ...prev }
+      delete next[file]
+      return next
+    })
+  }
+
+  // File contents arrive on demand, so expanding a file asks the extension for
+  // its `before`/`after`. The pending map keeps a second click from spawning a
+  // duplicate git call.
+  const requestDiff = (file: string) => {
+    if (pendingFiles()[file]) return
+    markPending(file, true)
+    post({ type: "diffViewer.requestDiff", file })
+  }
+
+  // Metadata moved while we were holding cached contents — ask again.
+  const refreshStale = (files: Set<string>) => {
+    for (const file of files) requestDiff(file)
+  }
+
+  const loadingFiles = createMemo(() => new Set(Object.keys(pendingFiles())))
+
   const unsubscribe = vscode.onMessage((msg) => {
     if (msg.type === "diffViewer.diffs") {
-      setDiffs(msg.diffs)
+      const merged = mergeWorktreeDiffs(diffs(), msg.diffs)
+      setDiffs((prev) => {
+        const next = merged.diffs
+        // Keep the previous array when nothing moved so an open file keeps its
+        // rendered diff instead of tearing down and losing scroll position.
+        if (prev.length === next.length && prev.every((item, index) => item === next[index])) return prev
+        return next
+      })
+      if (merged.stale.size > 0) refreshStale(merged.stale)
+      return
+    }
+
+    if (msg.type === "diffViewer.diffFile") {
+      markPending(msg.file, false)
+      const detail = msg.diff
+      if (!detail) return
+      setDiffs((prev) => prev.map((item) => (item.file === detail.file ? detail : item)))
       return
     }
 
@@ -50,6 +100,12 @@ const DiffViewerContent: Component = () => {
 
     if (msg.type === "diffViewer.revertFileResult") {
       markReverting(msg.file, false)
+      return
+    }
+
+    if (msg.type === "diffViewer.state") {
+      setSessionId(msg.sessionId)
+      setDiffScope(msg.diffScope)
       return
     }
   })
@@ -66,11 +122,14 @@ const DiffViewerContent: Component = () => {
     window.removeEventListener("message", handler)
   })
 
+  // testagent_change - Changes 页签首屏不自动展开任何文件，点击文件树或「展开全部」时才按需加载 diff
   return (
     <FullScreenDiffView
       diffs={diffs()}
       loading={loading()}
       sessionKey="local"
+      sessionId={sessionId()}
+      autoOpen={false}
       comments={comments()}
       onCommentsChange={setComments}
       onSendAll={() => {}}
@@ -79,9 +138,16 @@ const DiffViewerContent: Component = () => {
         setDiffStyle(style)
         post({ type: "diffViewer.setDiffStyle", style })
       }}
+      diffScope={diffScope()}
+      onDiffScopeChange={(scope) => {
+        setDiffScope(scope)
+        post({ type: "diffViewer.setDiffScope", scope })
+      }}
       onOpenFile={(relativePath) => {
         post({ type: "openFile", filePath: relativePath })
       }}
+      loadingFiles={loadingFiles()}
+      onRequestDiff={requestDiff}
       onRevertFile={(file) => {
         markReverting(file, true)
         post({ type: "diffViewer.revertFile", file })

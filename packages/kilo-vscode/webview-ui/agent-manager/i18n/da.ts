@@ -165,6 +165,8 @@ export const dict = {
   "agentManager.review.metaFile": "Fil",
   "agentManager.review.metaLine": "Linje",
   "agentManager.review.metaComment": "Brugerkommentar",
+  "agentManager.review.scope.session": "Denne session",
+  "agentManager.review.scope.worktree": "Alle ændringer",
   "agentManager.review.collapsedOnly": "{{count}} foldet sammen",
   "agentManager.review.collapsedWithLarge": "{{collapsed}} foldet sammen, {{large}} store",
   "agentManager.review.largeFileCollapsed": "Stor fil (sammenklappet)",

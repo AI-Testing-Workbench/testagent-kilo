@@ -161,6 +161,8 @@ export const dict = {
   "agentManager.review.metaFile": "ไฟล์",
   "agentManager.review.metaLine": "บรรทัด",
   "agentManager.review.metaComment": "ความคิดเห็นของผู้ใช้",
+  "agentManager.review.scope.session": "เซสชันนี้",
+  "agentManager.review.scope.worktree": "การเปลี่ยนแปลงทั้งหมด",
   "agentManager.review.collapsedOnly": "ยุบ {{count}} รายการ",
   "agentManager.review.collapsedWithLarge": "ยุบ {{collapsed}} รายการ, ขนาดใหญ่ {{large}} รายการ",
   "agentManager.review.largeFileCollapsed": "ไฟล์ขนาดใหญ่ (พับอยู่)",

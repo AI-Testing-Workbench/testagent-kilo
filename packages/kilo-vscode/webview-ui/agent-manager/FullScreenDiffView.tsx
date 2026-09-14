@@ -17,7 +17,7 @@ import { Spinner } from "@kilocode/kilo-ui/spinner"
 import { ResizeHandle } from "@kilocode/kilo-ui/resize-handle"
 import { Tooltip, TooltipKeybind } from "@kilocode/kilo-ui/tooltip"
 import type { DiffLineAnnotation, AnnotationSide, SelectedLineRange } from "@pierre/diffs"
-import type { WorktreeFileDiff } from "../src/types/messages"
+import type { WorktreeFileDiff, DiffScope } from "../src/types/messages"
 import { KILO_FILE_PATH_MIME } from "../src/utils/path-mentions"
 import { useLanguage } from "../src/context/language"
 import { FileTree } from "./FileTree"
@@ -31,6 +31,7 @@ import {
 } from "./review-annotations"
 import { LONG_DIFF_MARKER_FILE_COUNT, initialOpenFiles, isLargeDiffFile } from "./diff-open-policy"
 import { DiffEndMarker } from "./DiffEndMarker"
+import { LOCAL } from "./navigate"
 
 type DiffStyle = "unified" | "split"
 
@@ -45,10 +46,14 @@ interface FullScreenDiffViewProps {
   onSendAll?: () => void
   diffStyle: DiffStyle
   onDiffStyleChange: (style: DiffStyle) => void
+  diffScope?: DiffScope
+  onDiffScopeChange?: (scope: DiffScope) => void
   onRequestDiff?: (file: string) => void
   onOpenFile?: (relativePath: string, line?: number) => void
   onRevertFile?: (file: string) => void
   revertingFiles?: Set<string>
+  // testagent_change - Changes 页签传 false，首屏所有文件保持收起，避免一次性展开大量 diff 后难以滚动
+  autoOpen?: boolean
   onClose: () => void
 }
 
@@ -152,7 +157,9 @@ export const FullScreenDiffView: Component<FullScreenDiffViewProps> = (props) =>
         // New context: initialize open state from the diff policy.
         if (key !== initializedKey) {
           initializedKey = key
-          setOpen(initialOpenFiles(diffs))
+          // testagent_change start - callers can opt out of the auto-open policy
+          setOpen(props.autoOpen === false ? [] : initialOpenFiles(diffs))
+          // testagent_change end
           return
         }
 
@@ -409,6 +416,22 @@ export const FullScreenDiffView: Component<FullScreenDiffViewProps> = (props) =>
       {/* Toolbar */}
       <div class="am-review-toolbar">
         <div class="am-review-toolbar-left">
+          <Show when={props.onDiffScopeChange && props.sessionId && props.sessionId !== LOCAL}>
+            <RadioGroup
+              options={["session", "worktree"] as const}
+              current={props.diffScope ?? "session"}
+              size="small"
+              value={(scope) => scope}
+              label={(scope) =>
+                scope === "session"
+                  ? t("agentManager.review.scope.session")
+                  : t("agentManager.review.scope.worktree")
+              }
+              onSelect={(scope) => {
+                if (scope) props.onDiffScopeChange?.(scope)
+              }}
+            />
+          </Show>
           <RadioGroup
             options={["unified", "split"] as const}
             current={props.diffStyle}
@@ -489,7 +512,11 @@ export const FullScreenDiffView: Component<FullScreenDiffViewProps> = (props) =>
 
           <Show when={!props.loading && props.diffs.length === 0}>
             <div class="am-diff-empty">
-              <span>{t("session.review.noChanges")}</span>
+              <span>
+                {props.diffScope === "session" && props.sessionId && props.sessionId !== LOCAL
+                  ? `${t("agentManager.review.scope.session")}: ${t("session.review.noChanges")}`
+                  : t("session.review.noChanges")}
+              </span>
             </div>
           </Show>
 

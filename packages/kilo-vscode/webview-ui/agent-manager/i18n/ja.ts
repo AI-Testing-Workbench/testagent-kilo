@@ -165,6 +165,8 @@ export const dict = {
   "agentManager.review.metaFile": "ファイル",
   "agentManager.review.metaLine": "行",
   "agentManager.review.metaComment": "ユーザーコメント",
+  "agentManager.review.scope.session": "このセッション",
+  "agentManager.review.scope.worktree": "すべての変更",
   "agentManager.review.collapsedOnly": "{{count}} 件折りたたみ",
   "agentManager.review.collapsedWithLarge": "{{collapsed}} 件折りたたみ、{{large}} 件がサイズ大",
   "agentManager.review.largeFileCollapsed": "大きなファイル（折りたたみ）",

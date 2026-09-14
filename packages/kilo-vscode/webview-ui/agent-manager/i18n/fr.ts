@@ -166,6 +166,8 @@ export const dict = {
   "agentManager.review.metaFile": "Fichier",
   "agentManager.review.metaLine": "Ligne",
   "agentManager.review.metaComment": "Commentaire de l'utilisateur",
+  "agentManager.review.scope.session": "Cette session",
+  "agentManager.review.scope.worktree": "Toutes les modifications",
   "agentManager.review.collapsedOnly": "{{count}} repliés",
   "agentManager.review.collapsedWithLarge": "{{collapsed}} repliés, {{large}} volumineux",
   "agentManager.review.largeFileCollapsed": "Fichier volumineux (replié)",

@@ -170,6 +170,8 @@ export const dict = {
   "agentManager.review.metaFile": "File",
   "agentManager.review.metaLine": "Line",
   "agentManager.review.metaComment": "User comment",
+  "agentManager.review.scope.session": "This session",
+  "agentManager.review.scope.worktree": "All changes",
   "agentManager.review.collapsedOnly": "{{count}} collapsed",
   "agentManager.review.collapsedWithLarge": "{{collapsed}} collapsed, {{large}} large",
   "agentManager.review.largeFileCollapsed": "Large file (collapsed)",
