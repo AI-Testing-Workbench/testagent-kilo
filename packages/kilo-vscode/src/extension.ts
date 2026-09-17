@@ -2,9 +2,8 @@ import * as vscode from "vscode"
 import * as path from "path"
 import * as net from "net" // testagent_change - import net at top level
 import { isTestagentBun } from "./services/cli-backend/runtime"
-import { isCloudMode } from "./services/cli-backend/cloud-mode" // testagent_change - gate Web UI link button
-import { KiloProvider } from "./KiloProvider"
 import { isCloudMode } from "./services/cli-backend/cloud-mode" // testagent_change
+import { KiloProvider } from "./KiloProvider"
 import { AgentManagerProvider } from "./agent-manager/AgentManagerProvider"
 import { VscodeHost } from "./agent-manager/vscode-host"
 // testagent_change - KiloClaw disabled
@@ -15,7 +14,7 @@ import { SettingsEditorProvider } from "./SettingsEditorProvider"
 import { SubAgentViewerProvider } from "./SubAgentViewerProvider"
 import { EXTENSION_DISPLAY_NAME } from "./constants"
 import { KiloConnectionService } from "./services/cli-backend"
-import { formatWebUiLink } from "./services/cli-backend/share-link" // testagent_change - copy web UI share link
+import { formatWebUiLink, sessionPath } from "./services/cli-backend/share-link" // testagent_change - copy web UI share link
 import { registerAutocompleteProvider } from "./services/autocomplete"
 import { ensureBackendForAutocomplete } from "./services/autocomplete/ensure-backend"
 import { AutocompleteServiceManager } from "./services/autocomplete/AutocompleteServiceManager"
@@ -279,7 +278,11 @@ export function activate(context: vscode.ExtensionContext) {
         vscode.window.showWarningMessage("Web UI 尚未启动")
         return
       }
-      const url = formatWebUiLink({ port, password: config.password })
+      const target = activeTabProvider() ?? provider
+      const sessionID = target.getCurrentSessionId() ?? provider.getCurrentSessionId()
+      const directory = sessionID ? await target.resolveSessionDirectory(sessionID) : undefined
+      const path = sessionID && directory ? sessionPath(directory, sessionID) : undefined
+      const url = formatWebUiLink({ port, password: config.password, path })
       await vscode.env.clipboard.writeText(url)
       const open = "打开"
       vscode.window.showInformationMessage(`Web UI 链接已复制：${url}`, open).then((pick) => {

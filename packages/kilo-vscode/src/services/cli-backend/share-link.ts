@@ -20,8 +20,22 @@ function resolveShareHost(): string {
   return "127.0.0.1"
 }
 
-export function formatWebUiLink(input: { port: number; password: string; username?: string; host?: string }): string {
+export function formatWebUiLink(input: {
+  port: number
+  password: string
+  username?: string
+  host?: string
+  path?: string
+}): string {
   const token = Buffer.from(`${input.username ?? "opencode"}:${input.password}`).toString("base64")
   const host = input.host ?? resolveShareHost()
-  return `http://${host}:${input.port}/?auth_token=${encodeURIComponent(token)}`
+  return `http://${host}:${input.port}${input.path ?? "/"}?auth_token=${encodeURIComponent(token)}`
+}
+
+/**
+ * Deep link to a session inside the web UI. `directory` is encoded the same way
+ * the app encodes the `:dir` route param (base64url without padding).
+ */
+export function sessionPath(directory: string, sessionID: string): string {
+  return `/${Buffer.from(directory, "utf8").toString("base64url")}/session/${sessionID}`
 }

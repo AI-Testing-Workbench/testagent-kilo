@@ -818,6 +818,24 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
   }
 
   /**
+   * Resolve the directory a session belongs to, preferring the backend's
+   * authoritative value so deep links use the same project path the web UI
+   * expects. Falls back to the locally tracked workspace directory.
+   */
+  public async resolveSessionDirectory(sessionID: string): Promise<string | undefined> {
+    if (this.currentSession?.id === sessionID && this.currentSession.directory) return this.currentSession.directory
+    const client = this.client
+    if (client) {
+      const found = await client.session
+        .get({ sessionID, directory: this.getContextDirectory() })
+        .then((x) => x.data?.directory)
+        .catch(() => undefined)
+      if (found) return found
+    }
+    return this.getProjectDirectory(sessionID)
+  }
+
+  /**
    * Re-fetch and send the full session list to the webview.
    * Called by AgentManagerProvider after worktree recovery completes.
    */
