@@ -2,7 +2,7 @@
   "name": "TestAgent",
   "displayName": "TestAgent",
   "description": "TestAgent",
-  "version": "1.4.5",
+  "version": "1.4.6",
   "icon": "assets/icons/logo-outline-black.png",
   "galleryBanner": {
     "color": "#FFFFFF",
@@ -94,6 +94,11 @@
         "command": "testagent.new.settingsButtonClicked",
         "title": "设置",
         "icon": "$(settings-gear)"
+      },
+      {
+        "command": "testagent.new.copyWebUiLink",
+        "title": "复制 Web UI 链接",
+        "icon": "$(link)"
       },
       {
         "command": "testagent.new.reloadSkills",
@@ -344,6 +349,12 @@
       }
     ],
     "menus": {
+      "commandPalette": [
+        {
+          "command": "testagent.new.copyWebUiLink",
+          "when": "testagent.new.cloudMode"
+        }
+      ],
       "view/title": [
         {
           "command": "testagent.new.plusButtonClicked",
@@ -354,6 +365,11 @@
           "command": "testagent.new.historyButtonClicked",
           "group": "navigation@1",
           "when": "view == testagent.SidebarProvider"
+        },
+        {
+          "command": "testagent.new.copyWebUiLink",
+          "group": "navigation@2",
+          "when": "view == testagent.SidebarProvider && testagent.new.cloudMode"
         },
         {
           "command": "testagent.new.settingsButtonClicked",

@@ -2,6 +2,7 @@ import * as vscode from "vscode"
 import * as path from "path"
 import * as net from "net" // testagent_change - import net at top level
 import { isTestagentBun } from "./services/cli-backend/runtime"
+import { isCloudMode } from "./services/cli-backend/cloud-mode" // testagent_change - gate Web UI link button
 import { KiloProvider } from "./KiloProvider"
 import { AgentManagerProvider } from "./agent-manager/AgentManagerProvider"
 import { VscodeHost } from "./agent-manager/vscode-host"
@@ -13,6 +14,7 @@ import { SettingsEditorProvider } from "./SettingsEditorProvider"
 import { SubAgentViewerProvider } from "./SubAgentViewerProvider"
 import { EXTENSION_DISPLAY_NAME } from "./constants"
 import { KiloConnectionService } from "./services/cli-backend"
+import { formatWebUiLink } from "./services/cli-backend/share-link" // testagent_change - copy web UI share link
 import { registerAutocompleteProvider } from "./services/autocomplete"
 import { ensureBackendForAutocomplete } from "./services/autocomplete/ensure-backend"
 import { AutocompleteServiceManager } from "./services/autocomplete/AutocompleteServiceManager"
@@ -32,6 +34,10 @@ import { PythonInterpreterService } from "./services/python-interpreter" // test
 // it starts lazily when a webview connects or when ensureBackendForAutocomplete() triggers it.
 export function activate(context: vscode.ExtensionContext) {
   console.log("TestAgent extension is now active")
+
+  // testagent_change start - only expose the "copy Web UI link" command in cloud mode
+  vscode.commands.executeCommand("setContext", "testagent.new.cloudMode", isCloudMode())
+  // testagent_change end
 
   // testagent_change start - Initialize Python interpreter service
   console.log("[TestAgent] Initializing Python interpreter service...")
@@ -264,6 +270,22 @@ export function activate(context: vscode.ExtensionContext) {
       if (tab) tab.postMessage({ type: "action", action: "plusButtonClicked" })
       else provider.postMessage({ type: "action", action: "plusButtonClicked" })
     }),
+    // testagent_change start - copy a shareable web UI link (with auth_token) to the clipboard
+    vscode.commands.registerCommand("testagent.new.copyWebUiLink", async () => {
+      const config = connectionService.getServerConfig()
+      const port = connectionService.getServerInfo()?.port
+      if (!config || !port) {
+        vscode.window.showWarningMessage("Web UI 尚未启动")
+        return
+      }
+      const url = formatWebUiLink({ port, password: config.password })
+      await vscode.env.clipboard.writeText(url)
+      const open = "打开"
+      vscode.window.showInformationMessage(`Web UI 链接已复制：${url}`, open).then((pick) => {
+        if (pick === open) vscode.env.openExternal(vscode.Uri.parse(url))
+      })
+    }),
+    // testagent_change end
     // testagent_change 增加reloadSkills
     vscode.commands.registerCommand("testagent.new.reloadSkills", async () => {
       try {
