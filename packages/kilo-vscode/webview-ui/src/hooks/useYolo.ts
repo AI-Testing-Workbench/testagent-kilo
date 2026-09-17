@@ -34,13 +34,12 @@ export function useYolo(vscode?: ReturnType<typeof useVSCode>, session?: ReturnT
   const [busy, setBusy] = createSignal(false)
   let counter = 0
 
-  // 监听 extension 回推的 YOLO 状态（toggle 确认 / 查询结果），收到即校正并解除 busy
+  // 监听 extension 回推的 YOLO 状态（toggle 确认 / 查询结果），收到即校正并解除 busy。
+  // ok:false 表示后端写入失败：enabled 是服务端/本地的真实值，直接回滚乐观更新。
   const unsubscribe = api.onMessage((message: ExtensionMessage) => {
     if (message.type !== "yoloStatus") return
-    if (message.ok) {
-      setYolo(message.enabled)
-      setBusy(false)
-    }
+    setYolo(message.enabled)
+    setBusy(false)
   })
   onCleanup(unsubscribe)
 

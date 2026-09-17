@@ -472,12 +472,41 @@ export interface RequestYoloStatusMessage {
    打包命令：`bun run testagent-nodejs:vsix`（packages/kilo-vscode/）+ `code-insiders --install-extension`。
 2. **状态不持久化**：两侧均为内存态（extension host + CLI 进程），VS Code 重启后复位——
    与用户要求一致；如需跨重启保留，可在 toggle 时落盘到用户 settings。
-3. **同步失败不自愈**：`handleYoloToggle` 双写后端失败只记日志；
-   若 CLI 进程恰好重启（server 侧复位为 false）而 extension 侧仍为 true，
-   行为短暂不一致，直到下一次 toggle 或 reload window 查询自愈。
-4. **无连续错误熔断**：cline yolo 下连续错误直接 stop；opencode 侧有独立的 doom-loop 机制，
-   语义不对应，未组合。
+3. ~~**同步失败不自愈**~~（v2 已修）：`handleYoloToggle` 现先写后端成功再回推确认，
+   失败回 `ok:false` 让 webview 回滚乐观更新；`handleYoloStatus` 以后端为唯一事实源，
+   多 provider 实例的 stale `true` 也能被查询纠正。
+4. ~~**无连续错误熔断**~~（v2 已修）：见§十"错误自动续跑"，有界退避续跑已补上。
 5. **`reset()` 未接线**：`Yolo.reset()` 已提供但尚未挂到进程退出钩子
    （纯内存布尔，进程退出即消失，无泄漏风险，接线属可选）。
 6. **预存问题未处理**（非本次引入，基线对比确认）：50 个后端 typecheck 错误、
    extension/webview 预存错误、knip/kilocode-change 失败（构建产物 `node.js.map` 含上游标记）。
+   > 补充：`check-kilocode-change` 的 `kilocode_change` 命中全部来自 gitignored 的历史构建产物
+   > `nodejs-server/node.js.map`（`src`/`webview-ui` 源码命中数为 0），清一次构建产物即恢复绿。
+
+## 十、v2 无人值守加固（对标 cline 分层错误处理）
+
+背景：v1 的"自动续跑"（completion guard）只识别**提问式收尾**，无法处理模型/网络
+报错、存量审批卡死、状态脱节——这些恰是无人值守最大隐患。v2 参照 cline 的分层哲学
+（`/Users/findly/other/cline`：传输层重试有 `!accepted` 闸门、agent 层 hard error 一律 fail、
+YOLO 交给外层重跑）逐项补齐。
+
+| 项 | 位置 | 行为 |
+| --- | --- | --- |
+| 存量挂起唤醒 | `permission/index.ts` / `question/index.ts` + `yolo.ts:onEnabled()` | 开启 YOLO 的**瞬间**，对已在 `Deferred.await` 的用户请求 raceFirst 放行（权限=once、问题=首选项，发对应 replied 事件），不写持久规则、不复活已 reject 的请求（幂等） |
+| 流式重试闸门 | `processor.ts` `ctx.emitted` + `retry.ts` `policy({stop})` | 本轮**已流出** text/reasoning/tool-input 后，网络中断不再整请求重试（对齐 cline `!accepted`），避免重复吐字/重放工具 |
+| 错误自动续跑（有界） | `session/prompt.ts` runLoop | 瞬态失败（`APIError`/`UnknownError`）→ 注入 `[SYSTEM]` 提醒、2s 起指数退避、**≤3 次**重跑；取得进展即清零。abort/鉴权/溢出/结构化不复活（交重试层或按原逻辑终止） |
+| guard 信号扩展 | `session/prompt.ts` + `yolo-prompt.ts:CONTINUE` | completion guard 不再只认提问式收尾：`finish==="length"`（token 截断）、空轮（零文本/文件）也算"没干完"→ 注入 CONTINUE 续跑（对齐 cline MAX_TOKENS_INCOMPLETE/empty 处理） |
+| 前后端一致性 | `KiloProvider.ts` + `useYolo.ts` | toggle server-first，失败回滚；status 查询以后端为事实源 |
+| 脚本化初始态 | `yolo.ts` | `let enabled = process.env.TESTAGENT_YOLO === "1"`，CI/无人值守启动即开启 |
+| 事件订阅 | `yolo.ts` | `GlobalBus` 从"空发"变为 `onEnabled()` 的实际订阅者 |
+
+设计要点：
+- **分层不掩盖错误**：guard/续跑只兜"没干完"，hard error 的**根因**仍由重试层处理；
+  自动续跑仅对瞬态错误、且次数有上限，避免重撞同一堵墙烧 token（这是 v1 完全缺失的一道）。
+- **纯模块 + GlobalBus**：`onEnabled()` 仍是无 Effect 上下文依赖的纯函数，
+  `permission`/`question` 用 `Yolo.onEnabled().pipe(Effect.flatMap(放行逻辑))` 挂到各自 `ask`，
+  不引入 layer 组合问题。
+
+验证：`test/testagent/yolo.test.ts` 由 6→9 例（+3：权限存量唤醒 / 问题存量唤醒 /
+用户先 reject 后开启不复活）；typecheck 与 session/permission/question 套件基线对比**无新增失败**
+（prompt.test.ts 有 langfuse 插件预存的 3s 超时抖动，基线亦 4~12 fail 波动，非本次引入）。

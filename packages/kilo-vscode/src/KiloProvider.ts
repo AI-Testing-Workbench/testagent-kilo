@@ -2115,32 +2115,39 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
   }
 
   // testagent_change start - YOLO 模式开关（全局开关，与 session 无关）
-  // 状态设计：extension host 内存持有为事实源（VS Code 重启才重置），
-  // 同时双写后端 server（reload window 后 webview 重挂载时从后端恢复，保证不断档）。
+  // 状态设计（v3 修正）：后端 server 是唯一事实源，extension host 内存只是缓存
+  // （供 client 未就绪时兜底显示）。toggle 必须等 server 写入成功后才回推确认，
+  // 失败回推 ok:false 让 webview 回滚，避免"UI 常显 ON、后端实际 OFF"的脱节。
   private yoloEnabled = false
 
-  /** 切换 YOLO 全局开关，并把最新状态回推给 webview（public：供外部命令调用） */
+  /** 切换 YOLO 全局开关：先写后端，成功后回推确认（public：供外部命令调用） */
   public async handleYoloToggle(enabled: boolean): Promise<void> {
+    const client = this.client
+    if (client) {
+      try {
+        await client.testagent.yolo.set({ directory: this.getWorkspaceDirectory(), enabled })
+        this.yoloEnabled = enabled
+        this.postMessage({ type: "yoloStatus", ok: true, enabled, requestId: "" })
+      } catch (error) {
+        console.error("[TestAgent] yolo sync to server failed:", error)
+        // 后端写入失败：本地保持原值，回推 ok:false + 当前真实值供 webview 回滚乐观更新
+        this.postMessage({ type: "yoloStatus", ok: false, enabled: this.yoloEnabled, requestId: "" })
+      }
+      return
+    }
+    // server 未就绪：暂存本地内存，待重挂载查询时以 server 为准校正
     this.yoloEnabled = enabled
     this.postMessage({ type: "yoloStatus", ok: true, enabled, requestId: "" })
-    const client = this.client
-    if (!client) return
-    try {
-      await client.testagent.yolo.set({ directory: this.getWorkspaceDirectory(), enabled })
-    } catch (error) {
-      console.error("[TestAgent] yolo sync to server failed:", error)
-    }
   }
 
-  /** 查询 YOLO 状态：extension 内存优先，未初始化/查询失败时回退后端 */
+  /** 查询 YOLO 状态：以后端 server 为事实源，查询失败时才回退 extension 内存 */
   private async handleYoloStatus(requestId: string): Promise<void> {
     const client = this.client
     if (!client) return
     try {
       const res = await client.testagent.yolo.get({ directory: this.getWorkspaceDirectory() })
-      const serverEnabled = res.data?.enabled ?? false
-      // 后端比 extension 新（例如 CLI 侧直接调用 API 改过状态）时以后端为准
-      this.yoloEnabled = this.yoloEnabled || serverEnabled
+      // 后端是唯一事实源：false 同样覆盖本地 stale true（多 provider 实例可被纠正）
+      this.yoloEnabled = res.data?.enabled ?? false
       this.postMessage({ type: "yoloStatus", ok: true, enabled: this.yoloEnabled, requestId })
     } catch (error) {
       this.postMessage({ type: "yoloStatus", ok: true, enabled: this.yoloEnabled, requestId })
