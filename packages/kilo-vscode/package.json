@@ -358,6 +358,8 @@
         {
           "command": "testagent.new.setYolo",
           "when": "false"
+        },
+        {
           "command": "testagent.new.copyWebUiLink",
           "when": "testagent.new.cloudMode"
         }
