@@ -359,6 +359,9 @@ const notifiedEventIds: Set<string> = new Set()
 
 export class KiloProvider implements vscode.WebviewViewProvider, TelemetryPropertiesProvider {
   public static readonly viewType = "testagent.SidebarProvider" // testagent_change
+  // testagent_change start - 所有存活实例，供外部命令广播 yolo 等全局状态
+  public static readonly instances = new Set<KiloProvider>()
+  // testagent_change end
   private readonly instanceId = crypto.randomUUID()
   private webviewType: "sidebar" | "panel" | "unknown" = "unknown" // testagent_change
 
@@ -487,6 +490,7 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
   ) {
     this.projectDirectory = options?.projectDirectory
     this.slimEditMetadata = options?.slimEditMetadata ?? true
+    KiloProvider.instances.add(this) // testagent_change
 
     TelemetryProxy.getInstance().setProvider(this)
 
@@ -1347,6 +1351,14 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
           )
           break
         // testagent_change end
+        // testagent_change start - YOLO 模式开关
+        case "requestYoloToggle":
+          await this.handleYoloToggle(message.enabled)
+          break
+        case "requestYoloStatus":
+          void this.handleYoloStatus(message.requestId)
+          break
+        // testagent_change end
         case "requestTerminalContext":
           void this.handleTerminalContext(message.requestId)
           break
@@ -2110,6 +2122,47 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
     }
     this.pendingSessionRefresh = ctx.pendingSessionRefresh
   }
+
+  // testagent_change start - YOLO 模式开关（全局开关，与 session 无关）
+  // 状态设计（v3 修正）：后端 server 是唯一事实源，extension host 内存只是缓存
+  // （供 client 未就绪时兜底显示）。toggle 必须等 server 写入成功后才回推确认，
+  // 失败回推 ok:false 让 webview 回滚，避免"UI 常显 ON、后端实际 OFF"的脱节。
+  private yoloEnabled = false
+
+  /** 切换 YOLO 全局开关：先写后端，成功后回推确认（public：供外部命令调用） */
+  public async handleYoloToggle(enabled: boolean): Promise<void> {
+    const client = this.client
+    if (client) {
+      try {
+        await client.testagent.yolo.set({ directory: this.getWorkspaceDirectory(), enabled })
+        this.yoloEnabled = enabled
+        this.postMessage({ type: "yoloStatus", ok: true, enabled, requestId: "" })
+      } catch (error) {
+        console.error("[TestAgent] yolo sync to server failed:", error)
+        // 后端写入失败：本地保持原值，回推 ok:false + 当前真实值供 webview 回滚乐观更新
+        this.postMessage({ type: "yoloStatus", ok: false, enabled: this.yoloEnabled, requestId: "" })
+      }
+      return
+    }
+    // server 未就绪：暂存本地内存，待重挂载查询时以 server 为准校正
+    this.yoloEnabled = enabled
+    this.postMessage({ type: "yoloStatus", ok: true, enabled, requestId: "" })
+  }
+
+  /** 查询 YOLO 状态：以后端 server 为事实源，查询失败时才回退 extension 内存 */
+  private async handleYoloStatus(requestId: string): Promise<void> {
+    const client = this.client
+    if (!client) return
+    try {
+      const res = await client.testagent.yolo.get({ directory: this.getWorkspaceDirectory() })
+      // 后端是唯一事实源：false 同样覆盖本地 stale true（多 provider 实例可被纠正）
+      this.yoloEnabled = res.data?.enabled ?? false
+      this.postMessage({ type: "yoloStatus", ok: true, enabled: this.yoloEnabled, requestId })
+    } catch (error) {
+      this.postMessage({ type: "yoloStatus", ok: true, enabled: this.yoloEnabled, requestId })
+    }
+  }
+  // testagent_change end
 
   private async handleTerminalContext(requestId: string): Promise<void> {
     try {
@@ -5364,6 +5417,7 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
    * Does NOT kill the server — that's the connection service's job.
    */
   dispose(): void {
+    KiloProvider.instances.delete(this) // testagent_change
     this.unsubscribeRemote?.()
     this.focusSession()
     this.statsPoller?.stop()

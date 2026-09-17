@@ -3884,6 +3884,50 @@ export type TestagentAgentOverrideSetResponses = {
 export type TestagentAgentOverrideSetResponse =
   TestagentAgentOverrideSetResponses[keyof TestagentAgentOverrideSetResponses]
 
+export type TestagentYoloGetData = {
+  body?: never
+  path?: never
+  query?: {
+    directory?: string
+    workspace?: string
+  }
+  url: "/testagent/yolo"
+}
+
+export type TestagentYoloGetResponses = {
+  /**
+   * Current YOLO mode
+   */
+  200: {
+    enabled: boolean
+  }
+}
+
+export type TestagentYoloGetResponse = TestagentYoloGetResponses[keyof TestagentYoloGetResponses]
+
+export type TestagentYoloSetData = {
+  body?: {
+    enabled: boolean
+  }
+  path?: never
+  query?: {
+    directory?: string
+    workspace?: string
+  }
+  url: "/testagent/yolo"
+}
+
+export type TestagentYoloSetResponses = {
+  /**
+   * YOLO mode set successfully
+   */
+  200: {
+    applied: boolean
+  }
+}
+
+export type TestagentYoloSetResponse = TestagentYoloSetResponses[keyof TestagentYoloSetResponses]
+
 export type EventSubscribeData = {
   body?: never
   path?: never

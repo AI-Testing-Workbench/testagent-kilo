@@ -111,6 +111,11 @@
         "category": "TestAgent"
       },
       {
+        "command": "testagent.new.setYolo",
+        "title": "Set Yolo Mode",
+        "category": "TestAgent"
+      },
+      {
         "command": "testagent.new.openInTab",
         "title": "TestAgent",
         "icon": {
@@ -351,6 +356,8 @@
     "menus": {
       "commandPalette": [
         {
+          "command": "testagent.new.setYolo",
+          "when": "false"
           "command": "testagent.new.copyWebUiLink",
           "when": "testagent.new.cloudMode"
         }

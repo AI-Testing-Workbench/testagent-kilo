@@ -667,3 +667,26 @@
   justify-content: center;
   margin:4px 0;
 }
+
+/* testagent_change start - YOLO 模式开关 */
+.prompt-input-yolo {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.prompt-input-yolo .prompt-input-yolo-tag {
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.4px;
+  color: var(--vscode-descriptionForeground);
+}
+
+.prompt-input-yolo--active .prompt-input-yolo-tag {
+  color: var(--vscode-charts-green, #4ec9b0);
+}
+
+.prompt-input-yolo--active {
+  color: var(--vscode-charts-green, #4ec9b0);
+}
+/* testagent_change end */
