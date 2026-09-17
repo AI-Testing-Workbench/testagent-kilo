@@ -6,12 +6,11 @@ import * as path from "path"
 import * as vscode from "vscode"
 import { t } from "./i18n"
 import { parseServerPort } from "./server-utils"
-import { isCloudMode } from "./cloud-mode"
+import { CLOUD_SERVER_HOSTNAME, CLOUD_SERVER_PORT, isCloudMode } from "./cloud-mode"
 import {
   clearServerState,
   getServerDataDir,
   getServerLogPath,
-  pickFreePort,
   probeServer,
   readServerState,
   waitForServer,
@@ -179,7 +178,7 @@ export class NodeServerManager {
     const spawnCwd = vscode.workspace.workspaceFolders?.[0]?.uri.fsPath ?? process.env.HOME ?? require("os").homedir()
 
     const cloud = isCloudMode()
-    const port = cloud ? await pickFreePort() : 0
+    const port = cloud ? CLOUD_SERVER_PORT : 0
     // testagent_change start - 启动时环境变量激活源：开关开启注入 TESTAGENT_ZH_ANSWER_ENABLED=1（与运行时按钮切换相互独立）。
     // 运行中按钮切换走 /testagent/zh-answer 热切换，不写环境变量。
     // 企业 ZH relay 地址不再由扩展配置注入：serve 进程通过 ...process.env 透传环境变量 ZH_RELAY_URL，否则插件使用内置默认地址。
@@ -197,7 +196,7 @@ export class NodeServerManager {
         "--password",
         password,
         "--hostname",
-        "127.0.0.1",
+        cloud ? CLOUD_SERVER_HOSTNAME : "127.0.0.1",
       ]
 
       const commonSpawnOpts = {

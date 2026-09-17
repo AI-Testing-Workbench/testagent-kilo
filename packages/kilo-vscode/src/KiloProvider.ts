@@ -70,7 +70,6 @@ import { hasGit } from "./kilo-provider/git-status"
 import { exec } from "./util/process"
 // testagent_change start - testflow integration
 import { SdtRunner } from "./testagent/sdt-runner"
-import { runTaskCommand } from "./testagent/task-runner"
 import { handleInteractiveRun } from "./testagent/sdt-interactive-runner"
 import { handleRequestStages } from "./testagent/sdt-stages-handler"
 import { parseCommandArgs } from "./testagent/command-args"
@@ -1044,6 +1043,16 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
             user_id: message.userId,
             sessionId: message.sessionId,
           })
+          break
+        }
+        case "openTaskQuery": {
+          const ext = vscode.extensions.getExtension("test-tech.testcase-select")
+          if (!ext) {
+            vscode.window.showErrorMessage("未找到 TestCase Select，请先安装。")
+            break
+          }
+          await ext.activate()
+          await vscode.commands.executeCommand("test-tech.task-query")
           break
         }
         // testagent_change end
@@ -3735,34 +3744,6 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
     })
   }
 
-  // testagent_change start - task command handler (task-start / task-query)
-  private async handleTaskCommand(text: string, sessionID?: string, messageID?: string): Promise<void> {
-    const parts = parseCommandArgs(text)
-    const raw = parts[0]?.slice(6) ?? ""
-
-    if (raw !== "query") {
-      void vscode.window.showErrorMessage(`TestAgent: 未知 task 命令 "${raw}"`)
-      return
-    }
-
-    const resolved = await this.resolveSession(sessionID)
-    if (!resolved) {
-      void vscode.window.showErrorMessage("TestAgent: Not connected to CLI backend")
-      return
-    }
-
-    void runTaskCommand({
-      cmd: "query",
-      args: parts.slice(1),
-      cwd: resolved.dir,
-      sessionID: resolved.sid,
-      userText: text,
-      userMessageID: messageID,
-      post: (msg) => this.postMessage(msg),
-    })
-  }
-  // testagent_change end
-
   private async handleSendMessage(
     text: string,
     messageID?: string,
@@ -3779,12 +3760,6 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
     // testagent_change start - intercept /sdt-* commands for testflow
     if (text.startsWith("/sdt-")) {
       await this.handleSdtCommand(text, sessionID, providerID, modelID, messageID, agent)
-      return
-    }
-    // testagent_change end
-    // testagent_change start - intercept /task-* commands
-    if (text.startsWith("/task-")) {
-      await this.handleTaskCommand(text, sessionID, messageID)
       return
     }
     // testagent_change end
@@ -3870,12 +3845,6 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
     // testagent_change start - intercept sdt-* commands for testflow
     if (command.startsWith("sdt-")) {
       await this.handleSdtCommand(`/${command} ${args}`.trim(), sessionID, providerID, modelID, messageID, agent)
-      return
-    }
-    // testagent_change end
-    // testagent_change start - intercept task-* commands
-    if (command.startsWith("task-")) {
-      await this.handleTaskCommand(`/${command} ${args}`.trim(), sessionID, messageID)
       return
     }
     // testagent_change end

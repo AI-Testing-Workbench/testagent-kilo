@@ -7,12 +7,11 @@ import * as path from "path"
 import * as vscode from "vscode"
 import { t } from "./i18n"
 import { parseServerPort } from "./server-utils"
-import { isCloudMode } from "./cloud-mode"
+import { CLOUD_SERVER_HOSTNAME, CLOUD_SERVER_PORT, isCloudMode } from "./cloud-mode"
 import {
   clearServerState,
   getServerDataDir,
   getServerLogPath,
-  pickFreePort,
   probeServer,
   readServerState,
   waitForServer,
@@ -183,8 +182,9 @@ export class ServerManager {
     const spawnCwd = vscode.workspace.workspaceFolders?.[0]?.uri.fsPath ?? process.env.HOME ?? os.homedir()
 
     const cloud = isCloudMode()
-    const port = cloud ? await pickFreePort() : 0
+    const port = cloud ? CLOUD_SERVER_PORT : 0
     const args = ["serve", "--port", String(port)]
+    if (cloud) args.push("--hostname", CLOUD_SERVER_HOSTNAME)
     if (this.logLevel) args.push("--log-level", this.logLevel)
 
     return this.runServer({ cliPath, password, spawnCwd, args, claudeCompat, meta, cloud, port })
