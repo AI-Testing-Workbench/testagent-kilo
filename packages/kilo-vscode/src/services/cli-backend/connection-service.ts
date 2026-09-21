@@ -18,6 +18,8 @@ type MigrationCompleteListener = () => void
 type FavoritesChangeListener = (favorites: Array<{ providerID: string; modelID: string }>) => void
 type ClearPendingPromptsListener = () => void
 type AgentsChangeListener = () => void // testagent_change
+// testagent_change - fired after /mcp/reload rebuilds MCP state from the config file
+type McpReloadListener = () => void
 type DirectoryProvider = () => string[]
 
 // Poll /global/health at the same interval as packages/app/src/context/server.tsx.
@@ -82,6 +84,7 @@ export class KiloConnectionService {
   private readonly favoritesChangeListeners: Set<FavoritesChangeListener> = new Set()
   private readonly clearPendingPromptsListeners: Set<ClearPendingPromptsListener> = new Set()
   private readonly agentsChangeListeners: Set<AgentsChangeListener> = new Set() // testagent_change
+  private readonly mcpReloadListeners: Set<McpReloadListener> = new Set() // testagent_change
   private readonly directoryProviders: Set<DirectoryProvider> = new Set()
   // testagent_change start - track current session ID for aborting retry on auto-compaction
   private getCurrentSessionId: (() => string | undefined) | null = null
@@ -428,6 +431,29 @@ export class KiloConnectionService {
   }
 
   /**
+   * Subscribe to MCP reload events. Returns unsubscribe function.
+   * testagent_change - `/mcp/reload` rebuilds MCP state from the config file alone, so servers
+   * that were registered at runtime (such as the VS Code browser tools bridge) are dropped.
+   * Subscribers that own such a server use this to register it again.
+   */
+  onMcpReloaded(listener: McpReloadListener): () => void {
+    this.mcpReloadListeners.add(listener)
+    return () => {
+      this.mcpReloadListeners.delete(listener)
+    }
+  }
+
+  /**
+   * Broadcast that the backend reloaded its MCP servers from config.
+   * testagent_change
+   */
+  notifyMcpReloaded(): void {
+    for (const listener of this.mcpReloadListeners) {
+      listener()
+    }
+  }
+
+  /**
    * Register a callback that returns workspace directories tracked by a
    * KiloProvider (root + worktree dirs). Used by drainPendingPrompts() to
    * cover all active Instance directories across every provider.
@@ -655,6 +681,7 @@ export class KiloConnectionService {
     this.migrationCompleteListeners.clear()
     this.favoritesChangeListeners.clear()
     this.clearPendingPromptsListeners.clear()
+    this.mcpReloadListeners.clear()
     this.directoryProviders.clear()
     this.messageSessionIdsByMessageId.clear()
     this.focused.clear()

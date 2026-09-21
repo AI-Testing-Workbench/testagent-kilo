@@ -1053,8 +1053,13 @@ export const dict = {
 
   "settings.browser.description":
     "Når aktivert kan AI-agenten samhandle med nettsider — navigere, klikke, skrive og ta skjermbilder. Et Chrome-vindu åpnes slik at du kan se agenten jobbe.",
+  "settings.browser.vscodeTools.title": "Bruk VS Codes innebygde nettleser",
+  "settings.browser.vscodeTools.description":
+    "La agenten arbeide i VS Codes egen nettleser. Ingen ekstra installasjon; sider åpnes i en redigeringsfane. Krever VS Code 1.110 eller nyere og Workbench > Browser: Enable Chat Tools.",
   "settings.browser.enable.title": "Aktiver nettleserautomatisering",
-  "settings.browser.enable.description": "Registrer Playwright MCP-serveren med CLI-backend.",
+  "settings.browser.enable.description":
+    "Registrer Playwright MCP-serveren med CLI-backend. Slår av den innebygde nettleseren ovenfor.",
+  "settings.browser.playwrightOptions.title": "Playwright-alternativer",
   "settings.browser.systemChrome.title": "Bruk system-Chrome",
   "settings.browser.systemChrome.description":
     "Bruk den installerte Chrome-nettleseren i stedet for en separat Chromium-instans.",
@@ -1274,7 +1279,8 @@ export const dict = {
   "settings.checkpoints.enable.title": "Aktiver øyeblikksbilder",
   "settings.checkpoints.enable.description": "Opprett kontrollpunkter før filredigeringer",
   "settings.context.autoCompaction.title": "Automatisk komprimering",
-  "settings.context.autoCompaction.description": "Når konteksten nærmer seg kapasitetsgrensen, sender eldre historikk (uten verktøy, uten systemprompter, media erstattet med plassholdere, verktøyutdata avkortet til 2000 tegn) til en dedikert komprimeringsagent for strukturert oppsummering, beholder de siste 2 samtalene og fortsetter automatisk økten",
+  "settings.context.autoCompaction.description":
+    "Når konteksten nærmer seg kapasitetsgrensen, sender eldre historikk (uten verktøy, uten systemprompter, media erstattet med plassholdere, verktøyutdata avkortet til 2000 tegn) til en dedikert komprimeringsagent for strukturert oppsummering, beholder de siste 2 samtalene og fortsetter automatisk økten",
   "settings.context.prune.title": "Fjern gamle utdata",
   "settings.context.prune.description": "Fjern gamle verktøyutdata under komprimering",
   "settings.context.watcherPatterns": "Filvakt-ignormønstre",

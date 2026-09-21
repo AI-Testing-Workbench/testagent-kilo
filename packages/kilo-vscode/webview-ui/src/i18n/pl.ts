@@ -1054,8 +1054,13 @@ export const dict = {
 
   "settings.browser.description":
     "Po włączeniu agent AI może wchodzić w interakcję ze stronami internetowymi — nawigować, klikać, pisać i robić zrzuty ekranu. Otworzy się okno Chrome, abyś mógł obserwować pracę agenta.",
+  "settings.browser.vscodeTools.title": "Użyj wbudowanej przeglądarki VS Code",
+  "settings.browser.vscodeTools.description":
+    "Pozwól agentowi pracować w przeglądarce wbudowanej w VS Code. Bez dodatkowej instalacji; strony otwierają się w karcie edytora. Wymaga VS Code 1.110 lub nowszego oraz ustawienia Workbench > Browser: Enable Chat Tools.",
   "settings.browser.enable.title": "Włącz automatyzację przeglądarki",
-  "settings.browser.enable.description": "Zarejestruj serwer Playwright MCP w backendzie CLI.",
+  "settings.browser.enable.description":
+    "Zarejestruj serwer Playwright MCP w backendzie CLI. Wyłączy wbudowaną przeglądarkę powyżej.",
+  "settings.browser.playwrightOptions.title": "Opcje Playwright",
   "settings.browser.systemChrome.title": "Użyj systemowego Chrome",
   "settings.browser.systemChrome.description":
     "Użyj zainstalowanej przeglądarki Chrome zamiast oddzielnej instancji Chromium.",
@@ -1282,7 +1287,8 @@ export const dict = {
   "settings.checkpoints.enable.title": "Włącz migawki",
   "settings.checkpoints.enable.description": "Twórz punkty kontrolne przed edycją plików",
   "settings.context.autoCompaction.title": "Automatyczna kompakcja",
-  "settings.context.autoCompaction.description": "Gdy kontekst zbliża się do limitu, wysyła starszą historię (bez narzędzi, bez podpowiedzi systemowych, multimedia zastąpione placeholderami, wyniki narzędzi przycięte do 2000 znaków) do dedykowanego agenta kompresji w celu strukturyzowanego podsumowania, zachowuje ostatnie 2 rundy rozmowy i automatycznie kontynuuje sesję",
+  "settings.context.autoCompaction.description":
+    "Gdy kontekst zbliża się do limitu, wysyła starszą historię (bez narzędzi, bez podpowiedzi systemowych, multimedia zastąpione placeholderami, wyniki narzędzi przycięte do 2000 znaków) do dedykowanego agenta kompresji w celu strukturyzowanego podsumowania, zachowuje ostatnie 2 rundy rozmowy i automatycznie kontynuuje sesję",
   "settings.context.prune.title": "Przytnij stare wyjścia",
   "settings.context.prune.description": "Usuń stare wyjścia narzędzi podczas kompakcji",
   "settings.context.watcherPatterns": "Wzorce ignorowania obserwatora plików",

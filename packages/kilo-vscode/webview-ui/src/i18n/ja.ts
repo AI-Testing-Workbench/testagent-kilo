@@ -1049,8 +1049,13 @@ export const dict = {
 
   "settings.browser.description":
     "有効にすると、AIエージェントがWebページを操作できるようになります — ナビゲーション、クリック、入力、スクリーンショットの撮影。Chromeウィンドウが開き、エージェントの作業を確認できます。",
+  "settings.browser.vscodeTools.title": "VS Code内蔵ブラウザを使用",
+  "settings.browser.vscodeTools.description":
+    "エージェントがVS Code自体のブラウザで操作できるようにします。追加インストールは不要で、ページはエディタータブで開きます。VS Code 1.110以降と Workbench > Browser: Enable Chat Tools 設定が必要です。",
   "settings.browser.enable.title": "ブラウザ自動化を有効にする",
-  "settings.browser.enable.description": "Playwright MCPサーバーをCLIバックエンドに登録します。",
+  "settings.browser.enable.description":
+    "Playwright MCPサーバーをCLIバックエンドに登録します。上の内蔵ブラウザはオフになります。",
+  "settings.browser.playwrightOptions.title": "Playwright のオプション",
   "settings.browser.systemChrome.title": "システムChromeを使用",
   "settings.browser.systemChrome.description":
     "別のChromiumインスタンスの代わりに、インストール済みのChromeブラウザを使用します。",
@@ -1272,7 +1277,8 @@ export const dict = {
   "settings.checkpoints.enable.title": "スナップショットを有効にする",
   "settings.checkpoints.enable.description": "ファイル編集前にチェックポイントを作成して以前の状態を復元可能にする",
   "settings.context.autoCompaction.title": "自動圧縮",
-  "settings.context.autoCompaction.description": "コンテキストが容量に近づくと、古い履歴（ツールなし、システムプロンプトなし、メディアはプレースホルダーに置換、ツール出力は2000文字に切り捨て）を専用の圧縮エージェントに送り構造化要約し、最新2ターンを保持して自動的に会話を続行します",
+  "settings.context.autoCompaction.description":
+    "コンテキストが容量に近づくと、古い履歴（ツールなし、システムプロンプトなし、メディアはプレースホルダーに置換、ツール出力は2000文字に切り捨て）を専用の圧縮エージェントに送り構造化要約し、最新2ターンを保持して自動的に会話を続行します",
   "settings.context.prune.title": "古い出力を削除",
   "settings.context.prune.description": "圧縮時に古いツール出力を削除",
   "settings.context.watcherPatterns": "ファイルウォッチャー無視パターン",

@@ -1065,8 +1065,13 @@ export const dict = {
 
   "settings.browser.description":
     "Wenn aktiviert, kann der KI-Agent mit Webseiten interagieren — navigieren, klicken, tippen und Screenshots erstellen. Ein Chrome-Fenster wird geöffnet, damit Sie dem Agenten bei der Arbeit zusehen können.",
+  "settings.browser.vscodeTools.title": "Integrierten Browser von VS Code verwenden",
+  "settings.browser.vscodeTools.description":
+    "Den Agent im eigenen Browser von VS Code arbeiten lassen. Keine zusätzliche Installation; Seiten öffnen sich in einem Editor-Tab. Erfordert VS Code 1.110 oder neuer und die Einstellung Workbench > Browser: Enable Chat Tools.",
   "settings.browser.enable.title": "Browser-Automatisierung aktivieren",
-  "settings.browser.enable.description": "Den Playwright-MCP-Server beim CLI-Backend registrieren.",
+  "settings.browser.enable.description":
+    "Den Playwright-MCP-Server beim CLI-Backend registrieren. Schaltet den integrierten Browser oben aus.",
+  "settings.browser.playwrightOptions.title": "Playwright-Optionen",
   "settings.browser.systemChrome.title": "System-Chrome verwenden",
   "settings.browser.systemChrome.description":
     "Verwenden Sie Ihren installierten Chrome-Browser anstelle einer separaten Chromium-Instanz.",
@@ -1298,7 +1303,8 @@ export const dict = {
   "settings.checkpoints.enable.description":
     "Prüfpunkte vor Dateibearbeitungen erstellen, um vorherige Zustände wiederherstellen zu können",
   "settings.context.autoCompaction.title": "Automatische Komprimierung",
-  "settings.context.autoCompaction.description": "Wenn der Kontext sich der Kapazitätsgrenze nähert, sendet den älteren Verlauf (keine Tools, keine System-Prompts, Medien durch Platzhalter ersetzt, Tool-Ausgaben auf 2000 Zeichen gekürzt) an einen speziellen Komprimierungsagenten zur strukturierten Zusammenfassung, behält die letzten 2 Gesprächsrunden und setzt die Sitzung automatisch fort",
+  "settings.context.autoCompaction.description":
+    "Wenn der Kontext sich der Kapazitätsgrenze nähert, sendet den älteren Verlauf (keine Tools, keine System-Prompts, Medien durch Platzhalter ersetzt, Tool-Ausgaben auf 2000 Zeichen gekürzt) an einen speziellen Komprimierungsagenten zur strukturierten Zusammenfassung, behält die letzten 2 Gesprächsrunden und setzt die Sitzung automatisch fort",
   "settings.context.prune.title": "Alte Ausgaben bereinigen",
   "settings.context.prune.description": "Alte Werkzeugausgaben während der Komprimierung entfernen",
   "settings.context.watcherPatterns": "Datei-Watcher-Ignorierungsmuster",
