@@ -14,7 +14,7 @@ const BrowserTab: Component = () => {
     enabled: false,
     useSystemChrome: true,
     headless: false,
-    vscodeBrowserTools: true,
+    vscodeBrowserTools: false,
   })
 
   onMount(() => {

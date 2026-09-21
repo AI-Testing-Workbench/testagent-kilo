@@ -362,12 +362,12 @@ export class VscodeBrowserToolsService implements vscode.Disposable {
   }
 
   private enabled(): boolean {
-    if (!vscode.workspace.getConfiguration("testagent.new.vscodeBrowserTools").get<boolean>("enabled", true)) {
+    if (!vscode.workspace.getConfiguration("testagent.new.vscodeBrowserTools").get<boolean>("enabled", false)) {
       return false
     }
     // The two browser backends are mutually exclusive. The settings panel writes the other one off,
-    // but a hand-edited settings.json could still hold both as true. Playwright wins that tie: it is
-    // the explicit opt-in of the two, while these tools are on by default.
+    // but a hand-edited settings.json could still hold both as true. Playwright wins that tie: the
+    // panel mirrors the same rule, so what it shows is what the agent actually gets.
     return !vscode.workspace.getConfiguration("testagent.new.browserAutomation").get<boolean>("enabled", false)
   }
 

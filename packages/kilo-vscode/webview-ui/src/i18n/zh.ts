@@ -1070,12 +1070,12 @@ export const dict = {
   "settings.agentBehaviour.subtab.skills": "技能",
 
   "settings.browser.description":
-    "选择 AI 智能体操作网页的方式：导航、点击、输入和截图。下方两种后端同一时间只能启用一种。", // testagent_change
-  "settings.browser.vscodeTools.title": "使用 VS Code 内置浏览器", // testagent_change
+    "选择 AI 智能体操作网页的方式：导航、点击、输入和截图。", // testagent_change
+  "settings.browser.vscodeTools.title": "使用 TS Code 内置浏览器", // testagent_change
   "settings.browser.vscodeTools.description":
-    "让智能体在 VS Code 自带的浏览器中操作，页面在编辑器标签页中打开，无需额外安装。需要 VS Code 1.110 及以上，并开启“Workbench > Browser: Enable Chat Tools”。", // testagent_change
+    "让TestAgent在 TS Code 自带的浏览器中操作，页面在编辑器标签页中打开。", // testagent_change
   "settings.browser.enable.title": "启用浏览器自动化",
-  "settings.browser.enable.description": "将 Playwright MCP 服务器注册到 CLI 后端，会自动关闭上方的内置浏览器。",
+  "settings.browser.enable.description": "将 Playwright MCP 服务器注册到 CLI 后端。",
   "settings.browser.playwrightOptions.title": "Playwright 选项", // testagent_change
   "settings.browser.systemChrome.title": "使用系统 Chrome",
   "settings.browser.systemChrome.description": "使用已安装的 Chrome 浏览器，而不是单独的 Chromium 实例。",

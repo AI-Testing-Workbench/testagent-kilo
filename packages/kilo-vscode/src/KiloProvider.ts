@@ -4706,7 +4706,9 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
         enabled: automation.get<boolean>("enabled", false),
         useSystemChrome: automation.get<boolean>("useSystemChrome", true),
         headless: automation.get<boolean>("headless", false),
-        vscodeBrowserTools: tools.get<boolean>("enabled", true),
+        // testagent_change - report what is actually in effect. The tools service declines to
+        // register while Playwright is on, and a hand-edited settings.json can hold both as true.
+        vscodeBrowserTools: tools.get<boolean>("enabled", false) && !automation.get<boolean>("enabled", false),
       },
     })
   }
