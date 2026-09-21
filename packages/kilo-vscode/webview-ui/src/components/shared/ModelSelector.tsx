@@ -154,6 +154,8 @@ export const ModelSelectorBase: Component<ModelSelectorBaseProps> = (props) => {
     const c = connected()
     return models().filter((m) => {
       if (!props.includeAutoSmall && isSmall(m)) return false
+      // testagent_change: Filter out specific model
+      if (m.providerID === "test-llm" && m.id === "Economy") return false
       // testagent_change
       // 显示所有已连接的供应商
       if (c.includes(m.providerID)) return true
