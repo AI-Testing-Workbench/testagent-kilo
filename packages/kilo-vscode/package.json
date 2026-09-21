@@ -559,7 +559,7 @@
         },
         "testagent.new.vscodeBrowserTools.enabled": {
           "type": "boolean",
-          "default": true,
+          "default": false,
           "description": "Let the AI agent use VS Code's integrated browser (open, read, screenshot and navigate pages). Requires VS Code 1.110 or newer and the \"Workbench > Browser: Enable Chat Tools\" (workbench.browser.enableChatTools) setting. Mutually exclusive with testagent.new.browserAutomation.enabled — enabling that turns this off."
         },
         "testagent.new.notifications.agent": {
