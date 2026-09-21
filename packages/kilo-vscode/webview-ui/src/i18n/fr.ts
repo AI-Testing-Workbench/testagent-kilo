@@ -1067,8 +1067,13 @@ export const dict = {
 
   "settings.browser.description":
     "Lorsqu'il est activé, l'agent IA peut interagir avec les pages web — naviguer, cliquer, saisir du texte et prendre des captures d'écran. Une fenêtre Chrome s'ouvrira pour que vous puissiez observer l'agent travailler.",
+  "settings.browser.vscodeTools.title": "Utiliser le navigateur intégré de VS Code",
+  "settings.browser.vscodeTools.description":
+    "Permettre à l'agent de travailler dans le navigateur intégré de VS Code. Aucune installation supplémentaire ; les pages s'ouvrent dans un onglet d'éditeur. Nécessite VS Code 1.110 ou une version ultérieure et le paramètre Workbench > Browser: Enable Chat Tools.",
   "settings.browser.enable.title": "Activer l'automatisation du navigateur",
-  "settings.browser.enable.description": "Enregistrer le serveur Playwright MCP auprès du backend CLI.",
+  "settings.browser.enable.description":
+    "Enregistrer le serveur Playwright MCP auprès du backend CLI. Désactive le navigateur intégré ci-dessus.",
+  "settings.browser.playwrightOptions.title": "Options Playwright",
   "settings.browser.systemChrome.title": "Utiliser le Chrome système",
   "settings.browser.systemChrome.description":
     "Utiliser votre navigateur Chrome installé au lieu d'une instance Chromium séparée.",
@@ -1303,7 +1308,8 @@ export const dict = {
   "settings.checkpoints.enable.title": "Activer les instantanés",
   "settings.checkpoints.enable.description": "Créer des points de contrôle avant les modifications de fichiers",
   "settings.context.autoCompaction.title": "Compaction automatique",
-  "settings.context.autoCompaction.description": "Lorsque le contexte approche de sa capacité, envoie l'historique ancien (sans outils, sans invites système, médias remplacés par des placeholders, sorties d'outils tronquées à 2000 caractères) à un agent de compression pour un résumé structuré, conserve les 2 derniers tours et continue automatiquement la session",
+  "settings.context.autoCompaction.description":
+    "Lorsque le contexte approche de sa capacité, envoie l'historique ancien (sans outils, sans invites système, médias remplacés par des placeholders, sorties d'outils tronquées à 2000 caractères) à un agent de compression pour un résumé structuré, conserve les 2 derniers tours et continue automatiquement la session",
   "settings.context.prune.title": "Élaguer les anciennes sorties",
   "settings.context.prune.description": "Supprimer les anciennes sorties d'outils pendant la compaction",
   "settings.context.watcherPatterns": "Motifs d'ignorance de l'observateur",
