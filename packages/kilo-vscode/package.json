@@ -46,7 +46,13 @@
     "kilocode"
   ],
   "activationEvents": [
-    "onStartupFinished"
+    "onStartupFinished",
+    "onCommand:testagent.new.agentManager.prepareSkillEvaluation",
+    "onCommand:testagent.new.agentManager.openSkillEvaluationSession",
+    "onCommand:testagent.new.agentManager.getSkillEvaluationResults",
+    "onCommand:testagent.new.agentManager.refreshSkillEvaluationResult",
+    "onCommand:testagent.new.agentManager.cleanupSkillEvaluationResult",
+    "onCommand:testagent.new.agentManager.deleteSkillEvaluationResult"
   ],
   "main": "./dist/extension.js",
   "contributes": {
@@ -80,6 +86,36 @@
       ]
     },
     "commands": [
+      {
+        "command": "testagent.new.agentManager.prepareSkillEvaluation",
+        "title": "Agent Manager: Prepare Skill Evaluation",
+        "category": "TestAgent"
+      },
+      {
+        "command": "testagent.new.agentManager.openSkillEvaluationSession",
+        "title": "Agent Manager: Open Skill Evaluation Session",
+        "category": "TestAgent"
+      },
+      {
+        "command": "testagent.new.agentManager.getSkillEvaluationResults",
+        "title": "Agent Manager: Get Skill Evaluation Results",
+        "category": "TestAgent"
+      },
+      {
+        "command": "testagent.new.agentManager.refreshSkillEvaluationResult",
+        "title": "Agent Manager: Refresh Skill Evaluation Result",
+        "category": "TestAgent"
+      },
+      {
+        "command": "testagent.new.agentManager.cleanupSkillEvaluationResult",
+        "title": "Agent Manager: Clean Up Skill Evaluation Result",
+        "category": "TestAgent"
+      },
+      {
+        "command": "testagent.new.agentManager.deleteSkillEvaluationResult",
+        "title": "Agent Manager: Delete Skill Evaluation Result",
+        "category": "TestAgent"
+      },
       {
         "command": "testagent.new.plusButtonClicked",
         "title": "新建任务",

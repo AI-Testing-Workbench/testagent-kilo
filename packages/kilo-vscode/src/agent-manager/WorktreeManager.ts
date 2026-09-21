@@ -146,6 +146,7 @@ export class WorktreeManager {
     baseBranch?: string
     branchName?: string
     onProgress?: (step: WorktreeProgressStep, message: string, detail?: string) => void
+    localOnly?: boolean
   }): Promise<CreateWorktreeResult> {
     await this.ensureMigrated()
     return this.withGitLock(() => this.createWorktreeImpl(params))
@@ -170,6 +171,7 @@ export class WorktreeManager {
     baseBranch?: string
     branchName?: string
     onProgress?: (step: WorktreeProgressStep, message: string, detail?: string) => void
+    localOnly?: boolean
   }): Promise<CreateWorktreeResult> {
     await this.ensureGitAvailable()
     const repo = await this.git.checkIsRepo()
@@ -198,7 +200,7 @@ export class WorktreeManager {
     if (params.existingBranch) {
       // Existing branch provided directly — only attach remote when the
       // remote tracking ref actually exists (the branch may be local-only).
-      const remote = await this.resolveRemote()
+      const remote = await this.remote(params.localOnly)
       const hasRemoteRef = remote && (await this.refExistsLocally(`${remote}/${params.existingBranch}`))
       parent = params.existingBranch
       parentRemote = hasRemoteRef ? remote : undefined
@@ -210,11 +212,12 @@ export class WorktreeManager {
       }
     } else {
       // Resolve best start point for new branch
-      const requestedBase = params.baseBranch || (await this.defaultBranch())
+      const requestedBase = params.baseBranch || (await this.defaultBranch(params.localOnly))
       params.onProgress?.("verifying", `Resolving start point: ${requestedBase}`)
 
       startPoint = await this.resolveStartPoint(requestedBase, params.onProgress, {
         allowFallback: !params.baseBranch, // Only fallback if user didn't explicitly request a specific base
+        localOnly: params.localOnly,
       })
       parent = startPoint.branch
       parentRemote = startPoint.remote
@@ -640,12 +643,12 @@ export class WorktreeManager {
   async resolveStartPoint(
     branch: string,
     onProgress?: (step: WorktreeProgressStep, message: string, detail?: string) => void,
-    opts?: { allowFallback?: boolean },
+    opts?: { allowFallback?: boolean; localOnly?: boolean },
   ): Promise<StartPointResult> {
-    const { allowFallback = true } = opts || {}
+    const { allowFallback = true, localOnly = false } = opts || {}
 
     // 1. Remote fetch (with caching to avoid redundant fetches in multi-version mode)
-    const remote = await this.resolveRemote()
+    const remote = localOnly ? undefined : await this.resolveRemote()
     if (remote) {
       const cacheKey = `${this.root}:${remote}:${branch}`
       const cached = WorktreeManager.fetchCache.get(cacheKey)
@@ -703,11 +706,11 @@ export class WorktreeManager {
 
     // 4. Derived fallback
     if (allowFallback) {
-      const fallbacks = await this.derivedFallbackBranches(branch)
+      const fallbacks = await this.derivedFallbackBranches(branch, localOnly)
       for (const fallback of fallbacks) {
         if (fallback === branch) continue // already tried
         try {
-          const res = await this.resolveStartPoint(fallback, onProgress, { allowFallback: false })
+          const res = await this.resolveStartPoint(fallback, onProgress, { allowFallback: false, localOnly })
           return {
             ...res,
             source: "fallback",
@@ -720,6 +723,11 @@ export class WorktreeManager {
     }
 
     throw new Error(`Could not resolve start point for branch "${branch}"`)
+  }
+
+  private async remote(localOnly = false): Promise<string | undefined> {
+    if (localOnly) return undefined
+    return this.resolveRemote()
   }
 
   /**
@@ -751,10 +759,10 @@ export class WorktreeManager {
     }
   }
 
-  async derivedFallbackBranches(requested: string): Promise<string[]> {
+  async derivedFallbackBranches(requested: string, localOnly = false): Promise<string[]> {
     const defaults = []
     try {
-      defaults.push(await this.defaultBranch())
+      defaults.push(await this.defaultBranch(localOnly))
     } catch (e) {
       this.log(`derivedFallbackBranches: failed to determine default branch: ${e}`)
     }
@@ -828,9 +836,9 @@ export class WorktreeManager {
     return { branch }
   }
 
-  async defaultBranch(): Promise<string> {
+  async defaultBranch(localOnly = false): Promise<string> {
     // 1. Try symbolic-ref against the resolved remote (not hardcoded "origin")
-    const remote = await this.resolveRemote()
+    const remote = await this.remote(localOnly)
     if (remote) {
       try {
         const head = await this.git.raw(["symbolic-ref", `refs/remotes/${remote}/HEAD`])

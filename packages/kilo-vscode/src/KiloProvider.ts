@@ -4777,8 +4777,10 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
         this.cachedChatTipsMessage = message
         this.postMessage(message)
       })
-      .catch((err) => {
-        console.error("[TestAgent]  ❌ Failed to fetch chat tips:", err)
+      .catch(() => {
+        const message = { type: "chatTipsLoaded", tips: [] }
+        this.cachedChatTipsMessage = message
+        this.postMessage(message)
       })
       .finally(() => clearTimeout(timer))
   }

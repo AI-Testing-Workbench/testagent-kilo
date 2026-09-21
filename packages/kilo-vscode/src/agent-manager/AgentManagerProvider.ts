@@ -1,6 +1,7 @@
 import * as fs from "fs"
+import * as os from "node:os"
 import * as path from "path"
-import type { KiloClient, Session } from "@kilocode/sdk/v2/client"
+import type { Event, KiloClient, Session } from "@kilocode/sdk/v2/client"
 import type { KiloConnectionService } from "../services/cli-backend"
 import { getErrorMessage } from "../kilo-provider-utils"
 import { isAbsolutePath } from "../path-utils"
@@ -34,6 +35,20 @@ import { Semaphore } from "./semaphore"
 import { PLATFORM } from "./constants"
 import type { AgentManagerOutMessage, AgentManagerInMessage } from "./types"
 import type { Host, PanelContext, OutputHandle, Disposable } from "./host"
+import type { SkillEvaluationModelOption, SkillEvaluationRequest } from "./skill-evaluation"
+import { installSkillVersion } from "./SkillArtifactMaterializer"
+import { prepareEvaluation } from "./SkillEvaluationPreparer"
+import { GitRepositoryProbe } from "./GitRepositoryProbe"
+import { SkillEvaluationStore, type SkillEvaluationResult } from "./SkillEvaluationStore"
+import { collectSessionEvaluationMetrics } from "./SessionEvaluationMetrics"
+import { fetchSessionEvaluationMetrics } from "./SkillEvaluationMetricsClient"
+
+
+type SkillEvaluationResource = {
+  worktreeId?: string
+  worktreeExists: boolean
+  sessionExists: boolean
+}
 
 /**
  * AgentManagerProvider opens the Agent Manager panel.
@@ -62,6 +77,17 @@ export class AgentManagerProvider implements Disposable {
   private staleWorktreeIds = new Set<string>()
   private cachedWorktreeStats: { type: "agentManager.worktreeStats"; stats: WorktreeStats[] } | undefined
   private cachedLocalStats: { type: "agentManager.localStats"; stats: LocalStats } | undefined
+  private ready = false
+  private evaluations: SkillEvaluationRequest[] = []
+  private readonly results: SkillEvaluationStore
+  private readonly unsubscribeEvaluationEvents: () => void
+  private readonly evaluationPermissionStarts = new Map<string, { sessionId: string; startedAt: number }>()
+  private readonly evaluationWaits = new Map<string, number>()
+  private readonly evaluationHitl = new Map<string, number>()
+  private evaluationPreparing = false
+  private evaluationRuns = 0
+  private evaluationFocus: { sessionId: string; worktreeId?: string } | undefined
+  private readonly evaluationFinalizing = new Set<string>()
 
   /** Session ID most recently loaded via a `loadMessages` message from the webview.
    *  Updated synchronously — unlike the session provider's currentSession which depends on
@@ -70,8 +96,13 @@ export class AgentManagerProvider implements Disposable {
   constructor(
     private readonly host: Host,
     private readonly connectionService: KiloConnectionService,
+    storage?: string,
   ) {
     this.outputChannel = host.createOutput("TestAgent Manager")
+    const root = storage || path.join(os.homedir(), ".testagent")
+    this.results = new SkillEvaluationStore(path.join(root, "skill-evaluation-results.json"), (message) =>
+      this.log(message),
+    )
     this.terminalManager = new SessionTerminalManager(
       (msg) => this.outputChannel.appendLine(`[SessionTerminal] ${msg}`),
       createTerminalHost(),
@@ -141,6 +172,11 @@ export class AgentManagerProvider implements Disposable {
       log: (...a) => this.log(...a),
       semaphore,
     })
+    this.unsubscribeEvaluationEvents = this.connectionService.onEvent((event) => {
+      void this.onEvaluationEvent(event).catch((error) => {
+        this.log("Failed to finalize Skill evaluation result: " + String(error))
+      })
+    })
   }
 
   private log(...args: unknown[]) {
@@ -190,6 +226,7 @@ export class AgentManagerProvider implements Disposable {
       this.panel = undefined
     }
     this.panel = ctx
+    this.ready = false
 
     this.statsPoller.setVisible(ctx.visible)
     ctx.onDidChangeVisibility((visible) => {
@@ -213,6 +250,8 @@ export class AgentManagerProvider implements Disposable {
         this.prBridge.poller.stop()
         this.diffs.stop()
         this.panel = undefined
+        this.ready = false
+        this.evaluations = []
       }
       ctx.sessions.dispose()
     })
@@ -527,6 +566,8 @@ export class AgentManagerProvider implements Disposable {
   }
 
   private onRequestState(): void {
+    this.ready = true
+    this.flushEvaluations()
     void this.stateReady
       ?.then(() => {
         // When the folder is not a git repo (or has no folder open),
@@ -550,6 +591,7 @@ export class AgentManagerProvider implements Disposable {
         if (this.state.getSessions().length > 0) {
           this.panel?.sessions.refreshSessions()
         }
+        this.postEvaluationFocus()
       })
       .catch((err) => {
         this.log("initializeState failed, pushing partial state:", err)
@@ -598,6 +640,7 @@ export class AgentManagerProvider implements Disposable {
     existingBranch?: string
     name?: string
     label?: string
+    localOnly?: boolean
   }): Promise<{
     worktree: ReturnType<WorktreeStateManager["addWorktree"]>
     result: CreateWorktreeResult
@@ -628,6 +671,7 @@ export class AgentManagerProvider implements Disposable {
         baseBranch: effectiveBase ?? opts?.baseBranch,
         branchName: opts?.branchName,
         existingBranch: opts?.existingBranch,
+        localOnly: opts?.localOnly,
       })
     } catch (error) {
       const msg = error instanceof Error ? error.message : String(error)
@@ -749,6 +793,26 @@ export class AgentManagerProvider implements Disposable {
     await this.stateReady.catch((err) => this.log(`${context}: stateReady rejected, continuing:`, err))
   }
 
+  private async ensureEvaluationState(context: string): Promise<void> {
+    if (!this.stateReady) {
+      if (!this.getWorktreeManager() || !this.getStateManager()) return
+      this.stateReady = this.initializeState()
+    }
+    await this.waitForStateReady(context)
+  }
+
+  private skillEvaluationResource(item: SkillEvaluationResult): SkillEvaluationResource {
+    const state = this.getStateManager()
+    const session = state?.getSession(item.sessionId)
+    const worktreeId = item.worktreeId || session?.worktreeId || undefined
+    const worktree = worktreeId ? state?.getWorktree(worktreeId) : undefined
+    return {
+      worktreeId,
+      worktreeExists: Boolean(worktree && fs.existsSync(this.worktreePath(worktree.path))),
+      sessionExists: Boolean(session && session.worktreeId === worktreeId),
+    }
+  }
+
   // ---------------------------------------------------------------------------
   // Worktree actions
   // ---------------------------------------------------------------------------
@@ -800,20 +864,21 @@ export class AgentManagerProvider implements Disposable {
       this.log(`Worktree ${worktreeId} not found in state`)
       return null
     }
+    const disk = this.worktreePath(worktree.path)
     // Remove from state BEFORE disk removal so pollers immediately stop targeting this worktree.
     // Pre-emptive skip covers any in-flight poll that already captured getWorktrees().
     this.statsPoller.skipWorktree(worktreeId)
     this.prBridge.remove(worktreeId)
     this.run.remove(worktreeId)
     const orphaned = state.removeWorktree(worktreeId)
-    if (this.diffs.shouldStopForWorktree(worktree.path, orphaned)) {
+    if (this.diffs.shouldStopForWorktree(disk, orphaned)) {
       this.diffs.stop()
     }
     for (const s of orphaned) this.panel?.sessions.clearSessionDirectory(s.id)
     this.pushState()
     // Disk removal after state is clean — pollers no longer reference this worktree.
     try {
-      await manager.removeWorktree(worktree.path, worktree.originalBranch ?? worktree.branch)
+      await manager.removeWorktree(disk, worktree.originalBranch ?? worktree.branch)
     } catch (error) {
       this.log(`Failed to remove worktree from disk: ${error}`)
     }
@@ -837,8 +902,9 @@ export class AgentManagerProvider implements Disposable {
       return null
     }
 
+    const disk = this.worktreePath(worktree.path)
     const orphaned = state.removeWorktree(worktreeId)
-    if (this.diffs.shouldStopForWorktree(worktree.path, orphaned)) {
+    if (this.diffs.shouldStopForWorktree(disk, orphaned)) {
       this.diffs.stop()
     }
     for (const session of orphaned) {
@@ -1376,6 +1442,44 @@ export class AgentManagerProvider implements Disposable {
     return this.state
   }
 
+  private worktreePath(value: string): string {
+    const root = this.getRoot()
+    return root && !path.isAbsolute(value) ? path.join(root, value) : value
+  }
+  private getExistingWorktrees() {
+    return this.getStateManager()?.getWorktrees().filter((item) => fs.existsSync(this.worktreePath(item.path))) ?? []
+  }
+
+  private async evaluationState(): Promise<{
+    worktrees: ReturnType<WorktreeStateManager["getWorktrees"]>
+    allIdle: boolean
+  }> {
+    await this.ensureEvaluationState("evaluationState")
+    const state = this.getStateManager()
+    const worktrees = this.getExistingWorktrees()
+    if (!state || worktrees.length === 0) return { worktrees, allIdle: true }
+
+    const idle = await Promise.all(
+      worktrees.map(async (worktree) => {
+        const sessions = state.getSessions(worktree.id)
+        if (sessions.length === 0) return true
+        const directory = this.worktreePath(worktree.path)
+        try {
+          const client = await this.connectionService.getClientAsync(directory)
+          const response = await client.session.status({ directory }, { throwOnError: true })
+          const statuses = response.data ?? {}
+          return sessions.every((session) => !statuses[session.id] || statuses[session.id].type === "idle")
+        } catch (error) {
+          this.log(
+            "Failed to query Skill evaluation worktree session status: " +
+              (error instanceof Error ? error.message : String(error)),
+          )
+          return false
+        }
+      }),
+    )
+    return { worktrees, allIdle: idle.every(Boolean) }
+  }
   private getSetupScriptService(): SetupScriptService | undefined {
     if (this.setupScript) return this.setupScript
     const root = this.getRoot()
@@ -1437,6 +1541,13 @@ export class AgentManagerProvider implements Disposable {
 
   private postToWebview(message: AgentManagerOutMessage): void {
     this.panel?.postMessage(message)
+  }
+
+  private postEvaluationFocus(): void {
+    const target = this.evaluationFocus
+    if (!target || !this.panel || !this.ready) return
+    this.evaluationFocus = undefined
+    this.postToWebview({ type: "agentManager.focusSession", ...target })
   }
 
   /**
@@ -1510,7 +1621,404 @@ export class AgentManagerProvider implements Disposable {
     this.panel?.postMessage(message)
   }
 
+  public async openSkillEvaluationSession(
+    skillId: string,
+    open = true,
+  ): Promise<{
+    success: boolean
+    running: boolean
+    hasWorktrees?: boolean
+    allIdle?: boolean
+    worktreeCount?: number
+    inspectOnly?: boolean
+    sessionId?: string
+    worktreeId?: string
+    error?: { code: string; message: string }
+  }> {
+    const info = await this.evaluationState()
+    const hasWorktrees = info.worktrees.length > 0
+    const running =
+      hasWorktrees || this.evaluationRuns > 0 || this.evaluations.length > 0 || this.evaluationPreparing
+    const base = {
+      success: true,
+      running,
+      hasWorktrees,
+      allIdle: info.allIdle,
+      worktreeCount: info.worktrees.length,
+    }
+    if (!open) return { ...base, inspectOnly: true }
+
+    const state = this.getStateManager()
+    const session = info.worktrees.flatMap((item) => state?.getSessions(item.id) ?? [])[0]
+    if (!running) return base
+    this.openPanel()
+    if (!session) return base
+    this.evaluationFocus = { sessionId: session.id, worktreeId: session.worktreeId ?? undefined }
+    this.panel?.reveal()
+    if (this.ready) void this.stateReady?.then(() => this.postEvaluationFocus())
+    return { ...base, sessionId: session.id, worktreeId: session.worktreeId ?? undefined }
+  }
+  public async getSkillEvaluationResults(
+    skillId: string,
+  ): Promise<Array<SkillEvaluationResult & SkillEvaluationResource>> {
+    await this.ensureEvaluationState("getSkillEvaluationResults")
+    return (await this.results.list(skillId)).map((item) => ({
+      ...item,
+      ...this.skillEvaluationResource(item),
+    }))
+  }
+  public async refreshSkillEvaluationResult(
+    skillId: string,
+    sessionId: string,
+  ): Promise<(SkillEvaluationResult & SkillEvaluationResource) | undefined> {
+    await this.ensureEvaluationState("refreshSkillEvaluationResult")
+    const directory = this.getStateManager()?.directoryFor(sessionId)
+    const previous = (await this.results.list(skillId)).find((item) => item.sessionId === sessionId)?.metrics
+    const data = await this.collectEvaluationMetrics(sessionId, directory)
+    data.metrics.compactedCount ??= previous?.compactedCount
+    data.metrics.userPromptCount ??= previous?.userPromptCount
+    data.metrics.hitlCount ??= previous?.hitlCount
+    const result = await this.results.refresh(skillId, sessionId, data.metrics, data.error)
+    return result ? { ...result, ...this.skillEvaluationResource(result) } : undefined
+  }
+
+  public async deleteSkillEvaluationResult(
+    skillId: string,
+    sessionId: string,
+  ): Promise<{ success: boolean; error?: { code: string; message: string } }> {
+    await this.ensureEvaluationState("deleteSkillEvaluationResult")
+    const removed = await this.results.remove(skillId, sessionId)
+    if (!removed) {
+      return {
+        success: false,
+        error: { code: "evaluation_result_not_found", message: "Evaluation result was not found" },
+      }
+    }
+    this.clearEvaluationTracking(sessionId)
+    return { success: true }
+  }
+  public async cleanupSkillEvaluationResult(
+    skillId: string,
+    sessionId?: string,
+  ): Promise<{ success: boolean; error?: { code: string; message: string } }> {
+    const info = await this.evaluationState()
+    if (!info.worktrees.length) return { success: true }
+    if (!info.allIdle) {
+      return {
+        success: false,
+        error: { code: "evaluation_in_progress", message: "当前项目存在正在运行的 Agent Manager 会话，无法删除 worktree。" },
+      }
+    }
+
+    this.log("Deleting all " + info.worktrees.length + " worktrees for Skill " + skillId)
+    for (const worktree of info.worktrees) await this.onDeleteWorktree(worktree.id)
+    this.panel?.dispose()
+    return { success: true }
+  }
+  private async onEvaluationEvent(event: Event): Promise<void> {
+    const session = this.connectionService.resolveEventSessionId(event)
+    if (event.type === "permission.asked") {
+      const id = event.properties.id
+      this.evaluationPermissionStarts.set(id, { sessionId: event.properties.sessionID, startedAt: Date.now() })
+      this.evaluationHitl.set(event.properties.sessionID, (this.evaluationHitl.get(event.properties.sessionID) ?? 0) + 1)
+      return
+    }
+    if (event.type === "permission.replied") {
+      const pending = this.evaluationPermissionStarts.get(event.properties.requestID)
+      if (pending) {
+        const elapsed = Math.max(0, Date.now() - pending.startedAt)
+        this.evaluationWaits.set(pending.sessionId, (this.evaluationWaits.get(pending.sessionId) ?? 0) + elapsed)
+        this.evaluationPermissionStarts.delete(event.properties.requestID)
+      }
+      return
+    }
+    if (event.type === "question.asked") {
+      if (session) this.evaluationHitl.set(session, (this.evaluationHitl.get(session) ?? 0) + 1)
+      return
+    }
+    if (event.type !== "session.idle" && event.type !== "session.status") return
+    if (event.type === "session.status" && event.properties.status.type !== "idle") return
+    if (!session) return
+    const pending = await this.results.pending()
+    if (!pending.some((item) => item.sessionId === session)) return
+    if (this.evaluationFinalizing.has(session)) return
+    this.evaluationFinalizing.add(session)
+    const directory = this.getStateManager()?.directoryFor(session)
+    if (!directory) {
+      this.evaluationFinalizing.delete(session)
+      return
+    }
+    try {
+      const data = await this.collectEvaluationMetrics(session, directory, true)
+      const result = await this.results.finish(session, data.metrics, data.error)
+      if (result) this.log("Skill evaluation result persisted for session " + session)
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error)
+      const result = await this.results.finish(session, undefined, message)
+      if (result) this.log("Skill evaluation result persisted without metrics for session " + session)
+      this.log("Failed to collect Skill evaluation metrics for session " + session + ": " + message)
+    } finally {
+      this.clearEvaluationTracking(session)
+      this.evaluationFinalizing.delete(session)
+    }
+  }
+
+  private async collectEvaluationMetrics(sessionId: string, directory: string | undefined, delayed = false) {
+    let local: Partial<import("./SkillEvaluationMetricsClient").SkillEvaluationMetrics> = {}
+    let localError: string | undefined
+    try {
+      if (!directory) throw new Error("Session worktree is unavailable")
+      const client = await this.connectionService.getClientAsync(directory)
+      local = await collectSessionEvaluationMetrics({
+        client,
+        directory,
+        sessionId,
+        permissionWaits: Object.fromEntries(this.evaluationWaits),
+        hitlCounts: Object.fromEntries(this.evaluationHitl),
+      })
+    } catch (error) {
+      localError = error instanceof Error ? error.message : String(error)
+    }
+
+    if (delayed) await new Promise<void>((resolve) => setTimeout(resolve, 30_000))
+    let remote: Partial<import("./SkillEvaluationMetricsClient").SkillEvaluationMetrics> = {
+      toolCalls: undefined,
+      toolErrorCount: undefined,
+      subagentCount: undefined,
+      inputTokens: undefined,
+      outputTokens: undefined,
+      totalTokens: undefined,
+      elapsedMs: undefined,
+    }
+    let remoteError: string | undefined
+    for (const attempt of [0, 1, 2]) {
+      try {
+        remote = await fetchSessionEvaluationMetrics(sessionId)
+        remoteError = undefined
+        break
+      } catch (error) {
+        remoteError = error instanceof Error ? error.message : String(error)
+        if (attempt < 2 && delayed) await new Promise<void>((resolve) => setTimeout(resolve, 30_000))
+      }
+    }
+    const metrics = {
+      compactedCount: local.compactedCount,
+      userPromptCount: local.userPromptCount,
+      hitlCount: local.hitlCount,
+      ...remote,
+    }
+    const errors = [localError, remoteError].filter(Boolean)
+    return { metrics, error: errors.length ? errors.join("; ") : undefined }
+  }
+
+  private clearEvaluationTracking(sessionId: string): void {
+    this.evaluationWaits.delete(sessionId)
+    this.evaluationHitl.delete(sessionId)
+    for (const [id, pending] of this.evaluationPermissionStarts) {
+      if (pending.sessionId === sessionId) this.evaluationPermissionStarts.delete(id)
+    }
+  }
+
+  public async prepareSkillEvaluation(input: SkillEvaluationRequest): Promise<boolean> {
+    if (!this.panel || this.evaluationPreparing || this.evaluationRuns > 0 || this.evaluations.length > 0) return false
+    this.evaluationPreparing = true
+    try {
+      await this.ensureEvaluationState("prepareSkillEvaluation")
+      if (this.getExistingWorktrees().length > 0) return false
+      this.evaluations.push(input)
+      this.flushEvaluations()
+      return true
+    } finally {
+      this.evaluationPreparing = false
+    }
+  }
+
+  public async listSkillEvaluationModels(): Promise<SkillEvaluationModelOption[]> {
+    const directory = this.getRoot()
+    if (!directory) return []
+    const client = await this.connectionService.getClientAsync(directory)
+    const response = await client.provider.list({ directory }, { throwOnError: true })
+    const defaults = response.data.default ?? {}
+    const seen = new Set<string>()
+    const models = response.data.all
+      .flatMap((provider) =>
+        Object.values(provider.models).flatMap((model) => {
+          const providerID = model.providerID || provider.id
+          const modelID = model.id
+          const key = `${providerID}/${modelID}`
+          if (seen.has(key)) return []
+          seen.add(key)
+          return [
+            {
+              providerID,
+              modelID,
+              name: model.name || modelID,
+              providerName: provider.name || providerID,
+              isDefault: defaults[providerID] === modelID,
+            },
+          ]
+        }),
+      )
+    for (const [providerID, modelID] of Object.entries(defaults)) {
+      const key = `${providerID}/${modelID}`
+      if (seen.has(key)) continue
+      seen.add(key)
+      models.push({ providerID, modelID, name: modelID, providerName: providerID, isDefault: true })
+    }
+    return models.sort(
+      (left, right) => Number(right.isDefault) - Number(left.isDefault) || left.name!.localeCompare(right.name!),
+    )
+  }
+  private flushEvaluations(): void {
+    if (!this.panel || !this.ready) return
+    const items = this.evaluations.splice(0)
+    for (const item of items) {
+      this.evaluationRuns += 1
+      void this.runEvaluation(item).finally(() => {
+        this.evaluationRuns = Math.max(0, this.evaluationRuns - 1)
+      })
+    }
+  }
+
+  private async ensureEvaluationRepository(): Promise<boolean> {
+    const root = this.getRoot()
+    if (!root) {
+      this.host.showError("请先打开一个工作目录，再运行 Skill 版本评测。")
+      return false
+    }
+
+    try {
+      const probe = new GitRepositoryProbe(root)
+      const result = await probe.probe()
+      this.log(`Skill evaluation Git probe: ${result.kind}`)
+      if (result.kind === "ready" || result.kind === "dirty-repo") return true
+      if (result.kind === "no-repo" || result.kind === "unborn-repo") {
+        this.log("Initializing a local Git repository for Skill evaluation")
+        const initialized = await probe.initialize()
+        this.log(`Local Git repository initialized at ${initialized.top || root}`)
+        this.host.refreshGit()
+        return true
+      }
+
+      const message = result.error?.message || "当前工作目录无法创建本地 Git worktree。"
+      this.host.showError(message)
+      return false
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error)
+      this.log(`Failed to prepare local Git repository: ${message}`)
+      this.host.showError(`本地 Git 初始化失败：${message}`)
+      return false
+    }
+  }
+
+  private async runEvaluation(input: SkillEvaluationRequest): Promise<void> {
+    await this.waitForStateReady("runEvaluation")
+    if (!(await this.ensureEvaluationRepository())) return
+    await prepareEvaluation(input, {
+      create: async (item, group) => {
+        const label = `${input.skillName} ${item.version}`
+        const created = await this.createWorktreeOnDisk({
+          groupId: group,
+          name: label,
+          label,
+          localOnly: true,
+        })
+        if (!created) return undefined
+        return {
+          id: created.worktree.id,
+          versionId: item.versionId,
+          result: created.result,
+          path: created.result.path,
+          branch: created.result.branch,
+          parentBranch: created.result.parentBranch,
+          remote: created.result.remote,
+        }
+      },
+      setup: (tree) => this.runSetupScriptForWorktree(tree.path, tree.branch, tree.id),
+      install: async (item, tree, run, variant) => {
+        const installed = await installSkillVersion({
+          artifactPath: item.artifactPath,
+          digest: item.digest,
+          skillId: input.skillId,
+          versionId: item.versionId,
+          version: item.version,
+          name: input.skillName,
+          kind: "skill",
+          worktree: tree.path,
+          runId: run,
+          variantId: variant,
+        })
+        return installed.content
+      },
+      finish: async (tree) => {
+        const state = this.getStateManager()
+        const panel = this.panel
+        if (!state || !panel) return undefined
+        const session = await this.createSessionInWorktree(tree.path, tree.branch, tree.id)
+        if (!session) return undefined
+        state.addSession(session.id, tree.id)
+        this.registerWorktreeSession(session.id, tree.path)
+        this.notifyWorktreeReady(session.id, tree.result, tree.id)
+        panel.sessions.registerSession(session)
+        this.host.capture("Agent Manager Session Started", {
+          source: PLATFORM,
+          sessionId: session.id,
+          worktreeId: tree.id,
+          branch: tree.branch,
+          skillId: input.skillId,
+          versionId: tree.versionId,
+          skillEvaluation: true,
+        })
+        return session.id
+      },
+      run: async (item, tree, session, content) => {
+        const client = await this.connectionService.getClientAsync(tree.path)
+        const text = input.prompt?.length ? `${content}\n\n${input.prompt}` : content
+        await this.results.start({
+          skillId: input.skillId,
+          skillName: input.skillName,
+          versionId: item.versionId,
+          version: item.version,
+          digest: item.digest,
+          sessionId: session,
+          worktreeId: tree.id,
+          startedAt: new Date().toISOString(),
+          model: input.model,
+        })
+        this.evaluationHitl.set(session, 0)
+        this.evaluationWaits.set(session, 0)
+        this.log(`Submitting Skill version ${item.versionId} to session ${session}`)
+        try {
+          await client.session.promptAsync(
+            {
+              sessionID: session,
+              directory: tree.path,
+              parts: [{ type: "text", text }],
+              model: input.model ? { providerID: input.model.providerID, modelID: input.model.modelID } : undefined,
+            },
+            { throwOnError: true },
+          )
+        } catch (error) {
+          await this.results.discard(session)
+          this.clearEvaluationTracking(session)
+          throw error
+        }
+      },
+      remove: async (tree) => {
+        this.getStateManager()?.removeWorktree(tree.id)
+        await this.getWorktreeManager()?.removeWorktree(tree.path)
+        this.pushState()
+      },
+      progress: (status, total, completed, groupId) => {
+        this.postToWebview({ type: "agentManager.multiVersionProgress", status, total, completed, groupId })
+      },
+      error: (message) => this.host.showError(message),
+      log: (message) => this.log(message),
+    })
+  }
+
   public dispose(): void {
+    this.unsubscribeEvaluationEvents()
     this.connectionService.unregisterFocused("agent-manager")
     this.connectionService.registerOpen("agent-manager", [])
     this.diffs.stop()
