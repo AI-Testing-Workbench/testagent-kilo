@@ -1070,20 +1070,20 @@ export const dict = {
   "settings.agentBehaviour.subtab.skills": "技能",
 
   "settings.browser.description":
-    "选择 AI 智能体操作网页的方式：导航、点击、输入和截图。", // testagent_change
-  "settings.browser.vscodeTools.title": "使用 TS Code 内置浏览器", // testagent_change
+    "让TestAgent操作网页的方式：导航、点击、输入和截图。", // testagent_change
+  "settings.browser.vscodeTools.title": "使用工作台内置浏览器", // testagent_change
   "settings.browser.vscodeTools.description":
-    "让TestAgent在 TS Code 自带的浏览器中操作，页面在编辑器标签页中打开。", // testagent_change
-  "settings.browser.enable.title": "启用浏览器自动化",
-  "settings.browser.enable.description": "将 Playwright MCP 服务器注册到 CLI 后端。",
+    "让TestAgent在工作台内置的浏览器中操作，页面将在编辑器标签页中打开。", // testagent_change
+  "settings.browser.enable.title": "使用外部浏览器",
+  "settings.browser.enable.description": "将 Playwright MCP 服务器注册到TestAgent。",
   "settings.browser.playwrightOptions.title": "Playwright 选项", // testagent_change
   "settings.browser.systemChrome.title": "使用系统 Chrome",
   "settings.browser.systemChrome.description": "使用已安装的 Chrome 浏览器，而不是单独的 Chromium 实例。",
   "settings.browser.headless.title": "无头模式",
   "settings.browser.headless.description": "以无头模式运行（无可见浏览器窗口）。",
 
-  "settings.language.description": '"自动"将使用 VS Code 的显示语言。选择 TestAgent Code 界面的语言。',
-  "settings.language.auto": "自动（VS Code 语言）",
+  "settings.language.description": '"自动"将使用 TSCode 的显示语言。选择 TestAgent 界面的语言。',
+  "settings.language.auto": "自动（TSCode 语言）",
   "settings.language.current": "当前：",
 
   "common.add": "添加",
