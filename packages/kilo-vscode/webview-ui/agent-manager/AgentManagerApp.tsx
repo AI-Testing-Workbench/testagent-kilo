@@ -1211,6 +1211,21 @@ const AgentManagerContent: Component = () => {
         session.selectSession(ev.sessionId)
       }
 
+      if ((msg as { type?: string }).type === "agentManager.focusSession") {
+        const ev = msg as { type: string; sessionId: string; worktreeId?: string }
+        saveTabMemory()
+        setReviewActive(false)
+        setActivePendingId(undefined)
+        if (ev.worktreeId) {
+          setSelection(ev.worktreeId)
+          evictLocal(ev.sessionId)
+        } else {
+          setSelection(LOCAL)
+          setLocalSessionIDs((prev) => (prev.includes(ev.sessionId) ? prev : [...prev, ev.sessionId]))
+        }
+        session.selectSession(ev.sessionId)
+      }
+
       if (msg.type === "agentManager.sessionForked") {
         const ev = msg as { type: string; sessionId: string; forkedFromId: string; worktreeId?: string }
         if (!ev.worktreeId) {
