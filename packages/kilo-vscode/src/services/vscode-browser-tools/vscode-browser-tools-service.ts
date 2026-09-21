@@ -196,6 +196,14 @@ export class VscodeBrowserToolsService implements vscode.Disposable {
         this.setState("connected")
         return
       }
+
+      // The CLI reports a failed connection in the response body rather than as an HTTP error, so
+      // these paths never reach the `catch` below. Release the listener and the watcher here too:
+      // otherwise a failed registration leaves the port bound and the timer running until the
+      // extension is disposed.
+      this.stopWatch()
+      await this.stopServer()
+
       if (serverStatus?.status === "failed") {
         console.error(
           "[TestAgent] VscodeBrowserToolsService: MCP server failed:",
