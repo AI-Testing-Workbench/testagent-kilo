@@ -173,6 +173,8 @@ export const dict = {
   "agentManager.review.metaFile": "Файл",
   "agentManager.review.metaLine": "Рядок",
   "agentManager.review.metaComment": "Коментар користувача",
+  "agentManager.review.scope.session": "Ця сесія",
+  "agentManager.review.scope.worktree": "Усі зміни",
   "agentManager.review.collapsedOnly": "{{count}} згорнуто",
   "agentManager.review.collapsedWithLarge": "{{collapsed}} згорнуто, {{large}} великих",
   "agentManager.review.largeFileCollapsed": "Великий файл (згорнуто)",

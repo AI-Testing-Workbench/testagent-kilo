@@ -409,6 +409,32 @@ describe("GitOps", () => {
     })
   })
 
+  describe("root", () => {
+    it("resolves and normalizes the repository root", async () => {
+      const git = ops(async (args) => (args[0] === "rev-parse" ? "C:\\Repo\\" : ""))
+      expect(await git.root("/repo/sub")).toBe("c:/repo")
+    })
+
+    it("caches the resolved root across calls", async () => {
+      let calls = 0
+      const git = ops(async (args) => {
+        if (args[0] !== "rev-parse") return ""
+        calls++
+        return "/repo"
+      })
+      await git.root("/repo/sub")
+      await git.root("/repo/sub")
+      expect(calls).toBe(1)
+    })
+
+    it("falls back to cwd when git cannot resolve a root", async () => {
+      const git = ops(async () => {
+        throw new Error("not a git repo")
+      })
+      expect(await git.root("/repo/sub")).toBe("/repo/sub")
+    })
+  })
+
   describe("workingTreeStats", () => {
     it("parses numstat for tracked changes", async () => {
       const git = ops(async (args) => {
@@ -418,6 +444,33 @@ describe("GitOps", () => {
       })
       const stats = await git.workingTreeStats("/repo")
       expect(stats).toEqual({ files: 2, additions: 3, deletions: 6 })
+    })
+
+    it("requests --no-renames so totals match the review panel", async () => {
+      const calls: string[][] = []
+      const git = ops(async (args) => {
+        calls.push(args)
+        if (args[0] === "diff") return "1\t0\tsrc/a.ts"
+        return ""
+      })
+      await git.workingTreeStats("/repo")
+      expect(calls).toContainEqual(["diff", "--no-renames", "--ignore-cr-at-eol", "HEAD", "--numstat"])
+    })
+
+    it("runs git from the repo root so tracked and untracked paths share one base", async () => {
+      const calls: Array<{ args: string[]; cwd: string }> = []
+      const git = ops(async (args, cwd) => {
+        calls.push({ args, cwd })
+        if (args[0] === "rev-parse") return "/repo"
+        return ""
+      })
+      await git.workingTreeStats("/repo/packages/app")
+      // `git ls-files --others` is subtree-scoped and cwd-relative, while
+      // `git diff` reports root-relative paths — mixing the two from a
+      // subdirectory both drops files and produces unusable paths.
+      expect(calls).toContainEqual({ args: ["rev-parse", "--show-toplevel"], cwd: "/repo/packages/app" })
+      expect(calls).toContainEqual({ args: ["diff", "--no-renames", "--ignore-cr-at-eol", "HEAD", "--numstat"], cwd: "/repo" })
+      expect(calls).toContainEqual({ args: ["ls-files", "--others", "--exclude-standard"], cwd: "/repo" })
     })
 
     it("treats binary numstat entries as zero additions and deletions", async () => {
@@ -459,6 +512,60 @@ describe("GitOps", () => {
 
         const stats = await git.workingTreeStats(cwd)
         expect(stats.files).toBe(1)
+        expect(stats.additions).toBe(3)
+      })
+    })
+
+    it("treats a trailing newline as a line terminator, not an extra line", async () => {
+      await withRepo(async (cwd) => {
+        const git = new GitOps({ log: () => undefined })
+        await fs.writeFile(nodePath.join(cwd, "init.txt"), "x\n", "utf8")
+        runGit(cwd, ["add", "-A"])
+        runGit(cwd, ["-c", "user.name=Test", "-c", "user.email=test@example.com", "commit", "-m", "init"])
+
+        // Three lines with a trailing newline — git and `local-diff` both report 3.
+        await fs.writeFile(nodePath.join(cwd, "new.txt"), "a\nb\nc\n", "utf8")
+        // Empty untracked file — zero lines, not one.
+        await fs.writeFile(nodePath.join(cwd, "empty.txt"), "", "utf8")
+
+        const stats = await git.workingTreeStats(cwd)
+        expect(stats.files).toBe(2)
+        expect(stats.additions).toBe(3)
+      })
+    })
+
+    it("does not count a CRLF checkout as a whole-file rewrite", async () => {
+      await withRepo(async (cwd) => {
+        const git = new GitOps({ log: () => undefined })
+        const rows = Array.from({ length: 20 }, (_, index) => `line ${index + 1}`)
+        await fs.writeFile(nodePath.join(cwd, "init.txt"), `${rows.join("\n")}\n`, "utf8")
+        runGit(cwd, ["add", "-A"])
+        runGit(cwd, ["-c", "user.name=Test", "-c", "user.email=test@example.com", "commit", "-m", "init"])
+
+        // Windows checkouts hold CRLF while the blob is LF. Only the first five
+        // rows actually change; the rest differ by line ending alone.
+        const next = rows.map((row, index) => (index < 5 ? `changed ${index + 1}` : row))
+        await fs.writeFile(nodePath.join(cwd, "init.txt"), `${next.join("\r\n")}\r\n`, "utf8")
+
+        const stats = await git.workingTreeStats(cwd)
+        expect(stats).toEqual({ files: 1, additions: 5, deletions: 5 })
+      })
+    })
+
+    it("includes untracked files outside cwd when cwd is a nested directory", async () => {
+      await withRepo(async (cwd) => {
+        const git = new GitOps({ log: () => undefined })
+        await fs.writeFile(nodePath.join(cwd, "init.txt"), "x\n", "utf8")
+        runGit(cwd, ["add", "-A"])
+        runGit(cwd, ["-c", "user.name=Test", "-c", "user.email=test@example.com", "commit", "-m", "init"])
+
+        const sub = nodePath.join(cwd, "pkg")
+        await fs.mkdir(sub, { recursive: true })
+        await fs.writeFile(nodePath.join(sub, "inside.txt"), "a\nb\n", "utf8")
+        await fs.writeFile(nodePath.join(cwd, "outside.txt"), "z\n", "utf8")
+
+        const stats = await git.workingTreeStats(sub)
+        expect(stats.files).toBe(2)
         expect(stats.additions).toBe(3)
       })
     })

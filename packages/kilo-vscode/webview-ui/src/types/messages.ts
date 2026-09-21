@@ -1162,6 +1162,7 @@ export interface AgentManagerStateMessage {
   worktreeOrder?: string[]
   sessionsCollapsed?: boolean
   reviewDiffStyle?: "unified" | "split"
+  diffScope?: DiffScope
   isGitRepo?: boolean
   defaultBaseBranch?: string
   runStatuses?: RunStatus[]
@@ -1564,6 +1565,22 @@ export interface DiffViewerRevertFileResultMessage {
   message: string
 }
 
+// Which changes the standalone changes viewer is scoped to (extension → webview)
+export interface DiffViewerStateMessage {
+  type: "diffViewer.state"
+  /** Session the panel was opened for, if any. */
+  sessionId?: string
+  diffScope: DiffScope
+}
+
+// Single-file detail for the standalone changes viewer (extension → webview).
+// The list itself only carries metadata so opening a file can render its diff.
+export interface DiffViewerDiffFileMessage {
+  type: "diffViewer.diffFile"
+  file: string
+  diff: WorktreeFileDiff | null
+}
+
 export interface ClearPendingPromptsMessage {
   type: "clearPendingPrompts"
 }
@@ -1837,6 +1854,8 @@ export type ExtensionMessage =
   | DiffViewerDiffsMessage
   | DiffViewerLoadingMessage
   | DiffViewerRevertFileResultMessage
+  | DiffViewerStateMessage
+  | DiffViewerDiffFileMessage
   | MarketplaceDataMessage
   | MarketplaceInstallResultMessage
   | MarketplaceRemoveResultMessage
@@ -2591,6 +2610,16 @@ export interface SetReviewDiffStyleRequest {
   style: "unified" | "split"
 }
 
+// Which changes the review panel shows: only the current session's edits,
+// or everything in the worktree.
+export type DiffScope = "session" | "worktree"
+
+// Persist review diff scope preference: current session vs whole worktree
+export interface SetDiffScopeRequest {
+  type: "agentManager.setDiffScope"
+  scope: DiffScope
+}
+
 export interface RequestBranchesMessage {
   type: "agentManager.requestBranches"
 }
@@ -2700,6 +2729,8 @@ export interface EnhancePromptRequest {
 // Open the standalone changes viewer tab from the sidebar
 export interface OpenChangesRequest {
   type: "openChanges"
+  /** Session whose changes the viewer should show. Omitted → whole worktree. */
+  sessionId?: string
 }
 
 // Open diff virtual (permission diff) in the lightweight diff virtual panel
@@ -3037,6 +3068,7 @@ export type WebviewMessage =
   | { type: "updateEnvVar"; key: string; value: string }
   | { type: "deleteEnvVar"; key: string }
   | SetReviewDiffStyleRequest
+  | SetDiffScopeRequest
   | PersistVariantRequest
   | RequestVariantsMessage
   | PersistEnableThinkingRequest

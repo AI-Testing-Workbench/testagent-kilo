@@ -5,6 +5,7 @@ import * as path from "path"
 import { diffSummary, diffFile, generatedLike, resolveBase, MAX_DETAIL_BYTES } from "../../src/agent-manager/local-diff"
 import { GitOps } from "../../src/agent-manager/GitOps"
 import { resolveLocalDiffTarget } from "../../src/review-utils"
+import { mergeWorktreeDiffs } from "../../webview-ui/agent-manager/diff-state"
 
 function git(): GitOps {
   return new GitOps({ log: () => undefined })
@@ -170,6 +171,35 @@ describe("diffSummary", () => {
     })
   })
 
+  it("keys every file relative to the repo root when dir is a subdirectory", async () => {
+    await withRepo(async (dir, base) => {
+      // `git diff` reports root-relative paths, but `git ls-files --others` is
+      // subtree-scoped and cwd-relative. Running from root keeps one base so
+      // the panel, revert, and the session-scope filter stay in agreement.
+      const sub = path.join(dir, "pkg")
+      await fs.mkdir(sub, { recursive: true })
+      await fs.writeFile(path.join(sub, "fresh.txt"), "a\nb\n")
+      await fs.writeFile(path.join(dir, "seed.txt"), "seed\nchanged\n")
+
+      const result = await diffSummary(git(), sub, base)
+      const files = result.map((entry) => entry.file).sort()
+      expect(files).toEqual(["pkg/fresh.txt", "seed.txt"])
+      expect(result.find((entry) => entry.file === "pkg/fresh.txt")?.additions).toBe(2)
+    })
+  })
+
+  it("resolves detail for a root-relative untracked path when dir is a subdirectory", async () => {
+    await withRepo(async (dir, base) => {
+      const sub = path.join(dir, "pkg")
+      await fs.mkdir(sub, { recursive: true })
+      await fs.writeFile(path.join(sub, "fresh.txt"), "a\nb\n")
+
+      const result = await diffFile(git(), sub, base, "pkg/fresh.txt")
+      expect(result?.after).toBe("a\nb\n")
+      expect(result?.additions).toBe(2)
+    })
+  })
+
   it("all entries are summarized with empty before/after/patch", async () => {
     await withRepo(async (dir, base) => {
       await fs.writeFile(path.join(dir, "untracked.txt"), "x\n")
@@ -198,6 +228,33 @@ describe("diffSummary", () => {
       const src = result.find((e) => e.file === "src.ts")
       expect(dist?.generatedLike).toBe(true)
       expect(src?.generatedLike).toBe(false)
+    })
+  })
+
+  // The changes panel draws a file by pairing a summary entry (metadata only,
+  // used for the polling list) with the detail for the same path (contents,
+  // fetched when the row is expanded). If the summary ever starts carrying
+  // content — or the detail stops — expanding a row silently renders nothing.
+  it("hands the changes panel renderable contents through the summary/detail pair", async () => {
+    await withRepo(async (dir, base) => {
+      await fs.writeFile(path.join(dir, "seed.txt"), "seed\nsecond\n")
+
+      const summary = await diffSummary(git(), dir, base)
+      const meta = summary.find((e) => e.file === "seed.txt")
+      expect(meta?.summarized).toBe(true)
+      expect(meta?.before).toBe("")
+      expect(meta?.after).toBe("")
+
+      const detail = await diffFile(git(), dir, base, "seed.txt")
+      if (!detail) throw new Error("expected a detail entry for seed.txt")
+      expect(detail.summarized).toBe(false)
+      expect(detail.before).toBe("seed\n")
+      expect(detail.after).toBe("seed\nsecond\n")
+
+      // A poll that arrives after the detail must keep the loaded contents.
+      const merged = mergeWorktreeDiffs([detail], summary)
+      expect(merged.diffs.find((e) => e.file === "seed.txt")?.after).toBe("seed\nsecond\n")
+      expect(merged.stale.size).toBe(0)
     })
   })
 })
@@ -330,6 +387,61 @@ describe("resolveLocalDiffTarget + revertFile", () => {
 
       const restored = await fs.readFile(path.join(dir, "seed.txt"), "utf-8")
       expect(restored).toBe("seed\n")
+    })
+  })
+})
+
+describe("line ending handling", () => {
+  /** Body of `count` rows, the first `changed` of which hold new content. */
+  function body(count: number, changed: number, ending: string): string {
+    const rows = Array.from({ length: count }, (_, index) => {
+      const n = index + 1
+      return n <= changed ? `changed ${n}` : `line ${n}`
+    })
+    return rows.join(ending) + ending
+  }
+
+  /** Commit LF content, then rewrite the file on disk using `ending`. */
+  async function seed(dir: string, ending: string, changed: number): Promise<void> {
+    const file = path.join(dir, "doc.txt")
+    await fs.writeFile(file, body(20, 0, "\n"))
+    runSync(dir, ["add", "doc.txt"])
+    runSync(dir, ["commit", "-m", "add doc"])
+    await fs.writeFile(file, body(20, changed, ending))
+  }
+
+  it("reports a CRLF-only difference as no change", async () => {
+    await withRepo(async (dir) => {
+      await seed(dir, "\r\n", 0)
+      expect(await diffSummary(git(), dir, "main")).toHaveLength(0)
+    })
+  })
+
+  it("counts only the changed rows of a CRLF file", async () => {
+    await withRepo(async (dir) => {
+      await seed(dir, "\r\n", 5)
+      const entry = (await diffSummary(git(), dir, "main")).find((item) => item.file === "doc.txt")
+      expect(entry?.additions).toBe(5)
+      expect(entry?.deletions).toBe(5)
+    })
+  })
+
+  it("normalizes line endings in the rendered sides", async () => {
+    await withRepo(async (dir) => {
+      await seed(dir, "\r\n", 5)
+      const detail = await diffFile(git(), dir, "main", "doc.txt")
+      expect(detail?.before).not.toContain("\r")
+      expect(detail?.after).not.toContain("\r")
+      expect(detail?.after).toBe(body(20, 5, "\n"))
+    })
+  })
+
+  it("resolves real changes against an LF working tree the same way", async () => {
+    await withRepo(async (dir) => {
+      await seed(dir, "\n", 5)
+      const entry = (await diffSummary(git(), dir, "main")).find((item) => item.file === "doc.txt")
+      expect(entry?.additions).toBe(5)
+      expect(entry?.deletions).toBe(5)
     })
   })
 })

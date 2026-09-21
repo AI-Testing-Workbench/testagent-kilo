@@ -41,6 +41,7 @@ import type {
   SectionState,
   SessionInfo,
   BranchInfo,
+  DiffScope,
 } from "../src/types/messages"
 import {
   DragDropProvider,
@@ -367,6 +368,7 @@ const AgentManagerContent: Component = () => {
   const [reviewCommentsByContext, setReviewCommentsByContext] = createSignal<Record<string, ReviewComment[]>>({})
   const [reviewActive, setReviewActive] = createSignal(false)
   const [reviewDiffStyle, setReviewDiffStyle] = createSignal<"unified" | "split">("unified")
+  const [reviewDiffScope, setReviewDiffScope] = createSignal<DiffScope>("session")
   // reviewOpen (memo below) controls tab presence for selected context.
 
   // Per-worktree git stats (diff additions/deletions, commits missing from origin)
@@ -1257,6 +1259,9 @@ const AgentManagerContent: Component = () => {
         if (state.reviewDiffStyle === "split" || state.reviewDiffStyle === "unified") {
           setReviewDiffStyle(state.reviewDiffStyle)
         }
+        if (state.diffScope === "session" || state.diffScope === "worktree") {
+          setReviewDiffScope(state.diffScope)
+        }
         if ("defaultBaseBranch" in state) setDefaultBaseBranch(state.defaultBaseBranch || undefined)
         setRunScriptConfigured(state.runScriptConfigured === true)
         syncRunStatuses(state.runStatuses)
@@ -1586,6 +1591,12 @@ const AgentManagerContent: Component = () => {
     if (reviewDiffStyle() === style) return
     setReviewDiffStyle(style)
     vscode.postMessage({ type: "agentManager.setReviewDiffStyle", style })
+  }
+
+  const setSharedDiffScope = (scope: DiffScope) => {
+    if (reviewDiffScope() === scope) return
+    setReviewDiffScope(scope)
+    vscode.postMessage({ type: "agentManager.setDiffScope", scope })
   }
 
   const setDiffFilePending = (sessionId: string, file: string, value: boolean) => {
@@ -3034,6 +3045,8 @@ const AgentManagerContent: Component = () => {
                       sessionKey={diffSessionKey()}
                       diffStyle={reviewDiffStyle()}
                       onDiffStyleChange={setSharedDiffStyle}
+                      diffScope={reviewDiffScope()}
+                      onDiffScopeChange={setSharedDiffScope}
                       comments={reviewComments()}
                       onCommentsChange={setReviewCommentsForSelection}
                       onClose={() => setSidePanel(null)}
@@ -3067,6 +3080,8 @@ const AgentManagerContent: Component = () => {
                 onSendAll={closeReviewTab}
                 diffStyle={reviewDiffStyle()}
                 onDiffStyleChange={setSharedDiffStyle}
+                diffScope={reviewDiffScope()}
+                onDiffScopeChange={setSharedDiffScope}
                 onRequestDiff={requestDiffFile}
                 onOpenFile={(file, line) => {
                   const id = currentDiffSessionId()

@@ -501,8 +501,8 @@ export function activate(context: vscode.ExtensionContext) {
       console.log("[TestAgent] Terminal created and command sent")
       // testagent_change end
     }),
-    vscode.commands.registerCommand("testagent.new.showChanges", () => {
-      diffViewerProvider.openPanel()
+    vscode.commands.registerCommand("testagent.new.showChanges", (sessionId?: string) => {
+      diffViewerProvider.openPanel(sessionId) // testagent_change - session-scoped panel
     }),
     vscode.commands.registerCommand(
       "testagent.new.openSubAgentViewer",

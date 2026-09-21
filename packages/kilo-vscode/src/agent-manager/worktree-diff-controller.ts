@@ -10,6 +10,14 @@ const LOCAL_DIFF_ID = "local" as const
 
 type Target = { sessionId: string; directory: string; baseBranch: string }
 
+/**
+ * Which changes the review panel shows.
+ *
+ * - `session`: only files the current session modified (default)
+ * - `worktree`: everything that differs from the base branch
+ */
+export type DiffScope = "session" | "worktree"
+
 export interface WorktreeDiffControllerContext {
   getState: () => WorktreeStateManager | undefined
   getRoot: () => string | undefined
@@ -26,6 +34,14 @@ export interface WorktreeDiffControllerContext {
   localDiff: (dir: string, base: string) => Promise<WorktreeDiffEntry[]>
   /** In-process single-file diff (replaces client.worktree.diffFile). */
   localDiffFile: (dir: string, base: string, file: string) => Promise<WorktreeDiffEntry | null>
+  /** Current review panel scope. Read on every refresh so the toggle applies live. */
+  getScope: () => DiffScope
+  /**
+   * Files modified by a session, translated into repo-relative paths. `undefined`
+   * means "unknown" — the caller then falls back to the unscoped worktree diff so
+   * the panel never goes blank. An empty set is a real answer: no changes yet.
+   */
+  sessionFiles: (sessionId: string, directory: string) => Promise<Set<string> | undefined>
   post: (msg: AgentManagerOutMessage) => void
   log: (...args: unknown[]) => void
 }
@@ -155,7 +171,7 @@ export class WorktreeDiffController {
     this.ctx.post({ type: "agentManager.worktreeDiffLoading", sessionId, loading: true })
 
     try {
-      const files = await this.ctx.localDiff(target.directory, target.baseBranch)
+      const files = await this.diffFor(sessionId, target.directory, target.baseBranch)
       this.ctx.log(`Worktree diff returned ${files.length} file(s) for session ${sessionId}`)
       this.hash = hashFileDiffs(files)
       this.session = sessionId
@@ -214,12 +230,17 @@ export class WorktreeDiffController {
     this.target = undefined
   }
 
+  /** Re-fetch the active session's diff, e.g. after the scope toggle changed. */
+  public refresh(): void {
+    if (this.session) void this.request(this.session)
+  }
+
   private async poll(sessionId: string): Promise<void> {
     const target = this.target?.sessionId === sessionId ? this.target : undefined
     if (!target) return
 
     try {
-      const files = await this.ctx.localDiff(target.directory, target.baseBranch)
+      const files = await this.diffFor(sessionId, target.directory, target.baseBranch)
       const hash = hashFileDiffs(files)
       if (hash === this.hash && this.session === sessionId) return
       this.hash = hash
@@ -228,6 +249,20 @@ export class WorktreeDiffController {
     } catch (error) {
       this.ctx.log("Failed to poll worktree diff:", error)
     }
+  }
+
+  /**
+   * Diff entries for the active scope. In `session` scope the worktree diff is
+   * filtered down to the files the session touched — the file contents still come
+   * from git so per-file detail, revert and apply keep working unchanged.
+   */
+  private async diffFor(sessionId: string, directory: string, baseBranch: string): Promise<WorktreeDiffEntry[]> {
+    const files = await this.ctx.localDiff(directory, baseBranch)
+    if (this.ctx.getScope() !== "session" || sessionId === LOCAL_DIFF_ID) return files
+
+    const touched = await this.ctx.sessionFiles(sessionId, directory)
+    if (!touched) return files
+    return files.filter((file) => touched.has(file.file))
   }
 
   private async resolve(sessionId: string): Promise<{ directory: string; baseBranch: string } | undefined> {

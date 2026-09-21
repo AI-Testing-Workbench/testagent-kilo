@@ -165,6 +165,8 @@ export const dict = {
   "agentManager.review.metaFile": "Файл",
   "agentManager.review.metaLine": "Строка",
   "agentManager.review.metaComment": "Комментарий пользователя",
+  "agentManager.review.scope.session": "Эта сессия",
+  "agentManager.review.scope.worktree": "Все изменения",
   "agentManager.review.collapsedOnly": "{{count}} свернуто",
   "agentManager.review.collapsedWithLarge": "{{collapsed}} свернуто, {{large}} больших",
   "agentManager.review.largeFileCollapsed": "Большой файл (свернут)",

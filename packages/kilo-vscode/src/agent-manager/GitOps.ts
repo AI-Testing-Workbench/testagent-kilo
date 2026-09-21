@@ -62,6 +62,17 @@ export function nonInteractiveEnv(): NodeJS.ProcessEnv {
   return env
 }
 
+/**
+ * Count lines the way git does: a trailing newline terminates the last line
+ * instead of starting an empty one, so `"a\n"` is one line and `""` is zero.
+ * Shared with the review panel (`local-diff.ts`) so the worktree badge totals
+ * and the per-file counts cannot drift apart.
+ */
+export function countLines(content: string): number {
+  if (!content) return 0
+  return content.endsWith("\n") ? content.split("\n").length - 1 : content.split("\n").length
+}
+
 export class GitOps {
   private readonly log: (...args: unknown[]) => void
   private readonly runGit: (args: string[], cwd: string) => Promise<string>
@@ -231,17 +242,45 @@ export class GitOps {
   }
 
   /**
+   * Repo (or worktree) root for `cwd`. `git diff` reports paths relative to the
+   * repo root, but `git ls-files --others` reports them relative to the working
+   * directory and only covers that directory's subtree — so any caller mixing
+   * both must run git from the root to keep a single path base. Falls back to
+   * `cwd` when git cannot resolve a root (bare repo, detached worktree).
+   *
+   * Cached: root is stable for the lifetime of a worktree and callers sit on
+   * polling paths.
+   */
+  async root(cwd: string): Promise<string> {
+    const cacheKey = `root:${cwd}`
+    const cached = this.getCached(cacheKey)
+    if (cached) return cached
+
+    const resolved = await this.raw(["rev-parse", "--show-toplevel"], cwd).catch(() => "")
+    if (!resolved) return cwd
+    const result = normalizePath(resolved)
+    this.setCached(cacheKey, result)
+    return result
+  }
+
+  /**
    * Compute working-tree stats (staged + unstaged + untracked) without requiring
-   * a remote or base branch. Combines `git diff HEAD --numstat` for tracked
-   * changes with `git ls-files --others` for new files.
+   * a remote or base branch. Combines `git diff --no-renames HEAD --numstat` for
+   * tracked changes with `git ls-files --others` for new files.
+   *
+   * Runs from the repo root and passes `--no-renames` so the totals share a path
+   * base and an add/delete accounting with the review panel (`local-diff.ts`).
    *
    * Returns aggregate file count, additions, and deletions across the working tree.
    */
   async workingTreeStats(cwd: string): Promise<{ files: number; additions: number; deletions: number }> {
+    const root = await this.root(cwd)
     // Single diff against HEAD captures both staged and unstaged changes.
+    // `--ignore-cr-at-eol` keeps a CRLF checkout from reporting the whole file as
+    // rewritten, matching what the review panel counts.
     const [numstat, untracked] = await Promise.all([
-      this.raw(["diff", "HEAD", "--numstat"], cwd).catch(() => ""),
-      this.raw(["ls-files", "--others", "--exclude-standard"], cwd).catch(() => ""),
+      this.raw(["diff", "--no-renames", "--ignore-cr-at-eol", "HEAD", "--numstat"], root).catch(() => ""),
+      this.raw(["ls-files", "--others", "--exclude-standard"], root).catch(() => ""),
     ])
 
     const tracked = numstat
@@ -267,11 +306,10 @@ export class GitOps {
     const counts = await Promise.all(
       paths.map(async (p) => {
         try {
-          const full = nodePath.resolve(cwd, p)
+          const full = nodePath.join(root, p)
           const stat = await fs.stat(full)
           if (stat.size > 1_000_000) return 0
-          const content = await fs.readFile(full, "utf-8")
-          return content.split("\n").length
+          return countLines(await fs.readFile(full, "utf-8"))
         } catch (err) {
           this.log(`Failed to read untracked file ${p}:`, err)
           return 0

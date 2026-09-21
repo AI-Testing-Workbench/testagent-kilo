@@ -281,7 +281,7 @@ export const ChatView: Component<ChatViewProps> = (props) => {
                         "session-diff-badge--empty": !session.worktreeStats()?.files,
                         "session-diff-badge--has-changes": !!session.worktreeStats()?.files,
                       }}
-                      onClick={() => vscode.postMessage({ type: "openChanges" })}
+                      onClick={() => vscode.postMessage({ type: "openChanges", sessionId: id() ?? undefined })}
                       aria-label={language.t("command.session.show.changes")}
                     >
                       <Icon name="layers" size="small" />

@@ -160,6 +160,8 @@ export const dict = {
   "agentManager.review.metaFile": "檔案",
   "agentManager.review.metaLine": "行",
   "agentManager.review.metaComment": "使用者評論",
+  "agentManager.review.scope.session": "本工作階段",
+  "agentManager.review.scope.worktree": "全部變更",
   "agentManager.review.collapsedOnly": "{{count}} 個已摺疊",
   "agentManager.review.collapsedWithLarge": "{{collapsed}} 個已摺疊，{{large}} 個過大",
   "agentManager.review.largeFileCollapsed": "大型檔案（已摺疊）",

@@ -25,6 +25,7 @@ import { handleRunMessage } from "./run/message"
 import { forkSession } from "./fork-session"
 import { continueInWorktree } from "./continue-in-worktree"
 import { WorktreeDiffController } from "./worktree-diff-controller"
+import { editedFiles, SessionFiles } from "./session-files"
 import { WorktreeImporter } from "./worktree-importer"
 import { diffSummary as localDiffSummary, diffFile as localDiffFile } from "./local-diff"
 
@@ -59,6 +60,8 @@ export class AgentManagerProvider implements Disposable {
   private prBridge!: PRStatusBridge
   private gitOps: GitOps
   private diffs: WorktreeDiffController
+  private sessionFiles: SessionFiles
+  private sessionDiffUnsub: (() => void) | undefined
   private staleWorktreeIds = new Set<string>()
   private cachedWorktreeStats: { type: "agentManager.worktreeStats"; stats: WorktreeStats[] } | undefined
   private cachedLocalStats: { type: "agentManager.localStats"; stats: LocalStats } | undefined
@@ -99,6 +102,21 @@ export class AgentManagerProvider implements Disposable {
     })
     const semaphore = new Semaphore(3)
     this.gitOps = new GitOps({ log: (...args) => this.log(...args), semaphore })
+    this.sessionFiles = new SessionFiles((msg) => this.log(msg))
+    this.sessionDiffUnsub = connectionService.onEvent((event) => {
+      // Live tool parts make a session's change set visible as soon as the agent
+      // writes a file, long before the server's snapshot diff is written.
+      if (event.type === "message.part.updated") {
+        const part = event.properties.part as { sessionID?: string }
+        if (part.sessionID) this.sessionFiles.add(part.sessionID, editedFiles(event.properties.part))
+        return
+      }
+      if (event.type !== "session.diff") return
+      this.sessionFiles.add(
+        event.properties.sessionID,
+        event.properties.diff.map((item) => item.file),
+      )
+    })
     this.diffs = new WorktreeDiffController({
       getState: () => this.getStateManager(),
       getRoot: () => this.getRoot(),
@@ -107,6 +125,9 @@ export class AgentManagerProvider implements Disposable {
       git: this.gitOps,
       localDiff: (dir, base) => localDiffSummary(this.gitOps, dir, base, (...args) => this.log(...args)),
       localDiffFile: (dir, base, file) => localDiffFile(this.gitOps, dir, base, file, (...args) => this.log(...args)),
+      getScope: () => this.state?.getDiffScope() ?? "session",
+      sessionFiles: (sessionId, directory) =>
+        this.sessionFiles.get(this.connectionService.getClient(), sessionId, directory),
       post: (msg) => this.postToWebview(msg),
       log: (...args) => this.log(...args),
     })
@@ -450,6 +471,11 @@ export class AgentManagerProvider implements Disposable {
       this.state?.setReviewDiffStyle(m.style)
       return null
     }
+    if (m.type === "agentManager.setDiffScope") {
+      this.state?.setDiffScope(m.scope)
+      this.diffs.refresh()
+      return null
+    }
     if (m.type === "agentManager.setDefaultBaseBranch") {
       this.state?.setDefaultBaseBranch(normalizeBaseBranch(m.branch))
       this.pushState()
@@ -702,7 +728,7 @@ export class AgentManagerProvider implements Disposable {
 
     try {
       const { data: session } = await client.session.create(
-        { directory: worktreePath, platform: PLATFORM },
+        { directory: worktreePath },
         { throwOnError: true },
       )
       return session
@@ -895,7 +921,7 @@ export class AgentManagerProvider implements Disposable {
     let session: Session
     try {
       const { data } = await client.session.create(
-        { directory: worktree.path, platform: PLATFORM },
+        { directory: worktree.path },
         { throwOnError: true },
       )
       session = data
@@ -1315,6 +1341,7 @@ export class AgentManagerProvider implements Disposable {
       worktreeOrder: state.getWorktreeOrder(),
       sessionsCollapsed: state.getSessionsCollapsed(),
       reviewDiffStyle: state.getReviewDiffStyle(),
+      diffScope: state.getDiffScope(),
       isGitRepo: true,
       defaultBaseBranch: state.getDefaultBaseBranch(),
       ...run,
@@ -1336,6 +1363,7 @@ export class AgentManagerProvider implements Disposable {
       sessions: [],
       staleWorktreeIds: [],
       reviewDiffStyle: "unified",
+      diffScope: "session",
       isGitRepo: false,
       runStatuses: [],
       runScriptConfigured: false,
@@ -1513,6 +1541,8 @@ export class AgentManagerProvider implements Disposable {
   public dispose(): void {
     this.connectionService.unregisterFocused("agent-manager")
     this.connectionService.registerOpen("agent-manager", [])
+    this.sessionDiffUnsub?.()
+    this.sessionFiles.clear()
     this.diffs.stop()
     this.statsPoller.stop()
     this.gitOps.dispose()

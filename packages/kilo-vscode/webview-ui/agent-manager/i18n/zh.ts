@@ -161,6 +161,8 @@ export const dict = {
   "agentManager.review.metaFile": "文件",
   "agentManager.review.metaLine": "行",
   "agentManager.review.metaComment": "用户评论",
+  "agentManager.review.scope.session": "本会话",
+  "agentManager.review.scope.worktree": "全部改动",
   "agentManager.review.collapsedOnly": "{{count}} 个已折叠",
   "agentManager.review.collapsedWithLarge": "{{collapsed}} 个已折叠，{{large}} 个过大",
   "agentManager.review.largeFileCollapsed": "大文件（已折叠）",

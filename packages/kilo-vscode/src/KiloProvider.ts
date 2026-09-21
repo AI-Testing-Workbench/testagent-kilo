@@ -1087,7 +1087,7 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
           vscode.commands.executeCommand("testagent.new.marketplaceButtonClicked", this.projectDirectory)
           break
         case "openChanges":
-          vscode.commands.executeCommand("testagent.new.showChanges")
+          vscode.commands.executeCommand("testagent.new.showChanges", message.sessionId) // testagent_change - session-scoped panel
           break
         case "openDiffVirtual":
           this.openDiffVirtual(message.diff)

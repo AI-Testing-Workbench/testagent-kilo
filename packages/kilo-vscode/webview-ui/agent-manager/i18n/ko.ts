@@ -165,6 +165,8 @@ export const dict = {
   "agentManager.review.metaFile": "파일",
   "agentManager.review.metaLine": "라인",
   "agentManager.review.metaComment": "사용자 코멘트",
+  "agentManager.review.scope.session": "이 세션",
+  "agentManager.review.scope.worktree": "모든 변경 사항",
   "agentManager.review.collapsedOnly": "{{count}}개 접힘",
   "agentManager.review.collapsedWithLarge": "{{collapsed}}개 접힘, {{large}}개 대용량",
   "agentManager.review.largeFileCollapsed": "큰 파일(접힘)",

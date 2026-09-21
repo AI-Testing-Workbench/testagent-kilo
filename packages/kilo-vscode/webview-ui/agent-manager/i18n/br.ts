@@ -165,6 +165,8 @@ export const dict = {
   "agentManager.review.metaFile": "Arquivo",
   "agentManager.review.metaLine": "Linha",
   "agentManager.review.metaComment": "Comentário do usuário",
+  "agentManager.review.scope.session": "Ar sesion-mañ",
+  "agentManager.review.scope.worktree": "An holl cheñchamantoù",
   "agentManager.review.collapsedOnly": "{{count}} recolhidos",
   "agentManager.review.collapsedWithLarge": "{{collapsed}} recolhidos, {{large}} grandes",
   "agentManager.review.largeFileCollapsed": "Arquivo grande (recolhido)",
