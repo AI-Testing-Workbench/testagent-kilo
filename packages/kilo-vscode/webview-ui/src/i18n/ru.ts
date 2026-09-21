@@ -1056,8 +1056,13 @@ export const dict = {
 
   "settings.browser.description":
     "При включении ИИ-агент может взаимодействовать с веб-страницами — переходить по ссылкам, нажимать, вводить текст и делать скриншоты. Откроется окно Chrome, чтобы вы могли наблюдать за работой агента.",
+  "settings.browser.vscodeTools.title": "Использовать встроенный браузер VS Code",
+  "settings.browser.vscodeTools.description":
+    "Разрешить агенту работать во встроенном браузере VS Code. Без дополнительной установки; страницы открываются во вкладке редактора. Требуется VS Code 1.110 или новее и параметр Workbench > Browser: Enable Chat Tools.",
   "settings.browser.enable.title": "Включить автоматизацию браузера",
-  "settings.browser.enable.description": "Зарегистрировать сервер Playwright MCP в CLI-бэкенде.",
+  "settings.browser.enable.description":
+    "Зарегистрировать сервер Playwright MCP в CLI-бэкенде. Отключит встроенный браузер выше.",
+  "settings.browser.playwrightOptions.title": "Параметры Playwright",
   "settings.browser.systemChrome.title": "Использовать системный Chrome",
   "settings.browser.systemChrome.description":
     "Использовать установленный браузер Chrome вместо отдельного экземпляра Chromium.",
@@ -1281,7 +1286,8 @@ export const dict = {
   "settings.checkpoints.enable.title": "Включить снимки",
   "settings.checkpoints.enable.description": "Создавать контрольные точки перед редактированием файлов",
   "settings.context.autoCompaction.title": "Автоматическое сжатие",
-  "settings.context.autoCompaction.description": "Когда контекст приближается к лимиту, отправляет старую историю (без инструментов, без системных подсказок, медиа заменены плейсхолдерами, вывод инструментов сокращён до 2000 символов) специальному агенту сжатия для структурированного обобщения, сохраняет последние 2 оборота и автоматически продолжает сессию",
+  "settings.context.autoCompaction.description":
+    "Когда контекст приближается к лимиту, отправляет старую историю (без инструментов, без системных подсказок, медиа заменены плейсхолдерами, вывод инструментов сокращён до 2000 символов) специальному агенту сжатия для структурированного обобщения, сохраняет последние 2 оборота и автоматически продолжает сессию",
   "settings.context.prune.title": "Очистить старые выходные данные",
   "settings.context.prune.description": "Удалить старые выходные данные инструментов при сжатии",
   "settings.context.watcherPatterns": "Шаблоны игнорирования наблюдателя файлов",

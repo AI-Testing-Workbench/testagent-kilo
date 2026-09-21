@@ -1059,8 +1059,13 @@ export const dict = {
 
   "settings.browser.description":
     "Cuando está activado, el agente de IA puede interactuar con páginas web: navegar, hacer clic, escribir y capturar pantallas. Se abrirá una ventana de Chrome para que puedas ver al agente trabajar.",
+  "settings.browser.vscodeTools.title": "Usar el navegador integrado de VS Code",
+  "settings.browser.vscodeTools.description":
+    "Permite que el agente trabaje en el navegador propio de VS Code. Sin instalación adicional; las páginas se abren en una pestaña del editor. Requiere VS Code 1.110 o posterior y el ajuste Workbench > Browser: Enable Chat Tools.",
   "settings.browser.enable.title": "Activar automatización del navegador",
-  "settings.browser.enable.description": "Registrar el servidor Playwright MCP con el backend CLI.",
+  "settings.browser.enable.description":
+    "Registrar el servidor Playwright MCP con el backend CLI. Desactiva el navegador integrado de arriba.",
+  "settings.browser.playwrightOptions.title": "Opciones de Playwright",
   "settings.browser.systemChrome.title": "Usar Chrome del sistema",
   "settings.browser.systemChrome.description":
     "Usar el navegador Chrome instalado en lugar de una instancia separada de Chromium.",
@@ -1290,7 +1295,8 @@ export const dict = {
   "settings.checkpoints.enable.title": "Habilitar instantáneas",
   "settings.checkpoints.enable.description": "Crear puntos de control antes de editar archivos",
   "settings.context.autoCompaction.title": "Compactación automática",
-  "settings.context.autoCompaction.description": "Cuando el contexto se acerca al límite, envía el historial anterior (sin herramientas, sin prompts del sistema, medios reemplazados por marcadores de posición, salidas de herramientas truncadas a 2000 caracteres) a un agente de compresión para resumir estructuradamente, conserva las últimas 2 rondas y continúa automáticamente la sesión",
+  "settings.context.autoCompaction.description":
+    "Cuando el contexto se acerca al límite, envía el historial anterior (sin herramientas, sin prompts del sistema, medios reemplazados por marcadores de posición, salidas de herramientas truncadas a 2000 caracteres) a un agente de compresión para resumir estructuradamente, conserva las últimas 2 rondas y continúa automáticamente la sesión",
   "settings.context.prune.title": "Eliminar salidas antiguas",
   "settings.context.prune.description": "Eliminar salidas de herramientas antiguas durante la compactación",
   "settings.context.watcherPatterns": "Patrones de ignorar del observador",

@@ -1070,9 +1070,13 @@ export const dict = {
   "settings.agentBehaviour.subtab.skills": "技能",
 
   "settings.browser.description":
-    "启用后，AI 代理可以与网页交互 — 导航、点击、输入和截取屏幕截图。Chrome 窗口将打开，以便您观察代理的工作。",
+    "选择 AI 智能体操作网页的方式：导航、点击、输入和截图。", // testagent_change
+  "settings.browser.vscodeTools.title": "使用 TS Code 内置浏览器", // testagent_change
+  "settings.browser.vscodeTools.description":
+    "让TestAgent在 TS Code 自带的浏览器中操作，页面在编辑器标签页中打开。", // testagent_change
   "settings.browser.enable.title": "启用浏览器自动化",
   "settings.browser.enable.description": "将 Playwright MCP 服务器注册到 CLI 后端。",
+  "settings.browser.playwrightOptions.title": "Playwright 选项", // testagent_change
   "settings.browser.systemChrome.title": "使用系统 Chrome",
   "settings.browser.systemChrome.description": "使用已安装的 Chrome 浏览器，而不是单独的 Chromium 实例。",
   "settings.browser.headless.title": "无头模式",
@@ -1239,7 +1243,8 @@ export const dict = {
   "settings.agentBehaviour.editMcp.timeout": "超时（秒）",
   "settings.agentBehaviour.editMcp.timeout.placeholder": "e.g. 5",
   "settings.agentBehaviour.editMcp.headers": "请求头",
-  "settings.agentBehaviour.editMcp.headers.help": "已自动加入sap_id（8位员工编号)和yst_id_token(一事通token),服务器按需使用",
+  "settings.agentBehaviour.editMcp.headers.help":
+    "已自动加入sap_id（8位员工编号)和yst_id_token(一事通token),服务器按需使用",
   "settings.agentBehaviour.editMcp.scopeLocal": "项目配置",
   "settings.agentBehaviour.editMcp.scopeGlobal": "全局配置",
   "settings.agentBehaviour.skillPaths": "技能文件夹路径",
@@ -1303,9 +1308,11 @@ export const dict = {
   "settings.checkpoints.enable.title": "启用快照",
   "settings.checkpoints.enable.description": "在文件编辑前创建检查点，以便恢复之前的状态",
   "settings.context.autoCompaction.title": "自动压缩",
-  "settings.context.autoCompaction.description": "当上下文接近容量上限时，将对话历史（不含最近 2 轮对话、工具调用以及系统提示词等）发给专用压缩 agent 进行压缩",
+  "settings.context.autoCompaction.description":
+    "当上下文接近容量上限时，将对话历史（不含最近 2 轮对话、工具调用以及系统提示词等）发给专用压缩 agent 进行压缩",
   "settings.context.compactionLimit.title": "自动压缩阈值",
-  "settings.context.compactionLimit.description": "自动压缩开启后，当上下文达到模型窗口的此百分比时进行压缩，未填写则按上下文-20k的逻辑作为阈值",
+  "settings.context.compactionLimit.description":
+    "自动压缩开启后，当上下文达到模型窗口的此百分比时进行压缩，未填写则按上下文-20k的逻辑作为阈值",
   "settings.context.prune.title": "修剪旧输出",
   "settings.context.prune.description": "压缩期间移除旧的工具输出",
 

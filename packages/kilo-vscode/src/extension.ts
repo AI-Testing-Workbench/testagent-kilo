@@ -19,6 +19,7 @@ import { registerAutocompleteProvider } from "./services/autocomplete"
 import { ensureBackendForAutocomplete } from "./services/autocomplete/ensure-backend"
 import { AutocompleteServiceManager } from "./services/autocomplete/AutocompleteServiceManager"
 import { BrowserAutomationService } from "./services/browser-automation"
+import { VscodeBrowserToolsService } from "./services/vscode-browser-tools"
 import { TelemetryProxy } from "./services/telemetry"
 import { registerCommitMessageService } from "./services/commit-message"
 import { registerCodeActions, registerTerminalActions, KiloCodeActionProvider } from "./services/code-actions"
@@ -65,6 +66,10 @@ export function activate(context: vscode.ExtensionContext) {
   const browserAutomationService = new BrowserAutomationService(connectionService)
   browserAutomationService.syncWithSettings()
 
+  // Create VS Code browser tools service (exposes VS Code's integrated browser tools to the agent)
+  const vscodeBrowserToolsService = new VscodeBrowserToolsService(connectionService)
+  vscodeBrowserToolsService.syncWithSettings()
+
   // Create remote status service (one status bar item for all webviews)
   // Only available with testagent backend (depends on kilo-specific remote.* API)
   const remoteService = isTestagentBun() ? new RemoteStatusService() : null
@@ -78,6 +83,7 @@ export function activate(context: vscode.ExtensionContext) {
   const unsubscribeStateChange = connectionService.onStateChange((state) => {
     if (state === "connected") {
       browserAutomationService.reregisterIfEnabled()
+      vscodeBrowserToolsService.reregisterIfEnabled()
       if (telemetry) {
         const config = connectionService.getServerConfig()
         if (config) {
@@ -651,6 +657,7 @@ export function activate(context: vscode.ExtensionContext) {
     dispose: () => {
       unsubscribeStateChange()
       browserAutomationService.dispose()
+      vscodeBrowserToolsService.dispose()
       provider.dispose()
       connectionService.dispose()
     },

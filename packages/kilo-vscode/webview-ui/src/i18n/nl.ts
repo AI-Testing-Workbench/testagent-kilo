@@ -1053,8 +1053,13 @@ export const dict = {
 
   "settings.browser.description":
     "Indien ingeschakeld kan de AI agent interactie hebben met webpagina's — navigeren, klikken, typen en screenshots maken. Er wordt een Chrome-venster geopend zodat je de agent aan het werk kunt zien.",
+  "settings.browser.vscodeTools.title": "Ingebouwde browser van VS Code gebruiken",
+  "settings.browser.vscodeTools.description":
+    "Laat de agent werken in de eigen browser van VS Code. Geen extra installatie; pagina's openen in een editor-tabblad. Vereist VS Code 1.110 of nieuwer en de instelling Workbench > Browser: Enable Chat Tools.",
   "settings.browser.enable.title": "Browserautomatisering inschakelen",
-  "settings.browser.enable.description": "Registreer de Playwright MCP-server bij de CLI backend.",
+  "settings.browser.enable.description":
+    "Registreer de Playwright MCP-server bij de CLI backend. Schakelt de ingebouwde browser hierboven uit.",
+  "settings.browser.playwrightOptions.title": "Playwright-opties",
   "settings.browser.systemChrome.title": "Gebruik Systeem Chrome",
   "settings.browser.systemChrome.description":
     "Gebruik je geïnstalleerde Chrome-browser in plaats van een aparte Chromium-instantie.",
@@ -1255,7 +1260,8 @@ export const dict = {
     "Maak checkpoints aan voor het bewerken van bestanden zodat je eerdere staten kunt herstellen",
 
   "settings.context.autoCompaction.title": "Automatische Compactie",
-  "settings.context.autoCompaction.description": "Wanneer de context bijna vol is, stuurt oudere geschiedenis (geen tools, geen systeemprompts, media vervangen door placeholders, tooluitvoer ingekort tot 2000 tekens) naar een speciale compressie-agent voor gestructureerde samenvatting, behoudt de laatste 2 gespreksrondes en zet de sessie automatisch voort",
+  "settings.context.autoCompaction.description":
+    "Wanneer de context bijna vol is, stuurt oudere geschiedenis (geen tools, geen systeemprompts, media vervangen door placeholders, tooluitvoer ingekort tot 2000 tekens) naar een speciale compressie-agent voor gestructureerde samenvatting, behoudt de laatste 2 gespreksrondes en zet de sessie automatisch voort",
   "settings.context.prune.title": "Oude Uitvoer Opschonen",
   "settings.context.prune.description": "Verwijder oude tool uitvoer tijdens compactie",
   "settings.context.watcherPatterns": "File Watcher Negeer Patronen",

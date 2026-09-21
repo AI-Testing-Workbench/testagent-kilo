@@ -2535,6 +2535,11 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
       console.log("[TestAgent] Waiting for backend to rebuild state...")
       await new Promise((resolve) => setTimeout(resolve, 500))
 
+      // testagent_change: both /mcp/reload and the instance disposal above rebuild MCP state
+      // from the config file, which drops runtime-registered servers. Let their owners
+      // register themselves again now that the backend has settled.
+      this.connectionService.notifyMcpReloaded()
+
       // Refresh all relevant data in UI
       console.log("[TestAgent] Fetching fresh data from backend...")
       await Promise.all([this.fetchAndSendMcpStatus(), this.fetchAndSendConfig(true), this.fetchAndSendAgents()])
@@ -3529,6 +3534,9 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
         const sdkClient = (this.client as any).client
         if (sdkClient && typeof sdkClient.post === "function") {
           await sdkClient.post({ url: "/mcp/reload", body: {} })
+          // testagent_change: reload rebuilds MCP state from the config file, which drops
+          // runtime-registered servers. Let their owners register themselves again.
+          this.connectionService.notifyMcpReloaded()
         }
       } catch (e) {
         console.warn("[TestAgent] MCP reload after config update failed:", e)
@@ -4419,6 +4427,26 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
     const { section, leaf } = buildSettingPath(key)
     const config = vscode.workspace.getConfiguration(`testagent.new${section ? `.${section}` : ""}`)
     await config.update(leaf, value, vscode.ConfigurationTarget.Global)
+
+    // testagent_change start - the two browser backends are mutually exclusive. Each registers its
+    // own MCP server, so with both on the agent sees two overlapping sets of browser tools. Only
+    // the enable switches are affected; the Playwright sub-settings keep their values.
+    const other =
+      leaf !== "enabled" || value !== true
+        ? undefined
+        : section === "browserAutomation"
+          ? "vscodeBrowserTools"
+          : section === "vscodeBrowserTools"
+            ? "browserAutomation"
+            : undefined
+
+    if (other) {
+      await vscode.workspace
+        .getConfiguration(`testagent.new.${other}`)
+        .update("enabled", false, vscode.ConfigurationTarget.Global)
+      this.sendBrowserSettings()
+    }
+    // testagent_change end
   }
 
   // testagent_change start - notification methods
@@ -4710,13 +4738,17 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
    * Read the current browser automation settings and push them to the webview.
    */
   private sendBrowserSettings(): void {
-    const config = vscode.workspace.getConfiguration("testagent.new.browserAutomation")
+    const automation = vscode.workspace.getConfiguration("testagent.new.browserAutomation")
+    const tools = vscode.workspace.getConfiguration("testagent.new.vscodeBrowserTools")
     this.postMessage({
       type: "browserSettingsLoaded",
       settings: {
-        enabled: config.get<boolean>("enabled", false),
-        useSystemChrome: config.get<boolean>("useSystemChrome", true),
-        headless: config.get<boolean>("headless", false),
+        enabled: automation.get<boolean>("enabled", false),
+        useSystemChrome: automation.get<boolean>("useSystemChrome", true),
+        headless: automation.get<boolean>("headless", false),
+        // testagent_change - report what is actually in effect. The tools service declines to
+        // register while Playwright is on, and a hand-edited settings.json can hold both as true.
+        vscodeBrowserTools: tools.get<boolean>("enabled", false) && !automation.get<boolean>("enabled", false),
       },
     })
   }

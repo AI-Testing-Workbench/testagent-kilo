@@ -1056,8 +1056,13 @@ export const dict = {
 
   "settings.browser.description":
     "Kada je omogućeno, AI agent može komunicirati s web stranicama — navigirati, klikati, tipkati i snimati ekran. Chrome prozor će se otvoriti kako biste mogli pratiti rad agenta.",
+  "settings.browser.vscodeTools.title": "Koristi ugrađeni preglednik VS Codea",
+  "settings.browser.vscodeTools.description":
+    "Dozvoli agentu da radi u ugrađenom pregledniku VS Codea. Bez dodatne instalacije; stranice se otvaraju u kartici editora. Zahtijeva VS Code 1.110 ili noviji i postavku Workbench > Browser: Enable Chat Tools.",
   "settings.browser.enable.title": "Omogući automatizaciju preglednika",
-  "settings.browser.enable.description": "Registriraj Playwright MCP server s CLI pozadinom.",
+  "settings.browser.enable.description":
+    "Registriraj Playwright MCP server s CLI pozadinom. Isključuje ugrađeni preglednik iznad.",
+  "settings.browser.playwrightOptions.title": "Playwright opcije",
   "settings.browser.systemChrome.title": "Koristi sistemski Chrome",
   "settings.browser.systemChrome.description":
     "Koristite instalirani Chrome preglednik umjesto zasebne Chromium instance.",
@@ -1282,7 +1287,8 @@ export const dict = {
   "settings.checkpoints.enable.title": "Omogući snimke",
   "settings.checkpoints.enable.description": "Kreiraj kontrolne točke prije uređivanja datoteka",
   "settings.context.autoCompaction.title": "Automatska kompresija",
-  "settings.context.autoCompaction.description": "Kada se kontekst približi kapacitetu, šalje stariju povijest (bez alata, bez sistemskih upita, mediji zamijenjeni placeholderima, izlazi alata skraćeni na 2000 znakova) namjenskom agentu za kompresiju radi strukturiranog sažimanja, zadržava posljednje 2 runde i automatski nastavlja sesiju",
+  "settings.context.autoCompaction.description":
+    "Kada se kontekst približi kapacitetu, šalje stariju povijest (bez alata, bez sistemskih upita, mediji zamijenjeni placeholderima, izlazi alata skraćeni na 2000 znakova) namjenskom agentu za kompresiju radi strukturiranog sažimanja, zadržava posljednje 2 runde i automatski nastavlja sesiju",
   "settings.context.prune.title": "Očisti stare izlaze",
   "settings.context.prune.description": "Ukloni stare izlaze alata tokom kompresije",
   "settings.context.watcherPatterns": "Uzorci ignoriranja za promatrač datoteka",

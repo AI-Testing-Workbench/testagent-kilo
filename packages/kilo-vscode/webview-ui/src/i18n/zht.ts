@@ -1034,8 +1034,12 @@ export const dict = {
 
   "settings.browser.description":
     "啟用後，AI Agent 可以與網頁互動，可導覽、點選、輸入並擷取螢幕截圖。Chrome 視窗將開啟，方便觀察 Agent 的工作。",
+  "settings.browser.vscodeTools.title": "使用 VS Code 內建瀏覽器",
+  "settings.browser.vscodeTools.description":
+    "讓 Agent 在 VS Code 內建的瀏覽器中操作，頁面會於編輯器分頁開啟，無需額外安裝。需要 VS Code 1.110 以上，並開啟 Workbench > Browser: Enable Chat Tools。",
   "settings.browser.enable.title": "啟用瀏覽器自動化",
-  "settings.browser.enable.description": "將 Playwright MCP 伺服器註冊到 CLI 後端。",
+  "settings.browser.enable.description": "將 Playwright MCP 伺服器註冊到 CLI 後端，並自動關閉上方的內建瀏覽器。",
+  "settings.browser.playwrightOptions.title": "Playwright 選項",
   "settings.browser.systemChrome.title": "使用系統 Chrome",
   "settings.browser.systemChrome.description": "使用已安裝的 Chrome 瀏覽器，而非獨立的 Chromium 實例。",
   "settings.browser.headless.title": "無頭模式",

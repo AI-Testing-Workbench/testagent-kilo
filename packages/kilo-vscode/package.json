@@ -15,7 +15,7 @@
     "directory": "packages/kilo-vscode"
   },
   "engines": {
-    "vscode": "^1.105.1"
+    "vscode": "^1.110.1"
   },
   "license": "MIT",
   "author": {
@@ -570,7 +570,7 @@
         "testagent.new.browserAutomation.enabled": {
           "type": "boolean",
           "default": false,
-          "description": "Enable browser automation powered by Playwright. When enabled, the AI agent can interact with web pages in a visible Chrome window."
+          "description": "Enable browser automation powered by Playwright. When enabled, the AI agent can interact with web pages in a visible Chrome window. Mutually exclusive with testagent.new.vscodeBrowserTools.enabled — enabling this turns that off."
         },
         "testagent.new.browserAutomation.useSystemChrome": {
           "type": "boolean",
@@ -581,6 +581,11 @@
           "type": "boolean",
           "default": false,
           "description": "Run browser automation in headless mode (no visible window). When disabled, you can watch the agent interact with the browser."
+        },
+        "testagent.new.vscodeBrowserTools.enabled": {
+          "type": "boolean",
+          "default": false,
+          "description": "Let the AI agent use VS Code's integrated browser (open, read, screenshot and navigate pages). Requires VS Code 1.110 or newer and the \"Workbench > Browser: Enable Chat Tools\" (workbench.browser.enableChatTools) setting. Mutually exclusive with testagent.new.browserAutomation.enabled — enabling that turns this off."
         },
         "testagent.new.notifications.agent": {
           "type": "boolean",

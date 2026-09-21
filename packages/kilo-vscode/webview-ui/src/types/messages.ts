@@ -947,6 +947,8 @@ export interface BrowserSettings {
   enabled: boolean
   useSystemChrome: boolean
   headless: boolean
+  /** VS Code's integrated browser tools. Exclusive with Playwright: only one backend may be on. */
+  vscodeBrowserTools: boolean
 }
 
 export interface BrowserSettingsLoadedMessage {
