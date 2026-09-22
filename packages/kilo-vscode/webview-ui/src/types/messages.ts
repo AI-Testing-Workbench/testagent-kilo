@@ -1808,6 +1808,8 @@ export type ExtensionMessage =
       envVars: {
         system: Record<string, { key: string; value: string }>
         custom: Record<string, { key: string; value: string }>
+        // testagent_change - 从远程接口获取的环境变量
+        remote: Record<string, { key: string; value: string }>
       }
     }
   | DiffViewerDiffsMessage

@@ -17,13 +17,13 @@ export async function handleRequestEnvVars(
 
   try {
     const response = await client.testagent.envVars.list(undefined, { throwOnError: true })
-    const envVars = response.data || { system: {}, custom: {} }
+    const envVars = response.data || { system: {}, custom: {}, remote: {} }
     webview.postMessage({ type: "envVarsData", envVars })
   } catch (error) {
     console.error("[TestAgent] Failed to fetch env vars:", error)
     webview.postMessage({
       type: "envVarsData",
-      envVars: { system: {}, custom: {} },
+      envVars: { system: {}, custom: {}, remote: {} },
       error: formatEnvVarsLoadError(error),
     })
   }
@@ -134,5 +134,31 @@ export async function handleDeleteEnvVar(
       key,
       error: error instanceof Error ? error.message : String(error),
     })
+  }
+}
+
+/**
+ * 服务端连接成功后补齐远程接口变量：缺失才拉取，已存在则跳过。
+ * 失败不阻断启动流程，仅记录日志。
+ */
+export async function handleEnsureRemoteEnvVars(client: KiloClient): Promise<void> {
+  try {
+    const response = await client.testagent.envVars.ensureRemote(undefined, { throwOnError: true })
+    console.log("[TestAgent] Remote env vars ensured:", response.data)
+  } catch (error) {
+    console.warn("[TestAgent] Failed to ensure remote env vars:", error)
+  }
+}
+
+/**
+ * 登出时清理从接口获取的远程变量（落盘数据 + process.env）。
+ * 失败不阻断登出流程，仅记录日志。
+ */
+export async function handleClearRemoteEnvVars(client: KiloClient): Promise<void> {
+  try {
+    await client.testagent.envVars.clearRemote(undefined, { throwOnError: true })
+    console.log("[TestAgent] Remote env vars cleared")
+  } catch (error) {
+    console.warn("[TestAgent] Failed to clear remote env vars:", error)
   }
 }

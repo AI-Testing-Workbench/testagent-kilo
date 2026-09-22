@@ -14,6 +14,8 @@ const EnvVarsTab: Component = () => {
   const vscode = useVSCode()
   const [systemVars, setSystemVars] = createSignal<EnvVar[]>([])
   const [customVars, setCustomVars] = createSignal<EnvVar[]>([])
+  // testagent_change - 从远程接口获取的环境变量
+  const [remoteVars, setRemoteVars] = createSignal<EnvVar[]>([])
   const [loadError, setLoadError] = createSignal("")
   // testagent_change start - disable adding env vars from UI
   // const [newKey, setNewKey] = createSignal("")
@@ -34,11 +36,12 @@ const EnvVarsTab: Component = () => {
     if (msg.type === "envVarsData") {
       const envVarsMsg = msg as {
         type: "envVarsData"
-        envVars: { system: Record<string, EnvVar>; custom: Record<string, EnvVar> }
+        envVars: { system: Record<string, EnvVar>; custom: Record<string, EnvVar>; remote: Record<string, EnvVar> }
         error?: string
       }
       setSystemVars(Object.values(envVarsMsg.envVars.system))
       setCustomVars(Object.values(envVarsMsg.envVars.custom))
+      setRemoteVars(Object.values(envVarsMsg.envVars.remote ?? {}))
       setLoadError(envVarsMsg.error || "")
     }
   })
@@ -208,6 +211,36 @@ const EnvVarsTab: Component = () => {
           <p style={{ color: "var(--text-muted)" }}>暂无系统环境变量</p>
         </Show>
       </Card>
+
+      {/* testagent_change start - 远程接口获取的环境变量（只读，登出时清理） */}
+      <Card data-variant="wide-input" data-env-vars="remote">
+        <h4>鉴权环境变量</h4>
+        <For each={remoteVars()}>
+          {(v) => (
+            <SettingsRow title={v.key} last>
+              <div
+                title={v.value}
+                style={{
+                  width: "100%",
+                  padding: "6px 8px",
+                  border: "1px solid var(--border-weak-base)",
+                  "border-radius": "4px",
+                  color: "var(--text-weak-base)",
+                  "white-space": "nowrap",
+                  overflow: "hidden",
+                  "text-overflow": "ellipsis",
+                }}
+              >
+                {v.value}
+              </div>
+            </SettingsRow>
+          )}
+        </For>
+        <Show when={remoteVars().length === 0}>
+          <p style={{ color: "var(--text-muted)" }}>暂无鉴权环境变量</p>
+        </Show>
+      </Card>
+      {/* testagent_change end */}
 
       <Card data-variant="wide-input" data-env-vars="configured">
         <h4>自定义环境变量</h4>

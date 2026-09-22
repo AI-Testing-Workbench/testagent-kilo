@@ -193,6 +193,8 @@ import type {
   TestagentCustomEnvVarsBatchUpdateResponses,
   TestagentEnvVarsBatchQueryErrors,
   TestagentEnvVarsBatchQueryResponses,
+  TestagentEnvVarsClearRemoteResponses,
+  TestagentEnvVarsEnsureRemoteResponses,
   TestagentEnvVarsListErrors,
   TestagentEnvVarsListResponses,
   TestagentUserSetResponses,
@@ -736,6 +738,66 @@ export class EnvVars extends HeyApiClient {
         ...options?.headers,
         ...params.headers,
       },
+    })
+  }
+
+  /**
+   * Ensure remote environment variables exist
+   *
+   * If no TESTAGENT-prefixed variable exists yet, fetch them from the remote interface and persist them. Existing values are kept as-is.
+   */
+  public ensureRemote<ThrowOnError extends boolean = false>(
+    parameters?: {
+      directory?: string
+      workspace?: string
+    },
+    options?: Options<never, ThrowOnError>,
+  ) {
+    const params = buildClientParams(
+      [parameters],
+      [
+        {
+          args: [
+            { in: "query", key: "directory" },
+            { in: "query", key: "workspace" },
+          ],
+        },
+      ],
+    )
+    return (options?.client ?? this.client).post<TestagentEnvVarsEnsureRemoteResponses, unknown, ThrowOnError>({
+      url: "/testagent/env-vars/remote/ensure",
+      ...options,
+      ...params,
+    })
+  }
+
+  /**
+   * Clear remote environment variables
+   *
+   * Remove interface-fetched environment variables from storage and from the running process environment. Called on logout.
+   */
+  public clearRemote<ThrowOnError extends boolean = false>(
+    parameters?: {
+      directory?: string
+      workspace?: string
+    },
+    options?: Options<never, ThrowOnError>,
+  ) {
+    const params = buildClientParams(
+      [parameters],
+      [
+        {
+          args: [
+            { in: "query", key: "directory" },
+            { in: "query", key: "workspace" },
+          ],
+        },
+      ],
+    )
+    return (options?.client ?? this.client).delete<TestagentEnvVarsClearRemoteResponses, unknown, ThrowOnError>({
+      url: "/testagent/env-vars/remote",
+      ...options,
+      ...params,
     })
   }
 }

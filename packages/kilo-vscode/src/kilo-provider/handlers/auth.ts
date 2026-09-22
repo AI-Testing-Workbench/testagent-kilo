@@ -7,6 +7,7 @@
 
 import type { KiloClient } from "@kilocode/sdk/v2/client"
 import { getErrorMessage } from "../../kilo-provider-utils"
+import { handleClearRemoteEnvVars, handleEnsureRemoteEnvVars } from "./env-vars"
 
 export interface AuthContext {
   readonly client: KiloClient | null
@@ -61,6 +62,10 @@ export async function handleLogin(ctx: AuthContext, attempt: number, getAttempt:
 
     await ctx.disposeGlobal()
 
+    // testagent_change start - 登录成功后重新补齐远程接口环境变量（登出时已清理）
+    await handleEnsureRemoteEnvVars(ctx.client)
+    // testagent_change end
+
     // Step 3: Fetch profile and push to webview
     // testagent_change start - disable profile API (not available in testagent backend)
     // const { data: profile } = await ctx.client.kilo.profile(undefined, { throwOnError: true })
@@ -78,13 +83,16 @@ export async function handleLogin(ctx: AuthContext, attempt: number, getAttempt:
   }
 }
 
-/** Handle logout: remove auth credentials and clear profile. */
+/** Handle logout: remove auth credentials, clear interface-fetched env vars, and clear profile. */
 export async function handleLogout(ctx: AuthContext): Promise<void> {
   if (!ctx.client) return
 
   try {
     console.log("[TestAgent]  🚪 Logging out...")
     await ctx.client.auth.remove({ providerID: "kilo" }, { throwOnError: true })
+    // testagent_change start - 登出同时清理从远程接口获取的环境变量（落盘数据 + process.env）
+    await handleClearRemoteEnvVars(ctx.client)
+    // testagent_change end
     console.log("[TestAgent]  🚪 Logged out successfully")
     ctx.postMessage({ type: "profileData", data: null })
 

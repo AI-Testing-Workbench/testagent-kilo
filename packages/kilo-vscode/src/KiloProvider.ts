@@ -116,6 +116,7 @@ import {
   handleCreateEnvVar,
   handleUpdateEnvVar,
   handleDeleteEnvVar,
+  handleEnsureRemoteEnvVars,
 } from "./kilo-provider/handlers/env-vars"
 // testagent_change end
 
@@ -1674,6 +1675,9 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
           // Fire config warnings independently so a failure in the
           // sequential await chain doesn't prevent warnings from being shown
           void this.checkConfigWarnings("state")
+          // testagent_change start - 连接成功后补齐远程接口环境变量（缺失才拉取，失败不影响其他初始化）
+          if (this.client) void handleEnsureRemoteEnvVars(this.client)
+          // testagent_change end
           try {
             // testagent_change start - disable profile API (not available in testagent backend)
             // Profile fetch is best-effort — returns 401 when user isn't logged into gateway.
