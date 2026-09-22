@@ -1,6 +1,6 @@
 // testagent_change - new file
 import type { KiloClient } from "@kilocode/sdk/v2/client"
-import type * as vscode from "vscode"
+import * as vscode from "vscode"
 import { getErrorMessage } from "../../kilo-provider-utils"
 
 const formatEnvVarsLoadError = (error: unknown) =>
@@ -143,6 +143,14 @@ export async function handleDeleteEnvVar(
  */
 export async function handleEnsureRemoteEnvVars(client: KiloClient): Promise<void> {
   try {
+    // testagent_change start - 未登录（例如刚从 VS Code 左下角账号菜单注销）时绝不拉取接口变量，
+    // 否则注销时刚清理掉的接口变量会被重新写回。
+    const session = await vscode.authentication.getSession("tscode-oauth", [], { createIfNone: false })
+    if (!session) {
+      console.log("[TestAgent] Skip ensure remote env vars: no tscode-oauth session")
+      return
+    }
+    // testagent_change end
     const response = await client.testagent.envVars.ensureRemote(undefined, { throwOnError: true })
     console.log("[TestAgent] Remote env vars ensured:", response.data)
   } catch (error) {
