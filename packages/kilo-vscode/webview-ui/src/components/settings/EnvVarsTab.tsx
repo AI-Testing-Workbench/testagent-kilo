@@ -214,7 +214,7 @@ const EnvVarsTab: Component = () => {
 
       {/* testagent_change start - 远程接口获取的环境变量（只读，登出时清理） */}
       <Card data-variant="wide-input" data-env-vars="remote">
-        <h4>鉴权环境变量</h4>
+        <h4>TestAgent应用鉴权变量</h4>
         <For each={remoteVars()}>
           {(v) => (
             <SettingsRow title={v.key} last>
@@ -237,7 +237,7 @@ const EnvVarsTab: Component = () => {
           )}
         </For>
         <Show when={remoteVars().length === 0}>
-          <p style={{ color: "var(--text-muted)" }}>暂无鉴权环境变量</p>
+          <p style={{ color: "var(--text-muted)" }}>暂无TestAgent应用鉴权变量</p>
         </Show>
       </Card>
       {/* testagent_change end */}
