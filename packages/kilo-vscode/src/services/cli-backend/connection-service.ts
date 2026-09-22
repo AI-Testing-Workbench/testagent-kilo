@@ -6,6 +6,7 @@ import { createKiloClient, type KiloClient, type Event } from "@kilocode/sdk/v2/
 import { SdkSSEAdapter } from "./sdk-sse-adapter"
 import type { ServerConfig } from "./types"
 import { resolveEventSessionId as resolveEventSessionIdPure } from "./connection-utils"
+import { handleEnsureRemoteEnvVars } from "../../kilo-provider/handlers/env-vars" // testagent_change
 
 export type ConnectionState = "connecting" | "connected" | "disconnected" | "error"
 type SSEEventListener = (event: Event) => void
@@ -884,7 +885,13 @@ export class KiloConnectionService {
       if (!response.ok) {
         const text = await response.text()
         console.error("[testagent-vscode] syncUserId failed:", text)
+        return
       }
+      // testagent_change start - 远程接口变量依赖 originPathId，而该字段只能由这次 PUT 写入后端。
+      // SSE 进入 connected 时这次 PUT 还没发出，那时触发的拉取必然因缺少 pathCode 被跳过，
+      // 且没有任何地方重试，所以必须在用户信息落库之后再拉一次（幂等：已存在则跳过）。
+      if (this.client) await handleEnsureRemoteEnvVars(this.client)
+      // testagent_change end
     } catch (e) {
       console.error("[testagent-vscode] syncUserId error:", e)
       // non-critical, ignore

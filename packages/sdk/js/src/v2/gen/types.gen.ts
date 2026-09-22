@@ -3677,6 +3677,12 @@ export type TestagentEnvVarsListResponses = {
         value: string
       }
     }
+    remote: {
+      [key: string]: {
+        key: string
+        value: string
+      }
+    }
   }
 }
 
@@ -3717,6 +3723,12 @@ export type TestagentEnvVarsBatchQueryResponses = {
       }
     }
     custom: {
+      [key: string]: {
+        key: string
+        value: string
+      }
+    }
+    remote: {
       [key: string]: {
         key: string
         value: string
@@ -3807,6 +3819,49 @@ export type TestagentCustomEnvVarsBatchUpdateResponses = {
 
 export type TestagentCustomEnvVarsBatchUpdateResponse =
   TestagentCustomEnvVarsBatchUpdateResponses[keyof TestagentCustomEnvVarsBatchUpdateResponses]
+
+export type TestagentEnvVarsEnsureRemoteData = {
+  body?: never
+  path?: never
+  query?: {
+    directory?: string
+    workspace?: string
+  }
+  url: "/testagent/env-vars/remote/ensure"
+}
+
+export type TestagentEnvVarsEnsureRemoteResponses = {
+  /**
+   * 远程接口变量补齐结果
+   */
+  200: {
+    created: boolean
+    keys: Array<string>
+  }
+}
+
+export type TestagentEnvVarsEnsureRemoteResponse =
+  TestagentEnvVarsEnsureRemoteResponses[keyof TestagentEnvVarsEnsureRemoteResponses]
+
+export type TestagentEnvVarsClearRemoteData = {
+  body?: never
+  path?: never
+  query?: {
+    directory?: string
+    workspace?: string
+  }
+  url: "/testagent/env-vars/remote"
+}
+
+export type TestagentEnvVarsClearRemoteResponses = {
+  /**
+   * 远程接口变量清理成功
+   */
+  200: boolean
+}
+
+export type TestagentEnvVarsClearRemoteResponse =
+  TestagentEnvVarsClearRemoteResponses[keyof TestagentEnvVarsClearRemoteResponses]
 
 export type TestagentZhAnswerSetData = {
   body?: {
