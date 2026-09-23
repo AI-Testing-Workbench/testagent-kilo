@@ -6,7 +6,7 @@ import { createKiloClient, type KiloClient, type Event } from "@kilocode/sdk/v2/
 import { SdkSSEAdapter } from "./sdk-sse-adapter"
 import type { ServerConfig } from "./types"
 import { resolveEventSessionId as resolveEventSessionIdPure } from "./connection-utils"
-import { handleEnsureRemoteEnvVars } from "../../kilo-provider/handlers/env-vars" // testagent_change
+import { handleClearRemoteEnvVars, handleEnsureRemoteEnvVars } from "../../kilo-provider/handlers/env-vars" // testagent_change
 
 export type ConnectionState = "connecting" | "connected" | "disconnected" | "error"
 type SSEEventListener = (event: Event) => void
@@ -873,7 +873,15 @@ export class KiloConnectionService {
     if (!this.config) return
     try {
       const session = await vscode.authentication.getSession("tscode-oauth", [], { createIfNone: false })
-      const metadata = (session as any).metadata
+      // testagent_change start - 左下角账号菜单的注销不会经过 webview 的 logout 消息，只会走到这里。
+      // 只要 VS Code 的 tscode-oauth session 消失就视为已登出：直接清掉接口变量并返回。
+      // 放在 PUT 之前是有意的——清理不依赖用户信息是否同步成功，也不读 metadata（登出时它是 undefined）。
+      if (!session) {
+        if (this.client) await handleClearRemoteEnvVars(this.client)
+        return
+      }
+      // testagent_change end
+      const metadata = (session as any)?.metadata
       const userId = metadata?.employeeId
       const auth = `Basic ${Buffer.from(`opencode:${this.config.password}`).toString("base64")}`
       const response = await fetch(`${this.config.baseUrl}/testagent/user`, {
