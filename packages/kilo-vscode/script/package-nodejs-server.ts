@@ -51,6 +51,25 @@ await fs.rm(TARGET, { recursive: true, force: true })
 await fs.mkdir(TARGET, { recursive: true })
 await fs.cp(serverDist, TARGET, { recursive: true })
 
+// testagent_change start - Step 2.6: 把 agent host wrapper 拷进 bin/（.vscodeignore 已白名单 !bin/**），
+// 供 workbench OpenCode provider 通过 TestAgent/PATH 解析到 node 运行时
+console.log("Step 2.6: Copying agent host wrapper to bin/...")
+const wrapperSrcDir = join(SERVER_PKG, "deploy")
+const binDir = join(ROOT, "bin")
+await fs.mkdir(binDir, { recursive: true })
+for (const w of ["testagent-node", "testagent-node.cmd"]) {
+  const src = join(wrapperSrcDir, w)
+  if (existsSync(src)) {
+    const dest = join(binDir, w)
+    await fs.copyFile(src, dest)
+    if (w === "testagent-node") await fs.chmod(dest, 0o755) // vsce 打包保留 unix mode
+    console.log(`  ✓ ${src} -> ${dest}`)
+  } else {
+    console.warn(`  ⚠️ wrapper 缺失: ${src}（先在 testagent-core 跑 bun:mac/bun:windows 或 node:deploy）`)
+  }
+}
+// testagent_change end
+
 // // Step 2.5: Copy Bun binary for runtime switching
 // console.log("Step 2.5: Copying Bun binary for runtime switching...")
 // const bunBinDir = join(ROOT, "bin")
