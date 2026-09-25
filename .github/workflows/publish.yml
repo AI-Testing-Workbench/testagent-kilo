@@ -560,12 +560,12 @@ jobs:
       - name: Clone test-workbench-vsix repo
         run: |
           if [ -z "$WORKBENCH_TOKEN" ]; then
-            echo "::error::WORKBENCH_TOKEN secret is required to push to lulujs/test-workbench-vsix"
+            echo "::error::WORKBENCH_TOKEN secret is required to push to AI-Testing-Workbench/test-workbench-vsix"
             exit 1
           fi
           git config --global user.name "testagent-kilo[bot]"
           git config --global user.email "testagent-kilo[bot]@users.noreply.github.com"
-          git clone --depth 1 "https://x-access-token:${WORKBENCH_TOKEN}@github.com/lulujs/test-workbench-vsix.git" prebuilt
+          git clone --depth 1 "https://x-access-token:${WORKBENCH_TOKEN}@github.com/AI-Testing-Workbench/test-workbench-vsix.git" prebuilt
         env:
           WORKBENCH_TOKEN: ${{ secrets.WORKBENCH_TOKEN }}
 
