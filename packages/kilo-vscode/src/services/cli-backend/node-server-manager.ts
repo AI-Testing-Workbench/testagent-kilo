@@ -6,7 +6,7 @@ import * as path from "path"
 import * as vscode from "vscode"
 import { t } from "./i18n"
 import { parseServerPort } from "./server-utils"
-import { isCloudMode } from "./cloud-mode"
+import { shouldShareServer } from "./cloud-mode"
 import {
   clearServerState,
   getServerDataDir,
@@ -19,6 +19,7 @@ import {
   type ServerState,
 } from "./server-state"
 import { type ServerInstance, ServerStartupError, toErrorMessage } from "./server-manager"
+import { spawnOwnerWatcher } from "./server-lifetime"
 
 const STARTUP_TIMEOUT_SECONDS = 30
 
@@ -56,14 +57,14 @@ export class NodeServerManager {
       return this.startupPromise
     }
 
-    if (isCloudMode()) {
+    if (shouldShareServer()) {
       const adopted = await this.adoptExistingServer()
       if (adopted) {
         this.instance = adopted
-        console.log("[TestAgent] NodeServerManager: ✅ Adopted existing cloud server:", { port: adopted.port })
+        console.log("[TestAgent] NodeServerManager: ✅ Adopted existing shared server:", { port: adopted.port })
         return adopted
       }
-      console.log("[TestAgent] NodeServerManager: ☁️ No live cloud server found, spawning detached daemon")
+      console.log("[TestAgent] NodeServerManager: ☁️ No live shared server found, spawning detached daemon")
     }
 
     console.log("[TestAgent] NodeServerManager: 🚀 Starting new server instance...")
@@ -178,7 +179,7 @@ export class NodeServerManager {
 
     const spawnCwd = vscode.workspace.workspaceFolders?.[0]?.uri.fsPath ?? process.env.HOME ?? require("os").homedir()
 
-    const cloud = isCloudMode()
+    const cloud = shouldShareServer()
     const port = cloud ? await pickFreePort() : 0
     // testagent_change start - 启动时环境变量激活源：开关开启注入 TESTAGENT_ZH_ANSWER_ENABLED=1（与运行时按钮切换相互独立）。
     // 运行中按钮切换走 /testagent/zh-answer 热切换，不写环境变量。
@@ -352,6 +353,9 @@ export class NodeServerManager {
       throw new ServerStartupError(userMessage, userDetails)
     }
     writeServerState(state)
+    // Keep the detached shared daemon from outliving tscode: watch the owning app
+    // process (Electron main), not the extension host, so window reloads keep it.
+    spawnOwnerWatcher(nodePath, process.ppid, proc.pid)
     console.log("[TestAgent] NodeServerManager: ☁️ Cloud server ready:", { port })
     return { port, password, process: proc }
   }
@@ -531,10 +535,11 @@ export class NodeServerManager {
     const proc = this.instance.process
     this.instance = null
 
-    // Cloud mode: the daemon is intentionally detached from the extension host
-    // so tasks keep running after tscode closes. Do NOT kill it.
-    if (isCloudMode()) {
-      console.log("[TestAgent] NodeServerManager: ☁️ Cloud mode — leaving daemon running (detach), PID:", proc?.pid)
+    // Shared/cloud mode: the daemon is intentionally detached from the extension
+    // host so it survives window reloads and is shared with the Agent Host. The
+    // Agent Host (app-scoped) owns cleanup on app exit; do NOT kill it here.
+    if (shouldShareServer()) {
+      console.log("[TestAgent] NodeServerManager: ☁️ Shared mode — leaving daemon running (detach), PID:", proc?.pid)
       return
     }
 

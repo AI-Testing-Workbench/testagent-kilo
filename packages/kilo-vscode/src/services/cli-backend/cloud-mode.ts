@@ -14,3 +14,18 @@ import { existsSync } from "fs"
 export function isCloudMode(): boolean {
   return process.env.TESTAGENT_CLOUD_MODE === "1" || existsSync("/etc/tscode-cloud-mode")
 }
+
+/**
+ * Whether the backend server should run as a shared, detached daemon that is
+ * discovered/adopted via `server.json` (instead of a private child of the
+ * extension host).
+ *
+ * Cloud mode always does. Local tscode windows can opt in via
+ * `TESTAGENT_SHARED_SERVER=1`, so the editor extension and the Agent Host
+ * (Agents window) share a single backend process instead of each spawning its
+ * own — switching between the editor and the Agents window then never restarts
+ * the backend.
+ */
+export function shouldShareServer(): boolean {
+  return isCloudMode() || process.env.TESTAGENT_SHARED_SERVER === "1"
+}

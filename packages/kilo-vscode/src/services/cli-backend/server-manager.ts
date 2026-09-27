@@ -7,7 +7,7 @@ import * as path from "path"
 import * as vscode from "vscode"
 import { t } from "./i18n"
 import { parseServerPort } from "./server-utils"
-import { isCloudMode } from "./cloud-mode"
+import { shouldShareServer } from "./cloud-mode"
 import {
   clearServerState,
   getServerDataDir,
@@ -57,14 +57,14 @@ export class ServerManager {
       return this.startupPromise
     }
 
-    if (isCloudMode()) {
+    if (shouldShareServer()) {
       const adopted = await this.adoptExistingServer()
       if (adopted) {
         this.instance = adopted
-        console.log("[TestAgent] ServerManager: ✅ Adopted existing cloud server:", { port: adopted.port })
+        console.log("[TestAgent] ServerManager: ✅ Adopted existing shared server:", { port: adopted.port })
         return adopted
       }
-      console.log("[TestAgent] ServerManager: ☁️ No live cloud server found, spawning detached daemon")
+      console.log("[TestAgent] ServerManager: ☁️ No live shared server found, spawning detached daemon")
     }
 
     console.log("[TestAgent] ServerManager: 🚀 Starting new server instance...")
@@ -182,7 +182,7 @@ export class ServerManager {
     const claudeCompat = vscode.workspace.getConfiguration("testagent.new").get<boolean>("claudeCodeCompat", false)
     const spawnCwd = vscode.workspace.workspaceFolders?.[0]?.uri.fsPath ?? process.env.HOME ?? os.homedir()
 
-    const cloud = isCloudMode()
+    const cloud = shouldShareServer()
     const port = cloud ? await pickFreePort() : 0
     const args = ["serve", "--port", String(port)]
     if (this.logLevel) args.push("--log-level", this.logLevel)
@@ -473,10 +473,11 @@ export class ServerManager {
     const proc = this.instance.process
     this.instance = null
 
-    // Cloud mode: the daemon is intentionally detached from the extension host
-    // so tasks keep running after tscode closes. Do NOT kill it.
-    if (isCloudMode()) {
-      console.log("[TestAgent] ServerManager: ☁️ Cloud mode — leaving daemon running (detach), PID:", proc?.pid)
+    // Shared/cloud mode: the daemon is intentionally detached from the extension
+    // host so it survives window reloads and is shared with the Agent Host. The
+    // Agent Host (app-scoped) owns cleanup on app exit; do NOT kill it here.
+    if (shouldShareServer()) {
+      console.log("[TestAgent] ServerManager: ☁️ Shared mode — leaving daemon running (detach), PID:", proc?.pid)
       return
     }
 
