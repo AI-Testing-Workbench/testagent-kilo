@@ -16,6 +16,19 @@ export function isCloudMode(): boolean {
 }
 
 /**
+ * Whether the backend server should run as a shared, detached daemon that is
+ * discovered/adopted via `server.json` (instead of a private child of the
+ * extension host).
+ *
+ * Cloud mode always does. Local tscode windows can opt in via
+ * `TESTAGENT_SHARED_SERVER=1`, so the editor extension and the Agent Host
+ * (Agents window) share a single backend process instead of each spawning its
+ * own — switching between the editor and the Agents window then never restarts
+ * the backend.
+ */
+export function shouldShareServer(): boolean {
+  return isCloudMode() || process.env.TESTAGENT_SHARED_SERVER === "1"
+}
  * Fixed port for the cloud server so the container can expose it through a
  * stable k8s Service/Ingress target port. Cloud sandboxes are isolated, so the
  * port is free for the detached daemon.
