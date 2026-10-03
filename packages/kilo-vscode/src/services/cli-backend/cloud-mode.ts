@@ -29,6 +29,8 @@ export function isCloudMode(): boolean {
 export function shouldShareServer(): boolean {
   return isCloudMode() || process.env.TESTAGENT_SHARED_SERVER === "1"
 }
+
+/** 
  * Fixed port for the cloud server so the container can expose it through a
  * stable k8s Service/Ingress target port. Cloud sandboxes are isolated, so the
  * port is free for the detached daemon.

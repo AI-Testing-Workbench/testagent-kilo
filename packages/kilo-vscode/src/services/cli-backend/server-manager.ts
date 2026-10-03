@@ -7,11 +7,12 @@ import * as path from "path"
 import * as vscode from "vscode"
 import { t } from "./i18n"
 import { parseServerPort } from "./server-utils"
-import { CLOUD_SERVER_HOSTNAME, CLOUD_SERVER_PORT, shouldShareServer } from "./cloud-mode"
+import { CLOUD_SERVER_HOSTNAME, CLOUD_SERVER_PORT, isCloudMode, shouldShareServer } from "./cloud-mode"
 import {
   clearServerState,
   getServerDataDir,
   getServerLogPath,
+  pickFreePort,
   probeServer,
   readServerState,
   waitForServer,
@@ -181,13 +182,13 @@ export class ServerManager {
     const claudeCompat = vscode.workspace.getConfiguration("testagent.new").get<boolean>("claudeCodeCompat", false)
     const spawnCwd = vscode.workspace.workspaceFolders?.[0]?.uri.fsPath ?? process.env.HOME ?? os.homedir()
 
-    const cloud = shouldShareServer()
-    const port = cloud ? await pickFreePort() : 0
+    const shared = shouldShareServer()
+    const port = shared ? await pickFreePort(CLOUD_SERVER_PORT) : 0
     const args = ["serve", "--port", String(port)]
-    if (cloud) args.push("--hostname", CLOUD_SERVER_HOSTNAME)
+    if (shared) args.push("--hostname", isCloudMode() ? CLOUD_SERVER_HOSTNAME : "127.0.0.1")
     if (this.logLevel) args.push("--log-level", this.logLevel)
 
-    return this.runServer({ cliPath, password, spawnCwd, args, claudeCompat, meta, cloud, port })
+    return this.runServer({ cliPath, password, spawnCwd, args, claudeCompat, meta, shared, port })
   }
 
   private async getUserMeta() {
@@ -213,7 +214,7 @@ export class ServerManager {
     spawnCwd: string
     args: string[]
     claudeCompat: boolean
-    cloud: boolean
+    shared: boolean
     port: number
     meta:
       | {
@@ -233,7 +234,7 @@ export class ServerManager {
     console.log("[TestAgent] ServerManager: 🌐 Platform:", process.platform)
 
     const env = this.buildServerEnv(input)
-    if (input.cloud) {
+    if (input.shared) {
       return this.runCloudServer(input, env)
     }
     return this.runLocalServer(input, env)
@@ -245,7 +246,7 @@ export class ServerManager {
     spawnCwd: string
     args: string[]
     claudeCompat: boolean
-    cloud: boolean
+    shared: boolean
     port: number
     meta:
       | {
@@ -302,7 +303,7 @@ export class ServerManager {
       spawnCwd: string
       args: string[]
       claudeCompat: boolean
-      cloud: boolean
+      shared: boolean
       port: number
       meta: unknown
     },
@@ -384,7 +385,7 @@ export class ServerManager {
     args: string[]
     claudeCompat: boolean
     port: number
-    cloud: boolean
+    shared: boolean
     meta:
       | {
           userId?: string
