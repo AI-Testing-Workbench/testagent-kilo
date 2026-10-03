@@ -250,6 +250,12 @@ interface PRStatusOutMessage {
   error?: "gh_missing" | "gh_auth" | "fetch_failed"
 }
 
+interface FocusSessionMessage {
+  type: "agentManager.focusSession"
+  sessionId: string
+  worktreeId?: string
+}
+
 interface ActionOutMessage {
   type: "action"
   action: string
@@ -285,6 +291,7 @@ export type AgentManagerOutMessage =
   | PRStatusOutMessage
   | ActionOutMessage
   | RunStatusMessage
+  | FocusSessionMessage
 
 // ---------------------------------------------------------------------------
 // Webview → Extension messages (onMessage)

@@ -70,7 +70,6 @@ import { hasGit } from "./kilo-provider/git-status"
 import { exec } from "./util/process"
 // testagent_change start - testflow integration
 import { SdtRunner } from "./testagent/sdt-runner"
-import { runTaskCommand } from "./testagent/task-runner"
 import { handleInteractiveRun } from "./testagent/sdt-interactive-runner"
 import { handleRequestStages } from "./testagent/sdt-stages-handler"
 import { parseCommandArgs } from "./testagent/command-args"
@@ -116,6 +115,7 @@ import {
   handleCreateEnvVar,
   handleUpdateEnvVar,
   handleDeleteEnvVar,
+  handleEnsureRemoteEnvVars,
 } from "./kilo-provider/handlers/env-vars"
 // testagent_change end
 
@@ -360,6 +360,9 @@ const notifiedEventIds: Set<string> = new Set()
 
 export class KiloProvider implements vscode.WebviewViewProvider, TelemetryPropertiesProvider {
   public static readonly viewType = "testagent.SidebarProvider" // testagent_change
+  // testagent_change start - 所有存活实例，供外部命令广播 yolo 等全局状态
+  public static readonly instances = new Set<KiloProvider>()
+  // testagent_change end
   private readonly instanceId = crypto.randomUUID()
   private webviewType: "sidebar" | "panel" | "unknown" = "unknown" // testagent_change
 
@@ -488,6 +491,7 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
   ) {
     this.projectDirectory = options?.projectDirectory
     this.slimEditMetadata = options?.slimEditMetadata ?? true
+    KiloProvider.instances.add(this) // testagent_change
 
     TelemetryProxy.getInstance().setProvider(this)
 
@@ -815,6 +819,24 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
   }
 
   /**
+   * Resolve the directory a session belongs to, preferring the backend's
+   * authoritative value so deep links use the same project path the web UI
+   * expects. Falls back to the locally tracked workspace directory.
+   */
+  public async resolveSessionDirectory(sessionID: string): Promise<string | undefined> {
+    if (this.currentSession?.id === sessionID && this.currentSession.directory) return this.currentSession.directory
+    const client = this.client
+    if (client) {
+      const found = await client.session
+        .get({ sessionID, directory: this.getContextDirectory() })
+        .then((x) => x.data?.directory)
+        .catch(() => undefined)
+      if (found) return found
+    }
+    return this.getProjectDirectory(sessionID)
+  }
+
+  /**
    * Re-fetch and send the full session list to the webview.
    * Called by AgentManagerProvider after worktree recovery completes.
    */
@@ -1040,6 +1062,16 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
             user_id: message.userId,
             sessionId: message.sessionId,
           })
+          break
+        }
+        case "openTaskQuery": {
+          const ext = vscode.extensions.getExtension("test-tech.testcase-select")
+          if (!ext) {
+            vscode.window.showErrorMessage("未找到 TestCase Select，请先安装。")
+            break
+          }
+          await ext.activate()
+          await vscode.commands.executeCommand("test-tech.task-query")
           break
         }
         // testagent_change end
@@ -1336,6 +1368,14 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
             },
             message,
           )
+          break
+        // testagent_change end
+        // testagent_change start - YOLO 模式开关
+        case "requestYoloToggle":
+          await this.handleYoloToggle(message.enabled)
+          break
+        case "requestYoloStatus":
+          void this.handleYoloStatus(message.requestId)
           break
         // testagent_change end
         case "requestTerminalContext":
@@ -1674,6 +1714,9 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
           // Fire config warnings independently so a failure in the
           // sequential await chain doesn't prevent warnings from being shown
           void this.checkConfigWarnings("state")
+          // testagent_change start - 连接成功后补齐远程接口环境变量（缺失才拉取，失败不影响其他初始化）
+          if (this.client) void handleEnsureRemoteEnvVars(this.client)
+          // testagent_change end
           try {
             // testagent_change start - disable profile API (not available in testagent backend)
             // Profile fetch is best-effort — returns 401 when user isn't logged into gateway.
@@ -2102,6 +2145,47 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
     this.pendingSessionRefresh = ctx.pendingSessionRefresh
   }
 
+  // testagent_change start - YOLO 模式开关（全局开关，与 session 无关）
+  // 状态设计（v3 修正）：后端 server 是唯一事实源，extension host 内存只是缓存
+  // （供 client 未就绪时兜底显示）。toggle 必须等 server 写入成功后才回推确认，
+  // 失败回推 ok:false 让 webview 回滚，避免"UI 常显 ON、后端实际 OFF"的脱节。
+  private yoloEnabled = false
+
+  /** 切换 YOLO 全局开关：先写后端，成功后回推确认（public：供外部命令调用） */
+  public async handleYoloToggle(enabled: boolean): Promise<void> {
+    const client = this.client
+    if (client) {
+      try {
+        await client.testagent.yolo.set({ directory: this.getWorkspaceDirectory(), enabled })
+        this.yoloEnabled = enabled
+        this.postMessage({ type: "yoloStatus", ok: true, enabled, requestId: "" })
+      } catch (error) {
+        console.error("[TestAgent] yolo sync to server failed:", error)
+        // 后端写入失败：本地保持原值，回推 ok:false + 当前真实值供 webview 回滚乐观更新
+        this.postMessage({ type: "yoloStatus", ok: false, enabled: this.yoloEnabled, requestId: "" })
+      }
+      return
+    }
+    // server 未就绪：暂存本地内存，待重挂载查询时以 server 为准校正
+    this.yoloEnabled = enabled
+    this.postMessage({ type: "yoloStatus", ok: true, enabled, requestId: "" })
+  }
+
+  /** 查询 YOLO 状态：以后端 server 为事实源，查询失败时才回退 extension 内存 */
+  private async handleYoloStatus(requestId: string): Promise<void> {
+    const client = this.client
+    if (!client) return
+    try {
+      const res = await client.testagent.yolo.get({ directory: this.getWorkspaceDirectory() })
+      // 后端是唯一事实源：false 同样覆盖本地 stale true（多 provider 实例可被纠正）
+      this.yoloEnabled = res.data?.enabled ?? false
+      this.postMessage({ type: "yoloStatus", ok: true, enabled: this.yoloEnabled, requestId })
+    } catch (error) {
+      this.postMessage({ type: "yoloStatus", ok: true, enabled: this.yoloEnabled, requestId })
+    }
+  }
+  // testagent_change end
+
   private async handleTerminalContext(requestId: string): Promise<void> {
     try {
       const output = await getTerminalContents(-1)
@@ -2454,6 +2538,11 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
       // Wait for backend to rebuild state
       console.log("[TestAgent] Waiting for backend to rebuild state...")
       await new Promise((resolve) => setTimeout(resolve, 500))
+
+      // testagent_change: both /mcp/reload and the instance disposal above rebuild MCP state
+      // from the config file, which drops runtime-registered servers. Let their owners
+      // register themselves again now that the backend has settled.
+      this.connectionService.notifyMcpReloaded()
 
       // Refresh all relevant data in UI
       console.log("[TestAgent] Fetching fresh data from backend...")
@@ -3449,6 +3538,9 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
         const sdkClient = (this.client as any).client
         if (sdkClient && typeof sdkClient.post === "function") {
           await sdkClient.post({ url: "/mcp/reload", body: {} })
+          // testagent_change: reload rebuilds MCP state from the config file, which drops
+          // runtime-registered servers. Let their owners register themselves again.
+          this.connectionService.notifyMcpReloaded()
         }
       } catch (e) {
         console.warn("[TestAgent] MCP reload after config update failed:", e)
@@ -3682,34 +3774,6 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
     })
   }
 
-  // testagent_change start - task command handler (task-start / task-query)
-  private async handleTaskCommand(text: string, sessionID?: string, messageID?: string): Promise<void> {
-    const parts = parseCommandArgs(text)
-    const raw = parts[0]?.slice(6) ?? ""
-
-    if (raw !== "query") {
-      void vscode.window.showErrorMessage(`TestAgent: 未知 task 命令 "${raw}"`)
-      return
-    }
-
-    const resolved = await this.resolveSession(sessionID)
-    if (!resolved) {
-      void vscode.window.showErrorMessage("TestAgent: Not connected to CLI backend")
-      return
-    }
-
-    void runTaskCommand({
-      cmd: "query",
-      args: parts.slice(1),
-      cwd: resolved.dir,
-      sessionID: resolved.sid,
-      userText: text,
-      userMessageID: messageID,
-      post: (msg) => this.postMessage(msg),
-    })
-  }
-  // testagent_change end
-
   private async handleSendMessage(
     text: string,
     messageID?: string,
@@ -3726,12 +3790,6 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
     // testagent_change start - intercept /sdt-* commands for testflow
     if (text.startsWith("/sdt-")) {
       await this.handleSdtCommand(text, sessionID, providerID, modelID, messageID, agent)
-      return
-    }
-    // testagent_change end
-    // testagent_change start - intercept /task-* commands
-    if (text.startsWith("/task-")) {
-      await this.handleTaskCommand(text, sessionID, messageID)
       return
     }
     // testagent_change end
@@ -3817,12 +3875,6 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
     // testagent_change start - intercept sdt-* commands for testflow
     if (command.startsWith("sdt-")) {
       await this.handleSdtCommand(`/${command} ${args}`.trim(), sessionID, providerID, modelID, messageID, agent)
-      return
-    }
-    // testagent_change end
-    // testagent_change start - intercept task-* commands
-    if (command.startsWith("task-")) {
-      await this.handleTaskCommand(`/${command} ${args}`.trim(), sessionID, messageID)
       return
     }
     // testagent_change end
@@ -4379,6 +4431,26 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
     const { section, leaf } = buildSettingPath(key)
     const config = vscode.workspace.getConfiguration(`testagent.new${section ? `.${section}` : ""}`)
     await config.update(leaf, value, vscode.ConfigurationTarget.Global)
+
+    // testagent_change start - the two browser backends are mutually exclusive. Each registers its
+    // own MCP server, so with both on the agent sees two overlapping sets of browser tools. Only
+    // the enable switches are affected; the Playwright sub-settings keep their values.
+    const other =
+      leaf !== "enabled" || value !== true
+        ? undefined
+        : section === "browserAutomation"
+          ? "vscodeBrowserTools"
+          : section === "vscodeBrowserTools"
+            ? "browserAutomation"
+            : undefined
+
+    if (other) {
+      await vscode.workspace
+        .getConfiguration(`testagent.new.${other}`)
+        .update("enabled", false, vscode.ConfigurationTarget.Global)
+      this.sendBrowserSettings()
+    }
+    // testagent_change end
   }
 
   // testagent_change start - notification methods
@@ -4670,13 +4742,17 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
    * Read the current browser automation settings and push them to the webview.
    */
   private sendBrowserSettings(): void {
-    const config = vscode.workspace.getConfiguration("testagent.new.browserAutomation")
+    const automation = vscode.workspace.getConfiguration("testagent.new.browserAutomation")
+    const tools = vscode.workspace.getConfiguration("testagent.new.vscodeBrowserTools")
     this.postMessage({
       type: "browserSettingsLoaded",
       settings: {
-        enabled: config.get<boolean>("enabled", false),
-        useSystemChrome: config.get<boolean>("useSystemChrome", true),
-        headless: config.get<boolean>("headless", false),
+        enabled: automation.get<boolean>("enabled", false),
+        useSystemChrome: automation.get<boolean>("useSystemChrome", true),
+        headless: automation.get<boolean>("headless", false),
+        // testagent_change - report what is actually in effect. The tools service declines to
+        // register while Playwright is on, and a hand-edited settings.json can hold both as true.
+        vscodeBrowserTools: tools.get<boolean>("enabled", false) && !automation.get<boolean>("enabled", false),
       },
     })
   }
@@ -4705,8 +4781,10 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
         this.cachedChatTipsMessage = message
         this.postMessage(message)
       })
-      .catch((err) => {
-        console.error("[TestAgent]  ❌ Failed to fetch chat tips:", err)
+      .catch(() => {
+        const message = { type: "chatTipsLoaded", tips: [] }
+        this.cachedChatTipsMessage = message
+        this.postMessage(message)
       })
       .finally(() => clearTimeout(timer))
   }
@@ -5395,6 +5473,7 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
    * Does NOT kill the server — that's the connection service's job.
    */
   dispose(): void {
+    KiloProvider.instances.delete(this) // testagent_change
     this.unsubscribeRemote?.()
     this.focusSession()
     this.statsPoller?.stop()

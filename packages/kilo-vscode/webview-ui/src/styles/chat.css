@@ -461,15 +461,6 @@
   border: 1px solid var(--vscode-panel-border, var(--vscode-input-border));
   border-radius: 4px;
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
-  opacity: 0;
-  pointer-events: none;
-  transition: opacity 0.1s ease-in-out;
-}
-
-.chat-tip-widget:hover .chat-tip-toolbar,
-.chat-tip-widget:focus-within .chat-tip-toolbar {
-  opacity: 1;
-  pointer-events: auto;
 }
 
 /* ============================================

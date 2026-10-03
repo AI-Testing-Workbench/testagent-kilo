@@ -35,7 +35,12 @@ export const MultiModelSelector: Component<{
 
   const visibleModels = createMemo(() => {
     const c = connected()
-    return models().filter((m) => m.providerID === KILO_GATEWAY_ID || c.includes(m.providerID))
+    // testagent_change: Filter out specific models from display
+    return models().filter(
+      (m) =>
+        (m.providerID === KILO_GATEWAY_ID || c.includes(m.providerID)) &&
+        !(m.providerID === "test-llm" && m.id === "Economy"),
+    )
   })
 
   const filtered = createMemo(() => {

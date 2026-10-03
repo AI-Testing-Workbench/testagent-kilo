@@ -7,12 +7,11 @@ import * as path from "path"
 import * as vscode from "vscode"
 import { t } from "./i18n"
 import { parseServerPort } from "./server-utils"
-import { shouldShareServer } from "./cloud-mode"
+import { CLOUD_SERVER_HOSTNAME, CLOUD_SERVER_PORT, shouldShareServer } from "./cloud-mode"
 import {
   clearServerState,
   getServerDataDir,
   getServerLogPath,
-  pickFreePort,
   probeServer,
   readServerState,
   waitForServer,
@@ -185,6 +184,7 @@ export class ServerManager {
     const cloud = shouldShareServer()
     const port = cloud ? await pickFreePort() : 0
     const args = ["serve", "--port", String(port)]
+    if (cloud) args.push("--hostname", CLOUD_SERVER_HOSTNAME)
     if (this.logLevel) args.push("--log-level", this.logLevel)
 
     return this.runServer({ cliPath, password, spawnCwd, args, claudeCompat, meta, cloud, port })

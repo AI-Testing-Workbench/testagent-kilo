@@ -1054,8 +1054,13 @@ export const dict = {
 
   "settings.browser.description":
     "Quando ativado, o agente de IA pode interagir com páginas da web — navegar, clicar, digitar e capturar telas. Uma janela do Chrome será aberta para que você possa acompanhar o trabalho do agente.",
+  "settings.browser.vscodeTools.title": "Usar o Navegador Integrado do VS Code",
+  "settings.browser.vscodeTools.description":
+    "Permita que o agente trabalhe no navegador do próprio VS Code. Sem instalação extra; as páginas abrem em uma aba do editor. Requer VS Code 1.110 ou superior e a configuração Workbench > Browser: Enable Chat Tools.",
   "settings.browser.enable.title": "Ativar Automação do Navegador",
-  "settings.browser.enable.description": "Registrar o servidor Playwright MCP no backend CLI.",
+  "settings.browser.enable.description":
+    "Registrar o servidor Playwright MCP no backend CLI. Desativa o navegador integrado acima.",
+  "settings.browser.playwrightOptions.title": "Opções do Playwright",
   "settings.browser.systemChrome.title": "Usar Chrome do Sistema",
   "settings.browser.systemChrome.description":
     "Usar o navegador Chrome instalado em vez de uma instância separada do Chromium.",
@@ -1286,7 +1291,8 @@ export const dict = {
   "settings.checkpoints.enable.title": "Ativar snapshots",
   "settings.checkpoints.enable.description": "Criar pontos de verificação antes de editar arquivos",
   "settings.context.autoCompaction.title": "Compactação automática",
-  "settings.context.autoCompaction.description": "Quando o contexto se aproxima do limite, envia o histórico anterior (sem ferramentas, sem prompts de sistema, mídia substituída por placeholders, saídas de ferramentas truncadas para 2000 caracteres) para um agente de compactação para resumo estruturado, mantém as últimas 2 rodadas e continua automaticamente a sessão",
+  "settings.context.autoCompaction.description":
+    "Quando o contexto se aproxima do limite, envia o histórico anterior (sem ferramentas, sem prompts de sistema, mídia substituída por placeholders, saídas de ferramentas truncadas para 2000 caracteres) para um agente de compactação para resumo estruturado, mantém as últimas 2 rodadas e continua automaticamente a sessão",
   "settings.context.prune.title": "Remover saídas antigas",
   "settings.context.prune.description": "Remover saídas antigas de ferramentas durante a compactação",
   "settings.context.watcherPatterns": "Padrões de ignorar do observador",

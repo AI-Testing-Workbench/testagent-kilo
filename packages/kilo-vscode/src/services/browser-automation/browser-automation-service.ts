@@ -1,5 +1,6 @@
 import * as vscode from "vscode"
-import type { KiloClient, McpStatus } from "@kilocode/sdk/v2/client"
+import * as path from "path"
+import type { Event, KiloClient, McpStatus } from "@kilocode/sdk/v2/client"
 import type { KiloConnectionService } from "../cli-backend"
 
 export type BrowserAutomationState = "disabled" | "registering" | "connected" | "failed" | "disconnected"
@@ -8,6 +9,9 @@ export class BrowserAutomationService implements vscode.Disposable {
   private state: BrowserAutomationState = "disabled"
   private disposables: vscode.Disposable[] = []
   private stateListeners: Array<(state: BrowserAutomationState) => void> = []
+  /** Serializes `ensure()`: reload and disposal can arrive together and each drops the server. */
+  private busy = false
+  private queued = false
 
   // MCP server name used when registering with the CLI backend
   private static readonly MCP_SERVER_NAME = "testagent-playwright"
@@ -20,7 +24,59 @@ export class BrowserAutomationService implements vscode.Disposable {
           this.syncWithSettings()
         }
       }),
+      // This server is registered at runtime, so the CLI only knows about it in memory. Every
+      // path that rebuilds CLI state starts from the config file, which never lists it:
+      // `/mcp/reload` wipes the MCP state outright, and a global or instance disposal tears the
+      // whole instance down. Without these hooks the agent silently loses the Playwright tools
+      // until the backend restarts.
+      vscode.Disposable.from(
+        { dispose: connectionService.onMcpReloaded(() => void this.ensure()) },
+        { dispose: connectionService.onEvent((event) => this.onBackendEvent(event)) },
+      ),
     )
+  }
+
+  /** Re-register after the CLI throws away backend state, which takes the server down with it. */
+  private onBackendEvent(event: Event): void {
+    if (event.type === "global.disposed") {
+      void this.ensure()
+      return
+    }
+    if (event.type !== "server.instance.disposed") return
+    const props = event.properties as Record<string, unknown> | null
+    const dir = typeof props?.directory === "string" ? props.directory : undefined
+    // Another workspace folder has its own instance, and its own registration on top of this one.
+    if (dir && path.resolve(dir) !== path.resolve(this.getWorkspaceDirectory())) return
+    void this.ensure()
+  }
+
+  /**
+   * Re-register if enabled, at most one registration at a time.
+   *
+   * The triggers overlap by design (a reload is usually followed by an instance disposal), and
+   * two concurrent `register()` calls would fight over the same MCP server entry - and each one
+   * spawns its own `npx @playwright/mcp` process. A trigger that arrives while one is in flight
+   * queues a single extra pass rather than starting a second.
+   */
+  private async ensure(): Promise<void> {
+    if (this.busy) {
+      this.queued = true
+      return
+    }
+    this.busy = true
+    try {
+      do {
+        this.queued = false
+        if (!this.enabled()) return
+        await this.register()
+      } while (this.queued)
+    } finally {
+      this.busy = false
+    }
+  }
+
+  private enabled(): boolean {
+    return vscode.workspace.getConfiguration("testagent.new.browserAutomation").get<boolean>("enabled", false)
   }
 
   /** Current state */
@@ -44,14 +100,8 @@ export class BrowserAutomationService implements vscode.Disposable {
    * Called on construction and when settings change.
    */
   async syncWithSettings(): Promise<void> {
-    const config = vscode.workspace.getConfiguration("testagent.new.browserAutomation")
-    const enabled = config.get<boolean>("enabled", false)
-
-    if (enabled) {
-      await this.register()
-    } else {
-      await this.unregister()
-    }
+    if (this.enabled()) return this.ensure()
+    await this.unregister()
   }
 
   /**
@@ -59,11 +109,7 @@ export class BrowserAutomationService implements vscode.Disposable {
    * Should be called from the connection state change handler.
    */
   async reregisterIfEnabled(): Promise<void> {
-    const config = vscode.workspace.getConfiguration("testagent.new.browserAutomation")
-    const enabled = config.get<boolean>("enabled", false)
-    if (enabled) {
-      await this.register()
-    }
+    await this.ensure()
   }
 
   /**

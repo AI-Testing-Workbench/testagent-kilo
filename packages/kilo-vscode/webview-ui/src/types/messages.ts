@@ -877,6 +877,29 @@ export interface StagesResultMessage {
 }
 // testagent_change end
 
+// testagent_change start - YOLO 模式开关消息类型（全局开关，与 session 无关）
+/** YOLO 模式状态回包（extension → webview） */
+export interface YoloStatusMessage {
+  type: "yoloStatus"
+  ok: boolean
+  enabled: boolean
+  requestId: string
+  error?: string
+}
+
+/** 切换 YOLO 全局开关（webview → extension） */
+export interface RequestYoloToggleMessage {
+  type: "requestYoloToggle"
+  enabled: boolean
+}
+
+/** 查询 YOLO 全局状态（webview → extension） */
+export interface RequestYoloStatusMessage {
+  type: "requestYoloStatus"
+  requestId: string
+}
+// testagent_change end
+
 export interface TerminalContextResultMessage {
   type: "terminalContextResult"
   requestId: string
@@ -924,6 +947,8 @@ export interface BrowserSettings {
   enabled: boolean
   useSystemChrome: boolean
   headless: boolean
+  /** VS Code's integrated browser tools. Exclusive with Playwright: only one backend may be on. */
+  vscodeBrowserTools: boolean
 }
 
 export interface BrowserSettingsLoadedMessage {
@@ -1740,6 +1765,7 @@ export type ExtensionMessage =
   | ChatCompletionResultMessage
   | FileSearchResultMessage
   | StagesResultMessage // testagent_change  - /sdt-run 阶段列表查询消息类型
+  | YoloStatusMessage // testagent_change - YOLO 模式状态
   | TerminalContextResultMessage
   | TerminalContextErrorMessage
   | QuestionRequestMessage
@@ -1808,6 +1834,8 @@ export type ExtensionMessage =
       envVars: {
         system: Record<string, { key: string; value: string }>
         custom: Record<string, { key: string; value: string }>
+        // testagent_change - 从远程接口获取的环境变量
+        remote: Record<string, { key: string; value: string }>
       }
     }
   | DiffViewerDiffsMessage
@@ -1981,6 +2009,12 @@ export interface OpenBeeEyesRequest {
   type: "openBeeEyes"
   userId: string
   sessionId: string
+}
+// testagent_change end
+
+// testagent_change start
+export interface OpenTaskQueryRequest {
+  type: "openTaskQuery"
 }
 // testagent_change end
 
@@ -2916,6 +2950,7 @@ export type WebviewMessage =
   | RefreshProfileRequest
   | OpenExternalRequest
   | OpenBeeEyesRequest // testagent_change
+  | OpenTaskQueryRequest // testagent_change
   | OpenSettingsPanelRequest
   | OpenConfigFileRequest
   | OpenVSCodeSettingsRequest
@@ -2950,6 +2985,8 @@ export type WebviewMessage =
   | RequestChatCompletionMessage
   | RequestFileSearchMessage
   | RequestStagesMessage
+  | RequestYoloToggleMessage // testagent_change - YOLO 模式开关
+  | RequestYoloStatusMessage // testagent_change - YOLO 模式状态查询
   | RequestTerminalContextMessage
   | ChatCompletionAcceptedMessage
   | UpdateSettingRequest

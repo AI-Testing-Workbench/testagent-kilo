@@ -1040,8 +1040,13 @@ export const dict = {
 
   "settings.browser.description":
     "عند التفعيل، يمكن لوكيل الذكاء الاصطناعي التفاعل مع صفحات الويب — التنقل والنقر والكتابة والتقاط لقطات الشاشة. سيتم فتح نافذة Chrome حتى تتمكن من مشاهدة الوكيل أثناء العمل.",
+  "settings.browser.vscodeTools.title": "استخدام متصفح VS Code المدمج",
+  "settings.browser.vscodeTools.description":
+    "السماح للوكيل بالعمل في متصفح VS Code المدمج. لا حاجة لتثبيت إضافي؛ تُفتح الصفحات في تبويب المحرر. يتطلب VS Code 1.110 أو أحدث وإعداد Workbench > Browser: Enable Chat Tools.",
   "settings.browser.enable.title": "تفعيل أتمتة المتصفح",
-  "settings.browser.enable.description": "تسجيل خادم Playwright MCP مع الواجهة الخلفية لـ CLI.",
+  "settings.browser.enable.description":
+    "تسجيل خادم Playwright MCP مع الواجهة الخلفية لـ CLI، وسيتم إيقاف المتصفح المدمج أعلاه.",
+  "settings.browser.playwrightOptions.title": "خيارات Playwright",
   "settings.browser.systemChrome.title": "استخدام Chrome النظام",
   "settings.browser.systemChrome.description": "استخدم متصفح Chrome المثبت لديك بدلاً من نسخة Chromium منفصلة.",
   "settings.browser.headless.title": "الوضع بدون واجهة",
@@ -1256,7 +1261,8 @@ export const dict = {
   "settings.checkpoints.enable.title": "تمكين اللقطات",
   "settings.checkpoints.enable.description": "إنشاء نقاط فحص قبل تحرير الملفات",
   "settings.context.autoCompaction.title": "ضغط تلقائي",
-  "settings.context.autoCompaction.description": "عند اقتراب السياق من الحد الأقصى، يرسل التاريخ الأقدم (بدون أدوات، بدون مطالبات النظام، الوسائط مستبدلة بنصوص placeholder، مخرجات الأدوات مقتطعة إلى 2000 حرف) إلى وكيل ضغط مخصص للتلخيص المنظم، ويحتفظ بآخر جولتين، ويواصل الجلسة تلقائياً",
+  "settings.context.autoCompaction.description":
+    "عند اقتراب السياق من الحد الأقصى، يرسل التاريخ الأقدم (بدون أدوات، بدون مطالبات النظام، الوسائط مستبدلة بنصوص placeholder، مخرجات الأدوات مقتطعة إلى 2000 حرف) إلى وكيل ضغط مخصص للتلخيص المنظم، ويحتفظ بآخر جولتين، ويواصل الجلسة تلقائياً",
   "settings.context.prune.title": "تقليم المخرجات القديمة",
   "settings.context.prune.description": "إزالة مخرجات الأدوات القديمة أثناء الضغط",
   "settings.context.watcherPatterns": "أنماط تجاهل مراقب الملفات",

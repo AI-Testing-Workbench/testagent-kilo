@@ -184,6 +184,9 @@ export function useSlashCommand(vscode: VSCodeContext, exclude?: Set<string>): S
       name: "task-query",
       description: "查询执行任务详情",
       hints: ["task", "query", "status", "查询"],
+      action: () => {
+        vscode.postMessage({ type: "openTaskQuery" })
+      },
     },
     {
       name: "sdt-new",

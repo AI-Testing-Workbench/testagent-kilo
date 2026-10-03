@@ -2,6 +2,7 @@ import * as vscode from "vscode"
 import * as path from "path"
 import * as net from "net" // testagent_change - import net at top level
 import { isTestagentBun } from "./services/cli-backend/runtime"
+import { isCloudMode } from "./services/cli-backend/cloud-mode" // testagent_change
 import { KiloProvider } from "./KiloProvider"
 import { AgentManagerProvider } from "./agent-manager/AgentManagerProvider"
 import { VscodeHost } from "./agent-manager/vscode-host"
@@ -13,10 +14,12 @@ import { SettingsEditorProvider } from "./SettingsEditorProvider"
 import { SubAgentViewerProvider } from "./SubAgentViewerProvider"
 import { EXTENSION_DISPLAY_NAME } from "./constants"
 import { KiloConnectionService } from "./services/cli-backend"
+import { formatWebUiLink, sessionPath } from "./services/cli-backend/share-link" // testagent_change - copy web UI share link
 import { registerAutocompleteProvider } from "./services/autocomplete"
 import { ensureBackendForAutocomplete } from "./services/autocomplete/ensure-backend"
 import { AutocompleteServiceManager } from "./services/autocomplete/AutocompleteServiceManager"
 import { BrowserAutomationService } from "./services/browser-automation"
+import { VscodeBrowserToolsService } from "./services/vscode-browser-tools"
 import { TelemetryProxy } from "./services/telemetry"
 import { registerCommitMessageService } from "./services/commit-message"
 import { registerCodeActions, registerTerminalActions, KiloCodeActionProvider } from "./services/code-actions"
@@ -25,6 +28,19 @@ import { ensureCliInPath } from "./services/env-path"
 import { registerHeapSnapshot } from "./commands/heap-snapshot"
 import { RemoteStatusService } from "./services/RemoteStatusService"
 import { PythonInterpreterService } from "./services/python-interpreter" // testagent_change
+import {
+  parseSkillEvaluation,
+  parseSkillEvaluationResultCleanup,
+  parseSkillEvaluationSession,
+  parseSkillEvaluationResultDelete,
+  parseSkillEvaluationResultRefresh,
+  SKILL_EVALUATION_COMMAND,
+  SKILL_EVALUATION_RESULT_CLEANUP_COMMAND,
+  SKILL_EVALUATION_RESULT_DELETE_COMMAND,
+  SKILL_EVALUATION_RESULT_REFRESH_COMMAND,
+  SKILL_EVALUATION_SESSION_COMMAND,
+  SKILL_EVALUATION_RESULTS_COMMAND,
+} from "./agent-manager/skill-evaluation"
 
 // Activated via "onStartupFinished" (package.json) so that commands, code actions, keybindings,
 // autocomplete, commit-message generation, and URI deep links all work immediately — without
@@ -32,6 +48,10 @@ import { PythonInterpreterService } from "./services/python-interpreter" // test
 // it starts lazily when a webview connects or when ensureBackendForAutocomplete() triggers it.
 export function activate(context: vscode.ExtensionContext) {
   console.log("TestAgent extension is now active")
+
+  // testagent_change start - only expose the "copy Web UI link" command in cloud mode
+  vscode.commands.executeCommand("setContext", "testagent.new.cloudMode", isCloudMode())
+  // testagent_change end
 
   // testagent_change start - Initialize Python interpreter service
   console.log("[TestAgent] Initializing Python interpreter service...")
@@ -59,6 +79,10 @@ export function activate(context: vscode.ExtensionContext) {
   const browserAutomationService = new BrowserAutomationService(connectionService)
   browserAutomationService.syncWithSettings()
 
+  // Create VS Code browser tools service (exposes VS Code's integrated browser tools to the agent)
+  const vscodeBrowserToolsService = new VscodeBrowserToolsService(connectionService)
+  vscodeBrowserToolsService.syncWithSettings()
+
   // Create remote status service (one status bar item for all webviews)
   // Only available with testagent backend (depends on kilo-specific remote.* API)
   const remoteService = isTestagentBun() ? new RemoteStatusService() : null
@@ -72,6 +96,7 @@ export function activate(context: vscode.ExtensionContext) {
   const unsubscribeStateChange = connectionService.onStateChange((state) => {
     if (state === "connected") {
       browserAutomationService.reregisterIfEnabled()
+      vscodeBrowserToolsService.reregisterIfEnabled()
       if (telemetry) {
         const config = connectionService.getServerConfig()
         if (config) {
@@ -144,7 +169,11 @@ export function activate(context: vscode.ExtensionContext) {
 
   // Create Agent Manager provider for editor panel
   const agentManagerHost = new VscodeHost(context.extensionUri, connectionService, context)
-  const agentManagerProvider = new AgentManagerProvider(agentManagerHost, connectionService)
+  const agentManagerProvider = new AgentManagerProvider(
+    agentManagerHost,
+    connectionService,
+    context.globalStorageUri.fsPath,
+  )
   context.subscriptions.push(agentManagerProvider)
 
   // Wire "Continue in Worktree" from sidebar → Agent Manager
@@ -264,6 +293,26 @@ export function activate(context: vscode.ExtensionContext) {
       if (tab) tab.postMessage({ type: "action", action: "plusButtonClicked" })
       else provider.postMessage({ type: "action", action: "plusButtonClicked" })
     }),
+    // testagent_change start - copy a shareable web UI link (with auth_token) to the clipboard
+    vscode.commands.registerCommand("testagent.new.copyWebUiLink", async () => {
+      const config = connectionService.getServerConfig()
+      const port = connectionService.getServerInfo()?.port
+      if (!config || !port) {
+        vscode.window.showWarningMessage("Web UI 尚未启动")
+        return
+      }
+      const target = activeTabProvider() ?? provider
+      const sessionID = target.getCurrentSessionId() ?? provider.getCurrentSessionId()
+      const directory = sessionID ? await target.resolveSessionDirectory(sessionID) : undefined
+      const path = sessionID && directory ? sessionPath(directory, sessionID) : undefined
+      const url = formatWebUiLink({ port, password: config.password, path })
+      await vscode.env.clipboard.writeText(url)
+      const open = "打开"
+      vscode.window.showInformationMessage(`Web UI 链接已复制：${url}`, open).then((pick) => {
+        if (pick === open) vscode.env.openExternal(vscode.Uri.parse(url))
+      })
+    }),
+    // testagent_change end
     // testagent_change 增加reloadSkills
     vscode.commands.registerCommand("testagent.new.reloadSkills", async () => {
       try {
@@ -292,6 +341,20 @@ export function activate(context: vscode.ExtensionContext) {
         }
       }
     }),
+    // testagent_change start - 外部插件命令：开启/关闭 YOLO 模式（广播到所有 provider 实例）
+    vscode.commands.registerCommand("testagent.new.setYolo", async (enabled?: boolean) => {
+      // if (!isCloudMode()) {
+      //   return { success: false, error: "YOLO 模式仅在云端环境可用" }
+      // }
+      if (typeof enabled !== "boolean") {
+        return { success: false, error: "缺少参数 enabled（boolean）" }
+      }
+      for (const instance of KiloProvider.instances) {
+        await instance.handleYoloToggle(enabled)
+      }
+      return { success: true, enabled }
+    }),
+    // testagent_change end
     // testagent_change start - Broadcast enableThinkings updates to all webviews
     // Internal command triggered by KiloProvider after saving enableThinkings to globalState
     vscode.commands.registerCommand("testagent.internal.broadcastEnableThinkings", async () => {
@@ -317,13 +380,173 @@ export function activate(context: vscode.ExtensionContext) {
           if (result === "打开设置") {
             vscode.commands.executeCommand("testagent.new.settingsButtonClicked")
           }
-          return
+          return false
         }
 
         agentManagerProvider.openPanel()
+        return true
       } catch (error) {
         // If config fetch fails, allow opening (fail-open for better UX)
         agentManagerProvider.openPanel()
+        return true
+      }
+    }),
+    vscode.commands.registerCommand(SKILL_EVALUATION_COMMAND, async (input: unknown) => {
+      const parsed = parseSkillEvaluation(input)
+      if (!parsed.ok) return { accepted: false, error: parsed.error }
+
+      const existing = await agentManagerProvider.openSkillEvaluationSession(parsed.value.skillId)
+      if (!existing.success) return { accepted: false, error: existing.error }
+      if (existing.running) {
+        return {
+          accepted: false,
+          error: { code: "evaluation_in_progress", message: "Agent Manager 当前已有 worktree，已打开当前会话。" },
+        }
+      }
+      let models
+      try {
+        models = await agentManagerProvider.listSkillEvaluationModels()
+      } catch (error) {
+        return {
+          accepted: false,
+          error: {
+            code: "models_unavailable",
+            message: `无法读取可用模型：${error instanceof Error ? error.message : String(error)}`,
+          },
+        }
+      }
+      if (models.length === 0) {
+        return {
+          accepted: false,
+          error: { code: "models_unavailable", message: "当前没有可用模型，请先配置模型后再评测。" },
+        }
+      }
+      const picked = await vscode.window.showQuickPick(
+        models.map((model) => ({
+          label: `${model.providerName || model.providerID} / ${model.name || model.modelID}`,
+          description: model.isDefault ? "默认模型" : model.modelID,
+          detail: `${model.providerID}/${model.modelID}`,
+          model,
+        })),
+        { title: "选择 Skill 版本评测模型", placeHolder: "请选择用于所有选中版本的模型" },
+      )
+      if (!picked) {
+        return { accepted: false, error: { code: "model_selection_cancelled", message: "已取消模型选择。" } }
+      }
+      const prompt = await vscode.window.showInputBox({
+        title: "输入 Skill 评测提示词",
+        prompt: "提示词会追加到 Skill 内容末尾，并用于所有选中版本。留空表示不追加。",
+        placeHolder: "请输入本次评测要执行的任务（可留空）",
+        ignoreFocusOut: true,
+      })
+      if (prompt === undefined) {
+        return { accepted: false, error: { code: "prompt_input_cancelled", message: "已取消提示词输入。" } }
+      }
+      agentManagerProvider.openPanel()
+      const accepted = await agentManagerProvider.prepareSkillEvaluation({
+        ...parsed.value,
+        prompt,
+        model: {
+          providerID: picked.model.providerID,
+          modelID: picked.model.modelID,
+          name: picked.model.name,
+          providerName: picked.model.providerName,
+        },
+      })
+      if (!accepted) {
+        const current = await agentManagerProvider.openSkillEvaluationSession(parsed.value.skillId)
+        return {
+          accepted: false,
+          error: current.running
+            ? { code: "evaluation_in_progress", message: "Agent Manager 当前已有 worktree，已打开当前会话。" }
+            : { code: "agent_manager_unavailable", message: "无法打开 Agent Manager。" },
+        }
+      }
+      return { accepted: true, count: parsed.value.versions.length }
+    }),
+    vscode.commands.registerCommand(SKILL_EVALUATION_SESSION_COMMAND, async (input: unknown) => {
+      const parsed = parseSkillEvaluationSession(input)
+      if (!parsed.ok) return { success: false, running: false, error: parsed.error }
+      try {
+        return await agentManagerProvider.openSkillEvaluationSession(parsed.value.skillId, parsed.value.open)
+      } catch (error) {
+        return {
+          success: false,
+          running: false,
+          error: {
+            code: "evaluation_session_unavailable",
+            message: error instanceof Error ? error.message : String(error),
+          },
+        }
+      }
+    }),
+    vscode.commands.registerCommand(SKILL_EVALUATION_RESULTS_COMMAND, async (input: unknown) => {
+      const data = input && typeof input === "object" ? (input as Record<string, unknown>) : undefined
+      const skillId = typeof data?.skillId === "string" ? data.skillId.trim() : ""
+      if (!skillId) return { success: false, error: { code: "invalid_request", message: "Skill id is required" } }
+      try {
+        return { success: true, results: await agentManagerProvider.getSkillEvaluationResults(skillId) }
+      } catch (error) {
+        return {
+          success: false,
+          error: {
+            code: "evaluation_results_unavailable",
+            message: error instanceof Error ? error.message : String(error),
+          },
+        }
+      }
+    }),
+    vscode.commands.registerCommand(SKILL_EVALUATION_RESULT_REFRESH_COMMAND, async (input: unknown) => {
+      const parsed = parseSkillEvaluationResultRefresh(input)
+      if (!parsed.ok) return { success: false, error: parsed.error }
+      try {
+        const result = await agentManagerProvider.refreshSkillEvaluationResult(
+          parsed.value.skillId,
+          parsed.value.sessionId,
+        )
+        if (result) return { success: true, result }
+        return {
+          success: false,
+          error: { code: "evaluation_result_not_found", message: "Evaluation result was not found" },
+        }
+      } catch (error) {
+        return {
+          success: false,
+          error: {
+            code: "evaluation_result_refresh_failed",
+            message: error instanceof Error ? error.message : String(error),
+          },
+        }
+      }
+    }),
+    vscode.commands.registerCommand(SKILL_EVALUATION_RESULT_DELETE_COMMAND, async (input: unknown) => {
+      const parsed = parseSkillEvaluationResultDelete(input)
+      if (!parsed.ok) return { success: false, error: parsed.error }
+      try {
+        return await agentManagerProvider.deleteSkillEvaluationResult(parsed.value.skillId, parsed.value.sessionId)
+      } catch (error) {
+        return {
+          success: false,
+          error: {
+            code: "evaluation_result_delete_failed",
+            message: error instanceof Error ? error.message : String(error),
+          },
+        }
+      }
+    }),
+    vscode.commands.registerCommand(SKILL_EVALUATION_RESULT_CLEANUP_COMMAND, async (input: unknown) => {
+      const parsed = parseSkillEvaluationResultCleanup(input)
+      if (!parsed.ok) return { success: false, error: parsed.error }
+      try {
+        return await agentManagerProvider.cleanupSkillEvaluationResult(parsed.value.skillId)
+      } catch (error) {
+        return {
+          success: false,
+          error: {
+            code: "evaluation_result_cleanup_failed",
+            message: error instanceof Error ? error.message : String(error),
+          },
+        }
       }
     }),
     // testagent_change end
@@ -611,6 +834,7 @@ export function activate(context: vscode.ExtensionContext) {
     dispose: () => {
       unsubscribeStateChange()
       browserAutomationService.dispose()
+      vscodeBrowserToolsService.dispose()
       provider.dispose()
       connectionService.dispose()
     },

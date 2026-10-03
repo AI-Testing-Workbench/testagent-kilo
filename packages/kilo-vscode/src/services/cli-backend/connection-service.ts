@@ -6,6 +6,7 @@ import { createKiloClient, type KiloClient, type Event } from "@kilocode/sdk/v2/
 import { SdkSSEAdapter } from "./sdk-sse-adapter"
 import type { ServerConfig } from "./types"
 import { resolveEventSessionId as resolveEventSessionIdPure } from "./connection-utils"
+import { handleClearRemoteEnvVars, handleEnsureRemoteEnvVars } from "../../kilo-provider/handlers/env-vars" // testagent_change
 
 export type ConnectionState = "connecting" | "connected" | "disconnected" | "error"
 type SSEEventListener = (event: Event) => void
@@ -18,6 +19,8 @@ type MigrationCompleteListener = () => void
 type FavoritesChangeListener = (favorites: Array<{ providerID: string; modelID: string }>) => void
 type ClearPendingPromptsListener = () => void
 type AgentsChangeListener = () => void // testagent_change
+// testagent_change - fired after /mcp/reload rebuilds MCP state from the config file
+type McpReloadListener = () => void
 type DirectoryProvider = () => string[]
 
 // Poll /global/health at the same interval as packages/app/src/context/server.tsx.
@@ -82,6 +85,7 @@ export class KiloConnectionService {
   private readonly favoritesChangeListeners: Set<FavoritesChangeListener> = new Set()
   private readonly clearPendingPromptsListeners: Set<ClearPendingPromptsListener> = new Set()
   private readonly agentsChangeListeners: Set<AgentsChangeListener> = new Set() // testagent_change
+  private readonly mcpReloadListeners: Set<McpReloadListener> = new Set() // testagent_change
   private readonly directoryProviders: Set<DirectoryProvider> = new Set()
   // testagent_change start - track current session ID for aborting retry on auto-compaction
   private getCurrentSessionId: (() => string | undefined) | null = null
@@ -428,6 +432,29 @@ export class KiloConnectionService {
   }
 
   /**
+   * Subscribe to MCP reload events. Returns unsubscribe function.
+   * testagent_change - `/mcp/reload` rebuilds MCP state from the config file alone, so servers
+   * that were registered at runtime (such as the VS Code browser tools bridge) are dropped.
+   * Subscribers that own such a server use this to register it again.
+   */
+  onMcpReloaded(listener: McpReloadListener): () => void {
+    this.mcpReloadListeners.add(listener)
+    return () => {
+      this.mcpReloadListeners.delete(listener)
+    }
+  }
+
+  /**
+   * Broadcast that the backend reloaded its MCP servers from config.
+   * testagent_change
+   */
+  notifyMcpReloaded(): void {
+    for (const listener of this.mcpReloadListeners) {
+      listener()
+    }
+  }
+
+  /**
    * Register a callback that returns workspace directories tracked by a
    * KiloProvider (root + worktree dirs). Used by drainPendingPrompts() to
    * cover all active Instance directories across every provider.
@@ -655,6 +682,7 @@ export class KiloConnectionService {
     this.migrationCompleteListeners.clear()
     this.favoritesChangeListeners.clear()
     this.clearPendingPromptsListeners.clear()
+    this.mcpReloadListeners.clear()
     this.directoryProviders.clear()
     this.messageSessionIdsByMessageId.clear()
     this.focused.clear()
@@ -845,7 +873,15 @@ export class KiloConnectionService {
     if (!this.config) return
     try {
       const session = await vscode.authentication.getSession("tscode-oauth", [], { createIfNone: false })
-      const metadata = (session as any).metadata
+      // testagent_change start - 左下角账号菜单的注销不会经过 webview 的 logout 消息，只会走到这里。
+      // 只要 VS Code 的 tscode-oauth session 消失就视为已登出：直接清掉接口变量并返回。
+      // 放在 PUT 之前是有意的——清理不依赖用户信息是否同步成功，也不读 metadata（登出时它是 undefined）。
+      if (!session) {
+        if (this.client) await handleClearRemoteEnvVars(this.client)
+        return
+      }
+      // testagent_change end
+      const metadata = (session as any)?.metadata
       const userId = metadata?.employeeId
       const auth = `Basic ${Buffer.from(`opencode:${this.config.password}`).toString("base64")}`
       const response = await fetch(`${this.config.baseUrl}/testagent/user`, {
@@ -857,7 +893,13 @@ export class KiloConnectionService {
       if (!response.ok) {
         const text = await response.text()
         console.error("[testagent-vscode] syncUserId failed:", text)
+        return
       }
+      // testagent_change start - 远程接口变量依赖 originPathId，而该字段只能由这次 PUT 写入后端。
+      // SSE 进入 connected 时这次 PUT 还没发出，那时触发的拉取必然因缺少 pathCode 被跳过，
+      // 且没有任何地方重试，所以必须在用户信息落库之后再拉一次（幂等：已存在则跳过）。
+      if (this.client) await handleEnsureRemoteEnvVars(this.client)
+      // testagent_change end
     } catch (e) {
       console.error("[testagent-vscode] syncUserId error:", e)
       // non-critical, ignore

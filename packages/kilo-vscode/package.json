@@ -2,7 +2,7 @@
   "name": "TestAgent",
   "displayName": "TestAgent",
   "description": "TestAgent",
-  "version": "1.4.4",
+  "version": "1.5.0",
   "icon": "assets/icons/logo-outline-black.png",
   "galleryBanner": {
     "color": "#FFFFFF",
@@ -11,11 +11,11 @@
   "publisher": "test-tech",
   "repository": {
     "type": "git",
-    "url": "https://github.com/Kilo-Org/kilocode.git",
+    "url": "",
     "directory": "packages/kilo-vscode"
   },
   "engines": {
-    "vscode": "^1.105.1"
+    "vscode": "^1.110.1"
   },
   "license": "MIT",
   "author": {
@@ -46,7 +46,13 @@
     "kilocode"
   ],
   "activationEvents": [
-    "onStartupFinished"
+    "onStartupFinished",
+    "onCommand:testagent.new.agentManager.prepareSkillEvaluation",
+    "onCommand:testagent.new.agentManager.openSkillEvaluationSession",
+    "onCommand:testagent.new.agentManager.getSkillEvaluationResults",
+    "onCommand:testagent.new.agentManager.refreshSkillEvaluationResult",
+    "onCommand:testagent.new.agentManager.cleanupSkillEvaluationResult",
+    "onCommand:testagent.new.agentManager.deleteSkillEvaluationResult"
   ],
   "main": "./dist/extension.js",
   "contributes": {
@@ -81,6 +87,36 @@
     },
     "commands": [
       {
+        "command": "testagent.new.agentManager.prepareSkillEvaluation",
+        "title": "Agent Manager: Prepare Skill Evaluation",
+        "category": "TestAgent"
+      },
+      {
+        "command": "testagent.new.agentManager.openSkillEvaluationSession",
+        "title": "Agent Manager: Open Skill Evaluation Session",
+        "category": "TestAgent"
+      },
+      {
+        "command": "testagent.new.agentManager.getSkillEvaluationResults",
+        "title": "Agent Manager: Get Skill Evaluation Results",
+        "category": "TestAgent"
+      },
+      {
+        "command": "testagent.new.agentManager.refreshSkillEvaluationResult",
+        "title": "Agent Manager: Refresh Skill Evaluation Result",
+        "category": "TestAgent"
+      },
+      {
+        "command": "testagent.new.agentManager.cleanupSkillEvaluationResult",
+        "title": "Agent Manager: Clean Up Skill Evaluation Result",
+        "category": "TestAgent"
+      },
+      {
+        "command": "testagent.new.agentManager.deleteSkillEvaluationResult",
+        "title": "Agent Manager: Delete Skill Evaluation Result",
+        "category": "TestAgent"
+      },
+      {
         "command": "testagent.new.plusButtonClicked",
         "title": "新建任务",
         "icon": "$(add)"
@@ -96,6 +132,11 @@
         "icon": "$(settings-gear)"
       },
       {
+        "command": "testagent.new.copyWebUiLink",
+        "title": "复制 Web UI 链接",
+        "icon": "$(link)"
+      },
+      {
         "command": "testagent.new.reloadSkills",
         "title": "Reload Skills",
         "category": "TestAgent"
@@ -103,6 +144,11 @@
       {
         "command": "testagent.new.reloadMcp",
         "title": "Reload MCP Servers",
+        "category": "TestAgent"
+      },
+      {
+        "command": "testagent.new.setYolo",
+        "title": "Set Yolo Mode",
         "category": "TestAgent"
       },
       {
@@ -344,6 +390,16 @@
       }
     ],
     "menus": {
+      "commandPalette": [
+        {
+          "command": "testagent.new.setYolo",
+          "when": "false"
+        },
+        {
+          "command": "testagent.new.copyWebUiLink",
+          "when": "testagent.new.cloudMode"
+        }
+      ],
       "view/title": [
         {
           "command": "testagent.new.plusButtonClicked",
@@ -354,6 +410,11 @@
           "command": "testagent.new.historyButtonClicked",
           "group": "navigation@1",
           "when": "view == testagent.SidebarProvider"
+        },
+        {
+          "command": "testagent.new.copyWebUiLink",
+          "group": "navigation@2",
+          "when": "view == testagent.SidebarProvider && testagent.new.cloudMode"
         },
         {
           "command": "testagent.new.settingsButtonClicked",
@@ -545,7 +606,7 @@
         "testagent.new.browserAutomation.enabled": {
           "type": "boolean",
           "default": false,
-          "description": "Enable browser automation powered by Playwright. When enabled, the AI agent can interact with web pages in a visible Chrome window."
+          "description": "Enable browser automation powered by Playwright. When enabled, the AI agent can interact with web pages in a visible Chrome window. Mutually exclusive with testagent.new.vscodeBrowserTools.enabled — enabling this turns that off."
         },
         "testagent.new.browserAutomation.useSystemChrome": {
           "type": "boolean",
@@ -556,6 +617,11 @@
           "type": "boolean",
           "default": false,
           "description": "Run browser automation in headless mode (no visible window). When disabled, you can watch the agent interact with the browser."
+        },
+        "testagent.new.vscodeBrowserTools.enabled": {
+          "type": "boolean",
+          "default": false,
+          "description": "Let the AI agent use VS Code's integrated browser (open, read, screenshot and navigate pages). Requires VS Code 1.110 or newer and the \"Workbench > Browser: Enable Chat Tools\" (workbench.browser.enableChatTools) setting. Mutually exclusive with testagent.new.browserAutomation.enabled — enabling that turns this off."
         },
         "testagent.new.notifications.agent": {
           "type": "boolean",

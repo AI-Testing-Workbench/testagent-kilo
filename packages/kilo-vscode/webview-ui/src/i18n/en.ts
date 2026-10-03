@@ -1083,9 +1083,14 @@ export const dict = {
   "settings.agentBehaviour.subtab.skills": "Skills",
 
   "settings.browser.description":
-    "When enabled, the AI agent can interact with web pages — navigating, clicking, typing, and taking screenshots. A Chrome window will open so you can watch the agent work.",
+    "Choose how the AI agent interacts with web pages — navigating, clicking, typing, and taking screenshots. Only one of the two backends below can be enabled at a time.",
+  "settings.browser.vscodeTools.title": "Use VS Code's Integrated Browser",
+  "settings.browser.vscodeTools.description":
+    'Let the agent work in VS Code\'s own browser. No extra install; pages open in an editor tab. Requires VS Code 1.110 or newer and "Workbench > Browser: Enable Chat Tools".',
   "settings.browser.enable.title": "Enable Browser Automation",
-  "settings.browser.enable.description": "Register the Playwright MCP server with the CLI backend.",
+  "settings.browser.enable.description":
+    "Register the Playwright MCP server with the CLI backend. Turns off the integrated browser above.",
+  "settings.browser.playwrightOptions.title": "Playwright options",
   "settings.browser.systemChrome.title": "Use System Chrome",
   "settings.browser.systemChrome.description":
     "Use your installed Chrome browser instead of a separate Chromium instance.",
@@ -1187,7 +1192,8 @@ export const dict = {
   "settings.agentBehaviour.maxSteps.title": "Max Steps",
   "settings.agentBehaviour.maxSteps.description": "Maximum agentic iterations",
   "settings.agentBehaviour.thinking.title": "Thinking",
-  "settings.agentBehaviour.thinking.description": "Enable model thinking/reasoning output in chat input. When disabled, thinking is suppressed",
+  "settings.agentBehaviour.thinking.description":
+    "Enable model thinking/reasoning output in chat input. When disabled, thinking is suppressed",
   "settings.agentBehaviour.hidden.title": "Hidden",
   "settings.agentBehaviour.hidden.description": "Hide this agent from the mode switcher in the chat input",
   "settings.agentBehaviour.disable.title": "Disabled",

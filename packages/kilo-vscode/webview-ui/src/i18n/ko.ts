@@ -1047,8 +1047,13 @@ export const dict = {
 
   "settings.browser.description":
     "활성화하면 AI 에이전트가 웹 페이지와 상호작용할 수 있습니다 — 탐색, 클릭, 입력, 스크린샷 촬영. Chrome 창이 열려 에이전트의 작업을 확인할 수 있습니다.",
+  "settings.browser.vscodeTools.title": "VS Code 내장 브라우저 사용",
+  "settings.browser.vscodeTools.description":
+    "에이전트가 VS Code 자체 브라우저에서 작업하도록 합니다. 추가 설치가 필요 없으며 페이지는 편집기 탭에서 열립니다. VS Code 1.110 이상과 Workbench > Browser: Enable Chat Tools 설정이 필요합니다.",
   "settings.browser.enable.title": "브라우저 자동화 활성화",
-  "settings.browser.enable.description": "Playwright MCP 서버를 CLI 백엔드에 등록합니다.",
+  "settings.browser.enable.description":
+    "Playwright MCP 서버를 CLI 백엔드에 등록합니다. 위의 내장 브라우저는 꺼집니다.",
+  "settings.browser.playwrightOptions.title": "Playwright 옵션",
   "settings.browser.systemChrome.title": "시스템 Chrome 사용",
   "settings.browser.systemChrome.description": "별도의 Chromium 인스턴스 대신 설치된 Chrome 브라우저를 사용합니다.",
   "settings.browser.headless.title": "헤드리스 모드",
@@ -1260,7 +1265,8 @@ export const dict = {
   "settings.checkpoints.enable.title": "스냅샷 활성화",
   "settings.checkpoints.enable.description": "파일 편집 전 체크포인트를 생성하여 이전 상태를 복원할 수 있습니다",
   "settings.context.autoCompaction.title": "자동 압축",
-  "settings.context.autoCompaction.description": "컨텍스트가 한도에 가까워지면 이전 기록(도구 없음, 시스템 프롬프트 없음, 미디어는 플레이스홀더로 대체, 도구 출력은 2000자로 제한)을 전용 압축 에이전트에 보내 구조화된 요약을 생성하고 최근 2턴을 유지한 후 자동으로 대화를 계속합니다",
+  "settings.context.autoCompaction.description":
+    "컨텍스트가 한도에 가까워지면 이전 기록(도구 없음, 시스템 프롬프트 없음, 미디어는 플레이스홀더로 대체, 도구 출력은 2000자로 제한)을 전용 압축 에이전트에 보내 구조화된 요약을 생성하고 최근 2턴을 유지한 후 자동으로 대화를 계속합니다",
   "settings.context.prune.title": "이전 출력 정리",
   "settings.context.prune.description": "압축 중 이전 도구 출력 제거",
   "settings.context.watcherPatterns": "파일 감시자 무시 패턴",

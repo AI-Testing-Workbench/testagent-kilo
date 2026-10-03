@@ -6,12 +6,11 @@ import * as path from "path"
 import * as vscode from "vscode"
 import { t } from "./i18n"
 import { parseServerPort } from "./server-utils"
-import { shouldShareServer } from "./cloud-mode"
+import { CLOUD_SERVER_HOSTNAME, CLOUD_SERVER_PORT, shouldShareServer } from "./cloud-mode"
 import {
   clearServerState,
   getServerDataDir,
   getServerLogPath,
-  pickFreePort,
   probeServer,
   readServerState,
   waitForServer,
@@ -198,7 +197,7 @@ export class NodeServerManager {
         "--password",
         password,
         "--hostname",
-        "127.0.0.1",
+        cloud ? CLOUD_SERVER_HOSTNAME : "127.0.0.1",
       ]
 
       const commonSpawnOpts = {

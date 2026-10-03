@@ -1,4 +1,3 @@
-import { createServer } from "net"
 import * as fs from "fs"
 import * as os from "os"
 import * as path from "path"
@@ -102,29 +101,3 @@ export async function waitForServer(
   return false
 }
 
-/**
- * Pick a free TCP port on 127.0.0.1, starting from `preferred`.
- * The tiny close-and-rebind race is acceptable in a per-user container.
- */
-export function pickFreePort(preferred = 4096, maxAttempts = 100): Promise<number> {
-  return new Promise((resolve, reject) => {
-    const tryListen = (port: number, attempt: number) => {
-      const server = createServer()
-      server.once("error", () => {
-        try {
-          server.close()
-        } catch {
-          // ignore
-        }
-        if (attempt >= maxAttempts) reject(new Error("No free port found for cloud server"))
-        else tryListen(port + 1, attempt + 1)
-      })
-      server.listen(port, "127.0.0.1", () => {
-        const address = server.address()
-        const actualPort = typeof address === "object" && address ? address.port : port
-        server.close(() => resolve(actualPort))
-      })
-    }
-    tryListen(preferred, 0)
-  })
-}

@@ -1043,8 +1043,13 @@ export const dict = {
 
   "settings.browser.description":
     "เมื่อเปิดใช้งาน ตัวแทน AI สามารถโต้ตอบกับหน้าเว็บได้ — นำทาง คลิก พิมพ์ และจับภาพหน้าจอ หน้าต่าง Chrome จะเปิดขึ้นเพื่อให้คุณดูการทำงานของตัวแทน",
+  "settings.browser.vscodeTools.title": "ใช้เบราว์เซอร์ในตัวของ VS Code",
+  "settings.browser.vscodeTools.description":
+    "ให้เอเจนต์ทำงานในเบราว์เซอร์ของ VS Code เอง ไม่ต้องติดตั้งเพิ่ม หน้าเว็บจะเปิดในแท็บของตัวแก้ไข ต้องใช้ VS Code 1.110 ขึ้นไป และเปิด Workbench > Browser: Enable Chat Tools",
   "settings.browser.enable.title": "เปิดใช้งานการทำงานอัตโนมัติของเบราว์เซอร์",
-  "settings.browser.enable.description": "ลงทะเบียนเซิร์ฟเวอร์ Playwright MCP กับ CLI backend",
+  "settings.browser.enable.description":
+    "ลงทะเบียนเซิร์ฟเวอร์ Playwright MCP กับ CLI backend และจะปิดเบราว์เซอร์ในตัวด้านบน",
+  "settings.browser.playwrightOptions.title": "ตัวเลือก Playwright",
   "settings.browser.systemChrome.title": "ใช้ Chrome ของระบบ",
   "settings.browser.systemChrome.description": "ใช้เบราว์เซอร์ Chrome ที่ติดตั้งแทนอินสแตนซ์ Chromium แยกต่างหาก",
   "settings.browser.headless.title": "โหมด Headless",
@@ -1257,7 +1262,8 @@ export const dict = {
   "settings.checkpoints.enable.title": "เปิดใช้งานสแนปชอต",
   "settings.checkpoints.enable.description": "สร้างจุดตรวจก่อนแก้ไขไฟล์",
   "settings.context.autoCompaction.title": "การบีบอัดอัตโนมัติ",
-  "settings.context.autoCompaction.description": "เมื่อบริบทใกล้ถึงขีดจำกัด จะส่งประวัติที่เก่ากว่า (ไม่มีเครื่องมือ ไม่มีพรอมต์ระบบ สื่อถูกแทนที่ด้วยข้อความplaceholder ผลลัพธ์เครื่องมือถูกตัดเหลือ 2000 ตัวอักษร) ไปยังเอเจนต์บีบอัดเฉพาะเพื่อสรุปแบบมีโครงสร้าง เก็บการสนทนา 2 รอบล่าสุดไว้และดำเนินการสนทนาต่อโดยอัตโนมัติ",
+  "settings.context.autoCompaction.description":
+    "เมื่อบริบทใกล้ถึงขีดจำกัด จะส่งประวัติที่เก่ากว่า (ไม่มีเครื่องมือ ไม่มีพรอมต์ระบบ สื่อถูกแทนที่ด้วยข้อความplaceholder ผลลัพธ์เครื่องมือถูกตัดเหลือ 2000 ตัวอักษร) ไปยังเอเจนต์บีบอัดเฉพาะเพื่อสรุปแบบมีโครงสร้าง เก็บการสนทนา 2 รอบล่าสุดไว้และดำเนินการสนทนาต่อโดยอัตโนมัติ",
   "settings.context.prune.title": "ตัดผลลัพธ์เก่า",
   "settings.context.prune.description": "ลบผลลัพธ์เครื่องมือเก่าระหว่างการบีบอัด",
   "settings.context.watcherPatterns": "รูปแบบการละเว้นตัวเฝ้าดูไฟล์",

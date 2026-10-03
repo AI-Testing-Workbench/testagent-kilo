@@ -1053,8 +1053,13 @@ export const dict = {
 
   "settings.browser.description":
     "Etkinleştirildiğinde, yapay zeka ajanı web sayfalarıyla etkileşime girebilir — gezinme, tıklama, yazma ve ekran görüntüsü alma. Ajanın çalışmasını izleyebilmeniz için bir Chrome penceresi açılacak.",
+  "settings.browser.vscodeTools.title": "VS Code'un Yerleşik Tarayıcısını Kullan",
+  "settings.browser.vscodeTools.description":
+    "Aracının VS Code'un kendi tarayıcısında çalışmasını sağlar. Ek kurulum gerekmez; sayfalar bir düzenleyici sekmesinde açılır. VS Code 1.110 veya üzeri ve Workbench > Browser: Enable Chat Tools ayarı gerekir.",
   "settings.browser.enable.title": "Tarayıcı Otomasyonunu Etkinleştir",
-  "settings.browser.enable.description": "Playwright MCP sunucusunu CLI arka ucuyla kaydet.",
+  "settings.browser.enable.description":
+    "Playwright MCP sunucusunu CLI arka ucuyla kaydet. Yukarıdaki yerleşik tarayıcıyı kapatır.",
+  "settings.browser.playwrightOptions.title": "Playwright seçenekleri",
   "settings.browser.systemChrome.title": "Sistem Chrome'unu Kullan",
   "settings.browser.systemChrome.description": "Ayrı bir Chromium örneği yerine yüklü Chrome tarayıcınızı kullanın.",
   "settings.browser.headless.title": "Başsız Mod",
@@ -1248,7 +1253,8 @@ export const dict = {
     "Dosya düzenlemelerinden önce kontrol noktaları oluştur, böylece önceki durumları geri yükleyebilirsiniz",
 
   "settings.context.autoCompaction.title": "Otomatik Sıkıştırma",
-  "settings.context.autoCompaction.description": "Bağlam kapasiteye yaklaştığında, eski geçmişi (araçlar olmadan, sistem komutları olmadan, medya yer tutucularla değiştirilmiş, araç çıktıları 2000 karaktere kısaltılmış) özel bir sıkıştırma aracısına yapılandırılmış özet için gönderir, son 2 konuşma turunu korur ve oturumu otomatik olarak sürdürür",
+  "settings.context.autoCompaction.description":
+    "Bağlam kapasiteye yaklaştığında, eski geçmişi (araçlar olmadan, sistem komutları olmadan, medya yer tutucularla değiştirilmiş, araç çıktıları 2000 karaktere kısaltılmış) özel bir sıkıştırma aracısına yapılandırılmış özet için gönderir, son 2 konuşma turunu korur ve oturumu otomatik olarak sürdürür",
   "settings.context.prune.title": "Eski Çıktıları Temizle",
   "settings.context.prune.description": "Sıkıştırma sırasında eski araç çıktılarını kaldır",
   "settings.context.watcherPatterns": "Dosya İzleyici Yok Sayma Kalıpları",
