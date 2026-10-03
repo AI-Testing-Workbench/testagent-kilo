@@ -378,6 +378,8 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
   private connectionState: "connecting" | "connected" | "disconnected" | "error" = "connecting"
   private loginAttempt = 0
   private isWebviewReady = false
+  private pendingOpenSessionID: string | undefined // testagent_change - cross-window handoff
+  private readonly handoffResources = new Map<string, string>() // testagent_change - agent host session resource per conversation
   private readonly extensionVersion =
     vscode.extensions.getExtension("testagent.testagent-tscode")?.packageJSON?.version ?? "unknown"
   /** Cached providersLoaded payload so requestProviders can be served before client is ready */
@@ -878,6 +880,43 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
     this.postMessage({ type: "openCloudSession", sessionId })
   }
 
+  // testagent_change start - cross-window handoff: focus a backend session by id.
+  /** Focus a specific session, optionally overriding its directory (e.g. an Agents-window scratch dir). */
+  public openSession(sessionID: string, directory?: string, agentHostResource?: string): void {
+    if (directory) {
+      this.trackDirectory(sessionID, directory)
+    }
+    if (agentHostResource) {
+      this.handoffResources.set(sessionID, agentHostResource)
+    }
+    this.trackedSessionIds.add(sessionID)
+    this.pendingOpenSessionID = sessionID
+    this.flushPendingOpenSession()
+  }
+
+  /** Report the sidebar's active conversation for a cross-window handoff. */
+  public getActiveSessionHandoff(): { sessionId: string; directory?: string; agentHostResource?: string } | undefined {
+    const sessionId = this.currentSession?.id
+    if (!sessionId) return undefined
+    const directory = this.sessionDirectories.get(sessionId)
+    const agentHostResource = this.handoffResources.get(sessionId)
+    return {
+      sessionId,
+      ...(directory ? { directory } : {}),
+      ...(agentHostResource ? { agentHostResource } : {}),
+    }
+  }
+
+  private flushPendingOpenSession(): void {
+    if (!this.pendingOpenSessionID || !this.isWebviewReady) {
+      return
+    }
+    const sessionID = this.pendingOpenSessionID
+    this.pendingOpenSessionID = undefined
+    this.postMessage({ type: "openSession", sessionID })
+  }
+  // testagent_change end
+
   public setContinueInWorktreeHandler(
     handler: (sessionId: string, progress: (status: string, detail?: string, error?: string) => void) => Promise<void>,
   ): void {
@@ -919,6 +958,7 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
           await this.syncWebviewState("webviewReady")
           this.flushPendingReviewComments()
           this.recoverPendingPrompts()
+          this.flushPendingOpenSession() // testagent_change - cross-window handoff
           this.readyResolvers.splice(0).forEach((r) => r())
           break
         case "sendMessage": {

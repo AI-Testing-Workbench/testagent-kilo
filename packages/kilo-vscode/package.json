@@ -117,6 +117,14 @@
         "category": "TestAgent"
       },
       {
+        "command": "testagent.new.openSession",
+        "title": "Focus TestAgent session (internal)"
+      },
+      {
+        "command": "testagent.new.getActiveSession",
+        "title": "Get active TestAgent session (internal)"
+      },
+      {
         "command": "testagent.new.plusButtonClicked",
         "title": "新建任务",
         "icon": "$(add)"

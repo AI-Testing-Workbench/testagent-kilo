@@ -550,6 +550,24 @@ export function activate(context: vscode.ExtensionContext) {
       }
     }),
     // testagent_change end
+    // testagent_change start - cross-window handoff (Agents window <-> editor plugin)
+    // Focus the sidebar chat panel on a specific backend session.
+    vscode.commands.registerCommand(
+      "testagent.new.openSession",
+      async (sessionID: string, directory?: string, agentHostResource?: string) => {
+        if (typeof sessionID !== "string" || !sessionID) return
+        await vscode.commands.executeCommand("testagent.SidebarProvider.focus")
+        provider.openSession(
+          sessionID,
+          typeof directory === "string" ? directory : undefined,
+          typeof agentHostResource === "string" ? agentHostResource : undefined,
+        )
+        return true
+      },
+    ),
+    // Report the sidebar chat panel's active session so another window can focus it.
+    vscode.commands.registerCommand("testagent.new.getActiveSession", () => provider.getActiveSessionHandoff()),
+    // testagent_change end
     //testagent_change 注释
     // vscode.commands.registerCommand("testagent.new.marketplaceButtonClicked", (directory?: string) => {
     //   settingsEditorProvider.openPanel("marketplace", undefined, directory)

@@ -210,6 +210,13 @@ const AppContent: Component = () => {
         session.selectCloudSession(message.sessionId)
         setCurrentView("newTask")
       }
+      // testagent_change - cross-window handoff: focus a backend session by id.
+      if (message?.type === "openSession" && message.sessionID) {
+        console.log("[testagent] App: 🔗 openSession:", message.sessionID)
+        if (tabs) tabs.open(message.sessionID)
+        if (!tabs) session.selectSession(message.sessionID)
+        setCurrentView("newTask")
+      }
       handleForked(message)
       if (message?.type === "viewSubAgentSession" && message.sessionID) {
         console.log("[testagent] App: 🔍 viewSubAgentSession:", message.sessionID)

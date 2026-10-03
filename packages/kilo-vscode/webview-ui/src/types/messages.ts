@@ -723,6 +723,12 @@ export interface OpenCloudSessionMessage {
   sessionId: string
 }
 
+// testagent_change - cross-window handoff: focus a backend session by id.
+export interface OpenSessionMessage {
+  type: "openSession"
+  sessionID: string
+}
+
 export interface ActionMessage {
   type: "action"
   action: string
@@ -1807,6 +1813,7 @@ export type ExtensionMessage =
   | CloudSessionImportedMessage
   | CloudSessionImportFailedMessage
   | OpenCloudSessionMessage
+  | OpenSessionMessage
   | AgentManagerBranchesMessage
   | AgentManagerExternalWorktreesMessage
   | AgentManagerImportResultMessage
