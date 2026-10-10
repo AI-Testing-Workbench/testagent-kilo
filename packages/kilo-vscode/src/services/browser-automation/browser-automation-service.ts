@@ -137,6 +137,11 @@ export class BrowserAutomationService implements vscode.Disposable {
     if (useSystemChrome) {
       command.push("--browser", "chrome")
     }
+    // Chromium refuses to start its sandbox when running as root (e.g. inside a Docker
+    // container), so disable it there. `getuid` is undefined on Windows.
+    if (process.getuid?.() === 0) {
+      command.push("--no-sandbox")
+    }
 
     try {
       const directory = this.getWorkspaceDirectory()
