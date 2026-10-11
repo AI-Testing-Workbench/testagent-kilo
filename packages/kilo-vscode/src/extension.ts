@@ -28,6 +28,7 @@ import { ensureCliInPath } from "./services/env-path"
 import { registerHeapSnapshot } from "./commands/heap-snapshot"
 import { RemoteStatusService } from "./services/RemoteStatusService"
 import { PythonInterpreterService } from "./services/python-interpreter" // testagent_change
+import { registerDesktopPetBridge } from "./services/desktop-pet/desktop-pet-bridge" // testagent_change
 import {
   parseSkillEvaluation,
   parseSkillEvaluationResultCleanup,
@@ -74,6 +75,9 @@ export function activate(context: vscode.ExtensionContext) {
 
   // Create shared connection service (one server for all webviews)
   const connectionService = new KiloConnectionService(context)
+
+  // testagent_change - relay TestAgent pet states to the TSCode desktop pet
+  context.subscriptions.push(registerDesktopPetBridge(connectionService))
 
   // Create browser automation service (manages Playwright MCP registration)
   const browserAutomationService = new BrowserAutomationService(connectionService)
