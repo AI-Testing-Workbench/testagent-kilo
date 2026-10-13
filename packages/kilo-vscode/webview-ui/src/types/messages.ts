@@ -249,6 +249,16 @@ export interface QuestionRequest {
   }
 }
 
+// Unsubmitted selections for a pending question, keyed by request id. Lives in the
+// session context so the dock can restore them after the component remounts
+// (e.g. switching session tabs rebuilds the message list and unmounts the dock).
+export interface QuestionDraft {
+  tab: number
+  answers: string[][]
+  custom: string[]
+  kinds: Record<string, "option" | "custom">[]
+}
+
 export interface SuggestionAction {
   label: string
   description?: string

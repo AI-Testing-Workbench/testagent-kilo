@@ -22,6 +22,7 @@ import type {
   SessionStatusInfo,
   PermissionRequest,
   QuestionRequest,
+  QuestionDraft, // testagent_change - question 草稿状态提升
   SuggestionRequest,
   TodoItem,
   ModelSelection,
@@ -159,6 +160,10 @@ interface SessionContextValue {
   // Pending question requests (unscoped — all tracked sessions)
   questions: Accessor<QuestionRequest[]>
   questionErrors: Accessor<Set<string>>
+  // testagent_change start - question 草稿状态提升：按 requestID 持久化未提交的选择
+  questionDraft: (requestID: string) => QuestionDraft | undefined
+  saveQuestionDraft: (requestID: string, draft: QuestionDraft) => void
+  // testagent_change end
   suggestions: Accessor<SuggestionRequest[]>
   suggestionErrors: Accessor<Set<string>>
   respondingSuggestions: Accessor<Set<string>>
@@ -338,6 +343,29 @@ export const SessionProvider: ParentComponent = (props) => {
 
   // Tracks question IDs that failed so the UI can reset sending state
   const [questionErrors, setQuestionErrors] = createSignal<Set<string>>(new Set())
+
+  // testagent_change start - question 草稿状态提升：切换 session 会重建消息树并卸载
+  // QuestionDock，组件内局部状态随之丢失。把未提交的选择按 requestID 存到 context，
+  // 组件重建时恢复。
+  const [questionDrafts, setQuestionDrafts] = createSignal<Record<string, QuestionDraft>>({})
+
+  function questionDraft(requestID: string) {
+    return questionDrafts()[requestID]
+  }
+
+  function saveQuestionDraft(requestID: string, draft: QuestionDraft) {
+    setQuestionDrafts((prev) => ({ ...prev, [requestID]: draft }))
+  }
+
+  function clearQuestionDraft(requestID: string) {
+    setQuestionDrafts((prev) => {
+      if (!(requestID in prev)) return prev
+      const next = { ...prev }
+      delete next[requestID]
+      return next
+    })
+  }
+  // testagent_change end
   const [suggestions, setSuggestions] = createSignal<SuggestionRequest[]>([])
   const [suggestionErrors, setSuggestionErrors] = createSignal<Set<string>>(new Set())
   const [respondingSuggestions, setRespondingSuggestions] = createSignal<Set<string>>(new Set())
@@ -960,6 +988,7 @@ export const SessionProvider: ParentComponent = (props) => {
       case "clearPendingPrompts":
         setPermissions([])
         setQuestions([])
+        setQuestionDrafts({}) // testagent_change - 同步清理 question 草稿
         setSuggestions([])
         setRespondingPermissions(new Set<string>())
         setSuggestionErrors(new Set<string>())
@@ -1391,6 +1420,7 @@ export const SessionProvider: ParentComponent = (props) => {
 
   function handleQuestionResolved(requestID: string) {
     setQuestions((prev) => prev.filter((q) => q.id !== requestID))
+    clearQuestionDraft(requestID) // testagent_change - 清理已回答问题的草稿
     setQuestionErrors((prev) => {
       const next = new Set(prev)
       next.delete(requestID)
@@ -1666,6 +1696,14 @@ export const SessionProvider: ParentComponent = (props) => {
         .map((q) => q.id)
       if (deleted.length > 0) {
         setQuestions((prev) => prev.filter((q) => q.sessionID !== sessionID))
+        // testagent_change start - 同步清理被删除 session 的 question 草稿
+        setQuestionDrafts((prev) => {
+          const next = { ...prev }
+          for (const id of deleted) delete next[id]
+          if (Object.keys(next).length === Object.keys(prev).length) return prev
+          return next
+        })
+        // testagent_change end
         setQuestionErrors((prev) => {
           const next = new Set(prev)
           for (const id of deleted) next.delete(id)
@@ -2526,6 +2564,8 @@ export const SessionProvider: ParentComponent = (props) => {
     respondingPermissions,
     questions,
     questionErrors,
+    questionDraft, // testagent_change - question 草稿状态提升
+    saveQuestionDraft, // testagent_change - question 草稿状态提升
     suggestions,
     suggestionErrors,
     respondingSuggestions,

@@ -31,15 +31,31 @@ export const QuestionDock: Component<{ request: QuestionRequest }> = (props) => 
   const questions = createMemo(() => props.request.questions)
   const single = createMemo(() => questions().length === 1 && questions()[0]?.multiple !== true)
 
+  // testagent_change start - question 草稿状态提升：从 session context 恢复未提交的选择。
+  // 切换 session tab 会重建消息树并卸载本组件，局部 store 丢失后组件会重新挂载，
+  // 这里以 request.id 为键读取草稿初始化，避免用户的已选答案被重置。
+  const saved = session.questionDraft(props.request.id)
   const [store, setStore] = createStore({
-    tab: 0,
-    answers: [] as string[][],
-    custom: [] as string[],
-    kinds: [] as Record<string, "option" | "custom">[],
+    tab: saved?.tab ?? 0,
+    answers: saved?.answers ?? ([] as string[][]),
+    custom: saved?.custom ?? ([] as string[]),
+    kinds: saved?.kinds ?? ([] as Record<string, "option" | "custom">[]),
     editing: false,
     sending: false,
     collapsed: false,
   })
+
+  // Persist the draft on every selection change so a remount restores it.
+  // editing/sending/collapsed are transient UI states and intentionally not persisted.
+  createEffect(() => {
+    session.saveQuestionDraft(props.request.id, {
+      tab: store.tab,
+      answers: store.answers.map((a) => [...a]),
+      custom: [...store.custom],
+      kinds: store.kinds.map((k) => ({ ...k })),
+    })
+  })
+  // testagent_change end
 
   let root!: HTMLDivElement
   let prevAgent: string | undefined
