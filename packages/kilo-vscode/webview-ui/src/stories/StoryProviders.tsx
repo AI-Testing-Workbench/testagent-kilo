@@ -166,6 +166,8 @@ export function mockSessionValue(overrides?: {
     respondingPermissions: () => new Set<string>(),
     questions: () => qs,
     questionErrors: () => new Set<string>(),
+    questionDraft: () => undefined,
+    saveQuestionDraft: noop,
     suggestions: () => suggestions,
     suggestionErrors: () => new Set<string>(),
     respondingSuggestions: () => new Set<string>(),
