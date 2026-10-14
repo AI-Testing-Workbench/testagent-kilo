@@ -1067,7 +1067,6 @@ export const dict = {
   "settings.browser.cdpEndpoint.title": "Uzak CDP Adresi",
   "settings.browser.cdpEndpoint.description":
     "Yeni bir tarayıcı başlatmak yerine Chrome DevTools Protokolü üzerinden mevcut bir tarayıcıyı (ör. sandbox VNC masaüstündeki paylaşılan Chrome) yönetin. Devre dışı bırakmak için boş bırakın.",
-  "settings.browser.cdpEndpoint.placeholder": "http://127.0.0.1:9222",
   "settings.browser.cdp.title": "CDP bağlantı bilgileri",
   "settings.browser.cdp.notSet": "CDP uç noktası bulunamadı (tarayıcı etkin bir sandbox'ta değilsiniz).",
 

@@ -1074,7 +1074,6 @@ export const dict = {
   "settings.browser.cdpEndpoint.title": "Dirección CDP remota",
   "settings.browser.cdpEndpoint.description":
     "Controla un navegador existente a través del protocolo Chrome DevTools (p. ej. el Chrome compartido en el escritorio VNC del sandbox) en lugar de iniciar uno nuevo. Déjalo vacío para desactivarlo.",
-  "settings.browser.cdpEndpoint.placeholder": "http://127.0.0.1:9222",
   "settings.browser.cdp.title": "Información de conexión CDP",
   "settings.browser.cdp.notSet": "No se detectó ningún endpoint CDP (no estás en un sandbox con navegador habilitado).",
 

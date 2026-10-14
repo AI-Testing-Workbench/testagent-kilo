@@ -1064,7 +1064,6 @@ export const dict = {
   "settings.browser.cdpEndpoint.title": "リモート CDP アドレス",
   "settings.browser.cdpEndpoint.description":
     "Chrome DevTools プロトコルで既存のブラウザ（サンドボックスの VNC デスクトップ上の共有 Chrome など）を操作します。新しいブラウザは起動しません。空欄にすると無効になります。",
-  "settings.browser.cdpEndpoint.placeholder": "http://127.0.0.1:9222",
   "settings.browser.cdp.title": "CDP 接続情報",
   "settings.browser.cdp.notSet":
     "CDP エンドポイントが検出されませんでした（ブラウザを有効にしたサンドボックスではありません）。",

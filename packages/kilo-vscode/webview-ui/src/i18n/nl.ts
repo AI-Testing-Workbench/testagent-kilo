@@ -1068,7 +1068,6 @@ export const dict = {
   "settings.browser.cdpEndpoint.title": "Extern CDP-adres",
   "settings.browser.cdpEndpoint.description":
     "Bedien een bestaande browser via het Chrome DevTools-protocol (bijv. de gedeelde Chrome op het VNC-bureaublad van de sandbox) in plaats van een nieuwe te starten. Laat leeg om uit te schakelen.",
-  "settings.browser.cdpEndpoint.placeholder": "http://127.0.0.1:9222",
   "settings.browser.cdp.title": "CDP-verbindingsinfo",
   "settings.browser.cdp.notSet": "Geen CDP-endpoint gedetecteerd (niet in een sandbox met browser ingeschakeld).",
 

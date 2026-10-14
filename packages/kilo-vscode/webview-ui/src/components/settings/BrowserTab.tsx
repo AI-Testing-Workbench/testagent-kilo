@@ -171,7 +171,6 @@ const BrowserTab: Component = () => {
               onKeyDown={(event: KeyboardEvent) => {
                 if (event.key === "Enter") commitEndpoint()
               }}
-              placeholder={t("settings.browser.cdpEndpoint.placeholder")}
               disabled={!settings().enabled}
               style={{ width: "100%" }}
             />

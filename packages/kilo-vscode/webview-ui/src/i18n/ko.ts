@@ -1061,7 +1061,6 @@ export const dict = {
   "settings.browser.cdpEndpoint.title": "원격 CDP 주소",
   "settings.browser.cdpEndpoint.description":
     "Chrome DevTools 프로토콜로 기존 브라우저(예: 샌드박스 VNC 데스크톱의 공유 Chrome)를 사용합니다. 새 브라우저를 실행하지 않습니다. 비워 두면 비활성화됩니다.",
-  "settings.browser.cdpEndpoint.placeholder": "http://127.0.0.1:9222",
   "settings.browser.cdp.title": "CDP 연결 정보",
   "settings.browser.cdp.notSet": "CDP 엔드포인트가 감지되지 않았습니다(브라우저가 활성화된 샌드박스가 아님).",
 

@@ -1071,7 +1071,6 @@ export const dict = {
   "settings.browser.cdpEndpoint.title": "Udaljena CDP adresa",
   "settings.browser.cdpEndpoint.description":
     "Upravljajte postojećim preglednikom putem Chrome DevTools protokola (npr. zajednički Chrome na VNC radnoj površini sandboxa) umjesto pokretanja novog. Ostavite prazno da onemogućite.",
-  "settings.browser.cdpEndpoint.placeholder": "http://127.0.0.1:9222",
   "settings.browser.cdp.title": "CDP informacije o vezi",
   "settings.browser.cdp.notSet": "CDP endpoint nije pronađen (niste u sandboxu s omogućenim preglednikom).",
 

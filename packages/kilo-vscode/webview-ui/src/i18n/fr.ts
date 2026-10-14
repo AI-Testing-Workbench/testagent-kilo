@@ -1082,7 +1082,6 @@ export const dict = {
   "settings.browser.cdpEndpoint.title": "Adresse CDP distante",
   "settings.browser.cdpEndpoint.description":
     "Piloter un navigateur existant via le protocole Chrome DevTools (p. ex. le Chrome partagé sur le bureau VNC du sandbox) au lieu d'en lancer un nouveau. Laisser vide pour désactiver.",
-  "settings.browser.cdpEndpoint.placeholder": "http://127.0.0.1:9222",
   "settings.browser.cdp.title": "Infos de connexion CDP",
   "settings.browser.cdp.notSet": "Aucun point de terminaison CDP détecté (pas dans un sandbox avec navigateur activé).",
 

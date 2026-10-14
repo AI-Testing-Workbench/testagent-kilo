@@ -1069,7 +1069,6 @@ export const dict = {
   "settings.browser.cdpEndpoint.title": "Zdalny adres CDP",
   "settings.browser.cdpEndpoint.description":
     "Steruj istniejącą przeglądarką przez protokół Chrome DevTools (np. współdzielonym Chrome na pulpicie VNC sandboxa) zamiast uruchamiać nową. Pozostaw puste, aby wyłączyć.",
-  "settings.browser.cdpEndpoint.placeholder": "http://127.0.0.1:9222",
   "settings.browser.cdp.title": "Informacje o połączeniu CDP",
   "settings.browser.cdp.notSet": "Nie wykryto punktu końcowego CDP (brak sandboxa z włączoną przeglądarką).",
 

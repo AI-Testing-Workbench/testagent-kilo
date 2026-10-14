@@ -1071,7 +1071,6 @@ export const dict = {
   "settings.browser.cdpEndpoint.title": "Удалённый адрес CDP",
   "settings.browser.cdpEndpoint.description":
     "Управляйте существующим браузером по протоколу Chrome DevTools (например, общим Chrome на рабочем столе VNC песочницы) вместо запуска нового. Оставьте пустым, чтобы отключить.",
-  "settings.browser.cdpEndpoint.placeholder": "http://127.0.0.1:9222",
   "settings.browser.cdp.title": "Информация о подключении CDP",
   "settings.browser.cdp.notSet": "Конечная точка CDP не обнаружена (не в песочнице с включённым браузером).",
 

@@ -1065,7 +1065,6 @@ export const dict = {
   "settings.browser.cdpEndpoint.title": "Ekstern CDP-adresse",
   "settings.browser.cdpEndpoint.description":
     "Styr en eksisterende browser via Chrome DevTools-protokollen (f.eks. den delte Chrome på sandkassens VNC-skrivebord) i stedet for at starte en ny. Lad feltet stå tomt for at deaktivere.",
-  "settings.browser.cdpEndpoint.placeholder": "http://127.0.0.1:9222",
   "settings.browser.cdp.title": "CDP-forbindelsesinfo",
   "settings.browser.cdp.notSet": "Ingen CDP-endpoint fundet (kører ikke i en sandkasse med browser aktiveret).",
 

@@ -1047,7 +1047,6 @@ export const dict = {
   "settings.browser.cdpEndpoint.title": "遠端 CDP 位址",
   "settings.browser.cdpEndpoint.description":
     "透過 Chrome DevTools 協定連接已存在的瀏覽器（如沙盒 VNC 桌面上的共享 Chrome），而不是新開一個。留空則不啟用。",
-  "settings.browser.cdpEndpoint.placeholder": "http://127.0.0.1:9222",
   "settings.browser.cdp.title": "CDP 連線資訊",
   "settings.browser.cdp.notSet": "未偵測到 CDP 端點（目前不在啟用瀏覽器的沙盒中）。",
 

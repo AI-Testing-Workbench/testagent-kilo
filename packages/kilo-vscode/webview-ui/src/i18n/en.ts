@@ -1099,7 +1099,6 @@ export const dict = {
   "settings.browser.cdpEndpoint.title": "Remote CDP Endpoint",
   "settings.browser.cdpEndpoint.description":
     "Drive an existing browser over the Chrome DevTools Protocol (e.g. the shared Chrome on the sandbox VNC desktop) instead of launching a new one. Leave empty to disable.",
-  "settings.browser.cdpEndpoint.placeholder": "http://127.0.0.1:9222",
   "settings.browser.cdp.title": "CDP connection info",
   "settings.browser.cdp.notSet": "No CDP endpoint detected (not running in a browser-enabled sandbox).",
 

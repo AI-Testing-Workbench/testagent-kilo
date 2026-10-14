@@ -1054,7 +1054,6 @@ export const dict = {
   "settings.browser.cdpEndpoint.title": "عنوان CDP البعيد",
   "settings.browser.cdpEndpoint.description":
     "تحكّم في متصفح موجود عبر بروتوكول Chrome DevTools (مثل Chrome المشترك على سطح مكتب VNC في البيئة المعزولة) بدلاً من تشغيل متصفح جديد. اتركه فارغًا للتعطيل.",
-  "settings.browser.cdpEndpoint.placeholder": "http://127.0.0.1:9222",
   "settings.browser.cdp.title": "معلومات اتصال CDP",
   "settings.browser.cdp.notSet": "لم يتم العثور على نقطة نهاية CDP (لست في بيئة معزولة مع تمكين المتصفح).",
 

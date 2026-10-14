@@ -1057,7 +1057,6 @@ export const dict = {
   "settings.browser.cdpEndpoint.title": "ที่อยู่ CDP ระยะไกล",
   "settings.browser.cdpEndpoint.description":
     "ควบคุมเบราว์เซอร์ที่มีอยู่ผ่านโปรโตคอล Chrome DevTools (เช่น Chrome ที่ใช้ร่วมกันบนเดสก์ท็อป VNC ของแซนด์บ็อกซ์) แทนการเปิดเบราว์เซอร์ใหม่ เว้นว่างไว้เพื่อปิดใช้งาน",
-  "settings.browser.cdpEndpoint.placeholder": "http://127.0.0.1:9222",
   "settings.browser.cdp.title": "ข้อมูลการเชื่อมต่อ CDP",
   "settings.browser.cdp.notSet": "ไม่พบปลายทาง CDP (ไม่ได้อยู่ในแซนด์บ็อกซ์ที่เปิดใช้เบราว์เซอร์)",
 
