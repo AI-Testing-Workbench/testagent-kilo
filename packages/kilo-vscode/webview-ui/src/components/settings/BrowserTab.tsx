@@ -62,10 +62,6 @@ const BrowserTab: Component = () => {
     postMessage({ type: "updateSetting", key: "browserAutomation.cdpEndpoint", value: endpoint() })
   }
 
-  // A CDP endpoint (user-set or injected by the sandbox) means the MCP attaches to an existing
-  // browser, so the launch-only options no longer apply.
-  const cdpInEffect = () => !!settings().cdpEndpoint.trim() || !!settings().cdpEndpointEnv.trim()
-
   return (
     <div style={{ display: "flex", "flex-direction": "column", gap: "16px" }}>
       {/* Info text */}
@@ -136,7 +132,7 @@ const BrowserTab: Component = () => {
             <Switch
               checked={settings().useSystemChrome}
               onChange={(checked: boolean) => update("useSystemChrome", checked)}
-              disabled={!settings().enabled || cdpInEffect()}
+              disabled={!settings().enabled}
               hideLabel
             >
               {t("settings.browser.systemChrome.title")}
@@ -151,7 +147,7 @@ const BrowserTab: Component = () => {
             <Switch
               checked={settings().headless}
               onChange={(checked: boolean) => update("headless", checked)}
-              disabled={!settings().enabled || cdpInEffect()}
+              disabled={!settings().enabled}
               hideLabel
             >
               {t("settings.browser.headless.title")}
