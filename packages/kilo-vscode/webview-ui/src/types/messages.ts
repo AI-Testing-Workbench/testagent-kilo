@@ -732,6 +732,11 @@ export interface OpenSessionMessage {
 export interface ActionMessage {
   type: "action"
   action: string
+  // testagent_change start - optional values for direct agent/model selection
+  agent?: string
+  providerID?: string
+  modelID?: string
+  // testagent_change end
 }
 
 export interface SetChatBoxMessage {

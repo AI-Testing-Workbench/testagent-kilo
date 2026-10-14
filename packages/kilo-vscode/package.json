@@ -357,6 +357,16 @@
         "category": "TestAgent"
       },
       {
+        "command": "testagent.selectAgent",
+        "title": "Select Agent",
+        "category": "TestAgent"
+      },
+      {
+        "command": "testagent.selectModel",
+        "title": "Select Provider and Model",
+        "category": "TestAgent"
+      },
+      {
         "command": "testagent.new.toggleAutoApprove",
         "title": "Toggle Auto-Approve",
         "category": "TestAgent"

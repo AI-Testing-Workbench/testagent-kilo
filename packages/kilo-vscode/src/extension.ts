@@ -597,6 +597,20 @@ export function activate(context: vscode.ExtensionContext) {
       else provider.postMessage({ type: "action", action: "cyclePreviousAgentMode" })
       agentManagerProvider.postMessage({ type: "action", action: "cyclePreviousAgentMode" })
     }),
+    // testagent_change start - programmatically select an agent / provider+model in the chat panel
+    vscode.commands.registerCommand("testagent.selectAgent", (agent?: string) => {
+      if (!agent) return
+      const tab = activeTabProvider()
+      if (tab) tab.postMessage({ type: "action", action: "selectAgent", agent })
+      else provider.postMessage({ type: "action", action: "selectAgent", agent })
+    }),
+    vscode.commands.registerCommand("testagent.selectModel", (providerID?: string, modelID?: string) => {
+      if (!providerID || !modelID) return
+      const tab = activeTabProvider()
+      if (tab) tab.postMessage({ type: "action", action: "selectModel", providerID, modelID })
+      else provider.postMessage({ type: "action", action: "selectModel", providerID, modelID })
+    }),
+    // testagent_change end
     // vscode.commands.registerCommand("testagent.new.profileButtonClicked", () => {
     //   settingsEditorProvider.openPanel("profile")
     // }), // testagent_change

@@ -146,8 +146,8 @@ const AppContent: Component = () => {
   const server = useServer()
   const vscode = useVSCode()
 
-  const handleViewAction = (action: string) => {
-    switch (action) {
+  const handleViewAction = (message: { action: string; agent?: string; providerID?: string; modelID?: string }) => {
+    switch (message.action) {
       case "plusButtonClicked": {
         if (tabs) tabs.add()
         if (!tabs) session.clearCurrentSession()
@@ -171,6 +171,12 @@ const AppContent: Component = () => {
         break
       case "cyclePreviousAgentMode":
         if (document.hasFocus()) cycleAgent(-1)
+        break
+      case "selectAgent":
+        if (message.agent) session.selectAgent(message.agent)
+        break
+      case "selectModel":
+        if (message.providerID && message.modelID) session.selectModel(message.providerID, message.modelID)
         break
     }
   }
@@ -198,7 +204,7 @@ const AppContent: Component = () => {
       const message = event.data
       if (message?.type === "action" && message.action) {
         console.log("[testagent] App: 🎬 action:", message.action)
-        handleViewAction(message.action)
+        handleViewAction(message)
       }
       if (message?.type === "navigate" && message.view && VALID_VIEWS.has(message.view)) {
         console.log("[testagent] App: 🧭 navigate:", message.view, message.tab ? `tab=${message.tab}` : "")
