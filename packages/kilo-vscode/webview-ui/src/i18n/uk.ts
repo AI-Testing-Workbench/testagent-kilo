@@ -1066,6 +1066,12 @@ export const dict = {
     "Використовувати встановлений браузер Chrome замість окремого екземпляра Chromium.",
   "settings.browser.headless.title": "Безголовий режим",
   "settings.browser.headless.description": "Запускати в безголовому режимі (без видимого вікна браузера).",
+  "settings.browser.cdpEndpoint.title": "Віддалена CDP-адреса",
+  "settings.browser.cdpEndpoint.description":
+    "Керуйте наявним браузером через протокол Chrome DevTools (наприклад, спільним Chrome на робочому столі VNC пісочниці) замість запуску нового. Залиште порожнім, щоб вимкнути.",
+  "settings.browser.cdpEndpoint.placeholder": "http://127.0.0.1:9222",
+  "settings.browser.cdp.title": "Інформація про з'єднання CDP",
+  "settings.browser.cdp.notSet": "Кінцеву точку CDP не виявлено (не в пісочниці з увімкненим браузером).",
 
   "settings.language.description":
     '"Автоматично" використовує мову відображення VS Code. Виберіть мову для інтерфейсу Kilo Code.',

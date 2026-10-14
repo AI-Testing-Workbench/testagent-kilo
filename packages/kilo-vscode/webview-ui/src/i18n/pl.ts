@@ -1066,6 +1066,12 @@ export const dict = {
     "Użyj zainstalowanej przeglądarki Chrome zamiast oddzielnej instancji Chromium.",
   "settings.browser.headless.title": "Tryb headless",
   "settings.browser.headless.description": "Uruchom w trybie headless (bez widocznego okna przeglądarki).",
+  "settings.browser.cdpEndpoint.title": "Zdalny adres CDP",
+  "settings.browser.cdpEndpoint.description":
+    "Steruj istniejącą przeglądarką przez protokół Chrome DevTools (np. współdzielonym Chrome na pulpicie VNC sandboxa) zamiast uruchamiać nową. Pozostaw puste, aby wyłączyć.",
+  "settings.browser.cdpEndpoint.placeholder": "http://127.0.0.1:9222",
+  "settings.browser.cdp.title": "Informacje o połączeniu CDP",
+  "settings.browser.cdp.notSet": "Nie wykryto punktu końcowego CDP (brak sandboxa z włączoną przeglądarką).",
 
   "settings.language.description": 'Wybierz język interfejsu Kilo Code. „Auto" używa języka wyświetlania VS Code.',
   "settings.language.auto": "Auto (język VS Code)",

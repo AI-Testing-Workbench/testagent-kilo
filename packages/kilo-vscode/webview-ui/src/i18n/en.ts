@@ -1096,6 +1096,12 @@ export const dict = {
     "Use your installed Chrome browser instead of a separate Chromium instance.",
   "settings.browser.headless.title": "Headless Mode",
   "settings.browser.headless.description": "Run in headless mode (no visible browser window).",
+  "settings.browser.cdpEndpoint.title": "Remote CDP Endpoint",
+  "settings.browser.cdpEndpoint.description":
+    "Drive an existing browser over the Chrome DevTools Protocol (e.g. the shared Chrome on the sandbox VNC desktop) instead of launching a new one. Leave empty to disable.",
+  "settings.browser.cdpEndpoint.placeholder": "http://127.0.0.1:9222",
+  "settings.browser.cdp.title": "CDP connection info",
+  "settings.browser.cdp.notSet": "No CDP endpoint detected (not running in a browser-enabled sandbox).",
 
   "settings.language.description":
     'Choose the language for the Kilo Code UI. "Auto" uses your VS Code display language.',

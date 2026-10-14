@@ -1064,6 +1064,12 @@ export const dict = {
   "settings.browser.systemChrome.description": "Ayrı bir Chromium örneği yerine yüklü Chrome tarayıcınızı kullanın.",
   "settings.browser.headless.title": "Başsız Mod",
   "settings.browser.headless.description": "Başsız modda çalıştır (görünür tarayıcı penceresi yok).",
+  "settings.browser.cdpEndpoint.title": "Uzak CDP Adresi",
+  "settings.browser.cdpEndpoint.description":
+    "Yeni bir tarayıcı başlatmak yerine Chrome DevTools Protokolü üzerinden mevcut bir tarayıcıyı (ör. sandbox VNC masaüstündeki paylaşılan Chrome) yönetin. Devre dışı bırakmak için boş bırakın.",
+  "settings.browser.cdpEndpoint.placeholder": "http://127.0.0.1:9222",
+  "settings.browser.cdp.title": "CDP bağlantı bilgileri",
+  "settings.browser.cdp.notSet": "CDP uç noktası bulunamadı (tarayıcı etkin bir sandbox'ta değilsiniz).",
 
   "settings.language.description":
     '"Otomatik" VS Code görüntüleme dilinizi kullanır. Kilo Code arayüzü için dil seçin.',

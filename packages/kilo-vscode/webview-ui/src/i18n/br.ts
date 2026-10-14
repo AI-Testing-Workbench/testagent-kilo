@@ -1066,6 +1066,12 @@ export const dict = {
     "Usar o navegador Chrome instalado em vez de uma instância separada do Chromium.",
   "settings.browser.headless.title": "Modo Headless",
   "settings.browser.headless.description": "Executar em modo headless (sem janela do navegador visível).",
+  "settings.browser.cdpEndpoint.title": "Endereço CDP remoto",
+  "settings.browser.cdpEndpoint.description":
+    "Controle um navegador existente pelo protocolo Chrome DevTools (ex.: o Chrome compartilhado na área de trabalho VNC do sandbox) em vez de iniciar um novo. Deixe vazio para desativar.",
+  "settings.browser.cdpEndpoint.placeholder": "http://127.0.0.1:9222",
+  "settings.browser.cdp.title": "Informações de conexão CDP",
+  "settings.browser.cdp.notSet": "Nenhum endpoint CDP detectado (não está em um sandbox com navegador habilitado).",
 
   "settings.language.description":
     'Escolha o idioma da interface do Kilo Code. "Auto" usa o idioma de exibição do VS Code.',

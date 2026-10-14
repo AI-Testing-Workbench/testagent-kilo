@@ -4793,6 +4793,9 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
         // testagent_change - report what is actually in effect. The tools service declines to
         // register while Playwright is on, and a hand-edited settings.json can hold both as true.
         vscodeBrowserTools: tools.get<boolean>("enabled", false) && !automation.get<boolean>("enabled", false),
+        cdpEndpoint: automation.get<string>("cdpEndpoint", ""),
+        cdpEndpointEnv: process.env.TESTAGENT_CDP_ENDPOINT ?? "",
+        cdpExternalEnv: process.env.TESTAGENT_CDP_EXTERNAL ?? "",
       },
     })
   }

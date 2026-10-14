@@ -626,6 +626,11 @@
           "default": false,
           "description": "Run browser automation in headless mode (no visible window). When disabled, you can watch the agent interact with the browser."
         },
+        "testagent.new.browserAutomation.cdpEndpoint": {
+          "type": "string",
+          "default": "",
+          "description": "Connect to an existing browser over the Chrome DevTools Protocol (CDP) instead of launching a new one, e.g. http://127.0.0.1:9222. When set, the agent drives that browser (visible on its VNC desktop if any). Leave empty to launch a browser, or to auto-use TESTAGENT_CDP_ENDPOINT in cloud mode."
+        },
         "testagent.new.vscodeBrowserTools.enabled": {
           "type": "boolean",
           "default": false,

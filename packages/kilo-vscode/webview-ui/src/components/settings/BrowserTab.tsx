@@ -1,6 +1,7 @@
 import { Component, createSignal, onCleanup, onMount } from "solid-js"
 import { Switch } from "@kilocode/kilo-ui/switch"
 import { Card } from "@kilocode/kilo-ui/card"
+import { TextField } from "@kilocode/kilo-ui/text-field"
 import { useVSCode } from "../../context/vscode"
 import { useLanguage } from "../../context/language"
 import type { BrowserSettings } from "../../types/messages"
@@ -15,7 +16,14 @@ const BrowserTab: Component = () => {
     useSystemChrome: true,
     headless: false,
     vscodeBrowserTools: false,
+    cdpEndpoint: "",
+    cdpEndpointEnv: "",
+    cdpExternalEnv: "",
   })
+
+  // Draft kept separate from settings: the endpoint is persisted on blur/Enter, not per keystroke,
+  // so a long URL doesn't rewrite settings.json (and re-register the MCP) on every character.
+  const [endpoint, setEndpoint] = createSignal("")
 
   onMount(() => {
     postMessage({ type: "requestBrowserSettings" })
@@ -25,6 +33,7 @@ const BrowserTab: Component = () => {
   const unsubscribe = onMessage((msg) => {
     if (msg.type === "browserSettingsLoaded") {
       setSettings(msg.settings)
+      setEndpoint(msg.settings.cdpEndpoint)
     }
   })
   onCleanup(unsubscribe)
@@ -47,6 +56,15 @@ const BrowserTab: Component = () => {
     setSettings((prev) => ({ ...prev, vscodeBrowserTools: value, enabled: value ? false : prev.enabled }))
     postMessage({ type: "updateSetting", key: "vscodeBrowserTools.enabled", value })
   }
+
+  const commitEndpoint = () => {
+    if (endpoint() === settings().cdpEndpoint) return
+    postMessage({ type: "updateSetting", key: "browserAutomation.cdpEndpoint", value: endpoint() })
+  }
+
+  // A CDP endpoint (user-set or injected by the sandbox) means the MCP attaches to an existing
+  // browser, so the launch-only options no longer apply.
+  const cdpInEffect = () => !!settings().cdpEndpoint.trim() || !!settings().cdpEndpointEnv.trim()
 
   return (
     <div style={{ display: "flex", "flex-direction": "column", gap: "16px" }}>
@@ -118,7 +136,7 @@ const BrowserTab: Component = () => {
             <Switch
               checked={settings().useSystemChrome}
               onChange={(checked: boolean) => update("useSystemChrome", checked)}
-              disabled={!settings().enabled}
+              disabled={!settings().enabled || cdpInEffect()}
               hideLabel
             >
               {t("settings.browser.systemChrome.title")}
@@ -129,16 +147,56 @@ const BrowserTab: Component = () => {
           <SettingsRow
             title={t("settings.browser.headless.title")}
             description={t("settings.browser.headless.description")}
-            last
           >
             <Switch
               checked={settings().headless}
               onChange={(checked: boolean) => update("headless", checked)}
-              disabled={!settings().enabled}
+              disabled={!settings().enabled || cdpInEffect()}
               hideLabel
             >
               {t("settings.browser.headless.title")}
             </Switch>
+          </SettingsRow>
+
+          {/* Remote CDP endpoint: drives an existing browser (e.g. the shared sandbox Chrome on VNC)
+              instead of launching a new one. */}
+          <SettingsRow
+            title={t("settings.browser.cdpEndpoint.title")}
+            description={t("settings.browser.cdpEndpoint.description")}
+          >
+            <TextField
+              value={endpoint()}
+              onChange={setEndpoint}
+              onBlur={commitEndpoint}
+              onKeyDown={(event: KeyboardEvent) => {
+                if (event.key === "Enter") commitEndpoint()
+              }}
+              placeholder={t("settings.browser.cdpEndpoint.placeholder")}
+              disabled={!settings().enabled}
+              style={{ width: "100%" }}
+            />
+          </SettingsRow>
+
+          {/* Read-only CDP env vars injected by the sandbox image. */}
+          <SettingsRow title={t("settings.browser.cdp.title")} last>
+            <div
+              style={{
+                "font-family": "var(--vscode-editor-font-family, monospace)",
+                "font-size": "12px",
+                color: "var(--vscode-descriptionForeground)",
+                "word-break": "break-all",
+                "line-height": "1.6",
+              }}
+            >
+              {settings().cdpEndpointEnv || settings().cdpExternalEnv ? (
+                <>
+                  {settings().cdpEndpointEnv && <div>{`TESTAGENT_CDP_ENDPOINT=${settings().cdpEndpointEnv}`}</div>}
+                  {settings().cdpExternalEnv && <div>{`TESTAGENT_CDP_EXTERNAL=${settings().cdpExternalEnv}`}</div>}
+                </>
+              ) : (
+                <div>{t("settings.browser.cdp.notSet")}</div>
+              )}
+            </div>
           </SettingsRow>
         </div>
       </Card>

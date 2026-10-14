@@ -1069,11 +1069,9 @@ export const dict = {
   "settings.agentBehaviour.subtab.workflows": "工作流",
   "settings.agentBehaviour.subtab.skills": "技能",
 
-  "settings.browser.description":
-    "让TestAgent操作网页的方式：导航、点击、输入和截图。", // testagent_change
+  "settings.browser.description": "让TestAgent操作网页的方式：导航、点击、输入和截图。", // testagent_change
   "settings.browser.vscodeTools.title": "使用工作台内置浏览器", // testagent_change
-  "settings.browser.vscodeTools.description":
-    "让TestAgent在工作台内置的浏览器中操作，页面将在编辑器标签页中打开。", // testagent_change
+  "settings.browser.vscodeTools.description": "让TestAgent在工作台内置的浏览器中操作，页面将在编辑器标签页中打开。", // testagent_change
   "settings.browser.enable.title": "使用外部浏览器",
   "settings.browser.enable.description": "将 Playwright MCP 服务器注册到TestAgent。",
   "settings.browser.playwrightOptions.title": "Playwright 选项", // testagent_change
@@ -1081,6 +1079,12 @@ export const dict = {
   "settings.browser.systemChrome.description": "使用已安装的 Chrome 浏览器，而不是单独的 Chromium 实例。",
   "settings.browser.headless.title": "无头模式",
   "settings.browser.headless.description": "以无头模式运行（无可见浏览器窗口）。",
+  "settings.browser.cdpEndpoint.title": "远程 CDP 地址",
+  "settings.browser.cdpEndpoint.description":
+    "通过 Chrome DevTools 协议连接已存在的浏览器（如沙盒 VNC 桌面上的共享 Chrome），而不是新开一个。留空则不启用。",
+  "settings.browser.cdpEndpoint.placeholder": "http://127.0.0.1:9222",
+  "settings.browser.cdp.title": "CDP 连接信息",
+  "settings.browser.cdp.notSet": "未检测到 CDP 端点（当前不在启用浏览器的沙盒中）。",
 
   "settings.language.description": '"自动"将使用 TSCode 的显示语言。选择 TestAgent 界面的语言。',
   "settings.language.auto": "自动（TSCode 语言）",

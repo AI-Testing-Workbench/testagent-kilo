@@ -1062,6 +1062,12 @@ export const dict = {
     "Brug din installerede Chrome-browser i stedet for en separat Chromium-instans.",
   "settings.browser.headless.title": "Headless-tilstand",
   "settings.browser.headless.description": "Kør i headless-tilstand (intet synligt browservindue).",
+  "settings.browser.cdpEndpoint.title": "Ekstern CDP-adresse",
+  "settings.browser.cdpEndpoint.description":
+    "Styr en eksisterende browser via Chrome DevTools-protokollen (f.eks. den delte Chrome på sandkassens VNC-skrivebord) i stedet for at starte en ny. Lad feltet stå tomt for at deaktivere.",
+  "settings.browser.cdpEndpoint.placeholder": "http://127.0.0.1:9222",
+  "settings.browser.cdp.title": "CDP-forbindelsesinfo",
+  "settings.browser.cdp.notSet": "Ingen CDP-endpoint fundet (kører ikke i en sandkasse med browser aktiveret).",
 
   "settings.language.description": 'Vælg sproget til Kilo Code-brugerfladen. "Auto" bruger VS Codes visningssprog.',
   "settings.language.auto": "Auto (VS Code-sprog)",

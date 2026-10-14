@@ -2,6 +2,7 @@ import * as vscode from "vscode"
 import * as path from "path"
 import type { Event, KiloClient, McpStatus } from "@kilocode/sdk/v2/client"
 import type { KiloConnectionService } from "../cli-backend"
+import { isCloudMode } from "../cli-backend/cloud-mode"
 
 export type BrowserAutomationState = "disabled" | "registering" | "connected" | "failed" | "disconnected"
 
@@ -126,21 +127,34 @@ export class BrowserAutomationService implements vscode.Disposable {
     }
 
     const config = vscode.workspace.getConfiguration("testagent.new.browserAutomation")
-    const useSystemChrome = config.get<boolean>("useSystemChrome", true)
-    const headless = config.get<boolean>("headless", false)
+
+    // Prefer driving an existing browser over CDP: explicit setting first, then the endpoint the
+    // sandbox image injects (a shared Chrome on the VNC desktop), then a cloud-mode fallback.
+    const endpoint =
+      config.get<string>("cdpEndpoint", "").trim() ||
+      process.env.TESTAGENT_CDP_ENDPOINT?.trim() ||
+      (isCloudMode() ? "http://127.0.0.1:9222" : "")
 
     // Build the command for the Playwright MCP server
     const command = ["npx", "@playwright/mcp@latest"]
-    if (headless) {
-      command.push("--headless")
-    }
-    if (useSystemChrome) {
-      command.push("--browser", "chrome")
-    }
-    // Chromium refuses to start its sandbox when running as root (e.g. inside a Docker
-    // container), so disable it there. `getuid` is undefined on Windows.
-    if (process.getuid?.() === 0) {
-      command.push("--no-sandbox")
+    if (endpoint) {
+      // With --cdp-endpoint the MCP attaches to an already-running browser instead of launching
+      // its own; --browser/--headless are ignored in this mode.
+      command.push("--cdp-endpoint", endpoint)
+    } else {
+      const useSystemChrome = config.get<boolean>("useSystemChrome", true)
+      const headless = config.get<boolean>("headless", false)
+      if (headless) {
+        command.push("--headless")
+      }
+      if (useSystemChrome) {
+        command.push("--browser", "chrome")
+      }
+      // Chromium refuses to start its sandbox when running as root (e.g. inside a Docker
+      // container), so disable it there. `getuid` is undefined on Windows.
+      if (process.getuid?.() === 0) {
+        command.push("--no-sandbox")
+      }
     }
 
     try {

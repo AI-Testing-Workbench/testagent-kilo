@@ -955,6 +955,12 @@ export interface BrowserSettings {
   headless: boolean
   /** VS Code's integrated browser tools. Exclusive with Playwright: only one backend may be on. */
   vscodeBrowserTools: boolean
+  /** User-configured remote CDP endpoint the agent should drive instead of launching a browser. */
+  cdpEndpoint: string
+  /** Value of the TESTAGENT_CDP_ENDPOINT env var injected by the sandbox image (read-only). */
+  cdpEndpointEnv: string
+  /** Value of the TESTAGENT_CDP_EXTERNAL env var injected by the sandbox image (read-only). */
+  cdpExternalEnv: string
 }
 
 export interface BrowserSettingsLoadedMessage {

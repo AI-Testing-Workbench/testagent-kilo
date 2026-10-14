@@ -1058,6 +1058,12 @@ export const dict = {
   "settings.browser.systemChrome.description": "별도의 Chromium 인스턴스 대신 설치된 Chrome 브라우저를 사용합니다.",
   "settings.browser.headless.title": "헤드리스 모드",
   "settings.browser.headless.description": "헤드리스 모드로 실행합니다 (브라우저 창이 표시되지 않음).",
+  "settings.browser.cdpEndpoint.title": "원격 CDP 주소",
+  "settings.browser.cdpEndpoint.description":
+    "Chrome DevTools 프로토콜로 기존 브라우저(예: 샌드박스 VNC 데스크톱의 공유 Chrome)를 사용합니다. 새 브라우저를 실행하지 않습니다. 비워 두면 비활성화됩니다.",
+  "settings.browser.cdpEndpoint.placeholder": "http://127.0.0.1:9222",
+  "settings.browser.cdp.title": "CDP 연결 정보",
+  "settings.browser.cdp.notSet": "CDP 엔드포인트가 감지되지 않았습니다(브라우저가 활성화된 샌드박스가 아님).",
 
   "settings.language.description": 'Kilo Code UI의 언어를 선택하세요. "자동"은 VS Code 표시 언어를 사용합니다.',
   "settings.language.auto": "자동 (VS Code 언어)",

@@ -1065,6 +1065,12 @@ export const dict = {
     "Gebruik je geïnstalleerde Chrome-browser in plaats van een aparte Chromium-instantie.",
   "settings.browser.headless.title": "Headless Modus",
   "settings.browser.headless.description": "Draai in headless modus (geen zichtbaar browservenster).",
+  "settings.browser.cdpEndpoint.title": "Extern CDP-adres",
+  "settings.browser.cdpEndpoint.description":
+    "Bedien een bestaande browser via het Chrome DevTools-protocol (bijv. de gedeelde Chrome op het VNC-bureaublad van de sandbox) in plaats van een nieuwe te starten. Laat leeg om uit te schakelen.",
+  "settings.browser.cdpEndpoint.placeholder": "http://127.0.0.1:9222",
+  "settings.browser.cdp.title": "CDP-verbindingsinfo",
+  "settings.browser.cdp.notSet": "Geen CDP-endpoint gedetecteerd (niet in een sandbox met browser ingeschakeld).",
 
   "settings.language.description": 'Kies de taal voor de Kilo Code UI. "Auto" gebruikt je VS Code schermtaal.',
   "settings.language.auto": "Auto (VS Code taal)",
