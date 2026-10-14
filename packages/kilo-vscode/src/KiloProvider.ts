@@ -1452,6 +1452,21 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
         case "requestBrowserSettings":
           this.sendBrowserSettings()
           break
+        // testagent_change start - 在 tscode 内置 Simple Browser 中打开沙箱 VNC 桌面
+        case "openSandboxBrowser": {
+          const url = process.env.TESTAGENT_VNC_URL ?? ""
+          if (!url) {
+            vscode.window.showWarningMessage("当前沙箱未提供浏览器地址（TESTAGENT_VNC_URL 为空）")
+            break
+          }
+          // 先收起左侧栏，把空间让给内置浏览器
+          void vscode.commands
+            .executeCommand("workbench.action.closeSidebar")
+            .then(() => vscode.commands.executeCommand("simpleBrowser.show", url))
+            .then(undefined, (err) => vscode.window.showWarningMessage(`打开沙箱浏览器失败: ${err}`))
+          break
+        }
+        // testagent_change end
         case "requestChatTips":
           if (this.cachedChatTipsMessage) this.postMessage(this.cachedChatTipsMessage)
           break

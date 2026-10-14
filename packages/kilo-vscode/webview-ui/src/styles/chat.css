@@ -464,6 +464,69 @@
 }
 
 /* ============================================
+   Sandbox Browser Banner (testagent_change - 首页顶部"打开沙箱浏览器"横幅)
+   ============================================ */
+
+.sandbox-browser-banner {
+  position: absolute;
+  top: 8px;
+  left: 12px;
+  right: 12px;
+  z-index: 11;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 12px;
+  border: 1px solid var(--vscode-textLink-foreground, #3794ff);
+  border-radius: 4px;
+  background: var(--vscode-editorWidget-background, var(--vscode-input-background, #3c3c3c));
+  color: var(--vscode-textLink-foreground, #3794ff);
+  font-size: 12px;
+  cursor: pointer;
+}
+
+/* 首页账号切换器固定在右上角，横幅出现时整体下移避免遮挡 */
+.sandbox-browser-banner + .welcome-header {
+  top: 52px;
+}
+
+.sandbox-browser-banner:hover {
+  background: var(--vscode-list-hoverBackground, rgba(55, 148, 255, 0.12));
+}
+
+.sandbox-browser-banner:focus-visible {
+  outline: 1px solid var(--vscode-focusBorder, #007fd4);
+  outline-offset: 1px;
+}
+
+.sandbox-browser-banner svg {
+  flex-shrink: 0;
+}
+
+.sandbox-browser-banner-text {
+  font-weight: 600;
+  flex: 1;
+  min-width: 0;
+}
+
+.sandbox-browser-banner-close {
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 2px;
+  background: none;
+  border: none;
+  color: inherit;
+  cursor: pointer;
+  opacity: 0.8;
+}
+
+.sandbox-browser-banner-close:hover {
+  opacity: 1;
+}
+
+/* ============================================
    Revert Confirm Dock (testagent_change - 检查点重置确认)
    ============================================ */
 

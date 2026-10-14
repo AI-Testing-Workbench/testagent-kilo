@@ -2263,6 +2263,11 @@ export interface RequestBrowserSettingsMessage {
   type: "requestBrowserSettings"
 }
 
+// testagent_change - 在 tscode 内置 Simple Browser 中打开沙箱 VNC 桌面
+export interface OpenSandboxBrowserMessage {
+  type: "openSandboxBrowser"
+}
+
 // Chat tip (configured via `testagent.new.chatTips`)
 export interface ChatTipItem {
   id?: string
@@ -3007,6 +3012,7 @@ export type WebviewMessage =
   | UpdateSettingRequest
   | RequestTimelineSettingMessage
   | RequestBrowserSettingsMessage
+  | OpenSandboxBrowserMessage // testagent_change - 打开沙箱浏览器
   | RequestChatTipsMessage
   | ChatTipActionMessage
   | ChatTipReadManyMessage
