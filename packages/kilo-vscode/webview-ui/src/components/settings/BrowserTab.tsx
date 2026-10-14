@@ -19,6 +19,7 @@ const BrowserTab: Component = () => {
     cdpEndpoint: "",
     cdpEndpointEnv: "",
     cdpExternalEnv: "",
+    vncUrl: "",
   })
 
   // Draft kept separate from settings: the endpoint is persisted on blur/Enter, not per keystroke,
@@ -183,10 +184,11 @@ const BrowserTab: Component = () => {
                 "line-height": "1.6",
               }}
             >
-              {settings().cdpEndpointEnv || settings().cdpExternalEnv ? (
+              {settings().cdpEndpointEnv || settings().cdpExternalEnv || settings().vncUrl ? (
                 <>
                   {settings().cdpEndpointEnv && <div>{`TESTAGENT_CDP_ENDPOINT=${settings().cdpEndpointEnv}`}</div>}
                   {settings().cdpExternalEnv && <div>{`TESTAGENT_CDP_EXTERNAL=${settings().cdpExternalEnv}`}</div>}
+                  {settings().vncUrl && <div>{`TESTAGENT_VNC_URL=${settings().vncUrl}`}</div>}
                 </>
               ) : (
                 <div>{t("settings.browser.cdp.notSet")}</div>

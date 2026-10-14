@@ -4796,6 +4796,7 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
         cdpEndpoint: automation.get<string>("cdpEndpoint", ""),
         cdpEndpointEnv: process.env.TESTAGENT_CDP_ENDPOINT ?? "",
         cdpExternalEnv: process.env.TESTAGENT_CDP_EXTERNAL ?? "",
+        vncUrl: process.env.TESTAGENT_VNC_URL ?? "",
       },
     })
   }

@@ -961,6 +961,8 @@ export interface BrowserSettings {
   cdpEndpointEnv: string
   /** Value of the TESTAGENT_CDP_EXTERNAL env var injected by the sandbox image (read-only). */
   cdpExternalEnv: string
+  /** Value of the TESTAGENT_VNC_URL env var injected by the sandbox image (read-only). */
+  vncUrl: string
 }
 
 export interface BrowserSettingsLoadedMessage {
