@@ -7,6 +7,8 @@ import type {
   AppAgentsResponses,
   AppLogErrors,
   AppLogResponses,
+  AppReloadAgentsResponses,
+  AppReloadCommandsResponses,
   AppReloadSkillsResponses,
   AppSkillsResponses,
   Auth as Auth3,
@@ -487,6 +489,66 @@ export class App extends HeyApiClient {
     )
     return (options?.client ?? this.client).post<AppReloadSkillsResponses, unknown, ThrowOnError>({
       url: "/skill/reload",
+      ...options,
+      ...params,
+    })
+  }
+
+  /**
+   * Reload agents
+   *
+   * Invalidate agent cache and reload all agents from config/disk
+   */
+  public reloadAgents<ThrowOnError extends boolean = false>(
+    parameters?: {
+      directory?: string
+      workspace?: string
+    },
+    options?: Options<never, ThrowOnError>,
+  ) {
+    const params = buildClientParams(
+      [parameters],
+      [
+        {
+          args: [
+            { in: "query", key: "directory" },
+            { in: "query", key: "workspace" },
+          ],
+        },
+      ],
+    )
+    return (options?.client ?? this.client).post<AppReloadAgentsResponses, unknown, ThrowOnError>({
+      url: "/agent/reload",
+      ...options,
+      ...params,
+    })
+  }
+
+  /**
+   * Reload commands
+   *
+   * Invalidate command cache and reload all commands from config/disk
+   */
+  public reloadCommands<ThrowOnError extends boolean = false>(
+    parameters?: {
+      directory?: string
+      workspace?: string
+    },
+    options?: Options<never, ThrowOnError>,
+  ) {
+    const params = buildClientParams(
+      [parameters],
+      [
+        {
+          args: [
+            { in: "query", key: "directory" },
+            { in: "query", key: "workspace" },
+          ],
+        },
+      ],
+    )
+    return (options?.client ?? this.client).post<AppReloadCommandsResponses, unknown, ThrowOnError>({
+      url: "/command/reload",
       ...options,
       ...params,
     })
@@ -4211,6 +4273,7 @@ export class Session2 extends HeyApiClient {
       format?: OutputFormat
       system?: string
       variant?: string
+      maxConcurrency?: number | "NaN" | "Infinity" | "-Infinity" | "Infinity" | "-Infinity" | "NaN"
       parts?: Array<TextPartInput | FilePartInput | AgentPartInput | SubtaskPartInput>
     },
     options?: Options<never, ThrowOnError>,
@@ -4232,6 +4295,7 @@ export class Session2 extends HeyApiClient {
             { in: "body", key: "format" },
             { in: "body", key: "system" },
             { in: "body", key: "variant" },
+            { in: "body", key: "maxConcurrency" },
             { in: "body", key: "parts" },
           ],
         },
@@ -4573,6 +4637,7 @@ export class Session2 extends HeyApiClient {
       format?: OutputFormat
       system?: string
       variant?: string
+      maxConcurrency?: number | "NaN" | "Infinity" | "-Infinity" | "Infinity" | "-Infinity" | "NaN"
       parts?: Array<TextPartInput | FilePartInput | AgentPartInput | SubtaskPartInput>
     },
     options?: Options<never, ThrowOnError>,
@@ -4594,6 +4659,7 @@ export class Session2 extends HeyApiClient {
             { in: "body", key: "format" },
             { in: "body", key: "system" },
             { in: "body", key: "variant" },
+            { in: "body", key: "maxConcurrency" },
             { in: "body", key: "parts" },
           ],
         },
