@@ -11,6 +11,7 @@ import { createStore, reconcile } from "solid-js/store"
 import { useConfig } from "../../context/config"
 import { useLanguage } from "../../context/language"
 import { useProvider } from "../../context/provider"
+import { useSession } from "../../context/session"
 import { useVSCode } from "../../context/vscode"
 import type { ExtensionMessage, ProviderConfig } from "../../types/messages"
 import { createProviderAction } from "../../utils/provider-action"
@@ -62,6 +63,7 @@ const CustomProviderDialog = (props: CustomProviderDialogProps) => {
   const provider = useProvider()
   const language = useLanguage()
   const vscode = useVSCode()
+  const session = useSession()
   const action = createProviderAction(vscode)
   onCleanup(action.dispose)
 
@@ -408,6 +410,17 @@ const CustomProviderDialog = (props: CustomProviderDialogProps) => {
   function save(e: SubmitEvent) {
     e.preventDefault()
     if (form.saving) return
+
+    const busy = Object.values(session.allStatusMap()).filter((s) => s.type === "busy").length
+    if (busy > 0) {
+      showToast({
+        variant: "error",
+        title: busy === 1 ? language.t("settings.saveBar.warning.one") : language.t("settings.saveBar.warning.many"),
+        persistent: true,
+        actions: [{ label: language.t("settings.saveBar.cancel"), onClick: "dismiss" }],
+      })
+      return
+    }
 
     const result = validate()
     if (!result) return
