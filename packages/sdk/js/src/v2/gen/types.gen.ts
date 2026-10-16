@@ -6358,6 +6358,7 @@ export type SessionForkResponse = SessionForkResponses[keyof SessionForkResponse
 export type SessionAbortData = {
   body?: {
     reason?: "completed" | "user_abort" | "error"
+    scope?: "session" | "tree"
   }
   path: {
     sessionID: string

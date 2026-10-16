@@ -247,7 +247,7 @@ interface SessionContextValue {
     draftID?: string,
   ) => void
   continueTask: () => void // testagent_change - 添加继续任务方法
-  abort: (sessionID?: string) => void
+  abort: (sessionID?: string, scope?: "session" | "tree") => void
   compact: () => void
   respondToPermission: (
     permissionId: string,
@@ -2053,7 +2053,7 @@ export const SessionProvider: ParentComponent = (props) => {
   }
   // testagent_change end
 
-  function abort(sessionID?: string) {
+  function abort(sessionID?: string, scope?: "session" | "tree") {
     const sid = sessionID ?? currentSessionID()
     if (!sid) {
       console.warn("[testagent] Cannot abort: no current session")
@@ -2067,6 +2067,7 @@ export const SessionProvider: ParentComponent = (props) => {
       sessionID: sid,
       queuedMessageIDs,
       reason: "user_abort",
+      ...(scope ? { scope } : {}),
     })
   }
   // testagent_change end

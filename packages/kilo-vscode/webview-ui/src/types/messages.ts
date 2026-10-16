@@ -1922,6 +1922,8 @@ export interface AbortRequest {
   sessionID: string
   queuedMessageIDs?: string[]
   reason?: "completed" | "user_abort" | "error"
+  // testagent_change - 取消范围：默认 "session"；"tree" 用于停止 subagent 及其子会话
+  scope?: "session" | "tree"
 }
 
 export interface RevertSessionRequest {
