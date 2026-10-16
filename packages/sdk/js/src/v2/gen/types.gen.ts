@@ -4852,6 +4852,48 @@ export type AppReloadSkillsResponses = {
 
 export type AppReloadSkillsResponse = AppReloadSkillsResponses[keyof AppReloadSkillsResponses]
 
+export type AppReloadAgentsData = {
+  body?: never
+  path?: never
+  query?: {
+    directory?: string
+    workspace?: string
+  }
+  url: "/agent/reload"
+}
+
+export type AppReloadAgentsResponses = {
+  /**
+   * Agents reloaded successfully
+   */
+  200: {
+    success: boolean
+  }
+}
+
+export type AppReloadAgentsResponse = AppReloadAgentsResponses[keyof AppReloadAgentsResponses]
+
+export type AppReloadCommandsData = {
+  body?: never
+  path?: never
+  query?: {
+    directory?: string
+    workspace?: string
+  }
+  url: "/command/reload"
+}
+
+export type AppReloadCommandsResponses = {
+  /**
+   * Commands reloaded successfully
+   */
+  200: {
+    success: boolean
+  }
+}
+
+export type AppReloadCommandsResponse = AppReloadCommandsResponses[keyof AppReloadCommandsResponses]
+
 export type McpReloadData = {
   body?: never
   path?: never
@@ -6287,6 +6329,7 @@ export type SessionForkResponse = SessionForkResponses[keyof SessionForkResponse
 export type SessionAbortData = {
   body?: {
     reason?: "completed" | "user_abort" | "error"
+    scope?: "session" | "tree"
   }
   path: {
     sessionID: string
