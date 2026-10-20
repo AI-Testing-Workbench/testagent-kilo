@@ -506,7 +506,17 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
     // testagent_change start - use the shared workspace registry for cloud history
     const ui: CloudGitUi = {
       pick: (items, opts) => vscode.window.showQuickPick(items, opts),
-      confirm: (message, accept, cancel) => vscode.window.showWarningMessage(message, { modal: true }, accept, cancel),
+      confirm: async (message, accept, cancel) => {
+        const result = await vscode.window.showWarningMessage(
+          message,
+          { modal: true },
+          { title: accept },
+          { title: cancel, isCloseAffordance: true },
+        )
+        return result?.title
+      },
+      warn: async (message) =>
+        (await vscode.window.showWarningMessage(message, { modal: true }, "继续")) === "继续", // testagent_change
     }
     this.history = new History({
       connection: this.connectionService,

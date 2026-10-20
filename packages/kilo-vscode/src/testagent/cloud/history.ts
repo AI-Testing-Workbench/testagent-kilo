@@ -188,6 +188,7 @@ export class CloudHistory {
   }
 
   async export(id: string) {
+    const root = this.opts.dir() // testagent_change
     const dir = await this.opts.sessionDir(id).catch((err) => {
       this.opts.onError(err)
       return undefined
@@ -201,7 +202,7 @@ export class CloudHistory {
     this.pending.add(key)
     this.action({ action: "export", sessionID: id, pending: true })
     try {
-      const saved = await this.files.export(dir, id, dir)
+      const saved = await this.files.export(root, id, dir) // testagent_change
       this.opts.success?.(`云端会话已下云`)
     } catch (err) {
       this.opts.onError(err)

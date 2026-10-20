@@ -10,6 +10,7 @@ export type GitRemote = {
   transport: "http" | "https"
   prefix: string
   url: string
+  direction: "fetch" | "push" | "fetch & push" // testagent_change
 }
 
 export type CloudGitItem = {
@@ -28,6 +29,7 @@ export type CloudGitQuickPickOptions = {
 export type CloudGitUi = {
   pick: (items: readonly CloudGitItem[], opts: CloudGitQuickPickOptions) => PromiseLike<CloudGitItem | undefined>
   confirm: (message: string, accept: string, cancel: string) => PromiseLike<string | undefined>
+  warn?: (message: string) => PromiseLike<boolean | undefined> // testagent_change
 }
 
 export type CloudGitQueue = {
@@ -57,7 +59,9 @@ export class CloudGitError extends Error {
 const cancel = "取消，手动提交后继续"
 const gitAccept = "仅使用已提交内容"
 
-export function parseGitRemote(value: string): Omit<GitRemote, "name"> | undefined {
+// testagent_change start - assign fetch/push direction after parsing and URL merging
+export function parseGitRemote(value: string): Omit<GitRemote, "name" | "direction"> | undefined {
+  // testagent_change end
   const url = parseUrl(value)
   if (!url || !["http:", "https:"].includes(url.protocol)) return undefined
   const repo = parseGitRepo(url.pathname)
@@ -101,17 +105,26 @@ export async function selectCloudGitTargetInQueue(
 async function selectGitRoot(root: string, ui: CloudGitUi): Promise<CloudGitSelection | undefined> {
   const git = simpleGit(root)
   const remotes = await findGitRemotes(git)
-  const remote = remotes.length === 1 ? remotes[0] : await chooseGitRemote(remotes, ui)
+  // testagent_change start - retain the configured push target when a single remote name needs no selection
+  const remote =
+    new Set(remotes.map((item) => item.name)).size === 1
+      ? (remotes.find((item) => item.direction === "push") ??
+        remotes.find((item) => item.direction === "fetch & push") ??
+        remotes[0])
+      : await chooseGitRemote(remotes, ui)
+  // testagent_change end
   if (!remote) return undefined
 
-  const status = await git.status().catch((err) => {
+  // testagent_change start - include submodule changes even when Git is configured to ignore them
+  const status = await git.status(["--ignore-submodules=none"]).catch((err) => {
     throw new CloudGitError("无法检查本地工作区码云仓库的改动状态", "git_error", err)
   })
   const ignored = status.files.length > 0
   if (ignored) {
-    const message = `本地 Git 工作区中有 ${status.files.length} 个未提交文件（包括已暂存、未暂存或未跟踪的改动）。是否忽略这些本地改动，仅使用码云仓库中已提交版本在 云端沙箱 中继续？`
+    const message = `本地 Git 工作区 (包括子仓库) 中有 ${status.files.length} 个未提交项（包括已暂存、未暂存或未跟踪的改动）。是否忽略这些本地改动，仅使用码云仓库中已提交版本在 云端沙箱 中继续？`
     if ((await ui.confirm(message, gitAccept, cancel)) !== gitAccept) return undefined
   }
+  // testagent_change end
 
   const current = await git
     .raw(["branch", "--show-current"])
@@ -121,6 +134,12 @@ async function selectGitRoot(root: string, ui: CloudGitUi): Promise<CloudGitSele
   const localBranches = await listLocalBranches(git, current)
   const branches = remoteBranches.length > 0 ? remoteBranches : localBranches
   if (branches.length === 0) throw new CloudGitError(`码云仓库 ${remote.name} 没有可选择的分支`, "no_branches")
+  // testagent_change start - warn before showing branches if the current local branch is not tracked remotely
+  if (current && !remoteBranches.includes(current) && ui.warn) {
+    const message = `本地分支 ${current} 尚未推送至码云仓库的远端中。`
+    if (!(await ui.warn(message))) return undefined
+  }
+  // testagent_change end
 
   const head = await git
     .raw(["symbolic-ref", "--quiet", "--short", `refs/remotes/${remote.name}/HEAD`])
@@ -144,36 +163,91 @@ async function listRemoteNames(git: SimpleGit): Promise<string[]> {
   return names
 }
 
+// testagent_change start - represent each unique fetch/push URL while merging identical URLs
 async function findGitRemotes(git: SimpleGit): Promise<GitRemote[]> {
   const names = await listRemoteNames(git)
   const items = await Promise.all(
     names.map(async (name) => {
-      const url = await git
-        .raw(["remote", "get-url", "--push", "--all", name])
-        .then((raw) => raw.split(/\r?\n/)[0]?.trim() ?? "")
-        .catch(() => "")
-      const parsed = parseGitRemote(url)
-      return parsed ? { name, ...parsed } : undefined
+      const [fetch, push] = await Promise.all([
+        // testagent_change - only enumerate fetch URLs when a remote picker is needed
+        names.length > 1
+          ? git
+              .raw(["remote", "get-url", "--all", name])
+              .then((raw) =>
+                raw
+                  .split(/\r?\n/)
+                  .map((url) => url.trim())
+                  .filter(Boolean),
+              )
+              .catch(() => [])
+          : Promise.resolve([]),
+        git
+          .raw(["remote", "get-url", "--push", "--all", name])
+          .then((raw) =>
+            raw
+              .split(/\r?\n/)
+              .map((url) => url.trim())
+              .filter(Boolean),
+          )
+          .catch(() => []),
+      ])
+      const urls = new Map<
+        string,
+        { remote: Omit<GitRemote, "name" | "direction">; directions: Set<"fetch" | "push"> }
+      >()
+      for (const [values, direction] of [
+        [fetch, "fetch"],
+        [push, "push"],
+      ] as const) {
+        for (const value of values) {
+          const parsed = parseGitRemote(value)
+          if (!parsed) continue
+          const item = urls.get(parsed.url)
+          if (item) item.directions.add(direction)
+          else urls.set(parsed.url, { remote: parsed, directions: new Set([direction]) })
+        }
+      }
+      return [...urls].map(
+        ([url, item]): GitRemote => ({
+          name,
+          ...item.remote,
+          url,
+          direction: item.directions.size === 2 ? "fetch & push" : item.directions.has("fetch") ? "fetch" : "push",
+        }),
+      )
     }),
   )
-  const remotes = items.filter((item): item is GitRemote => !!item)
+  const remotes = items.flat()
   if (remotes.length === 0) {
     throw new CloudGitError("目前仅支持 HTTP/HTTPS 远程地址配置的码云仓库", "unsupported_remote")
   }
   return remotes
 }
+// testagent_change end
 
 function quickPickUi(): CloudGitUi {
   return {
     pick: (items, opts) => vscode.window.showQuickPick(items, opts),
-    confirm: (message, yes, no) => vscode.window.showWarningMessage(message, { modal: true }, yes, no),
+    // testagent_change start - use the custom cancel action instead of the modal's default Cancel
+    confirm: async (message, yes, no) => {
+      const result = await vscode.window.showWarningMessage(
+        message,
+        { modal: true },
+        { title: yes },
+        { title: no, isCloseAffordance: true },
+      )
+      return result?.title
+    },
+    // testagent_change end
+    warn: async (message) =>
+      (await vscode.window.showWarningMessage(message, { modal: true }, "继续")) === "继续", // testagent_change
   }
 }
 
 async function chooseGitRemote(remotes: GitRemote[], ui: CloudGitUi): Promise<GitRemote | undefined> {
   const items = remotes.map((remote) => ({
     label: remote.name,
-    description: `${remote.owner}/${remote.repository} (${remote.transport})`,
+    description: `(${remote.direction})`, // testagent_change
     detail: remote.url,
   }))
   const picked = await ui.pick(items, {
@@ -182,7 +256,7 @@ async function chooseGitRemote(remotes: GitRemote[], ui: CloudGitUi): Promise<Gi
     matchOnDetail: true,
     placeHolder: "请选择在 云端沙箱 中使用的码云仓库远端",
   })
-  return remotes.find((remote) => remote.name === picked?.label)
+  return remotes.find((remote) => remote.name === picked?.label && remote.url === picked.detail) // testagent_change
 }
 
 async function chooseGitBranch(
