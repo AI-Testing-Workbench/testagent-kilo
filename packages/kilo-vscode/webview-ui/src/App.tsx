@@ -33,6 +33,10 @@ import HistoryView from "./components/history/HistoryView"
 import { MigrationWizard } from "./components/migration" // legacy-migration
 import { NotificationsProvider } from "./context/notifications"
 import type { Message as SDKMessage, Part as SDKPart } from "@kilocode/sdk/v2"
+// testagent_change start - open archive previews in the shared ChatView
+import type { CloudArchiveData } from "../../src/testagent/cloud/archive-data"
+import type { ExtensionMessage } from "./types/messages"
+// testagent_change end
 import "./styles/chat.css"
 
 type ViewType = "newTask" | "marketplace" | "history" | "profile" | "settings" | "subAgentViewer"
@@ -50,8 +54,14 @@ export const DataBridge: Component<{ children: any }> = (props) => {
   const data = createMemo(() => {
     const id = session.currentSessionID()
     const family = session.familyData(id)
+    // testagent_change start - synthetic archive sessions are omitted from the history list but required by DataProvider
+    const rows = session.sessions()
+    const preview = session.archivePreview()
+    const current = session.currentSession()
+    const sessions = preview && current ? [...rows.filter((row) => row.id !== preview.sessionID), current] : rows
+    // testagent_change end
     return {
-      session: session.sessions().map((s) => ({ ...s, id: s.id, role: "user" as const })) as unknown as any[],
+      session: sessions.map((s) => ({ ...s, id: s.id, role: "user" as const })) as unknown as any[],  // testagent_change
       session_status: family.status as unknown as Record<string, any>,
       session_diff: {} as Record<string, any[]>,
       // Restrict chat data to the selected session family (self + subagents).
@@ -141,6 +151,9 @@ const AppContent: Component = () => {
   // legacy-migration: state-driven flag independent of currentView to avoid
   // race conditions with SettingsEditorProvider's navigate messages.
   const [migrationNeeded, setMigrationNeeded] = createSignal(false)
+  // testagent_change start - status for the archive ChatView's local import action
+  const [archiveForking, setArchiveForking] = createSignal<string>()
+  // testagent_change end
   const session = useSession()
   const tabs = useLocalTabs()
   const server = useServer()
@@ -149,6 +162,9 @@ const AppContent: Component = () => {
   const handleViewAction = (action: string) => {
     switch (action) {
       case "plusButtonClicked": {
+        // testagent_change start - leaving an archive preview restores a normal local session state
+        session.clearArchivePreview()
+        // testagent_change end
         if (tabs) tabs.add()
         if (!tabs) session.clearCurrentSession()
         setCurrentView("newTask")
@@ -213,10 +229,14 @@ const AppContent: Component = () => {
       // testagent_change - cross-window handoff: focus a backend session by id.
       if (message?.type === "openSession" && message.sessionID) {
         console.log("[testagent] App: 🔗 openSession:", message.sessionID)
+        // testagent_change start - external navigation leaves the virtual archive preview
+        session.clearArchivePreview()
+        // testagent_change end
         if (tabs) tabs.open(message.sessionID)
         if (!tabs) session.selectSession(message.sessionID)
         setCurrentView("newTask")
       }
+      handleArchiveMessage(message) // testagent_change - the archive ChatView owns its fork response; HistoryView handles row imports
       handleForked(message)
       if (message?.type === "viewSubAgentSession" && message.sessionID) {
         console.log("[testagent] App: 🔍 viewSubAgentSession:", message.sessionID)
@@ -234,10 +254,41 @@ const AppContent: Component = () => {
   })
 
   const handleSelectSession = (id: string) => {
+    // testagent_change start - archive previews are virtual and must not survive selecting a local session
+    session.clearArchivePreview()
+    setArchiveForking(undefined)
+    // testagent_change end
     if (tabs) tabs.open(id)
     if (!tabs) session.selectSession(id)
     setCurrentView("newTask")
   }
+
+  // testagent_change start - route archive selections and bottom imports through the shared ChatView
+  const handleSelectArchive = (key: string, archive: CloudArchiveData) => {
+    setArchiveForking(undefined)
+    session.selectArchivePreview(key, archive)
+    setCurrentView("newTask")
+  }
+
+  const handleForkArchive = (key: string) => {
+    if (session.archivePreview()?.key !== key || archiveForking()) return
+    setArchiveForking(key)
+    vscode.postMessage({ type: "requestCloudArchiveFork", key })
+  }
+
+  const handleArchiveMessage = (message: ExtensionMessage) => {
+    const key = archiveForking()
+    if (!key) return
+    if (message.type === "cloudArchiveForked" && key === message.key && message.sessionID) {
+      setArchiveForking(undefined)
+      handleSelectSession(message.sessionID)
+      return
+    }
+    if (message.type === "cloudArchiveOperationFailed" && message.operation === "fork" && key === message.key) {
+      setArchiveForking(undefined)
+    }
+  }
+  // testagent_change end
 
   const handleForkMessage = (sessionId: string, messageId: string) => {
     vscode.postMessage({ type: "forkSession", sessionId, messageId })
@@ -255,6 +306,10 @@ const AppContent: Component = () => {
                 onSelectSession={handleSelectSession}
                 onShowHistory={() => setCurrentView("history")}
                 onForkMessage={session.status() === "idle" ? handleForkMessage : undefined}
+                // testagent_change start - archive previews keep the same chat view but use a read-only import footer
+                archiveForking={!!session.archivePreview() && archiveForking() === session.archivePreview()?.key}
+                onForkArchive={handleForkArchive}
+                // testagent_change end
                 continueInWorktree
                 promptBoxId="sidebar:new-task"
               />
@@ -263,7 +318,12 @@ const AppContent: Component = () => {
               <MarketplaceView />
             </Match>
             <Match when={currentView() === "history"}>
-              <HistoryView onSelectSession={handleSelectSession} onBack={() => setCurrentView("newTask")} />
+              {/* testagent_change - selecting an archive opens the shared ChatView */}
+              <HistoryView
+                onSelectSession={handleSelectSession}
+                onSelectArchive={handleSelectArchive}
+                onBack={() => setCurrentView("newTask")}
+              />
             </Match>
             <Match when={currentView() === "profile"}>
               <ProfileView

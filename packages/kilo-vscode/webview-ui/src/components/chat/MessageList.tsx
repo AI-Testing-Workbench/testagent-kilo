@@ -397,17 +397,44 @@ export const MessageList: Component<MessageListProps> = (props) => {
                     return index() > active
                   })
 
+                  /* testagent_change start - prior renderer had no archive read-only guard
                   return <VscodeSessionTurn turn={turn} queued={queued()} onForkMessage={props.onForkMessage} />
+                  testagent_change end */
+                  // testagent_change start - share the Local renderer while suppressing archive mutations
+                  return (
+                    <VscodeSessionTurn
+                      turn={turn}
+                      queued={queued()}
+                      readonly={props.readonly}
+                      onForkMessage={props.readonly ? undefined : props.onForkMessage}
+                    />
+                  )
+                  // testagent_change end
                 }}
               </Virtualizer>
             </Show>
             <Show when={boundary()}>
               <RevertBanner />
             </Show>
+            {/* testagent_change start - queued turns use the same archive action guard
             <For each={queuedTurns()}>{(turn) => <VscodeSessionTurn turn={turn} queued />}</For>
+            testagent_change end */}
+            {/* testagent_change start - keep queued archive messages read-only */}
+            <For each={queuedTurns()}>
+              {(turn) => <VscodeSessionTurn turn={turn} queued readonly={props.readonly} />}
+            </For>
+            {/* testagent_change end */}
             <WorkingIndicator />
+            {/* testagent_change start - archive questions/suggestions are historical, not live requests
             <For each={props.questions?.()}>{(req) => <QuestionDock request={req} />}</For>
             <For each={props.suggestions?.()}>{(req) => <SuggestBar request={req} />}</For>
+            testagent_change end */}
+            {/* testagent_change start - live request controls stay disabled in archive previews */}
+            <Show when={!props.readonly}>
+              <For each={props.questions?.()}>{(req) => <QuestionDock request={req} />}</For>
+              <For each={props.suggestions?.()}>{(req) => <SuggestBar request={req} />}</For>
+            </Show>
+            {/* testagent_change end */}
           </Show>
         </div>
       </div>

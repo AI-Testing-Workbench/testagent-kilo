@@ -43,7 +43,7 @@ export const TaskHeader: Component<TaskHeaderProps> = (props) => {
   const [draft, setDraft] = createSignal("")
   const editable = createMemo(() => {
     const id = session.currentSessionID()
-    return !!id && !id.startsWith("cloud:")
+    return !props.readonly && !!id && !id.startsWith("cloud:") // testagent_change - archive header is read-only
   })
   const startEdit = () => {
     setDraft(title())

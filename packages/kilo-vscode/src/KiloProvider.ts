@@ -57,6 +57,12 @@ import { handleContinueInWorktree } from "./kilo-provider/continue-worktree"
 import { parseMessageFiles, type MessageFile } from "./kilo-provider/message-files"
 import { handleFileSearch } from "./kilo-provider/file-search"
 import { getTerminalContents } from "./services/terminal/context"
+// testagent_change start - cloud history stays on the local HTTP archive path
+import { CloudHistory as History } from "./testagent/cloud/history"
+import { cloudSyncRegistry as registry } from "./testagent/cloud/coordinator"
+import { isRemoteSshOutdated } from "./testagent/cloud/ssh-api"
+import type { CloudGitUi } from "./testagent/cloud/git-preflight"
+// testagent_change end
 import { matchFollowup, recordFollowup, type Followup } from "./kilo-provider/followup-session"
 import { clearCommandsCache, loadCommands } from "./kilo-provider/commands"
 import { fetchMessagePage, MESSAGE_PAGE_LIMIT } from "./kilo-provider/message-page"
@@ -368,6 +374,9 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
 
   private webview: vscode.Webview | null = null
   private webviewView: vscode.WebviewView | null = null // testagent_change - store view reference for visibility check
+  // testagent_change start - cache cloud history service per provider
+  private readonly history: History
+  // testagent_change end
 
   // testagent_change start - System notification service
   private systemNotification: SystemNotificationService
@@ -494,6 +503,54 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
     this.projectDirectory = options?.projectDirectory
     this.slimEditMetadata = options?.slimEditMetadata ?? true
     KiloProvider.instances.add(this) // testagent_change
+    // testagent_change start - use the shared workspace registry for cloud history
+    const ui: CloudGitUi = {
+      pick: (items, opts) => vscode.window.showQuickPick(items, opts),
+      confirm: (message, accept, cancel) => vscode.window.showWarningMessage(message, { modal: true }, accept, cancel),
+    }
+    this.history = new History({
+      connection: this.connectionService,
+      registry,
+      dir: () => this.getWorkspaceDirectory(),
+      sessionDir: (id) => this.resolveSessionDirectory(id),
+      context: (dir) => ({ directory: dir, workspace: process.env.OPENCODE_WORKSPACE_ID }),
+      pluginId: "test-tech.TestAgent",
+      ui,
+      local: !isCloudMode(),
+      progress: async <T>(task: (finish: () => void) => Promise<T>): Promise<T> => {
+        const state: { run?: Promise<T> } = {}
+        await vscode.window.withProgress(
+          {
+            location: vscode.ProgressLocation.Notification,
+            title: "正在准备会话上云...",
+            cancellable: false,
+          },
+          () =>
+            new Promise<void>((resolve) => {
+              state.run = task(resolve)
+              void state.run.then(
+                () => resolve(),
+                () => resolve(),
+              )
+            }),
+        )
+        if (!state.run) throw new Error("会话上云任务未启动")
+        return state.run
+      },
+      rename: async (id, title, dir) => {
+        const client = await this.connectionService.getClientAsync(dir)
+        await client.session.update({ sessionID: id, directory: dir, title }, { throwOnError: true })
+      },
+      post: (message) => this.postMessage(message),
+      onError: (err) => {
+        this.log(err)
+        if (isRemoteSshOutdated(err)) return
+        void vscode.window.showErrorMessage(err instanceof Error ? err.message : String(err))
+      },
+      warning: (message) => vscode.window.showWarningMessage(message, { modal: true }, "确定"),
+      success: (message) => void vscode.window.showInformationMessage(message),
+    })
+    // testagent_change end
 
     TelemetryProxy.getInstance().setProvider(this)
 
@@ -501,10 +558,10 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
     this.systemNotification = new SystemNotificationService(extensionUri)
     // testagent_change end
 
-    // testagent_change start - provide current session ID for auto-compaction retry abort
-    this.connectionService.setCurrentSessionIdGetter(() => this.currentSession?.id)
+    // testagent_change start - provide the current session ID and tolerate hosts without optional hooks
+    this.connectionService.setCurrentSessionIdGetter?.(() => this.currentSession?.id)
     // 当用户点击"确定"开启自动压缩时，走统一 abort 流程
-    this.connectionService.onAutoCompaction(() => {
+    this.connectionService.onAutoCompaction?.(() => {
       const sid = this.currentSession?.id
       if (sid) {
         // 直接通知前端 UI 更新状态（cancelRetry 内部依赖 retryAbortControllers，可能没有注册）
@@ -846,6 +903,52 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
     void this.handleLoadSessions()
   }
 
+  // testagent_change start - refresh visible archive metadata after sync writes
+  public refreshArchives(): void {
+    void this.history.list().catch(() => undefined)
+  }
+
+  private log(err: unknown): void {
+    const data = err && typeof err === "object" ? err : {}
+    const code = "code" in data && typeof data.code === "string" ? data.code : "unknown"
+    const serviceId = "serviceId" in data && typeof data.serviceId === "string" ? data.serviceId : "-"
+    console.error(`[TestAgent] stage=cloud_history serviceId=${serviceId} code=${code}`)
+  }
+
+  private async handleCloudHistoryMessage(message: Record<string, unknown>): Promise<void> {
+    switch (message.type) {
+      case "requestCloudArchiveList":
+        await this.history.list().catch(() => undefined)
+        return
+      case "requestCloudArchive":
+        if (typeof message.key === "string") {
+          await this.history.read(message.key).catch(() => undefined)
+        }
+        return
+      case "requestCloudArchiveFork": {
+        if (typeof message.key !== "string") return
+        const result = await this.history.fork(message.key).catch(() => undefined)
+        if (!result) return
+        await this.handleLoadSessions()
+        this.postMessage({
+          type: "cloudArchiveForked",
+          key: message.key,
+          sourceSessionID: result.sourceSessionID,
+          sessionID: result.sessionID,
+        })
+        return
+      }
+      case "requestCloudUpload":
+        if (typeof message.sessionID === "string") void this.history.upload(message.sessionID)
+        return
+      case "requestCloudExport":
+        if (typeof message.sessionID === "string") void this.history.export(message.sessionID)
+        return
+    }
+  }
+
+  // testagent_change end
+
   /** Register a listener invoked when a plan follow-up session is adopted. */
   public onFollowupAdopted(cb: (session: Session, directory: string) => void): void {
     this.followupListeners.push(cb)
@@ -951,11 +1054,15 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
 
       await routeSuggestionWebviewMessage(this.questionCtx, message)
       if (await ModelState.handleMessage(message.type, message, this.client, (msg) => this.postMessage(msg))) return
+      // testagent_change start - route archive actions through the HTTP history service
+      await this.handleCloudHistoryMessage(message)
+      // testagent_change end
       switch (message.type) {
         case "webviewReady":
           console.log("[TestAgent]  ✅ webviewReady received")
           this.isWebviewReady = true
           await this.syncWebviewState("webviewReady")
+          this.history.push() // testagent_change - replay cached archive metadata after webview reload
           this.flushPendingReviewComments()
           this.recoverPendingPrompts()
           this.flushPendingOpenSession() // testagent_change - cross-window handoff

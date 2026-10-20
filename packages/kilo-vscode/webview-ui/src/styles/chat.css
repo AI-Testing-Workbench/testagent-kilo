@@ -2522,6 +2522,28 @@ body.vscode-light
   opacity: 1;
 }
 
+/* testagent_change start - align per-session cloud actions with existing row controls */
+.session-list [data-slot="session-row-actions"] {
+  display: flex;
+  align-items: center;
+  flex-shrink: 0;
+  /* Prior text-action gap was 4px; icon wrappers now own spacing. */
+  gap: 0;
+}
+
+.session-list [data-slot="session-upload-button"] {
+  flex-shrink: 0;
+  margin-left: 4px;
+  opacity: 0;
+  transition: opacity 0.15s;
+}
+
+.session-list [data-slot="list-item"]:hover [data-slot="session-upload-button"],
+.session-list [data-slot="list-item"][data-active="true"] [data-slot="session-upload-button"] {
+  opacity: 1;
+}
+/* testagent_change end */
+
 /* History View (unified Local + Cloud tabs) */
 .history-view {
   display: flex;
@@ -2545,6 +2567,15 @@ body.vscode-light
   gap: 2px;
   flex: 1;
 }
+
+/* testagent_change start - cloud mode has a single database history source */
+.history-view-mode {
+  flex: 1;
+  padding: 3px 10px;
+  font-size: 12px;
+  font-weight: 600;
+}
+/* testagent_change end */
 
 .history-tab-btn {
   appearance: none;
@@ -2583,6 +2614,65 @@ body.vscode-light
   display: flex;
   flex-direction: column;
 }
+
+/* testagent_change start - render archive scan and read-only viewer status */
+
+.cloud-archive-list[data-error] [data-slot="list-message"] {
+  color: var(--vscode-errorForeground, var(--text-danger));
+}
+
+.cloud-archive-list {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  min-height: 0;
+  overflow: hidden;
+}
+
+.cloud-archive-preview {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  min-height: 0;
+  border-top: 1px solid var(--border-weak, var(--vscode-panel-border));
+}
+
+.cloud-archive-preview-header {
+  display: flex;
+  flex-shrink: 0;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 10px 12px;
+}
+
+.cloud-archive-preview-header h3,
+.cloud-archive-preview-header p {
+  margin: 0;
+  overflow-wrap: anywhere;
+}
+
+.cloud-archive-preview-header h3 {
+  font-size: 13px;
+}
+
+.cloud-archive-preview-header p {
+  margin-top: 3px;
+  font-size: 11px;
+  color: var(--text-weak, var(--vscode-descriptionForeground));
+}
+
+.cloud-archive-turns {
+  flex: 1;
+  min-height: 0;
+  overflow: auto;
+  padding: 0 8px 12px;
+}
+
+.cloud-archive-turn-container {
+  pointer-events: auto;
+}
+/* testagent_change end */
 
 /* Cloud Session List (inside History View) */
 .cloud-session-list {

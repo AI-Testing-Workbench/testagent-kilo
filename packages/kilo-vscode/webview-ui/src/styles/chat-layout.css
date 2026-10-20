@@ -36,6 +36,29 @@
   border-top: 1px solid var(--vscode-panel-border);
 }
 
+/* testagent_change start - present archive import as a non-editable composer */
+.archive-readonly-composer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin: 10px 12px 12px;
+  padding: 8px 10px;
+  min-height: 42px;
+  border: 1px solid var(--vscode-input-border, var(--border-weak, var(--vscode-panel-border)));
+  border-radius: 4px;
+  background: var(--vscode-input-background, var(--background-base));
+}
+
+.archive-readonly-composer-prompt {
+  min-width: 0;
+  overflow: hidden;
+  color: var(--vscode-descriptionForeground, var(--text-weak));
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+/* testagent_change end */
+
 /* ============================================
    Message List
    ============================================ */

@@ -14,6 +14,12 @@ import { SettingsEditorProvider } from "./SettingsEditorProvider"
 import { SubAgentViewerProvider } from "./SubAgentViewerProvider"
 import { EXTENSION_DISPLAY_NAME } from "./constants"
 import { KiloConnectionService } from "./services/cli-backend"
+// testagent_change start - workspace archive synchronization
+import { createCoreArchiveApi } from "./testagent/cloud/archive-api"
+import { cloudSyncRegistry } from "./testagent/cloud/coordinator"
+import { loadRemoteSshApi } from "./testagent/cloud/ssh-api"
+import { CloudArchiveSyncService } from "./testagent/cloud/sync-service"
+// testagent_change end
 import { formatWebUiLink, sessionPath } from "./services/cli-backend/share-link" // testagent_change - copy web UI share link
 import { registerAutocompleteProvider } from "./services/autocomplete"
 import { ensureBackendForAutocomplete } from "./services/autocomplete/ensure-backend"
@@ -75,6 +81,46 @@ export function activate(context: vscode.ExtensionContext) {
 
   // Create shared connection service (one server for all webviews)
   const connectionService = new KiloConnectionService(context)
+
+  // testagent_change start - start local/cloud archive synchronization from TestAgent's own mode signal
+  const log = (msg: string) => console.error(`[TestAgent] ${msg}`)
+  const cloudSync = new CloudArchiveSyncService({
+    mode: isCloudMode() ? "cloud" : "local",
+    registry: cloudSyncRegistry,
+    archive: createCoreArchiveApi(connectionService),
+    remote: loadRemoteSshApi,
+    context: (dir) => ({ directory: dir, workspace: process.env.OPENCODE_WORKSPACE_ID }),
+    onImported: () => {
+      for (const provider of KiloProvider.instances) provider.refreshSessions()
+    },
+    onError: (issue) => log(`stage=${issue.stage} serviceId=${issue.serviceId ?? "-"} code=${issue.code}`),
+  })
+  context.subscriptions.push(new vscode.Disposable(() => void cloudSync.dispose()))
+  const refreshCloud = (uri: vscode.Uri) => {
+    void cloudSync.refresh(uri.fsPath).catch((err) => {
+      const code = err instanceof Error && "code" in err && typeof err.code === "string" ? err.code : "unknown"
+      log(`stage=workspace serviceId=- code=${code}`)
+    })
+  }
+  const refreshImports = (uri: vscode.Uri) => {
+    refreshCloud(uri)
+    for (const provider of KiloProvider.instances) provider.refreshArchives()
+  }
+  const infoWatch = vscode.workspace.createFileSystemWatcher("**/.testagent/cloud/info.json")
+  const importWatch = vscode.workspace.createFileSystemWatcher("**/.testagent/cloud/import/**/*.json")
+  context.subscriptions.push(
+    infoWatch,
+    importWatch,
+    infoWatch.onDidCreate(refreshCloud),
+    infoWatch.onDidChange(refreshCloud),
+    importWatch.onDidCreate(refreshImports),
+    importWatch.onDidChange(refreshImports),
+    vscode.workspace.onDidChangeWorkspaceFolders((event) => {
+      event.added.forEach((folder) => refreshCloud(folder.uri))
+    }),
+  )
+  vscode.workspace.workspaceFolders?.forEach((folder) => refreshCloud(folder.uri))
+  // testagent_change end
 
   // testagent_change - relay TestAgent pet states to the TSCode desktop pet
   context.subscriptions.push(registerDesktopPetBridge(connectionService))
@@ -679,7 +725,7 @@ export function activate(context: vscode.ExtensionContext) {
           dark: vscode.Uri.file(context.asAbsolutePath("assets/icons/testagent_chat.png")),
         },
         location: { viewColumn: vscode.ViewColumn.Beside },
-        env: { TESTAGENT_CALLER: "vscode" }, // testagent_change - start with basic env
+        env: { TESTAGENT_CALLER: "vscode" },
         // On Windows, use PowerShell so quoted paths with spaces work correctly
         ...(process.platform === "win32" && {
           shellPath: "powershell.exe",
