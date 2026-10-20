@@ -137,7 +137,7 @@ export class CloudUploadService {
     start: () => void = () => undefined,
   ): Promise<CloudUploadResult | undefined> {
     const state = await this.state(dir, sessionDir)
-    if (!state.root) throw new CloudUploadError("当前路径不属于本地工作区码云仓库", "not_git")
+    if (!state.root) throw new CloudUploadError("当前工作区不是一个码云仓库", "not_git")
     if (!state.enabled) {
       if (state.reason === "busy") {
         throw new CloudUploadError("另一个工作台窗口正在处理此本地工作区码云仓库，请稍后重试", "busy")

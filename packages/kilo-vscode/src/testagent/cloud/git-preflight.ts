@@ -73,7 +73,7 @@ export function parseGitRemote(value: string): Omit<GitRemote, "name"> | undefin
 
 export async function inspectCloudGitRemotes(dir: string): Promise<CloudGitWorkspace> {
   const root = await resolveGitRoot(dir)
-  if (!root) throw new CloudGitError("当前路径不属于本地工作区码云仓库的 Git 工作树", "not_git")
+  if (!root) throw new CloudGitError("当前工作区不是一个 Git 工作树", "not_git")
   return { root, remotes: await findGitRemotes(simpleGit(root)) }
 }
 
@@ -84,7 +84,7 @@ export async function selectCloudGitTarget(
   ui: CloudGitUi = quickPickUi(),
 ): Promise<CloudGitSelection | undefined> {
   const root = await resolveGitRoot(dir)
-  if (!root) throw new CloudGitError("当前路径不属于本地工作区码云仓库的 Git 工作树", "not_git")
+  if (!root) throw new CloudGitError("当前工作区不是一个 Git 工作树", "not_git")
   return queue.run(() => selectGitRoot(root, ui))
 }
 
@@ -94,7 +94,7 @@ export async function selectCloudGitTargetInQueue(
   ui: CloudGitUi = quickPickUi(),
 ): Promise<CloudGitSelection | undefined> {
   const root = await resolveGitRoot(dir)
-  if (!root) throw new CloudGitError("当前路径不属于本地工作区码云仓库的 Git 工作树", "not_git")
+  if (!root) throw new CloudGitError("当前工作区不是一个 Git 工作树", "not_git")
   return selectGitRoot(root, ui)
 }
 

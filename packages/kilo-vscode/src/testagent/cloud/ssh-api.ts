@@ -166,7 +166,7 @@ export function isRemoteSshOutdated(value: unknown): boolean {
 
 export async function loadRemoteSshApi(): Promise<RemoteSshApi> {
   const extension = vscode.extensions.getExtension<RemoteSshApi>(REMOTE_SSH_EXTENSION_ID)
-  if (!extension) throw new RemoteSshApiError("未安装工作台的 TSCode Remote 扩展")
+  if (!extension) throw new RemoteSshApiError("尚未安装工作台的 TSCode Remote 扩展")
   const version = typeof extension.packageJSON.version === "string" ? extension.packageJSON.version : "未知版本"
   if (!remoteSshVersionSupported(version)) {
     if (!warned.has(version)) {
