@@ -81,7 +81,8 @@ export class CloudHistory {
       ? await inspectCloudGitRemotes(dir).then(
           () => true,
           (err) => {
-            if (!(err instanceof CloudGitError) || !["not_git", "no_remote", "unsupported_remote"].includes(err.code)) {
+            if (err instanceof CloudGitError && err.code === "no_remote") return true // testagent_change
+            if (!(err instanceof CloudGitError) || !["not_git", "unsupported_remote"].includes(err.code)) {
               this.opts.onError(err)
             }
             return false
@@ -107,7 +108,7 @@ export class CloudHistory {
       if (
         err instanceof CloudArchiveFilesError &&
         err.detail instanceof CloudGitError &&
-        ["not_git", "no_remote", "unsupported_remote"].includes(err.detail.code)
+        ["not_git", "unsupported_remote"].includes(err.detail.code) // testagent_change
       ) {
         this.listCache = { type: "cloudArchiveListLoaded", archives: [], invalidCount: 0 }
         this.opts.post(this.listCache)

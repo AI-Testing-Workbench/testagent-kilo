@@ -109,7 +109,7 @@ export class CloudArchiveFiles {
     const git = await inspectCloudGitRemotes(dir).catch((err) => {
       if (err instanceof CloudGitError) {
         throw new CloudArchiveFilesError(
-          err.code === "unsupported_remote" ? err.message : "当前工作区不是一个码云仓库",
+          err.code === "unsupported_remote" ? err.message : "当前工作区不是一个合法的码云仓库",
           "workspace_error",
           err,
         )
