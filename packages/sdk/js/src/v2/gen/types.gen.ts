@@ -410,6 +410,7 @@ export type UserMessage = {
     [key: string]: boolean
   }
   thinkingEnabled?: boolean
+  maxConcurrency?: number | "NaN" | "Infinity" | "-Infinity" | "Infinity" | "-Infinity" | "NaN"
 }
 
 export type AssistantMessage = {
@@ -1746,6 +1747,20 @@ export type ProviderAuthAuthorization = {
   instructions: string
 }
 
+export type SessionArchive = {
+  info: Session
+  messages: Array<{
+    info: Message
+    parts: Array<Part>
+  }>
+}
+
+export type SessionImportResult = {
+  sourceSessionID: string
+  sessionID: string
+  forked: boolean
+}
+
 export type TextPartInput = {
   id?: string
   type: "text"
@@ -1877,6 +1892,33 @@ export type WorkspaceWarpError = {
   data: {
     message: string
   }
+}
+
+export type UserMessage1 = {
+  id: string
+  sessionID: string
+  role: "user"
+  time: {
+    created: number
+  }
+  format?: OutputFormat
+  summary?: {
+    title?: string
+    body?: string
+    diffs: Array<SnapshotFileDiff>
+  }
+  agent: string
+  model: {
+    providerID: string
+    modelID: string
+    variant?: string
+  }
+  system?: string
+  tools?: {
+    [key: string]: boolean
+  }
+  thinkingEnabled?: boolean
+  maxConcurrency?: number | "NaN" | "Infinity" | "-Infinity"
 }
 
 export type SyncEventMessageUpdated = {
@@ -4852,6 +4894,48 @@ export type AppReloadSkillsResponses = {
 
 export type AppReloadSkillsResponse = AppReloadSkillsResponses[keyof AppReloadSkillsResponses]
 
+export type AppReloadAgentsData = {
+  body?: never
+  path?: never
+  query?: {
+    directory?: string
+    workspace?: string
+  }
+  url: "/agent/reload"
+}
+
+export type AppReloadAgentsResponses = {
+  /**
+   * Agents reloaded successfully
+   */
+  200: {
+    success: boolean
+  }
+}
+
+export type AppReloadAgentsResponse = AppReloadAgentsResponses[keyof AppReloadAgentsResponses]
+
+export type AppReloadCommandsData = {
+  body?: never
+  path?: never
+  query?: {
+    directory?: string
+    workspace?: string
+  }
+  url: "/command/reload"
+}
+
+export type AppReloadCommandsResponses = {
+  /**
+   * Commands reloaded successfully
+   */
+  200: {
+    success: boolean
+  }
+}
+
+export type AppReloadCommandsResponse = AppReloadCommandsResponses[keyof AppReloadCommandsResponses]
+
 export type McpReloadData = {
   body?: never
   path?: never
@@ -6142,6 +6226,7 @@ export type SessionPromptData = {
     format?: OutputFormat
     system?: string
     variant?: string
+    maxConcurrency?: number | "NaN" | "Infinity" | "-Infinity" | "Infinity" | "-Infinity" | "NaN"
     parts: Array<TextPartInput | FilePartInput | AgentPartInput | SubtaskPartInput>
   }
   path: {
@@ -6251,6 +6336,101 @@ export type SessionMessageResponses = {
 }
 
 export type SessionMessageResponse = SessionMessageResponses[keyof SessionMessageResponses]
+
+export type SessionExportData = {
+  body?: never
+  path: {
+    sessionID: string
+  }
+  query?: {
+    directory?: string
+    workspace?: string
+    sanitize?: boolean | "true" | "false"
+  }
+  url: "/session/{sessionID}/export"
+}
+
+export type SessionExportErrors = {
+  /**
+   * Bad request
+   */
+  400: BadRequestError
+  /**
+   * NotFoundError
+   */
+  404: NotFoundError
+}
+
+export type SessionExportError = SessionExportErrors[keyof SessionExportErrors]
+
+export type SessionExportResponses = {
+  /**
+   * Session archive
+   */
+  200: SessionArchive
+}
+
+export type SessionExportResponse = SessionExportResponses[keyof SessionExportResponses]
+
+export type SessionImportData = {
+  body?: SessionArchive
+  path: {
+    sessionID: string
+  }
+  query?: {
+    directory?: string
+    workspace?: string
+  }
+  url: "/session/{sessionID}/import"
+}
+
+export type SessionImportErrors = {
+  /**
+   * Bad request
+   */
+  400: BadRequestError
+}
+
+export type SessionImportError = SessionImportErrors[keyof SessionImportErrors]
+
+export type SessionImportResponses = {
+  /**
+   * Imported session
+   */
+  200: SessionImportResult
+}
+
+export type SessionImportResponse = SessionImportResponses[keyof SessionImportResponses]
+
+export type SessionImportForkData = {
+  body?: SessionArchive
+  path: {
+    sessionID: string
+  }
+  query?: {
+    directory?: string
+    workspace?: string
+  }
+  url: "/session/{sessionID}/import/fork"
+}
+
+export type SessionImportForkErrors = {
+  /**
+   * Bad request
+   */
+  400: BadRequestError
+}
+
+export type SessionImportForkError = SessionImportForkErrors[keyof SessionImportForkErrors]
+
+export type SessionImportForkResponses = {
+  /**
+   * Forked session
+   */
+  200: SessionImportResult
+}
+
+export type SessionImportForkResponse = SessionImportForkResponses[keyof SessionImportForkResponses]
 
 export type SessionForkData = {
   body?: {
@@ -6480,6 +6660,7 @@ export type SessionPromptAsyncData = {
     format?: OutputFormat
     system?: string
     variant?: string
+    maxConcurrency?: number | "NaN" | "Infinity" | "-Infinity" | "Infinity" | "-Infinity" | "NaN"
     parts: Array<TextPartInput | FilePartInput | AgentPartInput | SubtaskPartInput>
   }
   path: {
