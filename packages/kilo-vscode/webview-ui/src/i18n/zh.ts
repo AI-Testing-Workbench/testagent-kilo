@@ -909,7 +909,7 @@ export const dict = {
   "session.cloud.export.pending": "会话下云中...",
   "session.cloud.fork.success": "云端会话已迁移为本地会话",
   "cloud.archive.search": "搜索云端会话...",
-  "cloud.archive.empty": "当前工作区中没有云端会话，请在 云端沙箱 中下云云端会话后继续。",
+  "cloud.archive.empty": "暂无云端会话，请在 云端沙箱 中下云云端会话后继续。",
   "cloud.archive.listLoading": "正在加载云端会话...",
   "cloud.archive.loading": "正在读取云端会话...",
   "cloud.archive.select": "选择一个云端会话以查看内容。",

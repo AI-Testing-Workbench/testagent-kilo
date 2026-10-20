@@ -7,6 +7,13 @@ export interface CloudArchiveListLoadedMessage {
   invalidCount: number
 }
 
+// testagent_change start - expose local repository eligibility for history navigation
+export interface CloudArchiveAvailabilityMessage {
+  type: "cloudArchiveAvailability"
+  available: boolean
+}
+// testagent_change end
+
 export interface CloudArchiveLoadedMessage {
   type: "cloudArchiveLoaded"
   key: string
@@ -36,6 +43,7 @@ export interface CloudActionProgressMessage {
 
 export interface RequestCloudArchiveListMessage {
   type: "requestCloudArchiveList"
+  availabilityOnly?: true // testagent_change
 }
 
 export interface RequestCloudArchiveMessage {
@@ -70,6 +78,7 @@ testagent_change end */
 
 export type CloudHistoryExtensionMessage =
   | CloudArchiveListLoadedMessage
+  | CloudArchiveAvailabilityMessage // testagent_change
   | CloudArchiveLoadedMessage
   | CloudArchiveForkedMessage
   | CloudArchiveOperationFailedMessage

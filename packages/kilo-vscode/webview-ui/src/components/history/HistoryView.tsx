@@ -61,6 +61,7 @@ const HistoryView: Component<HistoryViewProps> = (props) => {
   const [tab, setTab] = createSignal<"local" | "cloud">(
     session.archivePreview() ? "cloud" : "local", // Return to Cloud history after viewing an archive.
   )
+  const [available, setAvailable] = createSignal(false) // testagent_change
   const [archives, setArchives] = createSignal<CloudArchiveSummary[]>([])
   const [key, setKey] = createSignal<string | undefined>(
     session.archivePreview()?.key, // Retain selected archive when returning from ChatView.
@@ -139,6 +140,16 @@ const HistoryView: Component<HistoryViewProps> = (props) => {
   // testagent_change start - subscribe to extension archive messages
   const stop = vscode.onMessage((message) => {
     switch (message.type) {
+      // testagent_change start - hide unavailable local Cloud history and discard stale preview state
+      case "cloudArchiveAvailability":
+        setAvailable(message.available)
+        if (message.available) return
+        session.clearArchivePreview()
+        setReading(false)
+        setOpening(undefined)
+        setTab("local")
+        return
+      // testagent_change end
       case "cloudArchiveListLoaded":
         list(message)
         return
@@ -186,6 +197,18 @@ const HistoryView: Component<HistoryViewProps> = (props) => {
     if (!server.isConnected()) {
       return
     }
+    // testagent_change start - probe eligibility without creating local cloud archive directories
+    if (!dir) {
+      setAvailable(false)
+      setLoaded(true)
+      if (tab() === "cloud") {
+        session.clearArchivePreview()
+        setTab("local")
+      }
+      return
+    }
+    vscode.postMessage({ type: "requestCloudArchiveList", availabilityOnly: true })
+    // testagent_change end
     if (tab() === "cloud") {
       reload()
       return
@@ -274,17 +297,21 @@ const HistoryView: Component<HistoryViewProps> = (props) => {
               >
                 {language.t("session.tab.local")}
               </button>
-              <button
-                role="tab"
-                aria-selected={tab() === "cloud"}
-                class="history-tab-btn"
-                classList={{ "history-tab-btn--active": tab() === "cloud" }}
-                onClick={() => {
-                  setTab("cloud")
-                }}
-              >
-                {language.t("session.tab.cloud")}
-              </button>
+              {/* testagent_change start - show Cloud history only for a supported local repository */}
+              <Show when={available()}>
+                <button
+                  role="tab"
+                  aria-selected={tab() === "cloud"}
+                  class="history-tab-btn"
+                  classList={{ "history-tab-btn--active": tab() === "cloud" }}
+                  onClick={() => {
+                    setTab("cloud")
+                  }}
+                >
+                  {language.t("session.tab.cloud")}
+                </button>
+              </Show>
+              {/* testagent_change end */}
             </div>
           }
         >

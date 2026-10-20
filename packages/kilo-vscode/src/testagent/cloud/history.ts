@@ -1,9 +1,9 @@
 // testagent_change - new file: route archive, fork, upload, and export through existing HTTP services
 import { createCoreArchiveApi, type CoreArchiveConnection } from "./archive-api"
-import { CloudArchiveFiles, type CloudArchiveList } from "./archive-files"
+import { CloudArchiveFiles, CloudArchiveFilesError, type CloudArchiveList } from "./archive-files" // testagent_change
 import type { CloudArchiveData } from "./archive-data"
 import { WorkspaceSyncRegistry } from "./coordinator"
-import type { CloudGitUi } from "./git-preflight"
+import { CloudGitError, inspectCloudGitRemotes, type CloudGitUi } from "./git-preflight" // testagent_change
 import { isRemoteSshOutdated, loadRemoteSshApi, type RemoteSshApi } from "./ssh-api"
 import { pullImportedRepository } from "./import-sync"
 import { CloudUploadError, CloudUploadService } from "./upload"
@@ -17,6 +17,7 @@ type CloudHistoryAction = {
 }
 
 type CloudHistoryMessage =
+  | { type: "cloudArchiveAvailability"; available: boolean } // testagent_change
   | { type: "cloudArchiveListLoaded"; archives: CloudArchiveList["archives"]; invalidCount: number }
   | { type: "cloudArchiveLoaded"; key: string; archive: CloudArchiveData }
   | { type: "cloudArchiveForked"; key: string; sourceSessionID: string; sessionID: string }
@@ -73,6 +74,24 @@ export class CloudHistory {
     })
   }
 
+  // testagent_change start - report archive history availability without creating workspace files
+  async availability() {
+    const dir = this.opts.dir()
+    const available = dir
+      ? await inspectCloudGitRemotes(dir).then(
+          () => true,
+          (err) => {
+            if (!(err instanceof CloudGitError) || !["not_git", "no_remote", "unsupported_remote"].includes(err.code)) {
+              this.opts.onError(err)
+            }
+            return false
+          },
+        )
+      : false
+    this.opts.post({ type: "cloudArchiveAvailability", available })
+  }
+  // testagent_change end
+
   async list() {
     try {
       const result = await this.files.list(this.opts.dir())
@@ -84,6 +103,17 @@ export class CloudHistory {
       if (result.invalidCount) this.opts.onError(new Error(`发现 ${result.invalidCount} 个无效的云端会话文件`))
       this.opts.post(this.listCache)
     } catch (err) {
+      // testagent_change start - ignore expected ineligible local workspaces in background/list refreshes
+      if (
+        err instanceof CloudArchiveFilesError &&
+        err.detail instanceof CloudGitError &&
+        ["not_git", "no_remote", "unsupported_remote"].includes(err.detail.code)
+      ) {
+        this.listCache = { type: "cloudArchiveListLoaded", archives: [], invalidCount: 0 }
+        this.opts.post(this.listCache)
+        return
+      }
+      // testagent_change end
       this.fail("list", undefined, err)
       throw err
     }
@@ -172,7 +202,7 @@ export class CloudHistory {
     this.action({ action: "export", sessionID: id, pending: true })
     try {
       const saved = await this.files.export(dir, id, dir)
-      this.opts.success?.(`云端会话已导出为 ${saved.name}`)
+      this.opts.success?.(`云端会话已下云`)
     } catch (err) {
       this.opts.onError(err)
     } finally {

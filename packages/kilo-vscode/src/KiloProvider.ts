@@ -918,6 +918,12 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
   private async handleCloudHistoryMessage(message: Record<string, unknown>): Promise<void> {
     switch (message.type) {
       case "requestCloudArchiveList":
+        // testagent_change start - answer eligibility probes without scanning or creating files
+        if (message.availabilityOnly === true) {
+          await this.history.availability()
+          return
+        }
+        // testagent_change end
         await this.history.list().catch(() => undefined)
         return
       case "requestCloudArchive":

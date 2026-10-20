@@ -260,7 +260,11 @@ const SessionList: Component<SessionListProps> = (props) => {
           }
         }}
         search={{ placeholder: language.t("session.search.placeholder"), autofocus: false }}
-        emptyMessage={language.t("session.empty")}
+        emptyMessage={
+          /* testagent_change start - show an archive-specific empty hint in local Cloud history */
+          props.source === "archive" ? language.t("cloud.archive.empty") : language.t("session.empty")
+          /* testagent_change end */
+        }
         groupBy={(s) => language.t(dateGroupKey(s.updatedAt))}
         sortGroupsBy={(a, b) => {
           const rank = Object.fromEntries(DATE_GROUP_KEYS.map((k, i) => [language.t(k), i]))
