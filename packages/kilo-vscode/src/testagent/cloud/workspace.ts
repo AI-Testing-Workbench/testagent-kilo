@@ -20,7 +20,7 @@ export type CloudWorkspace = CloudPaths & { state: CloudInfo }
 export class CloudWorkspaceError extends Error {
   constructor(
     message: string,
-    readonly code: "not_git" | "invalid_info" | "invalid_ignore" | "multiple_services" | "filesystem_error",
+    readonly code: "not_git" | "invalid_info" | "invalid_ignore" | "filesystem_error",
     readonly detail?: unknown,
   ) {
     super(message)
@@ -140,9 +140,6 @@ function validateInfo(value: unknown): CloudInfo {
   }
 
   const ids = [...new Set(info.serviceIds)] as string[]
-  if (ids.length > 1) {
-    throw new CloudWorkspaceError("一个本地工作区码云仓库最多只能关联一个云端服务", "multiple_services")
-  }
   return { serviceIds: ids }
 }
 

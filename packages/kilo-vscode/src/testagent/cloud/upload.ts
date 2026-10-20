@@ -21,7 +21,6 @@ export type CloudUploadReason =
   | "git_error"
   | "busy"
   | "session_mismatch"
-  | "service_exists"
   | "service_check_failed"
   | "pending"
 /* Removed the sticky previous-failure state; retries are allowed
@@ -32,7 +31,6 @@ export type CloudUploadState = {
   root?: string
   enabled: boolean
   pending: boolean
-  serviceId?: string
   reason?: CloudUploadReason
 }
 
@@ -122,9 +120,6 @@ export class CloudUploadService {
             const info = await writeCloudInfo(root, { serviceIds: live })
             workspace.state.serviceIds = info.serviceIds
           }
-          if (live[0]) {
-            return { root, enabled: false, pending: false, serviceId: live[0], reason: "service_exists" }
-          }
         }
         return { root, enabled: found.remotes.length > 0, pending: false }
       })
@@ -144,7 +139,6 @@ export class CloudUploadService {
     const state = await this.state(dir, sessionDir)
     if (!state.root) throw new CloudUploadError("当前路径不属于本地工作区码云仓库", "not_git")
     if (!state.enabled) {
-      if (state.serviceId) throw new CloudUploadError("此本地工作区码云仓库已关联云端服务", "service_exists", state.serviceId)
       if (state.reason === "busy") {
         throw new CloudUploadError("另一个工作台窗口正在处理此本地工作区码云仓库，请稍后重试", "busy")
       }
@@ -174,15 +168,6 @@ export class CloudUploadService {
       return await coord.run(async () => {
         if ((await resolveGitRoot(sessionDir)) !== root) {
           throw new CloudUploadError("所选会话不属于当前本地工作区码云仓库", "session_mismatch")
-        }
-        const workspace = await ensureCloudWorkspace(root)
-        const bound = workspace.state.serviceIds[0]
-        if (bound && (await this.live(bound))) {
-          throw new CloudUploadError("此本地工作区码云仓库已关联云端服务", "service_exists", bound)
-        }
-        if (bound) {
-          const info = await writeCloudInfo(root, { serviceIds: [] })
-          workspace.state.serviceIds = info.serviceIds
         }
         await inspectCloudGitRemotes(root)
 
@@ -289,7 +274,8 @@ export class CloudUploadService {
 
   private async remember(root: string, id: string, remote: RemoteSshApi): Promise<void> {
     try {
-      await writeCloudInfo(root, { serviceIds: [id] })
+      const workspace = await ensureCloudWorkspace(root)
+      await writeCloudInfo(root, { serviceIds: [...workspace.state.serviceIds, id] })
     } catch (err) {
       try {
         await remote.deleteContainer(id)

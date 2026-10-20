@@ -105,26 +105,29 @@ describe("码云仓库云端工作区状态", () => {
     await expect(readCloudInfo(root)).rejects.toMatchObject<Partial<CloudWorkspaceError>>({ code: "invalid_info" })
   })
 
-  it("拒绝绑定多个不同的 service ID", async () => {
+  it("接受多个不同的 service ID", async () => {
+    // testagent_change
     const root = await repo()
     const file = cloudPaths(root).info
     await fs.mkdir(path.dirname(file), { recursive: true })
     await fs.writeFile(file, JSON.stringify({ serviceIds: ["service-a", "service-b"] }))
 
-    await expect(readCloudInfo(root)).rejects.toMatchObject<Partial<CloudWorkspaceError>>({ code: "multiple_services" })
+    // testagent_change start - accept and preserve multiple valid service bindings
+    expect(await readCloudInfo(root)).toEqual({ serviceIds: ["service-a", "service-b"] })
+    // testagent_change end
   })
 
-  it("原子写入有效状态并拒绝超过上限的更新", async () => {
+  it("原子写入有效状态并保留多个服务 ID", async () => {
+    // testagent_change
     const root = await repo()
 
-    expect(await writeCloudInfo(root, { serviceIds: ["service-a", "service-a"] })).toEqual({
-      serviceIds: ["service-a"],
+    // testagent_change start - deduplicate IDs without imposing a workspace service-count limit
+    expect(await writeCloudInfo(root, { serviceIds: ["service-a", "service-a", "service-b"] })).toEqual({
+      serviceIds: ["service-a", "service-b"],
     })
-    expect(await readCloudInfo(root)).toEqual({ serviceIds: ["service-a"] })
+    expect(await readCloudInfo(root)).toEqual({ serviceIds: ["service-a", "service-b"] })
+    // testagent_change end
     expect(await fs.readFile(path.join(cloudPaths(root).cloud, ".gitignore"), "utf8")).toBe("*\n")
-    await expect(writeCloudInfo(root, { serviceIds: ["service-a", "service-b"] })).rejects.toMatchObject<
-      Partial<CloudWorkspaceError>
-    >({ code: "multiple_services" })
     expect((await fs.readdir(cloudPaths(root).cloud)).some((file) => file.endsWith(".tmp"))).toBe(false)
   })
 })

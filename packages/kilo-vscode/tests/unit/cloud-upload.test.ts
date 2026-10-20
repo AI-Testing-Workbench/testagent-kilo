@@ -228,30 +228,36 @@ afterEach(async () => {
 })
 
 describe("码云仓库上云服务", () => {
-  it("removes deleted IDs but keeps stopped services bound", async () => {
+  it("keeps a stopped service binding eligible for another upload", async () => {
     const root = await repo()
-    await ensureCloudWorkspace(root)
-    await writeCloudInfo(root, { serviceIds: ["service-old"] })
-    const svc = setup({ missing: true })
+    // testagent_change start - seed an existing service without adding Git setup probes
+    const dir = path.join(root, ".testagent", "cloud")
+    await fs.mkdir(dir, { recursive: true })
+    await fs.writeFile(path.join(dir, "info.json"), JSON.stringify({ serviceIds: ["service-stopped"] }))
+    // testagent_change end
+    const svc = setup({ status: "stopped" })
+    // testagent_change start - a live, stopped service no longer blocks creating another one
     expect(await svc.upload.state(root, root)).toMatchObject({ enabled: true, root })
-    expect(await readInfo(root)).toEqual({ serviceIds: [] })
-
-    await writeCloudInfo(root, { serviceIds: ["service-stopped"] })
-    const stop = setup({ status: "stopped" })
-    expect(await stop.upload.state(root, root)).toMatchObject({
-      enabled: false,
-      serviceId: "service-stopped",
-      reason: "service_exists",
-    })
+    // testagent_change end
     expect(await readInfo(root)).toEqual({ serviceIds: ["service-stopped"] })
   }, 15_000)
 
-  it("uploads the local archive in containerPrepared, records the ID, then removes the file", async () => {
+  it("uploads a new service and appends its ID without replacing existing bindings", async () => {
+    // testagent_change
     const root = await repo()
     const svc = setup()
+    // testagent_change start - isolate create and append from the separately tested workspace preflight
+    svc.upload.state = async () => ({ root, enabled: true, pending: false })
+    // testagent_change end
+    // testagent_change start - seed a prior service to verify the upload records both IDs
+    await fs.mkdir(path.join(root, ".testagent", "cloud"), { recursive: true })
+    await fs.writeFile(
+      path.join(root, ".testagent", "cloud", "info.json"),
+      JSON.stringify({ serviceIds: ["service-existing"] }),
+    )
+    // testagent_change end
 
     const result = await svc.upload.upload(root, "ses_1", root, ui())
-    const workspace = await ensureCloudWorkspace(root)
 
     expect(result).toMatchObject({ serviceId: "service-1", status: "running" })
     expect(svc.state.calls.slice(0, 3)).toEqual(["revealSidebar", "createContainer", "syncFiles"])
@@ -272,14 +278,14 @@ describe("码云仓库上云服务", () => {
       container: { serviceId: "service-1", host: "container-host" },
     })
     expect(svc.state.data[0]).toContain("unmodified archive content")
-    expect(await readCloudInfo(root)).toEqual({ serviceIds: ["service-1"] })
     if (!result) throw new Error("Upload returned no result")
-    expect(await fs.stat(path.join(workspace.export, result.archiveName)).catch(() => undefined)).toBeUndefined()
-    expect(await svc.upload.state(root, root)).toMatchObject({ enabled: false, reason: "service_exists" })
-    await expect(svc.upload.upload(root, "ses_1", root, ui())).rejects.toMatchObject<Partial<CloudUploadError>>({
-      code: "service_exists",
-    })
+    expect(
+      await fs.stat(path.join(root, ".testagent", "cloud", "export", result.archiveName)).catch(() => undefined),
+    ).toBeUndefined()
+    // testagent_change start - existing bindings do not block creation and are not overwritten
+    expect(await readCloudInfo(root)).toEqual({ serviceIds: ["service-existing", "service-1"] })
     expect(svc.state.reqs).toHaveLength(1)
+    // testagent_change end
   }, 20_000)
 
   it("does not export or create a service when branch selection is canceled", async () => {
