@@ -111,6 +111,6 @@ it("imports the session and warns when the current local branch differs from its
 
   expect(result).toEqual({ sourceSessionID: data.info.id, sessionID: "ses_forked", forked: true })
   expect(calls).toEqual(["POST /session/ses_imported/import/fork", "GET service service-42"])
-  expect(warnings).toEqual(["本地当前分支“main”与云端分支“develop”不匹配。\n会话已导入，本地仓库未拉取。"])
+  expect(warnings).toEqual(["本地当前分支“main”与码云分支“develop”不匹配。\n会话已导入，但未将码云仓库的更新拉取到本地工作区仓库。"])
   expect(errs).toEqual([])
 }, 30_000)

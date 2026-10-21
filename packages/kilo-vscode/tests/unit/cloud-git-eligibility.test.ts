@@ -36,10 +36,13 @@ function conn(): CoreArchiveConnection {
   }
 }
 
-function ui(): CloudGitUi {
+function ui(modals: string[] = []): CloudGitUi {
   return {
     pick: async (items: readonly CloudGitItem[]) => items.find((item) => item.label === "main"),
     confirm: async () => "取消",
+    modal: async (message) => {
+      modals.push(message)
+    },
   }
 }
 
@@ -49,10 +52,11 @@ afterEach(async () => {
 })
 
 describe("码云仓库上云入口", () => {
-  it("接受 HTTP(S) remote 且没有 tracking refs 时尝试当前本地分支", async () => {
+  it("接受 HTTP(S) remote 且没有 tracking refs 时模态提示本地分支未推送", async () => {
     const root = await repo("https://token:secret@github.com/alice/repo.git")
     const reg = new WorkspaceSyncRegistry()
     regs.push(reg)
+    const modals: string[] = []
     const service = new CloudUploadService({
       connection: conn(),
       registry: reg,
@@ -61,16 +65,10 @@ describe("码云仓库上云入口", () => {
     })
 
     expect(await service.state(root, root)).toMatchObject({ enabled: true, root })
-    expect(await selectCloudGitTargetInQueue(root, ui())).toMatchObject({
-      remote: {
-        name: "origin",
-        owner: "alice",
-        repository: "repo",
-        prefix: "https://github.com",
-        url: "https://github.com/alice/repo",
-      },
-      branch: "main",
-    })
+    expect(await selectCloudGitTargetInQueue(root, ui(modals))).toBeUndefined()
+    expect(modals).toEqual([
+      "所选码云仓库远端 origin 没有可选择的分支。本地分支 main 尚未推送至该远端。请先将分支推送至该远端后重试。",
+    ])
   }, 30_000)
 
   it("按钮请求遇到不支持状态时只记录错误，不向历史列表发提示", async () => {

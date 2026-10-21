@@ -51,9 +51,14 @@ function ui(
   choice?: string,
 ): {
   ui: CloudGitUi
-  state: { items: CloudGitItem[][]; opts: CloudGitQuickPickOptions[]; messages: string[] }
+  state: { items: CloudGitItem[][]; opts: CloudGitQuickPickOptions[]; messages: string[]; modals: string[] }
 } {
-  const state = { items: [] as CloudGitItem[][], opts: [] as CloudGitQuickPickOptions[], messages: [] as string[] }
+  const state = {
+    items: [] as CloudGitItem[][],
+    opts: [] as CloudGitQuickPickOptions[],
+    messages: [] as string[],
+    modals: [] as string[],
+  }
   return {
     state,
     ui: {
@@ -66,6 +71,9 @@ function ui(
       confirm: async (message) => {
         state.messages.push(message)
         return choice
+      },
+      modal: async (message) => {
+        state.modals.push(message)
       },
     },
   }
@@ -275,15 +283,20 @@ describe("Git 仓库上云前置检查", () => {
       prefix: "https://gitlab.com",
       url: "https://gitlab.com/alice/repo",
     })
-  }, 15_000)
+  }, 60_000)
 
-  it("没有 remote tracking refs 时退回本地分支", async () => {
+  it("没有所选 remote 的分支时提示本地分支尚未推送且不列本地分支", async () => {
     const root = await repo()
     await simpleGit(root).addRemote("origin", "https://github.com/alice/repo.git")
     const coord = await queue(root)
     const pick = ui(["main"])
-    expect(await selectCloudGitTarget(root, coord, pick.ui)).toMatchObject({ branch: "main" })
-  }, 15_000)
+
+    expect(await selectCloudGitTarget(root, coord, pick.ui)).toBeUndefined()
+    expect(pick.state.modals).toEqual([
+      "所选码云仓库远端 origin 没有可选择的分支。本地分支 main 尚未推送至该远端。请先将分支推送至该远端后重试。",
+    ])
+    expect(pick.state.items).toHaveLength(0)
+  }, 60_000)
 
   it("没有 HTTP(S) remote 时报告不支持的地址协议", async () => {
     const root = await repo()

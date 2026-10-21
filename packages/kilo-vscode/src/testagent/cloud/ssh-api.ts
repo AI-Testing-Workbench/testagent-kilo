@@ -43,8 +43,8 @@ export type ContainerStatusResult = {
   status: string
   gitee_user: string
   gitee_repository: string
-  gitee_url?: string
-  gitee_branch?: string
+  gitee_url: string
+  gitee_branch: string | null
   git_fin_status?: string
 }
 

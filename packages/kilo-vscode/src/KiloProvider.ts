@@ -369,6 +369,46 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
   // testagent_change start - 所有存活实例，供外部命令广播 yolo 等全局状态
   public static readonly instances = new Set<KiloProvider>()
   // testagent_change end
+  // testagent_change start - rediscover projects after a Git repository is created in an open folder
+  private static readonly refreshing = new Set<string>()
+
+  public static async refreshGitRepository(dir: string): Promise<void> {
+    const norm = (value: string) => {
+      const resolved = path.resolve(value)
+      return process.platform === "win32" ? resolved.toLowerCase() : resolved
+    }
+    const root = norm(dir)
+    if (KiloProvider.refreshing.has(root)) return
+    KiloProvider.refreshing.add(root)
+    try {
+      const all = [...KiloProvider.instances].filter((provider) => norm(provider.getWorkspaceDirectory()) === root)
+      if (!all.length) return
+      for (const provider of all) provider.pendingGitRepository = dir
+
+      const ready = all.filter((provider) => provider.gitStateReady && provider.connectionState === "connected")
+      if (!ready.length) return
+      if (ready.every((provider) => provider.cachedGitRepo)) {
+        for (const provider of all) provider.pendingGitRepository = undefined
+        return
+      }
+
+      const client = ready.find((provider) => provider.client)?.client
+      if (!client) return
+      for (const provider of ready) provider.projectID = undefined
+      await client.instance.dispose({ directory: dir })
+      for (const provider of ready) {
+        provider.cachedGitRepo = true
+        provider.pendingGitRepository = undefined
+        provider.postMessage({ type: "gitStatus", repo: true })
+        provider.startStatsPolling()
+      }
+      await Promise.all(ready.map((provider) => provider.handleLoadSessions()))
+      for (const provider of all) provider.pendingGitRepository = undefined
+    } finally {
+      KiloProvider.refreshing.delete(root)
+    }
+  }
+  // testagent_change end
   private readonly instanceId = crypto.randomUUID()
   private webviewType: "sidebar" | "panel" | "unknown" = "unknown" // testagent_change
 
@@ -480,6 +520,10 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
   private statsGitOps: GitOps | null = null
   private cachedStats: unknown = null
   private cachedGitRepo = false
+  // testagent_change start - defer Git project refresh until the backend connection is initialized
+  private gitStateReady = false
+  private pendingGitRepository: string | undefined
+  // testagent_change end
 
   /** Optional interceptor called before the standard message handler.
    *  Return null to consume the message, or return a (possibly transformed) message. */
@@ -517,6 +561,9 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
       },
       warn: async (message) =>
         (await vscode.window.showWarningMessage(message, { modal: true }, "继续")) === "继续", // testagent_change
+      modal: async (message) => {
+        await vscode.window.showWarningMessage(message, { modal: true }, "确定")
+      },
     }
     this.history = new History({
       connection: this.connectionService,
@@ -2022,6 +2069,19 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
       }, 5000)
 
       if (this.cachedGitRepo) this.startStatsPolling()
+
+      // testagent_change start - apply Git repository events received during connection startup
+      this.gitStateReady = true
+      if (this.pendingGitRepository) {
+        const dir = this.pendingGitRepository
+        void KiloProvider.refreshGitRepository(dir).catch((err) => {
+          this.postMessage({
+            type: "error",
+            message: `会话刷新失败：${getErrorMessage(err) || "未知错误"}`,
+          })
+        })
+      }
+      // testagent_change end
 
       console.log("[TestAgent]  ✅ initializeConnection completed successfully")
     } catch (error) {

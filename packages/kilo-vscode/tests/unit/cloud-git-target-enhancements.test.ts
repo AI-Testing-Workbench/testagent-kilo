@@ -61,6 +61,7 @@ function ui(picks: string[], dirty = false) {
       state.confirms.push(message)
       return dirty ? accept : undefined
     },
+    modal: async () => undefined,
     warn: async (message) => {
       state.events.push("warn")
       state.warnings.push(message)
@@ -71,7 +72,7 @@ function ui(picks: string[], dirty = false) {
 }
 
 describe("Cloud Git target enhancements", () => {
-  it("lists unique fetch and push URLs with their direction and selects the chosen URL", async () => {
+  it("lists push URLs and excludes fetch-only URLs", async () => {
     const { root, git } = await repo()
     const fetch = "https://github.com/alice/fetch.git"
     await remote(root, "origin", fetch)
@@ -79,28 +80,49 @@ describe("Cloud Git target enhancements", () => {
     await git.raw(["config", "--add", "remote.origin.url", "https://gitlab.com/alice/also.git"])
     await git.raw(["config", "--add", "remote.origin.pushurl", fetch])
     await git.raw(["config", "--add", "remote.origin.pushurl", "https://codeberg.org/alice/push.git"])
-    const pick = ui(["https://codeberg.org/alice/push", "origin/main"])
+    const pick = ui(["https://codeberg.org/alice/push", "main"])
 
     const result = await selectCloudGitTarget(root, direct, pick.view)
 
     expect(pick.state.items[0].map((item) => [item.label, item.description, item.detail])).toEqual([
-      ["backup", "(fetch & push)", "https://gitlab.com/alice/backup"],
-      ["origin", "(fetch & push)", "https://github.com/alice/fetch"],
-      ["origin", "(fetch)", "https://gitlab.com/alice/also"],
+      ["backup", "(push)", "https://gitlab.com/alice/backup"],
+      ["origin", "(push)", "https://github.com/alice/fetch"],
       ["origin", "(push)", "https://codeberg.org/alice/push"],
     ])
     expect(result?.remote).toMatchObject({ name: "origin", url: "https://codeberg.org/alice/push", direction: "push" })
+    expect(pick.state.items[1][0]?.detail).toBe("origin/main (https://codeberg.org/alice/push)")
+  }, 60_000)
+
+  it("prompts for every push URL under one remote name", async () => {
+    const { root, git } = await repo()
+    await remote(root, "origin", "https://github.com/alice/fetch-only.git")
+    await git.raw(["config", "--add", "remote.origin.pushurl", "https://github.com/alice/ssh2.git"])
+    await git.raw(["config", "--add", "remote.origin.pushurl", "https://github.com/alice/test3.git"])
+    const pick = ui(["https://github.com/alice/test3", "main"])
+
+    const result = await selectCloudGitTarget(root, direct, pick.view)
+
+    expect(pick.state.items[0].map((item) => [item.label, item.description, item.detail])).toEqual([
+      ["origin", "(push)", "https://github.com/alice/ssh2"],
+      ["origin", "(push)", "https://github.com/alice/test3"],
+    ])
+    expect(pick.state.items).toHaveLength(2)
+    expect(result?.remote).toMatchObject({ name: "origin", url: "https://github.com/alice/test3", direction: "push" })
+    expect(pick.state.items[1][0]?.detail).toBe("origin/main (https://github.com/alice/test3)")
   }, 60_000)
 
   it("warns before branch selection when the local branch is not in remote tracking refs", async () => {
     const { root } = await repo()
     await remote(root, "origin", "https://github.com/alice/repo.git", ["release"], "release")
-    const pick = ui(["origin/release"])
+    const pick = ui(["release"])
 
     const result = await selectCloudGitTarget(root, direct, pick.view)
 
     expect(pick.state.warnings[0]).toContain("本地分支 main")
+    expect(pick.state.warnings[0]).toContain("选择继续将使用远端中的分支")
     expect(pick.state.events).toEqual(["warn", "pick"])
+    expect(pick.state.items[0].map((item) => item.label)).toEqual(["release"])
+    expect(pick.state.items[0][0]?.detail).toBe("origin/release (https://github.com/alice/repo)")
     expect(result?.branch).toBe("release")
   }, 60_000)
 
@@ -152,12 +174,12 @@ describe("Cloud Git target enhancements", () => {
     await git.raw(["update-index", "--add", "--cacheinfo", `160000,${hash},modules/nested`])
     await git.add(".gitmodules")
     await git.raw(["-c", "user.name=Test", "-c", "user.email=test@example.com", "commit", "-m", "add submodule"])
-    await git.addRemote("origin", "https://github.com/alice/parent.git")
-    await git.addRemote("backup", "https://gitlab.com/alice/backup.git")
+    await remote(root, "origin", "https://github.com/alice/parent.git")
+    await remote(root, "backup", "https://gitlab.com/alice/backup.git")
     await git.raw(["config", "--local", "submodule.modules/nested.ignore", "all"])
     await fs.writeFile(path.join(root, "modules", "nested", "README.md"), "modified\n")
     await fs.writeFile(path.join(root, "modules", "nested", "untracked.txt"), "untracked\n")
-    const pick = ui(["https://github.com/alice/parent", "origin/main"], true)
+    const pick = ui(["https://github.com/alice/parent", "main"], true)
 
     const result = await selectCloudGitTarget(root, direct, pick.view)
 

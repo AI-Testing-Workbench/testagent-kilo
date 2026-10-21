@@ -159,6 +159,7 @@ function ui(branch = "main", pick = true): CloudGitUi {
     pick: async (items: readonly CloudGitItem[], _opts: CloudGitQuickPickOptions) =>
       pick ? items.find((item) => item.label === branch) : undefined,
     confirm: async () => "取消",
+    modal: async () => undefined,
   }
 }
 

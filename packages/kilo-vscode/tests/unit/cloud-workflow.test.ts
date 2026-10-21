@@ -46,6 +46,7 @@ function ui(confirm: string): CloudGitUi {
     pick: async (items: readonly CloudGitItem[], _opts: CloudGitQuickPickOptions) =>
       items.find((item) => item.label === "main"),
     confirm: async () => confirm,
+    modal: async () => undefined,
   }
 }
 

@@ -49,7 +49,7 @@ async function rewrite(root: string, bare: string): Promise<void> {
   await git.raw(["config", "--local", `url.${pathToFileURL(bare).href}.insteadOf`, url])
 }
 
-function state(branch = "main"): ContainerStatusResult {
+function state(branch: string | null = "main"): ContainerStatusResult {
   return {
     service_id: "service-1",
     status: "running",
@@ -83,6 +83,15 @@ it("warns for address and branch mismatches without fetching", async () => {
   expect(warning).toContain("地址")
   expect(warning).toContain("分支")
   expect(await simpleGit(root).revparse("HEAD")).toBe(head)
+}, 30_000)
+
+it("warns when the service branch is null", async () => {
+  const { root, bare } = await repo()
+  await rewrite(root, bare)
+
+  const warning = await pullImportedRepository(root, state(null))
+
+  expect(warning).toContain("未返回有效的码云分支")
 }, 30_000)
 
 it("does not change a divergent local branch", async () => {

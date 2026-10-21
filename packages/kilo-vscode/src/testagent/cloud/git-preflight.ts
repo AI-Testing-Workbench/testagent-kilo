@@ -10,7 +10,7 @@ export type GitRemote = {
   transport: "http" | "https"
   prefix: string
   url: string
-  direction: "fetch" | "push" | "fetch & push" // testagent_change
+  direction: "push" // testagent_change
 }
 
 export type CloudGitItem = {
@@ -29,6 +29,7 @@ export type CloudGitQuickPickOptions = {
 export type CloudGitUi = {
   pick: (items: readonly CloudGitItem[], opts: CloudGitQuickPickOptions) => PromiseLike<CloudGitItem | undefined>
   confirm: (message: string, accept: string, cancel: string) => PromiseLike<string | undefined>
+  modal: (message: string) => PromiseLike<void>
   warn?: (message: string) => PromiseLike<boolean | undefined> // testagent_change
 }
 
@@ -56,10 +57,10 @@ export class CloudGitError extends Error {
   }
 }
 
-const cancel = "取消，手动提交后继续"
-const gitAccept = "仅使用已提交内容"
+const cancel = "否，我手动提交后继续"
+const gitAccept = "是，仅使用已提交内容"
 
-// testagent_change start - assign fetch/push direction after parsing and URL merging
+// testagent_change start - parse push target URLs before adding remote metadata
 export function parseGitRemote(value: string): Omit<GitRemote, "name" | "direction"> | undefined {
   // testagent_change end
   const url = parseUrl(value)
@@ -105,13 +106,8 @@ export async function selectCloudGitTargetInQueue(
 async function selectGitRoot(root: string, ui: CloudGitUi): Promise<CloudGitSelection | undefined> {
   const git = simpleGit(root)
   const remotes = await findGitRemotes(git)
-  // testagent_change start - retain the configured push target when a single remote name needs no selection
-  const remote =
-    new Set(remotes.map((item) => item.name)).size === 1
-      ? (remotes.find((item) => item.direction === "push") ??
-        remotes.find((item) => item.direction === "fetch & push") ??
-        remotes[0])
-      : await chooseGitRemote(remotes, ui)
+  // testagent_change start - choose among configured push URLs, including those sharing a remote name
+  const remote = remotes.length === 1 ? remotes[0] : await chooseGitRemote(remotes, ui)
   // testagent_change end
   if (!remote) return undefined
 
@@ -131,12 +127,16 @@ async function selectGitRoot(root: string, ui: CloudGitUi): Promise<CloudGitSele
     .then((name) => name.trim())
     .catch(() => "")
   const remoteBranches = await listRemoteBranches(git, remote.name)
-  const localBranches = await listLocalBranches(git, current)
-  const branches = remoteBranches.length > 0 ? remoteBranches : localBranches
-  if (branches.length === 0) throw new CloudGitError(`码云仓库 ${remote.name} 没有可选择的分支`, "no_branches")
+  if (remoteBranches.length === 0) {
+    const local = current
+      ? `本地分支 ${current} 尚未推送至码云仓库。\n选择继续将使用码云仓库中的分支，或取消并手动推送后再试。`
+      : ""
+    await ui.modal(`所选码云仓库的远端 ${remote.name} 没有可供选择的分支。\n请手动推送本地分支后再试。`)
+    return undefined
+  }
   // testagent_change start - warn before showing branches if the current local branch is not tracked remotely
   if (current && !remoteBranches.includes(current) && ui.warn) {
-    const message = `本地分支 ${current} 尚未推送至码云仓库的远端中。`
+    const message = `本地分支 ${current} 尚未推送至码云仓库。\n选择继续将使用码云仓库中的分支，或取消并手动推送后再试。`
     if (!(await ui.warn(message))) return undefined
   }
   // testagent_change end
@@ -145,8 +145,12 @@ async function selectGitRoot(root: string, ui: CloudGitUi): Promise<CloudGitSele
     .raw(["symbolic-ref", "--quiet", "--short", `refs/remotes/${remote.name}/HEAD`])
     .then((name) => name.trim().slice(remote.name.length + 1))
     .catch(() => "")
-  const preferred = branches.includes(current) ? current : branches.includes(head) ? head : branches[0]
-  const ordered = [preferred!, ...branches.filter((branch) => branch !== preferred)]
+  const preferred = remoteBranches.includes(current)
+    ? current
+    : remoteBranches.includes(head)
+      ? head
+      : remoteBranches[0]
+  const ordered = [preferred!, ...remoteBranches.filter((branch) => branch !== preferred)]
   const branch = await chooseGitBranch(remote, ordered, preferred, ui)
   if (!branch) return undefined
   return { root, remote, branch, ignored }
@@ -163,56 +167,27 @@ async function listRemoteNames(git: SimpleGit): Promise<string[]> {
   return names
 }
 
-// testagent_change start - represent each unique fetch/push URL while merging identical URLs
+// testagent_change start - list each unique push URL as a selectable target
 async function findGitRemotes(git: SimpleGit): Promise<GitRemote[]> {
   const names = await listRemoteNames(git)
   const items = await Promise.all(
     names.map(async (name) => {
-      const [fetch, push] = await Promise.all([
-        // testagent_change - only enumerate fetch URLs when a remote picker is needed
-        names.length > 1
-          ? git
-              .raw(["remote", "get-url", "--all", name])
-              .then((raw) =>
-                raw
-                  .split(/\r?\n/)
-                  .map((url) => url.trim())
-                  .filter(Boolean),
-              )
-              .catch(() => [])
-          : Promise.resolve([]),
-        git
-          .raw(["remote", "get-url", "--push", "--all", name])
-          .then((raw) =>
-            raw
-              .split(/\r?\n/)
-              .map((url) => url.trim())
-              .filter(Boolean),
-          )
-          .catch(() => []),
-      ])
-      const urls = new Map<
-        string,
-        { remote: Omit<GitRemote, "name" | "direction">; directions: Set<"fetch" | "push"> }
-      >()
-      for (const [values, direction] of [
-        [fetch, "fetch"],
-        [push, "push"],
-      ] as const) {
-        for (const value of values) {
-          const parsed = parseGitRemote(value)
-          if (!parsed) continue
-          const item = urls.get(parsed.url)
-          if (item) item.directions.add(direction)
-          else urls.set(parsed.url, { remote: parsed, directions: new Set([direction]) })
-        }
+      const push = await git
+        .raw(["remote", "get-url", "--push", "--all", name])
+        .then((raw) => raw.split(/\r?\n/).map((url) => url.trim()).filter(Boolean))
+        .catch(() => [])
+      const urls = new Map<string, Omit<GitRemote, "name" | "direction">>()
+      for (const value of push) {
+        const parsed = parseGitRemote(value)
+        if (!parsed) continue
+        urls.set(parsed.url, parsed)
       }
       return [...urls].map(
-        ([url, item]): GitRemote => ({
+        ([url, parsed]): GitRemote => ({
           name,
-          ...item.remote,
+          ...parsed,
           url,
-          direction: item.directions.size === 2 ? "fetch & push" : item.directions.has("fetch") ? "fetch" : "push",
+          direction: "push",
         }),
       )
     }),
@@ -241,6 +216,9 @@ function quickPickUi(): CloudGitUi {
     // testagent_change end
     warn: async (message) =>
       (await vscode.window.showWarningMessage(message, { modal: true }, "继续")) === "继续", // testagent_change
+    modal: async (message) => {
+      await vscode.window.showWarningMessage(message, { modal: true }, "确定")
+    },
   }
 }
 
@@ -268,7 +246,7 @@ async function chooseGitBranch(
   const items = branches.map((branch) => ({
     label: branch,
     description: branch === preferred ? "默认分支" : undefined,
-    detail: `${remote.name}/${branch}`,
+    detail: `${remote.name}/${branch} (${remote.url})`,
   }))
   const picked = await ui.pick(items, {
     ignoreFocusOut: true,
@@ -294,15 +272,6 @@ async function listRemoteBranches(git: SimpleGit, remote: string): Promise<strin
         .filter((branch) => branch && branch !== "HEAD"),
     ),
   ].sort((left, right) => left.localeCompare(right))
-}
-
-async function listLocalBranches(git: SimpleGit, current: string): Promise<string[]> {
-  const raw = await git.raw(["for-each-ref", "--format=%(refname:short)", "refs/heads/"]).catch((err) => {
-    throw new CloudGitError("无法读取本地工作区码云仓库的分支", "git_error", err)
-  })
-  return [...new Set([...raw.split(/\r?\n/).map((name) => name.trim()), current].filter(Boolean))].sort((left, right) =>
-    left.localeCompare(right),
-  )
 }
 
 function parseGitRepo(value: string): { owner: string; repository: string } | undefined {

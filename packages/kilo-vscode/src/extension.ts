@@ -49,6 +49,21 @@ import {
   SKILL_EVALUATION_RESULTS_COMMAND,
 } from "./agent-manager/skill-evaluation"
 
+// testagent_change start - observe repositories created after a folder is opened
+interface GitRepository {
+  rootUri: vscode.Uri
+}
+
+interface GitAPI {
+  repositories: GitRepository[]
+  onDidOpenRepository: vscode.Event<GitRepository>
+}
+
+interface GitExtensionExports {
+  getAPI(version: number): GitAPI
+}
+// testagent_change end
+
 // Activated via "onStartupFinished" (package.json) so that commands, code actions, keybindings,
 // autocomplete, commit-message generation, and URI deep links all work immediately — without
 // requiring the user to open a Kilo sidebar or panel first. The CLI backend is NOT spawned here;
@@ -84,6 +99,31 @@ export function activate(context: vscode.ExtensionContext) {
 
   // testagent_change start - start local/cloud archive synchronization from TestAgent's own mode signal
   const log = (msg: string) => console.error(`[TestAgent] ${msg}`)
+  // testagent_change end
+  // testagent_change start - rediscover backend project identity when Git opens in the active folder
+  const gitExt = vscode.extensions.getExtension<GitExtensionExports>("vscode.git")
+  if (gitExt) {
+    const out = vscode.window.createOutputChannel("TestAgent")
+    context.subscriptions.push(out)
+    void (async () => {
+      const api = gitExt.isActive ? gitExt.exports?.getAPI(1) : (await gitExt.activate()).getAPI(1)
+      if (!api) return
+      const refresh = (dir: string) => {
+        void KiloProvider.refreshGitRepository(dir).catch((err: unknown) => {
+          const code = err instanceof Error ? err.name : "unknown"
+          out.appendLine(`[TestAgent] stage=git_project_refresh code=${code}`)
+          void vscode.window.showErrorMessage("刷新会话记录失败。")
+        })
+      }
+      context.subscriptions.push(api.onDidOpenRepository((repo) => refresh(repo.rootUri.fsPath)))
+      for (const repo of api.repositories) refresh(repo.rootUri.fsPath)
+    })().catch((err: unknown) => {
+      const code = err instanceof Error ? err.name : "unknown"
+      out.appendLine(`[TestAgent] stage=git_api code=${code}`)
+    })
+  }
+  // testagent_change end
+  // testagent_change start - start local/cloud archive synchronization from TestAgent's own mode signal
   const cloudSync = new CloudArchiveSyncService({
     mode: isCloudMode() ? "cloud" : "local",
     registry: cloudSyncRegistry,
