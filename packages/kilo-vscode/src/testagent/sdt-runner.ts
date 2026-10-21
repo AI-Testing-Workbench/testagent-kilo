@@ -14,7 +14,7 @@ const stripAnsi = (s: string) => s.replace(ANSI_RE, "")
  * 而是发 `result` 事件（一个），由 bridge 渲染成结果卡。对应的
  * stdout/stderr 实时日志会被丢弃，避免和卡片内容重复。
  */
-const ONE_SHOT_COMMANDS = new Set(["init", "new", "list", "switch", "validate", "stages", "config"])
+const ONE_SHOT_COMMANDS = new Set(["init", "new", "list", "switch", "validate", "stages", "config", "branch"])
 
 export interface SdtRunnerOpts {
   cmd: string
@@ -25,6 +25,12 @@ export interface SdtRunnerOpts {
   userText: string
   /** Reuse the webview's optimistic message ID to avoid creating a duplicate user message turn. */
   userMessageID?: string
+  /**
+   * branch 命令族的绑定回调：result 事件携带 branch 时调用，
+   * 宿主据此更新本 session 的 currentBranch（下一次 spawn 注入 SDT_BRANCH）。
+   * CLI 侧不落 active_branch，绑定只活在宿主内存里（总设 §4.6）。
+   */
+  onBranch?: (branch: string) => void
   post: (msg: unknown) => void
 }
 
@@ -35,6 +41,7 @@ export class SdtRunner {
   private bridge = new TestflowMessageBridge()
   private running = false
   private note: string | undefined
+  private onBranch: ((branch: string) => void) | undefined
 
   run(opts: SdtRunnerOpts): void {
     console.log('[TestAgent] SdtRunner.run called:', { cmd: opts.cmd, args: opts.args, cwd: opts.cwd, sessionID: opts.sessionID })
@@ -47,6 +54,7 @@ export class SdtRunner {
     console.log('[TestAgent] Starting testflow process...')
     this.running = true
     this.note = undefined
+    this.onBranch = opts.onBranch
     this.bridge.start({ sessionID: opts.sessionID, userText: opts.userText, userMessageID: opts.userMessageID, post: opts.post })
 
     // Use bundled testflow binary from extension's bin/ directory
@@ -169,6 +177,15 @@ export class SdtRunner {
         const { type: _t, ...payload } = event
         void _t
         this.bridge.onResult(payload)
+        // branch 命令族的 result 携带新绑定的 branch 名；sdt-new 携带 'default'（新任务只有
+        // default branch）——两者都通知宿主更新本 session 的绑定，避免会话残留在 branch2 时
+        // 新任务跑到不存在的 branch 下
+        if (
+          typeof payload.branch === "string" &&
+          (payload.kind === "branch" || payload.kind === "new")
+        ) {
+          this.onBranch?.(payload.branch)
+        }
         break
       }
       case "progress":
@@ -194,6 +211,7 @@ export class SdtRunner {
           event.current_stage_id as string | null,
           event.current_stage_index as number | null,
           event.error_message as string | null,
+          event.branch as string | null,
         )
         break
       case "finished":

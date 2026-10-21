@@ -39,6 +39,7 @@ export class TestflowMessageBridge {
   private startedAt = 0
   private latestProgress: {
     taskName: string
+    branch: string | null
     totalCount: number
     completedCount: number
     percent: number
@@ -159,9 +160,11 @@ export class TestflowMessageBridge {
     currentStageID: string | null = null,
     currentStageIndex: number | null = null,
     errorMessage: string | null = null,
+    branch: string | null = null,
   ): void {
     this.latestProgress = {
       taskName,
+      branch,
       stages,
       completedCount,
       totalCount,
@@ -179,6 +182,7 @@ export class TestflowMessageBridge {
       runID: this.runID,
       sequence: this.sequence,
       taskName,
+      branch,
       totalCount,
       completedCount,
       percent,
@@ -298,6 +302,8 @@ export class TestflowMessageBridge {
       new: "创建测试任务",
       list: "任务列表",
       switch: "切换默认任务",
+      branch: "执行分支",
+      stages: "阶段列表",
       validate: "校验流程配置",
       "config-update": "更新项目配置",
       error: "命令执行失败",

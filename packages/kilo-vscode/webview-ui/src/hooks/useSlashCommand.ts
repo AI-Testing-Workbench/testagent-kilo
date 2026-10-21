@@ -204,6 +204,11 @@ export function useSlashCommand(vscode: VSCodeContext, exclude?: Set<string>): S
       hints: ["testflow", "continue", "resume"],
     },
     {
+      name: "sdt-branch",
+      description: "管理多会话执行分支：/sdt-branch list|switch|new|fork",
+      hints: ["testflow", "branch", "rerun"],
+    },
+    {
       name: "sdt-init",
       description: "初始化 TestFlow 框架全局环境",
       hints: ["testflow", "init", "setup"],

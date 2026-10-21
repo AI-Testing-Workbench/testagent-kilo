@@ -444,6 +444,11 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
   private webviewMessageDisposable: vscode.Disposable | null = null
   // testagent_change start - testflow integration
   private readonly sdtRunners = new Map<string, SdtRunner>()
+  /**
+   * 每个 session 绑定的 testflow 执行 branch。CLI 侧不落 active_branch，
+   * 绑定只活在宿主内存里，随下一次 spawn 注入 SDT_BRANCH（缺省 default）。
+   */
+  private readonly sdtBranchBySession = new Map<string, string>()
   /** 本地 question 的 deferred 映射表（用于 /sdt-run 交互式阶段选择） */
   private readonly localQuestionMap = new Map<
     string,
@@ -2278,6 +2283,7 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
       this.sessionDirectories.delete(sessionID)
       this.lastReconciledAt.delete(sessionID)
       this.sdtRunners.delete(sessionID)
+      this.sdtBranchBySession.delete(sessionID)
       this.connectionService.pruneSession(sessionID)
       if (this.currentSession?.id === sessionID) {
         this.currentSession = null
@@ -3763,6 +3769,11 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
     this.sdtRunners.set(sid, next)
     return next
   }
+
+  /** 取本 session 绑定的执行 branch，未绑定时回退 default */
+  private getSdtBranch(sid: string): string {
+    return this.sdtBranchBySession.get(sid) ?? 'default'
+  }
   // testagent_change end
 
   // testagent_change start - testflow command handler
@@ -3798,6 +3809,7 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
         {
           sdtRunner: runner,
           localQuestionMap: this.localQuestionMap,
+          sdtBranch: this.getSdtBranch(resolved.sid),
           postMessage: (msg) => this.postMessage(msg),
           showErrorMessage: (msg) => void vscode.window.showErrorMessage(msg),
         },
@@ -3817,14 +3829,17 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
         OPENCODE_SERVER_URL: serverConfig.baseUrl,
         OPENCODE_SERVER_PASSWORD: serverConfig.password,
         OPENCODE_SESSION_ID: resolved.sid,
-        OPENCODE_PROVIDER_ID: providerID || "",
-        OPENCODE_MODEL_ID: modelID || "",
+        OPENCODE_PROVIDER_ID: providerID || '',
+        OPENCODE_MODEL_ID: modelID || '',
         OPENCODE_AGENT: agent,
         SDT_USER_TEXT: text,
+        SDT_BRANCH: this.getSdtBranch(resolved.sid),
       },
       sessionID: resolved.sid,
       userText: text,
       userMessageID: messageID,
+      // branch switch/new/fork 的 result 回传新绑定的 branch，更新本 session 的绑定
+      onBranch: (branch) => this.sdtBranchBySession.set(resolved.sid, branch),
       post: (msg) => this.postMessage(msg),
     })
   }

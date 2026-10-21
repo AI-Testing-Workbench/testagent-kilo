@@ -114,6 +114,10 @@ export const SdtProgressCard: Component<SdtProgressCardProps> = (props) => {
         />
         <span class="sdt-progress-card__title">
           SDT 任务 · {statusLabel(props.progress.status)} · {props.progress.taskName}
+          <Show when={props.progress.branch && props.progress.branch !== "default"}>
+            {" · branch "}
+            <code>{props.progress.branch!}</code>
+          </Show>
         </span>
         <span class="sdt-progress-card__metrics">
           第 {stageCount()} / {props.progress.totalCount} 阶段 · {progress()}%

@@ -190,7 +190,7 @@ function TestflowToolCard(props: { part: ToolPart }) {
 // ---------------------------------------------------------------------------
 
 type TestflowResultInput = {
-  kind: "init" | "new" | "list" | "switch" | "validate" | "config-update" | "error" | "help"
+  kind: "init" | "new" | "list" | "switch" | "validate" | "config-update" | "branch" | "stages" | "error" | "help"
   [k: string]: unknown
 }
 
@@ -268,11 +268,78 @@ function buildResultMarkdown(kind: string, payload: Record<string, unknown>): st
     if (filesUpdated > 0) parts.push(`📄 更新文件: ${filesUpdated} 个`)
     return parts.join("\n")
   }
+  if (kind === "branch") {
+    return renderBranchResult(payload)
+  }
   if (kind === "help") {
     return `${String(payload.text ?? "")}`
   }
   // kind === "error"
   return `❌ **${String(payload.command ?? "命令")} 执行失败**\n\n\`\`\`\n${String(payload.error ?? "")}\n\`\`\``
+}
+
+// branch 命令族的 result 渲染（list 为各 branch 的阶段概览，其余为新绑定回执）
+type BranchStageSummary = {
+  stage_id: string
+  stage_status: string
+  execute_start_time: string | null
+  execute_end_time: string | null
+  execute_command: string | null
+}
+
+type BranchSummary = {
+  branch: string
+  created_at: string
+  current_stage: string | null
+  process_status: string
+  stages: BranchStageSummary[]
+}
+
+function renderBranchList(taskName: string, branches: BranchSummary[]): string {
+  if (branches.length === 0) {
+    return `任务 \`${taskName}\` 还没有 branch（任务可能尚未登记到项目库）`
+  }
+  // 裁掉年份（`MM-DD HH:mm:ss`），完整时刻保留在 JSON 输出里
+  const clock = (s: string | null) => (s ? s.slice(5) : "")
+  // 超长文本截断到 max 字符并加省略号
+  const fit = (s: string | null | undefined, max = 500) =>
+    s ? (s.length > max ? `${s.slice(0, max)}…` : s) : ""
+  const stageLine = (s: BranchStageSummary): string => {
+    const span =
+      s.execute_start_time && s.execute_end_time
+        ? ` · ${clock(s.execute_start_time)} → ${clock(s.execute_end_time)}`
+        : s.execute_start_time
+          ? ` · ${clock(s.execute_start_time)} 起`
+          : " · 未执行"
+    const cmd = s.execute_command ? ` · 命令 \`${fit(s.execute_command)}\`` : ""
+    return ` \`${s.stage_id}\` · \`${s.stage_status}\`${span}${cmd}`
+  }
+  const blocks = branches.map((b) => {
+    const current = b.current_stage ? `\`${b.current_stage}\`` : "——"
+    const stages = b.stages.length
+      ? b.stages.map(stageLine).join("\n")
+      : " _暂无阶段记录_"
+    return `**${b.branch}** · 状态 \`${b.process_status}\` · 当前阶段 ${current}\n${stages}`
+  })
+  return `任务 \`${taskName}\` 共 **${branches.length}** 个 branch\n${blocks.join("\n\n")}`
+}
+
+function renderBranchResult(payload: Record<string, unknown>): string {
+  const taskName = String(payload.taskName ?? "")
+  const action = String(payload.action ?? "")
+  if (action === "list") {
+    const branches = Array.isArray(payload.branches) ? (payload.branches as BranchSummary[]) : []
+    return renderBranchList(taskName, branches)
+  }
+  const branch = String(payload.branch ?? "")
+  if (action === "fork") {
+    const source = String(payload.source ?? "")
+    return `任务 \`${taskName}\` 的 branch \`${source}\` 已复制为 \`${branch}\``
+  }
+  if (action === "new") {
+    return `任务 \`${taskName}\` 已新建 branch \`${branch}\``
+  }
+  return `任务 \`${taskName}\` 已切换到 branch \`${branch}\``
 }
 
 function buildResultStatusClass(kind: string): string {
@@ -289,6 +356,8 @@ const TestflowResultCard: Component<{ input: TestflowResultInput; output: string
       case "new": return "创建测试任务"
       case "list": return "任务列表"
       case "switch": return "切换默认任务"
+      case "branch": return "执行分支"
+      case "stages": return "阶段列表"
       case "validate": return "校验流程配置"
       case "config-update": return "更新项目配置"
       case "error": return "命令执行失败"
