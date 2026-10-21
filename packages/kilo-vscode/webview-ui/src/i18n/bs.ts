@@ -1091,6 +1091,11 @@ export const dict = {
     "Koristite instalirani Chrome preglednik umjesto zasebne Chromium instance.",
   "settings.browser.headless.title": "Headless način",
   "settings.browser.headless.description": "Pokreni u headless načinu (bez vidljivog prozora preglednika).",
+  "settings.browser.cdpEndpoint.title": "Udaljena CDP adresa",
+  "settings.browser.cdpEndpoint.description":
+    "Upravljajte postojećim preglednikom putem Chrome DevTools protokola (npr. zajednički Chrome na VNC radnoj površini sandboxa) umjesto pokretanja novog. Ostavite prazno da onemogućite.",
+  "settings.browser.cdp.title": "CDP informacije o vezi",
+  "settings.browser.cdp.notSet": "CDP endpoint nije pronađen (niste u sandboxu s omogućenim preglednikom).",
 
   "settings.language.description": 'Odaberite jezik za Kilo Code sučelje. "Auto" koristi jezik prikaza VS Code-a.',
   "settings.language.auto": "Auto (VS Code jezik)",

@@ -765,6 +765,11 @@ export interface OpenSessionMessage {
 export interface ActionMessage {
   type: "action"
   action: string
+  // testagent_change start - optional values for direct agent/model selection
+  agent?: string
+  providerID?: string
+  modelID?: string
+  // testagent_change end
 }
 
 export interface SetChatBoxMessage {
@@ -988,6 +993,14 @@ export interface BrowserSettings {
   headless: boolean
   /** VS Code's integrated browser tools. Exclusive with Playwright: only one backend may be on. */
   vscodeBrowserTools: boolean
+  /** User-configured remote CDP endpoint the agent should drive instead of launching a browser. */
+  cdpEndpoint: string
+  /** Value of the TESTAGENT_CDP_ENDPOINT env var injected by the sandbox image (read-only). */
+  cdpEndpointEnv: string
+  /** Value of the TESTAGENT_CDP_EXTERNAL env var injected by the sandbox image (read-only). */
+  cdpExternalEnv: string
+  /** Value of the TESTAGENT_VNC_URL env var injected by the sandbox image (read-only). */
+  vncUrl: string
 }
 
 export interface BrowserSettingsLoadedMessage {
@@ -2294,6 +2307,11 @@ export interface RequestBrowserSettingsMessage {
   type: "requestBrowserSettings"
 }
 
+// testagent_change - 在 tscode 内置 Simple Browser 中打开沙箱 VNC 桌面
+export interface OpenSandboxBrowserMessage {
+  type: "openSandboxBrowser"
+}
+
 // Chat tip (configured via `testagent.new.chatTips`)
 export interface ChatTipItem {
   id?: string
@@ -3041,6 +3059,7 @@ export type WebviewMessage =
   | UpdateSettingRequest
   | RequestTimelineSettingMessage
   | RequestBrowserSettingsMessage
+  | OpenSandboxBrowserMessage // testagent_change - 打开沙箱浏览器
   | RequestChatTipsMessage
   | ChatTipActionMessage
   | ChatTipReadManyMessage

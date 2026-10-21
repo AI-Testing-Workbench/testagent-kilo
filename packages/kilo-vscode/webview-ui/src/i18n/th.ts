@@ -1077,6 +1077,11 @@ export const dict = {
   "settings.browser.systemChrome.description": "ใช้เบราว์เซอร์ Chrome ที่ติดตั้งแทนอินสแตนซ์ Chromium แยกต่างหาก",
   "settings.browser.headless.title": "โหมด Headless",
   "settings.browser.headless.description": "ทำงานในโหมด headless (ไม่มีหน้าต่างเบราว์เซอร์ที่มองเห็นได้)",
+  "settings.browser.cdpEndpoint.title": "ที่อยู่ CDP ระยะไกล",
+  "settings.browser.cdpEndpoint.description":
+    "ควบคุมเบราว์เซอร์ที่มีอยู่ผ่านโปรโตคอล Chrome DevTools (เช่น Chrome ที่ใช้ร่วมกันบนเดสก์ท็อป VNC ของแซนด์บ็อกซ์) แทนการเปิดเบราว์เซอร์ใหม่ เว้นว่างไว้เพื่อปิดใช้งาน",
+  "settings.browser.cdp.title": "ข้อมูลการเชื่อมต่อ CDP",
+  "settings.browser.cdp.notSet": "ไม่พบปลายทาง CDP (ไม่ได้อยู่ในแซนด์บ็อกซ์ที่เปิดใช้เบราว์เซอร์)",
 
   "settings.language.description": 'เลือกภาษาสำหรับ UI ของ Kilo Code "อัตโนมัติ" จะใช้ภาษาการแสดงผลของ VS Code',
   "settings.language.auto": "อัตโนมัติ (ภาษา VS Code)",

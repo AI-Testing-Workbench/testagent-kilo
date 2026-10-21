@@ -1084,6 +1084,12 @@ export const dict = {
     "別のChromiumインスタンスの代わりに、インストール済みのChromeブラウザを使用します。",
   "settings.browser.headless.title": "ヘッドレスモード",
   "settings.browser.headless.description": "ヘッドレスモードで実行します（ブラウザウィンドウは表示されません）。",
+  "settings.browser.cdpEndpoint.title": "リモート CDP アドレス",
+  "settings.browser.cdpEndpoint.description":
+    "Chrome DevTools プロトコルで既存のブラウザ（サンドボックスの VNC デスクトップ上の共有 Chrome など）を操作します。新しいブラウザは起動しません。空欄にすると無効になります。",
+  "settings.browser.cdp.title": "CDP 接続情報",
+  "settings.browser.cdp.notSet":
+    "CDP エンドポイントが検出されませんでした（ブラウザを有効にしたサンドボックスではありません）。",
 
   "settings.language.description": "Kilo Code UIの言語を選択します。「自動」はVS Codeの表示言語を使用します。",
   "settings.language.auto": "自動（VS Code言語）",

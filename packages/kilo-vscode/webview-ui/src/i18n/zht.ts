@@ -1067,6 +1067,11 @@ export const dict = {
   "settings.browser.systemChrome.description": "使用已安裝的 Chrome 瀏覽器，而非獨立的 Chromium 實例。",
   "settings.browser.headless.title": "無頭模式",
   "settings.browser.headless.description": "以無頭模式執行（無可見瀏覽器視窗）。",
+  "settings.browser.cdpEndpoint.title": "遠端 CDP 位址",
+  "settings.browser.cdpEndpoint.description":
+    "透過 Chrome DevTools 協定連接已存在的瀏覽器（如沙盒 VNC 桌面上的共享 Chrome），而不是新開一個。留空則不啟用。",
+  "settings.browser.cdp.title": "CDP 連線資訊",
+  "settings.browser.cdp.notSet": "未偵測到 CDP 端點（目前不在啟用瀏覽器的沙盒中）。",
 
   "settings.language.description": "選擇 Kilo Code 介面的語言。「自動」使用 VS Code 的顯示語言。",
   "settings.language.auto": "自動（VS Code 語言）",

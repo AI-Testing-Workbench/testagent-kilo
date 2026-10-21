@@ -24,6 +24,7 @@ import { KiloNotifications } from "./KiloNotifications"
 import { WorkingIndicator } from "../shared/WorkingIndicator"
 import { QuestionDock } from "./QuestionDock"
 import { CloudLogo } from "../shared/CloudLogo"
+import { SandboxBrowserBanner } from "./SandboxBrowserBanner" // testagent_change
 import { Virtualizer, type VirtualizerHandle } from "virtua/solid"
 import { SuggestBar } from "./SuggestBar"
 import {
@@ -321,6 +322,8 @@ export const MessageList: Component<MessageListProps> = (props) => {
   return (
     <div class="message-list-container">
       <Show when={isEmpty()}>
+        {/* testagent_change - 沙箱下在首页顶部显示"打开沙箱浏览器"横幅 */}
+        <SandboxBrowserBanner />
         <div class="welcome-header">
           <AccountSwitcher class="account-switcher-welcome" />
           <KiloNotifications />

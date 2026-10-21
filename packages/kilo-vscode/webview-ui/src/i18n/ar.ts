@@ -1074,6 +1074,11 @@ export const dict = {
   "settings.browser.systemChrome.description": "استخدم متصفح Chrome المثبت لديك بدلاً من نسخة Chromium منفصلة.",
   "settings.browser.headless.title": "الوضع بدون واجهة",
   "settings.browser.headless.description": "التشغيل في الوضع بدون واجهة (بدون نافذة متصفح مرئية).",
+  "settings.browser.cdpEndpoint.title": "عنوان CDP البعيد",
+  "settings.browser.cdpEndpoint.description":
+    "تحكّم في متصفح موجود عبر بروتوكول Chrome DevTools (مثل Chrome المشترك على سطح مكتب VNC في البيئة المعزولة) بدلاً من تشغيل متصفح جديد. اتركه فارغًا للتعطيل.",
+  "settings.browser.cdp.title": "معلومات اتصال CDP",
+  "settings.browser.cdp.notSet": "لم يتم العثور على نقطة نهاية CDP (لست في بيئة معزولة مع تمكين المتصفح).",
 
   "settings.language.description": 'اختر اللغة لواجهة Kilo Code. "تلقائي" يستخدم لغة عرض VS Code.',
   "settings.language.auto": "تلقائي (لغة VS Code)",
