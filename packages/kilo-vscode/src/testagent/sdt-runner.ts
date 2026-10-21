@@ -28,7 +28,6 @@ export interface SdtRunnerOpts {
   /**
    * branch 命令族的绑定回调：result 事件携带 branch 时调用，
    * 宿主据此更新本 session 的 currentBranch（下一次 spawn 注入 SDT_BRANCH）。
-   * CLI 侧不落 active_branch，绑定只活在宿主内存里（总设 §4.6）。
    */
   onBranch?: (branch: string) => void
   post: (msg: unknown) => void
