@@ -186,7 +186,7 @@ export class CloudArchiveSyncService {
         )
         return undefined
       }
-      throw new CloudArchiveSyncError("无法查询码云容器状态", "service_status", code, id, err)
+      throw new CloudArchiveSyncError("无法查询云端沙箱状态", "service_status", code, id, err)
     })
     if (!state) return
     if (state && state.service_id !== id) {
@@ -203,7 +203,7 @@ export class CloudArchiveSyncService {
     }
     if (state.status !== "running") return
     if (state.service_id !== id || !safeName(state.gitee_repository)) {
-      throw new CloudArchiveSyncError("码云容器返回的仓库信息无效", "service_status", "invalid_repository", id)
+      throw new CloudArchiveSyncError("云端沙箱返回的仓库信息无效", "service_status", "invalid_repository", id)
     }
     if (state.git_fin_status && state.git_fin_status !== "initialized") return
 

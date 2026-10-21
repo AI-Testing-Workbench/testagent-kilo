@@ -13,8 +13,8 @@ export async function pullImportedRepository(root: string, state: ContainerStatu
     () => "",
   )
   const issues = mismatch(state, target, remote, branch, current)
-  if (issues.length) return `${issues.join("\n")}\n会话已导入，但未将码云仓库的更新拉取到本地工作区仓库。`
-  if (!remote || !branch) return "无法确认码云仓库目标。会话已导入，但未将码云仓库的更新拉取到本地工作区仓库。"
+  if (issues.length) return `${issues.join("\n")}\n\n会话已导入，但未将码云仓库的更新拉取到本地工作区仓库。`
+  if (!remote || !branch) return "无法确认码云仓库目标。\n会话已导入，但未将码云仓库的更新拉取到本地工作区仓库。"
   return fastForward(git, remote.name, branch)
 }
 
@@ -73,17 +73,17 @@ async function fastForward(
     () => true,
     () => false,
   )
-  if (!ref) return `码云分支“${branch}”无效。会话已导入，但未将码云仓库的更新拉取到本地工作区仓库。`
+  if (!ref) return `码云分支“${branch}”无效。\n会话已导入，但未将码云仓库的更新拉取到本地工作区仓库。`
 
   const status = await git.status().catch(() => undefined)
-  if (!status) return "无法检查本地 Git 工作区。会话已导入，但未将码云仓库的更新拉取到本地工作区仓库。"
-  if (status.files.length) return "本地 Git 工作区存在未提交改动，无法安全快进。会话已导入，但未将码云仓库的更新拉取到本地工作区仓库。"
+  if (!status) return "无法检查本地 Git 工作区。\n会话已导入，但未将码云仓库的更新拉取到本地工作区仓库。"
+  if (status.files.length) return "本地 Git 工作区存在未提交改动，无法安全快进。\n会话已导入，但未将码云仓库的更新拉取到本地工作区仓库。"
 
   const head = await git.revparse("HEAD").then(
     (raw) => raw.trim(),
     () => "",
   )
-  if (!head) return "无法读取本地 Git 提交。会话已导入，但未将码云仓库的更新拉取到本地工作区仓库。"
+  if (!head) return "无法读取本地 Git 提交。\n会话已导入，但未将码云仓库的更新拉取到本地工作区仓库。"
   const fetched = await git.raw(["fetch", "--no-tags", remote, `refs/heads/${branch}`]).then(
     () =>
       git.revparse("FETCH_HEAD").then(
@@ -92,14 +92,14 @@ async function fastForward(
       ),
     () => "",
   )
-  if (!fetched) return `无法获取码云分支“${branch}”。会话已导入，但未将码云仓库的更新拉取到本地工作区仓库。`
+  if (!fetched) return `无法获取码云分支“${branch}”。\n会话已导入，但未将码云仓库的更新拉取到本地工作区仓库。`
   if (head === fetched) return
 
   const base = await git.raw(["merge-base", head, fetched]).then(
     (raw) => raw.trim(),
     () => "",
   )
-  if (!base || base !== head) return `本地分支无法快进到码云分支“${branch}”。会话已导入，但未将码云仓库的更新拉取到本地工作区仓库。`
+  if (!base || base !== head) return `本地分支无法快进到码云分支“${branch}”。\n会话已导入，但未将码云仓库的更新拉取到本地工作区仓库。`
 
   const check = await git.status().catch(() => undefined)
   if (!check || check.files.length) return "拉取期间本地 Git 工作区发生变化，已停止快进。会话已导入。"
@@ -115,7 +115,7 @@ async function fastForward(
 
   return git.raw(["merge", "--ff-only", fetched]).then(
     () => undefined,
-    () => `无法快进到码云分支“${branch}”。会话已导入，但未将码云仓库的更新拉取到本地工作区仓库。`,
+    () => `无法快进到码云分支“${branch}”。\n会话已导入，但未将码云仓库的更新拉取到本地工作区仓库。`,
   )
 }
 // testagent_change end

@@ -221,7 +221,7 @@ export class CloudUploadService {
           }
           if (initializationFailure(err)) {
             throw new CloudUploadError(
-              "码云容器初始化失败",
+              "云端沙箱初始化失败",
               "initialization_failed",
               undefined,
               err,
@@ -236,7 +236,7 @@ export class CloudUploadService {
               err,
             )
           }
-          throw new CloudUploadError("创建码云容器失败", "remote_api_failed", undefined, err)
+          throw new CloudUploadError("创建云端沙箱失败", "remote_api_failed", undefined, err)
         })
         if (!result.service_id) {
           throw new CloudUploadError("码云服务未返回云端沙箱 ID", "prepared_missing")
