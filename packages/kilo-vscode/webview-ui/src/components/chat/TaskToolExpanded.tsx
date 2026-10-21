@@ -59,6 +59,31 @@ const TaskToolRenderer: Component<ToolProps> = (props) => {
     return id ? session.allStatusMap()[id]?.type === "busy" : false
   })
 
+  // testagent_change start - sub-agent status indicator
+  // 子 agent 窗口上的状态点：运行中(脉冲) / 已结束 / 失败 / 等待。
+  // 信号源：父会话 task part 状态(running) ∪ 子会话实时 SSE 状态(busy)。
+  // handleSubtask 在 prompt.ts 里把 part 从 running 翻到 completed/error，
+  // 两个信号任一为真即视为仍在运行，避免 SSE 抖动导致早翻完成态(误判已结束)。
+  const dotState = createMemo<"running" | "completed" | "idle" | "error">(() => {
+    if (props.status === "error") return "error"
+    if (running() || busy()) return "running"
+    if (props.status === "completed") return "completed"
+    return "idle"
+  })
+  const dotLabel = createMemo(() => {
+    switch (dotState()) {
+      case "running":
+        return language.t("session.messages.subagent.running")
+      case "completed":
+        return language.t("session.messages.subagent.ended")
+      case "error":
+        return language.t("session.messages.subagent.failed")
+      default:
+        return language.t("session.messages.subagent.pending")
+    }
+  })
+  // testagent_change end - sub-agent status indicator
+
   // Warm child session data immediately so completed task tools already have
   // their compact child tool list available when the user expands them.
   createEffect(() => {
@@ -115,6 +140,16 @@ const TaskToolRenderer: Component<ToolProps> = (props) => {
   const trigger = () => (
     <div data-slot="basic-tool-tool-info-structured">
       <div data-slot="basic-tool-tool-info-main">
+        {/* testagent_change start - sub-agent status indicator dot */}
+        <Tooltip value={dotLabel()} placement="top">
+          <span
+            data-component="task-tool-status-dot"
+            data-state={dotState()}
+            role="img"
+            aria-label={dotLabel()}
+          />
+        </Tooltip>
+        {/* testagent_change end - sub-agent status indicator dot */}
         <span data-slot="basic-tool-tool-title" class="capitalize">
           {title()}
         </span>

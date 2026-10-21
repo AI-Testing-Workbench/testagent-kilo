@@ -14,3 +14,43 @@
 [data-component="tool-output"][data-scrollable]:has([data-component="task-tools"]) {
   max-height: 200px;
 }
+
+/* ============================================
+   Task Tool — sub-agent status indicator
+   A small dot on the sub-agent window so the user
+   can tell at a glance whether it is still running,
+   without opening the sub-agent tab.
+   ============================================ */
+
+/* testagent_change start - sub-agent status indicator dot */
+[data-component="task-tool-status-dot"] {
+  display: inline-block;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  flex-shrink: 0;
+  background: var(--vscode-disabledForeground);
+  transition: background-color 0.2s ease;
+}
+
+[data-component="task-tool-status-dot"][data-state="running"] {
+  background: var(--vscode-progressBar-background);
+  animation: task-tool-status-pulse 1.2s ease-in-out infinite;
+}
+
+[data-component="task-tool-status-dot"][data-state="completed"] {
+  background: var(--vscode-testing-iconPassed, var(--vscode-terminal-ansiGreen));
+  animation: none;
+}
+
+[data-component="task-tool-status-dot"][data-state="error"] {
+  background: var(--vscode-errorForeground);
+  animation: none;
+}
+
+@keyframes task-tool-status-pulse {
+  50% {
+    opacity: 0.35;
+  }
+}
+/* testagent_change end - sub-agent status indicator dot */

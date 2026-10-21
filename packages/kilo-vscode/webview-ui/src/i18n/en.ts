@@ -999,6 +999,10 @@ export const dict = {
   "session.messages.scrollToBottom": "Scroll to bottom",
   "session.messages.initializing": "Initializing...",
   "session.messages.taskStarting": "Starting...",
+  "session.messages.subagent.running": "Sub-agent running", // testagent_change
+  "session.messages.subagent.ended": "Sub-agent finished", // testagent_change
+  "session.messages.subagent.failed": "Sub-agent failed", // testagent_change
+  "session.messages.subagent.pending": "Sub-agent pending", // testagent_change
   "session.status.writingResponse": "Writing response...",
   "session.status.retry": "Retrying…",
   "session.status.retrying": "Retrying (attempt {{ attempt }})… {{ message }}",

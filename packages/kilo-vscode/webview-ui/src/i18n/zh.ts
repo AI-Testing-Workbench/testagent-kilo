@@ -988,6 +988,10 @@ export const dict = {
   "session.messages.scrollToBottom": "滚动到底部",
   "session.messages.initializing": "初始化中...",
   "session.messages.taskStarting": "启动中...",
+  "session.messages.subagent.running": "子agent运行中", // testagent_change
+  "session.messages.subagent.ended": "子agent已结束", // testagent_change
+  "session.messages.subagent.failed": "子agent已失败", // testagent_change
+  "session.messages.subagent.pending": "子agent等待中", // testagent_change
   "session.status.writingResponse": "正在撰写回复…",
   "session.status.retry": "正在重试…",
   "session.status.retrying": "正在重试（第 {{ attempt }} 次）… {{ message }}",
