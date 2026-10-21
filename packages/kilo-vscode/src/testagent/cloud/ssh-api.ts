@@ -2,7 +2,7 @@
 import * as vscode from "vscode"
 
 export const REMOTE_SSH_EXTENSION_ID = "test-tech.tscode-remote-ssh"
-export const REMOTE_SSH_MIN_VERSION = "1.2.0"
+export const REMOTE_SSH_MIN_VERSION = "1.2.1"
 
 export type ContainerConfigEntry = {
   serviceId: string
