@@ -255,8 +255,10 @@ export class CloudHistory {
     this.pending.add(key)
     this.action({ action: "export", sessionID: id, pending: true })
     try {
-      const saved = await this.files.export(root, id, dir) // testagent_change
-      this.opts.success?.(`云端会话已下云`)
+      // testagent_change start - check cloud Git state before exporting a session archive
+      const saved = await this.files.export(root, id, dir, this.opts.local === false ? this.opts.ui : undefined)
+      if (saved) this.opts.success?.(`云端会话已下云`)
+      // testagent_change end
     } catch (err) {
       this.opts.onError(err)
     } finally {

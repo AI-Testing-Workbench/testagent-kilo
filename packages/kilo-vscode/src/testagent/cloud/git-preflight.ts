@@ -83,6 +83,37 @@ export async function inspectCloudGitRemotes(dir: string): Promise<CloudGitWorks
   return { root, remotes: await findGitRemotes(simpleGit(root)) }
 }
 
+// testagent_change start - require cloud exports to use a cleanly tracked code-host branch
+export async function preflight(root: string, remotes: GitRemote[], ui: CloudGitUi): Promise<boolean> {
+  const git = simpleGit(root)
+  const status = await git.status(["--ignore-submodules=none"]).catch((err) => {
+    throw new CloudGitError("无法检查云端工作区的改动状态", "git_error", err)
+  })
+  const branch = process.env.TESTAGENT_CLOUD_GITEE_BRANCH?.trim()
+  const tracking = status.tracking
+  const remote = remotes.find((item) => tracking === `${item.name}/${branch}`)
+  if (
+    !branch ||
+    !status.current ||
+    status.current !== branch ||
+    !tracking ||
+    !remote ||
+    status.ahead > 0 ||
+    status.behind > 0
+  ) {
+    await ui.modal(
+      `当前分支 ${status.current || "(detached)"} 与会话上云时配置的码云分支 ${branch || "(未配置)"} 不一致，请切换或同步分支后继续。`,
+    )
+    return false
+  }
+  if (status.files.length === 0) return true
+  const accept = "继续"
+  const cancel = "取消"
+  const message = `当前码云仓库工作区有 ${status.files.length} 个未提交项 (包括已暂存、未暂存或未跟踪的改动)。\n继续将忽略这些未提交项，但未提交的内容将有可能丢失！`
+  return (await ui.confirm(message, accept, cancel)) === accept
+}
+// testagent_change end
+
 // testagent_change - keep Git checks and modal prompts in the workspace operation queue
 export async function selectCloudGitTarget(
   dir: string,

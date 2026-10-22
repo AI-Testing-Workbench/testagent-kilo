@@ -4,7 +4,7 @@ import * as path from "node:path"
 import { CoreArchiveApi, exportSessionArchive, parseSessionArchive, type ArchiveContext } from "./archive-api"
 import { cloudArchiveData, type CloudArchiveData, type CloudArchiveSummary } from "./archive-data"
 import { WorkspaceSyncRegistry } from "./coordinator"
-import { CloudGitError, inspectCloudGitRemotes } from "./git-preflight"
+import { CloudGitError, inspectCloudGitRemotes, preflight, type CloudGitUi } from "./git-preflight" // testagent_change
 import { CloudWorkspaceError, ensureCloudWorkspace, resolveGitRoot } from "./workspace"
 
 export type CloudArchiveList = { archives: CloudArchiveSummary[]; invalidCount: number }
@@ -93,17 +93,25 @@ export class CloudArchiveFiles {
     }
   }
 
-  async export(dir: string, sessionID: string, sessionDir: string): Promise<{ name: string }> {
+  // testagent_change start - preflight cloud-mode exports before calling the core API
+  async export(
+    dir: string,
+    sessionID: string,
+    sessionDir: string,
+    ui?: CloudGitUi,
+  ): Promise<{ name: string } | undefined> {
     const workspace = await this.workspace(dir)
     return workspace.coord.run(async () => {
       if ((await resolveGitRoot(sessionDir)) !== workspace.root) {
         throw new CloudArchiveFilesError("云端会话不属于当前工作区码云仓库", "invalid_path")
       }
+      if (ui && !(await preflight(workspace.root, workspace.remotes, ui))) return
       const ctx = await this.context(sessionDir)
       const saved = await exportSessionArchive(workspace.root, this.opts.archive, sessionID, ctx)
       return { name: saved.name }
     })
   }
+  // testagent_change end
 
   private async workspace(dir: string) {
     const git = await inspectCloudGitRemotes(dir).catch((err) => {
@@ -126,6 +134,7 @@ export class CloudArchiveFiles {
       root: git.root,
       cloud,
       coord: await this.opts.registry.get(git.root, { onError: this.opts.onError }),
+      remotes: git.remotes, // testagent_change
     }
   }
 
