@@ -885,6 +885,7 @@ export const dict = {
   "session.tab.cloud": "Nuvem",
   // testagent_change start - translated local/cloud archive history actions
   "session.cloud.upload.button": "Enviar para a nuvem",
+  "session.cloud.upload.append": "Adicionar sessão à nuvem",
   "session.cloud.upload.pending": "Enviando...",
   "session.cloud.upload.disabled": "Indisponível para este workspace",
   "session.cloud.upload.success": "Sessão enviada para a nuvem",

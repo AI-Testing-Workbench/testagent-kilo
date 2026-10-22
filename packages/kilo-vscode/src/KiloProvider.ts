@@ -1002,7 +1002,8 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
         return
       }
       case "requestCloudUpload":
-        if (typeof message.sessionID === "string") void this.history.upload(message.sessionID)
+        if (typeof message.sessionID === "string")
+          void this.history.upload(message.sessionID, message.append === true) // testagent_change
         return
       case "requestCloudExport":
         if (typeof message.sessionID === "string") void this.history.export(message.sessionID)

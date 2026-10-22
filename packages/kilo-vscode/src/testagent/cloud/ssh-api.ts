@@ -41,6 +41,9 @@ export type ContainerCreateOptions = {
 export type ContainerStatusResult = {
   service_id: string
   status: string
+  type?: string | null // testagent_change
+  name?: string // testagent_change
+  expires_at?: string | null // testagent_change
   gitee_user: string
   gitee_repository: string
   gitee_url: string

@@ -882,6 +882,7 @@ export const dict = {
   "session.tab.cloud": "클라우드",
   // testagent_change start - translated local/cloud archive history actions
   "session.cloud.upload.button": "클라우드에 업로드",
+  "session.cloud.upload.append": "클라우드에 세션 추가",
   "session.cloud.upload.pending": "업로드 중...",
   "session.cloud.upload.disabled": "이 작업 영역에서는 사용할 수 없습니다",
   "session.cloud.upload.success": "세션을 클라우드에 업로드했습니다",

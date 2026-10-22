@@ -902,6 +902,7 @@ export const dict = {
   "session.cloud.import": "从云端导入",
   // testagent_change start - local/cloud archive history actions
   "session.cloud.upload.button": "会话上云",
+  "session.cloud.upload.append": "会话上云 (追加)",
   "session.cloud.upload.pending": "会话上云中...",
   "session.cloud.upload.disabled": "当前工作区无法使用会话上云功能",
   "session.cloud.upload.success": "会话已上传到云端沙箱",

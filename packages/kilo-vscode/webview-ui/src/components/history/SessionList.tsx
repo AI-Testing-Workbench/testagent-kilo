@@ -53,6 +53,8 @@ interface SessionListProps {
   source?: "local" | "cloud" | "archive"
   actions?: Record<string, CloudActionProgressMessage>
   onUpload?: (id: string) => void
+  appendAvailable?: boolean // testagent_change
+  onAppendUpload?: (id: string) => void // testagent_change
   onExport?: (id: string) => void
   // Render local archives with the same grouped list.
   archives?: CloudArchiveSummary[]
@@ -203,10 +205,15 @@ const SessionList: Component<SessionListProps> = (props) => {
             <ContextMenu.Item onSelect={() => startRename(item)}>
               <ContextMenu.ItemLabel>{language.t("common.rename")}</ContextMenu.ItemLabel>
             </ContextMenu.Item>
-            {/* testagent_change start - local sessions upload; cloud database sessions only download */}
+            {/* testagent_change start - local sessions upload or append; cloud database sessions only download */}
             <Show when={props.source !== "cloud" && props.onUpload}>
               <ContextMenu.Item onSelect={() => props.onUpload?.(item.id)}>
                 <ContextMenu.ItemLabel>{language.t("session.cloud.upload.button")}</ContextMenu.ItemLabel>
+              </ContextMenu.Item>
+            </Show>
+            <Show when={props.source === "local" && props.appendAvailable && props.onAppendUpload}>
+              <ContextMenu.Item onSelect={() => props.onAppendUpload?.(item.id)}>
+                <ContextMenu.ItemLabel>{language.t("session.cloud.upload.append")}</ContextMenu.ItemLabel>
               </ContextMenu.Item>
             </Show>
             <Show when={props.source === "cloud" && props.onExport}>

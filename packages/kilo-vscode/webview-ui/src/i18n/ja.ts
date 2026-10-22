@@ -881,6 +881,7 @@ export const dict = {
   "session.tab.cloud": "クラウド",
   // testagent_change start - translated local/cloud archive history actions
   "session.cloud.upload.button": "クラウドにアップロード",
+  "session.cloud.upload.append": "セッションをクラウドに追加",
   "session.cloud.upload.pending": "アップロード中...",
   "session.cloud.upload.disabled": "このワークスペースでは利用できません",
   "session.cloud.upload.success": "セッションをクラウドにアップロードしました",

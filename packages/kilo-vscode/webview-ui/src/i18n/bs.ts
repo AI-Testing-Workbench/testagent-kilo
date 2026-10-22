@@ -891,6 +891,7 @@ export const dict = {
   "session.tab.cloud": "Oblak",
   // testagent_change start - translated local/cloud archive history actions
   "session.cloud.upload.button": "Pošalji u oblak",
+  "session.cloud.upload.append": "Dodaj sesiju u oblak",
   "session.cloud.upload.pending": "Slanje...",
   "session.cloud.upload.disabled": "Nije dostupno za ovaj radni prostor",
   "session.cloud.upload.success": "Sesija je poslana u oblak",

@@ -70,6 +70,21 @@ export async function readCloudInfo(dir: string): Promise<CloudInfo> {
   return (await ensureCloudWorkspace(dir)).state
 }
 
+// testagent_change start - read existing service bindings for menu visibility without creating workspace files
+export async function readCloudInfoIfExists(dir: string): Promise<CloudInfo | undefined> {
+  const root = await resolveGitRoot(dir)
+  if (!root) return undefined
+  const raw = await fs.readFile(cloudPaths(root).info, "utf8").catch((err: NodeJS.ErrnoException) => {
+    if (err.code === "ENOENT") return undefined
+    throw new CloudWorkspaceError("无法读取本地工作区码云仓库中的 info.json", "filesystem_error", err)
+  })
+  if (raw === undefined) return undefined
+  const value = parseJson(raw)
+  if (!value.ok) throw new CloudWorkspaceError("本地工作区码云仓库中的 info.json 不是个有效的 JSON", "invalid_info")
+  return validateInfo(value.value)
+}
+// testagent_change end
+
 // testagent_change - binding updates must be called inside WorkspaceSyncCoordinator.run
 export async function writeCloudInfo(dir: string, value: unknown): Promise<CloudInfo> {
   const workspace = await ensureCloudWorkspace(dir)

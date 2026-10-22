@@ -880,6 +880,7 @@ export const dict = {
   "session.tab.cloud": "คลาวด์",
   // testagent_change start - translated local/cloud archive history actions
   "session.cloud.upload.button": "อัปโหลดไปยังคลาวด์",
+  "session.cloud.upload.append": "เพิ่มเซสชันไปยังคลาวด์",
   "session.cloud.upload.pending": "กำลังอัปโหลด...",
   "session.cloud.upload.disabled": "ไม่พร้อมใช้งานสำหรับพื้นที่ทำงานนี้",
   "session.cloud.upload.success": "อัปโหลดเซสชันไปยังคลาวด์แล้ว",

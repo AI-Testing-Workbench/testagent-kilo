@@ -888,6 +888,7 @@ export const dict = {
   "session.tab.cloud": "Chmura",
   // testagent_change start - translated local/cloud archive history actions
   "session.cloud.upload.button": "Prześlij do chmury",
+  "session.cloud.upload.append": "Dodaj sesję do chmury",
   "session.cloud.upload.pending": "Przesyłanie...",
   "session.cloud.upload.disabled": "Niedostępne dla tego obszaru roboczego",
   "session.cloud.upload.success": "Sesja została przesłana do chmury",

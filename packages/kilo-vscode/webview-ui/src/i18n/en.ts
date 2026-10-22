@@ -912,6 +912,7 @@ export const dict = {
   "session.cloud.import": "Import session",
   // testagent_change start - local/cloud archive history actions
   "session.cloud.upload.button": "Upload to Cloud",
+  "session.cloud.upload.append": "Upload to Cloud (append)",
   "session.cloud.upload.pending": "Uploading...",
   "session.cloud.upload.disabled": "Unavailable for this workspace",
   "session.cloud.upload.success": "Session uploaded to Cloud",

@@ -7,7 +7,7 @@ import { CloudGitError, inspectCloudGitRemotes, type CloudGitUi } from "./git-pr
 import { isRemoteSshOutdated, loadRemoteSshApi, type RemoteSshApi } from "./ssh-api"
 import { pullImportedRepository } from "./import-sync"
 import { CloudUploadError, CloudUploadService } from "./upload"
-import { resolveGitRoot } from "./workspace"
+import { readCloudInfoIfExists, resolveGitRoot } from "./workspace" // testagent_change
 
 type CloudHistoryAction = {
   action: "upload" | "export"
@@ -17,6 +17,7 @@ type CloudHistoryAction = {
 }
 
 type CloudHistoryMessage =
+  | { type: "cloudAppendAvailability"; available: boolean } // testagent_change
   | { type: "cloudArchiveAvailability"; available: boolean } // testagent_change
   | { type: "cloudArchiveListLoaded"; archives: CloudArchiveList["archives"]; invalidCount: number }
   | { type: "cloudArchiveLoaded"; key: string; archive: CloudArchiveData }
@@ -77,6 +78,15 @@ export class CloudHistory {
   // testagent_change start - report archive history availability without creating workspace files
   async availability() {
     const dir = this.opts.dir()
+    const append = dir
+      ? await readCloudInfoIfExists(dir).then(
+          (info) => !!info?.serviceIds.length,
+          (err) => {
+            this.opts.onError(err)
+            return false
+          },
+        )
+      : false
     const available = dir
       ? await inspectCloudGitRemotes(dir).then(
           () => true,
@@ -89,6 +99,7 @@ export class CloudHistory {
           },
         )
       : false
+    this.opts.post({ type: "cloudAppendAvailability", available: append })
     this.opts.post({ type: "cloudArchiveAvailability", available })
   }
   // testagent_change end
@@ -155,7 +166,8 @@ export class CloudHistory {
     if (this.listCache) this.opts.post(this.listCache)
   }
 
-  async upload(id: string) {
+  async upload(id: string, append = false) {
+    if (append) return this.append(id) // testagent_change
     const key = `upload:${id}`
     if (this.pending.has(key)) return
     this.pending.add(key)
@@ -175,7 +187,10 @@ export class CloudHistory {
           pending: false,
           cancelled: !result,
         })
-        if (result) this.opts.success?.("本地会话已成功上传至云端沙箱")
+        if (result) {
+          this.opts.success?.("本地会话已成功上传至云端沙箱")
+          await this.availability()
+        }
       } catch (err) {
         this.opts.onError(err)
         this.action({ action: "upload", sessionID: id, pending: false })
@@ -187,6 +202,43 @@ export class CloudHistory {
       this.pending.delete(key)
     }
   }
+
+  // testagent_change start - append a local session to an existing bound sandbox
+  async append(id: string) {
+    const key = `upload:${id}`
+    if (this.pending.has(key)) return
+    this.pending.add(key)
+    this.action({ action: "upload", sessionID: id, pending: true })
+    const task = async (finish: () => void) => {
+      try {
+        const root = this.opts.dir()
+        const dir = await this.opts.sessionDir(id)
+        if (!root || !dir) {
+          this.action({ action: "upload", sessionID: id, pending: false })
+          this.opts.onError(new CloudUploadError("会话不属于当前本地工作区码云仓库", "session_mismatch"))
+          return
+        }
+        const result = await this.service.append(root, id, dir, this.opts.ui, finish)
+        this.action({
+          action: "upload",
+          sessionID: id,
+          pending: false,
+          cancelled: !result,
+        })
+        if (result) this.opts.success?.("本地会话已成功追加至云端沙箱")
+      } catch (err) {
+        this.opts.onError(err)
+        this.action({ action: "upload", sessionID: id, pending: false })
+      }
+    }
+    try {
+      await (this.opts.progress ? this.opts.progress(task) : task(() => undefined))
+    } finally {
+      this.pending.delete(key)
+      await this.availability()
+    }
+  }
+  // testagent_change end
 
   async export(id: string) {
     const root = this.opts.dir() // testagent_change

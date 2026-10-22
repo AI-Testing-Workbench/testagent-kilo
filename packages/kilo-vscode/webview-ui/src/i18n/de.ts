@@ -896,6 +896,7 @@ export const dict = {
   "session.tab.cloud": "Cloud",
   // testagent_change start - translated local/cloud archive history actions
   "session.cloud.upload.button": "In die Cloud hochladen",
+  "session.cloud.upload.append": "Sitzung an die Cloud anhängen",
   "session.cloud.upload.pending": "Wird hochgeladen...",
   "session.cloud.upload.disabled": "Für diesen Arbeitsbereich nicht verfügbar",
   "session.cloud.upload.success": "Sitzung in die Cloud hochgeladen",

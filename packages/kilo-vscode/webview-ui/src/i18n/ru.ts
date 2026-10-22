@@ -891,6 +891,7 @@ export const dict = {
   "session.tab.cloud": "Облако",
   // testagent_change start - translated local/cloud archive history actions
   "session.cloud.upload.button": "Загрузить в облако",
+  "session.cloud.upload.append": "Добавить сессию в облако",
   "session.cloud.upload.pending": "Загрузка...",
   "session.cloud.upload.disabled": "Недоступно для этой рабочей области",
   "session.cloud.upload.success": "Сессия загружена в облако",

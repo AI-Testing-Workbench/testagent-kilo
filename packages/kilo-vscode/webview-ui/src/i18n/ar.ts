@@ -877,6 +877,7 @@ export const dict = {
   "session.tab.cloud": "السحابة",
   // testagent_change start - translated local/cloud archive history actions
   "session.cloud.upload.button": "رفع إلى السحابة",
+  "session.cloud.upload.append": "إضافة جلسة إلى السحابة",
   "session.cloud.upload.pending": "جارٍ الرفع...",
   "session.cloud.upload.disabled": "غير متاح لمساحة العمل هذه",
   "session.cloud.upload.success": "تم رفع الجلسة إلى السحابة",

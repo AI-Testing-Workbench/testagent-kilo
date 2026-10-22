@@ -884,6 +884,7 @@ export const dict = {
   "session.tab.cloud": "Sky",
   // testagent_change start - translated local/cloud archive history actions
   "session.cloud.upload.button": "Upload til skyen",
+  "session.cloud.upload.append": "Tilføj session til skyen",
   "session.cloud.upload.pending": "Uploader...",
   "session.cloud.upload.disabled": "Ikke tilgængelig for dette arbejdsområde",
   "session.cloud.upload.success": "Session uploadet til skyen",

@@ -886,6 +886,7 @@ export const dict = {
   "session.tab.cloud": "Cloud",
   // testagent_change start - translated local/cloud archive history actions
   "session.cloud.upload.button": "Cloud'a yükle",
+  "session.cloud.upload.append": "Oturumu Cloud'a ekle",
   "session.cloud.upload.pending": "Yükleniyor...",
   "session.cloud.upload.disabled": "Bu çalışma alanında kullanılamıyor",
   "session.cloud.upload.success": "Oturum Cloud'a yüklendi",

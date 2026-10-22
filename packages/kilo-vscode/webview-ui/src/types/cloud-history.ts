@@ -14,6 +14,13 @@ export interface CloudArchiveAvailabilityMessage {
 }
 // testagent_change end
 
+// testagent_change start - expose whether local sessions can target an existing sandbox
+export interface CloudAppendAvailabilityMessage {
+  type: "cloudAppendAvailability"
+  available: boolean
+}
+// testagent_change end
+
 export interface CloudArchiveLoadedMessage {
   type: "cloudArchiveLoaded"
   key: string
@@ -59,6 +66,7 @@ export interface RequestCloudArchiveForkMessage {
 export interface RequestCloudUploadMessage {
   type: "requestCloudUpload"
   sessionID: string
+  append?: true // testagent_change
 }
 
 export interface RequestCloudExportMessage {
@@ -79,6 +87,7 @@ testagent_change end */
 export type CloudHistoryExtensionMessage =
   | CloudArchiveListLoadedMessage
   | CloudArchiveAvailabilityMessage // testagent_change
+  | CloudAppendAvailabilityMessage // testagent_change
   | CloudArchiveLoadedMessage
   | CloudArchiveForkedMessage
   | CloudArchiveOperationFailedMessage

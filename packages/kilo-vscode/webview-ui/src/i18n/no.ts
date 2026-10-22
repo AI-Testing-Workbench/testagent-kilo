@@ -888,6 +888,7 @@ export const dict = {
   "session.tab.cloud": "Sky",
   // testagent_change start - translated local/cloud archive history actions
   "session.cloud.upload.button": "Last opp til skyen",
+  "session.cloud.upload.append": "Legg til økt i skyen",
   "session.cloud.upload.pending": "Laster opp...",
   "session.cloud.upload.disabled": "Ikke tilgjengelig for dette arbeidsområdet",
   "session.cloud.upload.success": "Økten er lastet opp til skyen",

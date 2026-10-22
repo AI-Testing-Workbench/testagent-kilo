@@ -17,6 +17,7 @@ export type CloudGitItem = {
   label: string
   description?: string
   detail?: string
+  id?: string // testagent_change
 }
 
 export type CloudGitQuickPickOptions = {

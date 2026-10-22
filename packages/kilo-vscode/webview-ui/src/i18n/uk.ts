@@ -888,6 +888,7 @@ export const dict = {
   "session.tab.cloud": "Хмарний",
   // testagent_change start - translated local/cloud archive history actions
   "session.cloud.upload.button": "Завантажити в хмару",
+  "session.cloud.upload.append": "Додати сесію до хмари",
   "session.cloud.upload.pending": "Завантаження...",
   "session.cloud.upload.disabled": "Недоступно для цього робочого простору",
   "session.cloud.upload.success": "Сесію завантажено в хмару",

@@ -891,6 +891,7 @@ export const dict = {
   "session.tab.cloud": "Nube",
   // testagent_change start - translated local/cloud archive history actions
   "session.cloud.upload.button": "Subir a la nube",
+  "session.cloud.upload.append": "Añadir sesión a la nube",
   "session.cloud.upload.pending": "Subiendo...",
   "session.cloud.upload.disabled": "No disponible para este espacio de trabajo",
   "session.cloud.upload.success": "Sesión subida a la nube",

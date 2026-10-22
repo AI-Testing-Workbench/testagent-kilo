@@ -875,6 +875,7 @@ export const dict = {
   "session.cloud.import": "從雲端匯入",
   // testagent_change start - local/cloud archive history actions
   "session.cloud.upload.button": "上傳至雲端",
+  "session.cloud.upload.append": "將工作階段新增至雲端",
   "session.cloud.upload.pending": "正在上傳...",
   "session.cloud.upload.disabled": "目前工作區無法上傳",
   "session.cloud.upload.success": "工作階段已上傳至雲端",

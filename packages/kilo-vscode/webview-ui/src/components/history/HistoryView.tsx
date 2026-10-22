@@ -62,6 +62,7 @@ const HistoryView: Component<HistoryViewProps> = (props) => {
     session.archivePreview() ? "cloud" : "local", // Return to Cloud history after viewing an archive.
   )
   const [available, setAvailable] = createSignal(false) // testagent_change
+  const [appendAvailable, setAppendAvailable] = createSignal(false) // testagent_change
   const [archives, setArchives] = createSignal<CloudArchiveSummary[]>([])
   const [key, setKey] = createSignal<string | undefined>(
     session.archivePreview()?.key, // Retain selected archive when returning from ChatView.
@@ -140,6 +141,11 @@ const HistoryView: Component<HistoryViewProps> = (props) => {
   // testagent_change start - subscribe to extension archive messages
   const stop = vscode.onMessage((message) => {
     switch (message.type) {
+      // testagent_change start - show append only while the current workspace has bound services
+      case "cloudAppendAvailability":
+        setAppendAvailable(message.available)
+        return
+      // testagent_change end
       // testagent_change start - hide unavailable local Cloud history and discard stale preview state
       case "cloudArchiveAvailability":
         setAvailable(message.available)
@@ -244,6 +250,12 @@ const HistoryView: Component<HistoryViewProps> = (props) => {
   function upload(id: string) {
     vscode.postMessage({ type: "requestCloudUpload", sessionID: id })
   }
+
+  // testagent_change start - route append uploads through the Extension Host service picker
+  function append(id: string) {
+    vscode.postMessage({ type: "requestCloudUpload", sessionID: id, append: true })
+  }
+  // testagent_change end
 
   function exportFile(id: string) {
     vscode.postMessage({ type: "requestCloudExport", sessionID: id })
@@ -370,6 +382,8 @@ const HistoryView: Component<HistoryViewProps> = (props) => {
                 source="local"
                 actions={actions()}
                 onUpload={upload}
+                appendAvailable={appendAvailable()}
+                onAppendUpload={append}
               />
             </Show>
           }
