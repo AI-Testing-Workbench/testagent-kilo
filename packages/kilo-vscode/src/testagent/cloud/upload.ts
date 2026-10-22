@@ -51,6 +51,7 @@ export type CloudUploadResult = {
 type ServiceChoice = {
   id: string
   state: Awaited<ReturnType<RemoteSshApi["getContainer"]>>
+  end: number
   item: CloudGitItem
 }
 // testagent_change end
@@ -383,14 +384,20 @@ export class CloudUploadService {
         continue
       }
       if (state.status !== "running") continue
+      const end = Date.parse(state.expires_at ?? "")
       const left = remaining(state.expires_at)
       if (left === "已过期") continue
       const name = state.name?.trim() || id
       const type = typeLabel(state.type?.trim())
-      entries.push({ id, state, item: { id, label: `${name} (${type})`, detail: `服务剩余时间：${left}` } })
+      entries.push({
+        id,
+        state,
+        end: Number.isFinite(end) ? end : 0,
+        item: { id, label: `${name} (${type})`, detail: `服务剩余时间：${left}` },
+      })
     }
     if (gone.length) await writeCloudInfo(root, { serviceIds: ids.filter((id) => !gone.includes(id)) })
-    return entries
+    return entries.sort((left, right) => right.end - left.end)
   }
   // testagent_change end
 

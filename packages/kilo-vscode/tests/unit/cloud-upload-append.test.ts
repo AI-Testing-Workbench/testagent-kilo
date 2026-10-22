@@ -22,11 +22,20 @@ function archive(): SessionArchive {
   }
 }
 
-async function setup(opts: { choose?: boolean; fail?: boolean; noInfo?: boolean; type?: string } = {}) {
+async function setup(
+  opts: {
+    choose?: boolean
+    fail?: boolean
+    noInfo?: boolean
+    type?: string
+    services?: Array<{ id: string; expires?: string | null }>
+  } = {},
+) {
   const root = await fs.mkdtemp(path.join(os.tmpdir(), "testagent-cloud-append-"))
   roots.push(root)
   await simpleGit(root).raw(["init", "-b", "main"])
-  if (!opts.noInfo) await writeCloudInfo(root, { serviceIds: ["service-1"] })
+  const services = opts.services ?? [{ id: "service-1", expires: new Date(Date.now() + 3_600_000).toISOString() }]
+  if (!opts.noInfo) await writeCloudInfo(root, { serviceIds: services.map((item) => item.id) })
   let exports = 0
   const server = Bun.serve({
     port: 0,
@@ -49,7 +58,7 @@ async function setup(opts: { choose?: boolean; fail?: boolean; noInfo?: boolean;
       status: "running",
       type: opts.type ?? "testagent_cloud",
       name: "Development",
-      expires_at: new Date(Date.now() + 3_600_000).toISOString(),
+      expires_at: services.find((item) => item.id === serviceId)?.expires,
       gitee_user: "alice",
       gitee_repository: "repo",
       gitee_url: "https://github.com",
@@ -147,6 +156,21 @@ describe("append session to an existing cloud sandbox", () => {
     await svc.history.append("ses_1")
 
     expect(svc.items[0]?.[0]?.label).toBe("Development (未知类型)")
+  }, 30_000)
+
+  it("orders services by remaining time, longest first, with unknown expiry last", async () => {
+    const now = Date.now()
+    const svc = await setup({
+      services: [
+        { id: "short", expires: new Date(now + 3_600_000).toISOString() },
+        { id: "unknown", expires: null },
+        { id: "long", expires: new Date(now + 86_400_000).toISOString() },
+      ],
+    })
+
+    await svc.history.append("ses_1")
+
+    expect(svc.items[0]?.map((item) => item.id)).toEqual(["long", "short", "unknown"])
   }, 30_000)
 
   it("does not export or transfer when the service picker is cancelled", async () => {
