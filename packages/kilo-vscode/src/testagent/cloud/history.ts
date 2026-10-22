@@ -148,7 +148,7 @@ export class CloudHistory {
       const result = await this.files.fork(dir, key)
       if (this.opts.rename) {
         const name = data.info.title
-        const title = `${name}（来自云端）`
+        const title = `${name} (来自云端)`
         const ctx = this.opts.context(dir)
         await this.opts.rename(result.sessionID, title, ctx.directory).catch((err) => {
           this.opts.onError(err)
