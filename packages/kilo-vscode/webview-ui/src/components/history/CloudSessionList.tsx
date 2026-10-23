@@ -1,10 +1,9 @@
 /**
  * CloudSessionList component
- * Displays cloud sessions from the Kilo cloud API, grouped by date.
- * Supports filtering by repository (git URL) and search by title.
- * Header/back button/import button are owned by the parent HistoryView.
+ * Displays SaaS sessions from the Kilo cloud API.
+ * This list is intentionally disabled: local mode reads archive files and cloud mode reads core sessions.
  */
-
+/* testagent_change start - keep legacy SaaS implementation commented out so it cannot substitute for archive/core history
 import { Component, Show, createSignal, createEffect, onMount, onCleanup } from "solid-js"
 import { List } from "@kilocode/kilo-ui/list"
 import { Checkbox } from "@kilocode/kilo-ui/checkbox"
@@ -173,3 +172,4 @@ const CloudSessionList: Component<CloudSessionListProps> = (props) => {
 }
 
 export default CloudSessionList
+testagent_change end */

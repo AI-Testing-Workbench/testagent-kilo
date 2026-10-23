@@ -131,6 +131,7 @@ import type {
   QuestionReplyResponses,
   SessionAbortErrors,
   SessionAbortResponses,
+  SessionArchive,
   SessionChildrenErrors,
   SessionChildrenResponses,
   SessionClearContextErrors,
@@ -147,10 +148,16 @@ import type {
   SessionDeleteResponses,
   SessionDelivery,
   SessionDiffResponses,
+  SessionExportErrors,
+  SessionExportResponses,
   SessionForkErrors,
   SessionForkResponses,
   SessionGetErrors,
   SessionGetResponses,
+  SessionImportErrors,
+  SessionImportForkErrors,
+  SessionImportForkResponses,
+  SessionImportResponses,
   SessionInitErrors,
   SessionInitResponses,
   SessionListResponses,
@@ -4382,6 +4389,118 @@ export class Session2 extends HeyApiClient {
       url: "/session/{sessionID}/message/{messageID}",
       ...options,
       ...params,
+    })
+  }
+
+  /**
+   * Export session
+   *
+   * Export a session and its complete message history as a CLI-compatible archive.
+   */
+  public export<ThrowOnError extends boolean = false>(
+    parameters: {
+      sessionID: string
+      directory?: string
+      workspace?: string
+      sanitize?: boolean | "true" | "false"
+    },
+    options?: Options<never, ThrowOnError>,
+  ) {
+    const params = buildClientParams(
+      [parameters],
+      [
+        {
+          args: [
+            { in: "path", key: "sessionID" },
+            { in: "query", key: "directory" },
+            { in: "query", key: "workspace" },
+            { in: "query", key: "sanitize" },
+          ],
+        },
+      ],
+    )
+    return (options?.client ?? this.client).get<SessionExportResponses, SessionExportErrors, ThrowOnError>({
+      url: "/session/{sessionID}/export",
+      ...options,
+      ...params,
+    })
+  }
+
+  /**
+   * Import session
+   *
+   * Import a CLI-compatible session archive while preserving its session, message, and part IDs.
+   */
+  public import<ThrowOnError extends boolean = false>(
+    parameters: {
+      sessionID: string
+      directory?: string
+      workspace?: string
+      sessionArchive?: SessionArchive
+    },
+    options?: Options<never, ThrowOnError>,
+  ) {
+    const params = buildClientParams(
+      [parameters],
+      [
+        {
+          args: [
+            { in: "path", key: "sessionID" },
+            { in: "query", key: "directory" },
+            { in: "query", key: "workspace" },
+            { key: "sessionArchive", map: "body" },
+          ],
+        },
+      ],
+    )
+    return (options?.client ?? this.client).post<SessionImportResponses, SessionImportErrors, ThrowOnError>({
+      url: "/session/{sessionID}/import",
+      ...options,
+      ...params,
+      headers: {
+        "Content-Type": "application/json",
+        ...options?.headers,
+        ...params.headers,
+      },
+    })
+  }
+
+  /**
+   * Fork imported session
+   *
+   * Import a session archive as a new session with remapped session, message, and part IDs.
+   */
+  public importFork<ThrowOnError extends boolean = false>(
+    parameters: {
+      sessionID: string
+      directory?: string
+      workspace?: string
+      sessionArchive?: SessionArchive
+    },
+    options?: Options<never, ThrowOnError>,
+  ) {
+    const params = buildClientParams(
+      [parameters],
+      [
+        {
+          args: [
+            { in: "path", key: "sessionID" },
+            { in: "query", key: "directory" },
+            { in: "query", key: "workspace" },
+            { key: "sessionArchive", map: "body" },
+          ],
+        },
+      ],
+    )
+    return (options?.client ?? this.client).post<SessionImportForkResponses, SessionImportForkErrors, ThrowOnError>({
+      url: "/session/{sessionID}/import/fork",
+      ...options,
+      ...params,
+      headers: {
+        "Content-Type": "application/json",
+        ...options?.headers,
+        ...params.headers,
+      },
     })
   }
 
