@@ -25,6 +25,11 @@ import { dict as uiEn } from "@kilocode/kilo-ui/i18n/en"
 import { dict as appEn } from "../i18n/en"
 import { dict as kiloEn } from "@kilocode/kilo-i18n/en"
 import SessionList from "../components/history/SessionList"
+// testagent_change start - demonstrate archive viewer and history row actions
+import CloudArchiveList from "../components/history/CloudArchiveList"
+import { cloudArchiveData } from "../../../src/testagent/cloud/archive-data"
+import type { SessionArchive } from "../../../src/testagent/cloud/archive-api"
+// testagent_change end
 
 const dict: Record<string, string> = { ...appEn, ...uiEn, ...kiloEn }
 function t(key: string) {
@@ -42,6 +47,68 @@ const mockSessions = [
   { id: "s3", title: "Fix TypeScript errors in webview", createdAt: weekAgo, updatedAt: weekAgo },
   { id: "s4", title: undefined, createdAt: weekAgo, updatedAt: weekAgo },
 ]
+
+// testagent_change start - native archive fixture for the shared read-only SessionTurn renderer
+const mockArchive = cloudArchiveData({
+  info: {
+    id: "ses_cloud_archive",
+    slug: "cloud-archive",
+    projectID: "project_1",
+    workspaceID: "workspace_1",
+    directory: "/project",
+    path: "src/app.ts",
+    title: "Review workspace sync behavior",
+    version: "1.0.0",
+    time: { created: Date.now() - 3600000, updated: Date.now() },
+  },
+  messages: [
+    {
+      info: {
+        id: "msg_user",
+        sessionID: "ses_cloud_archive",
+        role: "user",
+        agent: "code",
+        model: { providerID: "provider_1", modelID: "model_1" },
+        time: { created: Date.now() - 3600000 },
+      },
+      parts: [
+        {
+          id: "part_user",
+          sessionID: "ses_cloud_archive",
+          messageID: "msg_user",
+          type: "text",
+          text: "Review the synchronization behavior.",
+        },
+      ],
+    },
+    {
+      info: {
+        id: "msg_assistant",
+        sessionID: "ses_cloud_archive",
+        role: "assistant",
+        time: { created: Date.now() - 3500000, completed: Date.now() - 3400000 },
+        parentID: "msg_user",
+        modelID: "model_1",
+        providerID: "provider_1",
+        mode: "build",
+        agent: "code",
+        path: { cwd: "/project", root: "/project" },
+        cost: 0,
+        tokens: { input: 1, output: 1, reasoning: 0, cache: { read: 0, write: 0 } },
+      },
+      parts: [
+        {
+          id: "part_assistant",
+          sessionID: "ses_cloud_archive",
+          messageID: "msg_assistant",
+          type: "text",
+          text: "The archive preview is read-only and uses the shared session renderer.",
+        },
+      ],
+    },
+  ],
+} as SessionArchive)
+// testagent_change end
 
 const WithSessions: ParentComponent<{ sessions?: typeof mockSessions }> = (props) => {
   const [locale] = createSignal<"en">("en")
@@ -160,3 +227,78 @@ export const WithItems: Story = {
     </WithSessions>
   ),
 }
+
+// testagent_change start - local upload status and read-only archive viewer stories
+export const CloudUploadActions: Story = {
+  name: "Local sessions with Cloud upload actions",
+  render: () => (
+    <WithSessions sessions={mockSessions}>
+      <div style={{ height: "480px", width: "360px" }}>
+        <SessionList source="local" onSelectSession={noop} onUpload={noop} />
+      </div>
+    </WithSessions>
+  ),
+}
+
+export const CloudArchivePreview: Story = {
+  name: "Read-only Cloud archive preview",
+  render: () => (
+    <WithSessions>
+      <div style={{ height: "650px" }}>
+        <CloudArchiveList
+          directory="/project"
+          archives={[
+            {
+              key: "service_1/ses_cloud_archive.json",
+              sessionID: mockArchive.info.id,
+              title: mockArchive.info.title,
+              createdAt: mockArchive.info.time.created,
+              updatedAt: mockArchive.info.time.updated,
+              serviceId: "service_1",
+            },
+          ]}
+          selected="service_1/ses_cloud_archive.json"
+          archive={mockArchive}
+          loading={false}
+          onSelect={noop}
+          onFork={noop}
+        />
+      </div>
+    </WithSessions>
+  ),
+}
+
+export const CloudArchiveSessionList: Story = {
+  name: "Cloud archives in the shared Local history list",
+  render: () => (
+    <WithSessions>
+      <div style={{ height: "480px", width: "360px" }}>
+        <SessionList
+          source="archive"
+          onSelectSession={noop}
+          onSelectArchive={noop}
+          onImportArchive={noop}
+          archives={[
+            {
+              key: "service_1/ses_cloud_archive.json",
+              sessionID: mockArchive.info.id,
+              title: mockArchive.info.title,
+              createdAt: mockArchive.info.time.created,
+              updatedAt: mockArchive.info.time.updated,
+              serviceId: "service_1",
+            },
+            {
+              key: "service_1/ses_older_archive.json",
+              sessionID: "ses_older_archive",
+              title: "Investigate older workspace behavior",
+              createdAt: Date.now() - 8 * 86400000,
+              updatedAt: Date.now() - 8 * 86400000,
+              serviceId: "service_1",
+            },
+          ]}
+        />
+      </div>
+    </WithSessions>
+  ),
+}
+// testagent_change end

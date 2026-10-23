@@ -19,6 +19,7 @@ const BrowserTab: Component = () => {
     cdpEndpoint: "",
     cdpEndpointEnv: "",
     cdpExternalEnv: "",
+    vncUrl: "",
   })
 
   // Draft kept separate from settings: the endpoint is persisted on blur/Enter, not per keystroke,
@@ -61,10 +62,6 @@ const BrowserTab: Component = () => {
     if (endpoint() === settings().cdpEndpoint) return
     postMessage({ type: "updateSetting", key: "browserAutomation.cdpEndpoint", value: endpoint() })
   }
-
-  // A CDP endpoint (user-set or injected by the sandbox) means the MCP attaches to an existing
-  // browser, so the launch-only options no longer apply.
-  const cdpInEffect = () => !!settings().cdpEndpoint.trim() || !!settings().cdpEndpointEnv.trim()
 
   return (
     <div style={{ display: "flex", "flex-direction": "column", gap: "16px" }}>
@@ -136,7 +133,7 @@ const BrowserTab: Component = () => {
             <Switch
               checked={settings().useSystemChrome}
               onChange={(checked: boolean) => update("useSystemChrome", checked)}
-              disabled={!settings().enabled || cdpInEffect()}
+              disabled={!settings().enabled}
               hideLabel
             >
               {t("settings.browser.systemChrome.title")}
@@ -151,7 +148,7 @@ const BrowserTab: Component = () => {
             <Switch
               checked={settings().headless}
               onChange={(checked: boolean) => update("headless", checked)}
-              disabled={!settings().enabled || cdpInEffect()}
+              disabled={!settings().enabled}
               hideLabel
             >
               {t("settings.browser.headless.title")}
@@ -171,7 +168,6 @@ const BrowserTab: Component = () => {
               onKeyDown={(event: KeyboardEvent) => {
                 if (event.key === "Enter") commitEndpoint()
               }}
-              placeholder={t("settings.browser.cdpEndpoint.placeholder")}
               disabled={!settings().enabled}
               style={{ width: "100%" }}
             />
@@ -188,10 +184,11 @@ const BrowserTab: Component = () => {
                 "line-height": "1.6",
               }}
             >
-              {settings().cdpEndpointEnv || settings().cdpExternalEnv ? (
+              {settings().cdpEndpointEnv || settings().cdpExternalEnv || settings().vncUrl ? (
                 <>
                   {settings().cdpEndpointEnv && <div>{`TESTAGENT_CDP_ENDPOINT=${settings().cdpEndpointEnv}`}</div>}
                   {settings().cdpExternalEnv && <div>{`TESTAGENT_CDP_EXTERNAL=${settings().cdpExternalEnv}`}</div>}
+                  {settings().vncUrl && <div>{`TESTAGENT_VNC_URL=${settings().vncUrl}`}</div>}
                 </>
               ) : (
                 <div>{t("settings.browser.cdp.notSet")}</div>

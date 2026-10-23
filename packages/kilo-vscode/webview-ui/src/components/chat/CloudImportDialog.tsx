@@ -1,3 +1,4 @@
+/* testagent_change start - disabled legacy SaaS import; history now forks local archive files via core HTTP
 import { Component, createSignal } from "solid-js"
 import { Dialog } from "@kilocode/kilo-ui/dialog"
 import { Button } from "@kilocode/kilo-ui/button"
@@ -67,3 +68,4 @@ export const CloudImportDialog: Component<CloudImportDialogProps> = (props) => {
     </Dialog>
   )
 }
+testagent_change end */

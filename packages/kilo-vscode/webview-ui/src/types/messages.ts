@@ -4,9 +4,34 @@
 
 import type { ProviderAuthAuthorization, ProviderAuthMethod } from "@kilocode/sdk/v2/client"
 import type { PartBatch, PartUpdate } from "../../../src/shared/stream-messages"
+// testagent_change start - centralize cloud request and response payloads in one contract module
+import type {
+  CloudHistoryExtensionMessage as CloudExtension,
+  RequestCloudArchiveForkMessage as CloudRequestFork,
+  RequestCloudArchiveListMessage as CloudRequestList,
+  RequestCloudArchiveMessage as CloudRequestRead,
+  RequestCloudExportMessage as CloudRequestExport,
+  RequestCloudUploadMessage as CloudRequestUpload,
+} from "./cloud-history"
+// testagent_change end
 // testagent_change start 增加sdt进度卡片
 import type { SdtFinishedMessage, SdtProgressMessage, SdtStartedMessage } from "./sdt"
-// testagent_change start 增加sdt进度卡片
+// testagent_change end
+
+// testagent_change start - define cloud wire messages for the message contract
+export type CloudHistoryExtensionMessage = CloudExtension
+export type RequestCloudArchiveListMessage = CloudRequestList & { type: "requestCloudArchiveList" }
+export type RequestCloudArchiveMessage = CloudRequestRead & { type: "requestCloudArchive" }
+export type RequestCloudArchiveForkMessage = CloudRequestFork & { type: "requestCloudArchiveFork" }
+export type RequestCloudUploadMessage = CloudRequestUpload & { type: "requestCloudUpload" }
+export type RequestCloudExportMessage = CloudRequestExport & { type: "requestCloudExport" }
+export type CloudHistoryWebviewMessage =
+  | RequestCloudArchiveListMessage
+  | RequestCloudArchiveMessage
+  | RequestCloudArchiveForkMessage
+  | RequestCloudUploadMessage
+  | RequestCloudExportMessage
+// testagent_change end
 
 // Connection states
 export type ConnectionState = "connecting" | "connected" | "disconnected" | "error"
@@ -655,6 +680,14 @@ export interface SessionUpdatedMessage {
   session: SessionInfo
 }
 
+// testagent_change start - complete the SSE session info message contract
+export interface SessionInfoMessage {
+  type: "sessionInfo"
+  sessionID?: string
+  message: string
+}
+// testagent_change end
+
 export interface SessionDeletedMessage {
   type: "sessionDeleted"
   sessionID: string
@@ -732,6 +765,11 @@ export interface OpenSessionMessage {
 export interface ActionMessage {
   type: "action"
   action: string
+  // testagent_change start - optional values for direct agent/model selection
+  agent?: string
+  providerID?: string
+  modelID?: string
+  // testagent_change end
 }
 
 export interface SetChatBoxMessage {
@@ -961,6 +999,8 @@ export interface BrowserSettings {
   cdpEndpointEnv: string
   /** Value of the TESTAGENT_CDP_EXTERNAL env var injected by the sandbox image (read-only). */
   cdpExternalEnv: string
+  /** Value of the TESTAGENT_VNC_URL env var injected by the sandbox image (read-only). */
+  vncUrl: string
 }
 
 export interface BrowserSettingsLoadedMessage {
@@ -1755,12 +1795,18 @@ export type ExtensionMessage =
   | SessionCreatedMessage
   | SessionForkedMessage
   | SessionUpdatedMessage
+  // testagent_change start - expose SSE session status to the webview message contract
+  | SessionInfoMessage
+  // testagent_change end
   | SessionDeletedMessage
   | MessageRemovedMessage
   | MessagesLoadedMessage
   | MessageCreatedMessage
   | SessionsLoadedMessage
   | CloudSessionsLoadedMessage
+  // testagent_change start - keep cloud history responses in the extension message union
+  | CloudHistoryExtensionMessage
+  // testagent_change end
   | GitRemoteUrlLoadedMessage
   | ActionMessage
   | ProfileDataMessage
@@ -1978,13 +2024,13 @@ export interface RequestCloudSessionsMessage {
   gitUrl?: string
 }
 
-export interface RequestGitRemoteUrlMessage {
-  type: "requestGitRemoteUrl"
-}
-
 export interface RequestCloudSessionDataMessage {
   type: "requestCloudSessionData"
   sessionId: string
+}
+
+export interface RequestGitRemoteUrlMessage {
+  type: "requestGitRemoteUrl"
 }
 
 export interface ImportAndSendMessage {
@@ -2261,6 +2307,11 @@ export interface RequestTimelineSettingMessage {
 
 export interface RequestBrowserSettingsMessage {
   type: "requestBrowserSettings"
+}
+
+// testagent_change - 在 tscode 内置 Simple Browser 中打开沙箱 VNC 桌面
+export interface OpenSandboxBrowserMessage {
+  type: "openSandboxBrowser"
 }
 
 // Chat tip (configured via `testagent.new.chatTips`)
@@ -2959,6 +3010,9 @@ export type WebviewMessage =
   | LoadMessagesRequest
   | LoadSessionsRequest
   | RequestCloudSessionsMessage
+  // testagent_change start - keep local archive actions in the webview message union
+  | CloudHistoryWebviewMessage
+  // testagent_change end
   | RequestGitRemoteUrlMessage
   | LoginRequest
   | LogoutRequest
@@ -3007,6 +3061,7 @@ export type WebviewMessage =
   | UpdateSettingRequest
   | RequestTimelineSettingMessage
   | RequestBrowserSettingsMessage
+  | OpenSandboxBrowserMessage // testagent_change - 打开沙箱浏览器
   | RequestChatTipsMessage
   | ChatTipActionMessage
   | ChatTipReadManyMessage

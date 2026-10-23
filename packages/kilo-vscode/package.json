@@ -2,7 +2,7 @@
   "name": "TestAgent",
   "displayName": "TestAgent",
   "description": "TestAgent",
-  "version": "1.5.0",
+  "version": "1.5.1",
   "icon": "assets/icons/logo-outline-black.png",
   "galleryBanner": {
     "color": "#FFFFFF",
@@ -354,6 +354,16 @@
       {
         "command": "testagent.new.cyclePreviousAgentMode",
         "title": "Cycle Previous Agent Mode",
+        "category": "TestAgent"
+      },
+      {
+        "command": "testagent.selectAgent",
+        "title": "Select Agent",
+        "category": "TestAgent"
+      },
+      {
+        "command": "testagent.selectModel",
+        "title": "Select Provider and Model",
         "category": "TestAgent"
       },
       {
