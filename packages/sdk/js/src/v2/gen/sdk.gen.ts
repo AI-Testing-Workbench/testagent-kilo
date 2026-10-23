@@ -4554,6 +4554,7 @@ export class Session2 extends HeyApiClient {
       directory?: string
       workspace?: string
       reason?: "completed" | "user_abort" | "error"
+      scope?: "session" | "tree"
     },
     options?: Options<never, ThrowOnError>,
   ) {
@@ -4566,6 +4567,7 @@ export class Session2 extends HeyApiClient {
             { in: "query", key: "directory" },
             { in: "query", key: "workspace" },
             { in: "body", key: "reason" },
+            { in: "body", key: "scope" },
           ],
         },
       ],

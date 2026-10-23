@@ -1178,7 +1178,12 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
         // testagent_change end
         case "abort":
           this.cancelRetry(message.sessionID ?? "")
-          await this.handleAbort(message.sessionID, parseQueued(message.queuedMessageIDs), message.reason)
+          await this.handleAbort(
+            message.sessionID,
+            parseQueued(message.queuedMessageIDs),
+            message.reason,
+            message.scope, // testagent_change - 停止 subagent 走 tree
+          )
           break
         // testagent_change start - testflow message handlers
         case "testflow.syncChildSession":
@@ -4264,7 +4269,12 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
   }
   // testagent_change end
 
-  private async handleAbort(sessionID?: string, queuedMessageIDs: string[] = [], reason?: string): Promise<void> {
+  private async handleAbort(
+    sessionID?: string,
+    queuedMessageIDs: string[] = [],
+    reason?: string,
+    scope?: "session" | "tree", // testagent_change - 停止 subagent 时传 "tree"
+  ): Promise<void> {
     if (!this.client) {
       return
     }
@@ -4282,6 +4292,7 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
         dir: this.getWorkspaceDirectory(targetSessionID),
         queuedMessageIDs,
         reason: reason as "completed" | "user_abort" | "error" | undefined,
+        scope, // testagent_change - 透传取消范围
       })
       // testagent_change start - reconcile session status after abort
       // The session.status:idle event may be lost if SSE drops during abort,

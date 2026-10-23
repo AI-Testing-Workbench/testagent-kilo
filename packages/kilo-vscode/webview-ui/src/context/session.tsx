@@ -281,7 +281,7 @@ interface SessionContextValue {
     draftID?: string,
   ) => void
   continueTask: () => void // testagent_change - 添加继续任务方法
-  abort: (sessionID?: string) => void
+  abort: (sessionID?: string, scope?: "session" | "tree") => void
   compact: () => void
   respondToPermission: (
     permissionId: string,
@@ -2291,8 +2291,7 @@ export const SessionProvider: ParentComponent = (props) => {
   }
   // testagent_change end
 
-  // testagent_change start - prevent aborting archive previews
-  function abort(sessionID?: string) {
+  function abort(sessionID?: string, scope?: "session" | "tree") {
     const sid = sessionID ?? currentSessionID()
     if (isArchiveSession(sid)) return
     if (!sid) {
@@ -2307,6 +2306,7 @@ export const SessionProvider: ParentComponent = (props) => {
       sessionID: sid,
       queuedMessageIDs,
       reason: "user_abort",
+      ...(scope ? { scope } : {}),
     })
   }
   // testagent_change end
