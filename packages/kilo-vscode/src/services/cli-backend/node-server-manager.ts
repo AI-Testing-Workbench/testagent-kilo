@@ -207,6 +207,10 @@ export class NodeServerManager {
           ...process.env,
           OPENCODE_SERVER_PASSWORD: password,
           OPENCODE_SERVER_USERNAME: "opencode",
+          // testagent_change start - cloud 模式下「复制 Web UI 链接」按钮可用，同步开放
+          // GET /testagent/server/auth 给远程调用，两者共享 isCloudMode() 这同一个判定。
+          ...(isCloudMode() && { TESTAGENT_SERVER_AUTH_PUBLIC: "1" }),
+          // testagent_change end
           LANG: process.env.LANG || "en_US.UTF-8",
           LC_ALL: process.env.LC_ALL || "en_US.UTF-8",
           ...(process.platform === "win32" && {
