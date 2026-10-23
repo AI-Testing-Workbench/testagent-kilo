@@ -25,7 +25,8 @@ async function repo(): Promise<string> {
   const root = await fs.mkdtemp(path.join(os.tmpdir(), "testagent-cloud-git-"))
   roots.push(root)
   const git = simpleGit(root)
-  await git.raw(["init", "-b", "main"])
+  await git.init()
+  await git.raw(["symbolic-ref", "HEAD", "refs/heads/main"])
   await fs.writeFile(path.join(root, "README.md"), "initial\n")
   await git.add("README.md")
   await git.raw(["-c", "user.name=Test", "-c", "user.email=test@example.com", "commit", "-m", "initial"])
@@ -163,7 +164,7 @@ describe("Git 仓库上云前置检查", () => {
     await remote(root, "ssh", "git@codeberg.org:alice/ssh.git")
     const coord = await queue(root)
     const pick = ui(["mirror", "feature/work"])
-    const branch = await simpleGit(root).raw(["branch", "--show-current"])
+    const branch = await simpleGit(root).raw(["symbolic-ref", "--quiet", "--short", "HEAD"])
 
     const result: CloudGitSelection | undefined = await selectCloudGitTarget(root, coord, pick.ui)
 
@@ -184,7 +185,7 @@ describe("Git 仓库上云前置检查", () => {
     expect(pick.state.opts).toHaveLength(2)
     expect(pick.state.opts.every((opts) => opts.ignoreFocusOut)).toBe(true)
     expect(pick.state.opts.every((opts) => opts.matchOnDetail)).toBe(true)
-    expect(await simpleGit(root).raw(["branch", "--show-current"])).toBe(branch)
+    expect(await simpleGit(root).raw(["symbolic-ref", "--quiet", "--short", "HEAD"])).toBe(branch)
     expect(await readCloudInfo(root)).toEqual({ serviceIds: [] })
   }, 15_000)
 
@@ -220,7 +221,7 @@ describe("Git 仓库上云前置检查", () => {
 
     expect(result?.branch).toBe("release/one")
     expect(pick.state.items[0][0].label).toBe("release/one")
-    expect(await git.raw(["branch", "--show-current"])).toBe("")
+    expect(await git.raw(["symbolic-ref", "--quiet", "--short", "HEAD"]).catch(() => "")).toBe("")
   }, 15_000)
 
   it("当前分支不可用时使用 remote 默认分支", async () => {
@@ -234,7 +235,7 @@ describe("Git 仓库上云前置检查", () => {
 
     expect(result?.branch).toBe("release/one")
     expect(pick.state.items[0][0].label).toBe("release/one")
-    expect((await git.raw(["branch", "--show-current"])).trim()).toBe("main")
+    expect((await git.raw(["symbolic-ref", "--quiet", "--short", "HEAD"])).trim()).toBe("main")
   }, 15_000)
 
   it("取消选择 remote、脏工作区确认或分支时停止", async () => {
