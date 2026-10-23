@@ -8,7 +8,7 @@
  * session activity) and a context window progress bar.
  */
 
-import { Component, For, Show, createMemo, createSignal, onMount, onCleanup } from "solid-js"
+import { Component, For, Show, createEffect, createMemo, createSignal, on, onMount, onCleanup } from "solid-js"
 import { IconButton } from "@kilocode/kilo-ui/icon-button"
 import { Tooltip } from "@kilocode/kilo-ui/tooltip"
 import { Icon } from "@kilocode/kilo-ui/icon"
@@ -16,9 +16,11 @@ import { Checkbox } from "@kilocode/kilo-ui/checkbox"
 import { InlineInput } from "@kilocode/kilo-ui/inline-input"
 import { useSession } from "../../context/session"
 import { collapseCostBreakdown, buildTimingSegments, fmtDuration } from "../../context/session-utils"
+import { messageTurns } from "../../context/session-queue"
 import { useLanguage } from "../../context/language"
 import { useVSCode } from "../../context/vscode"
 import { TaskTimeline } from "./TaskTimeline"
+import { Banner } from "./Banner"
 import { CloudLogo } from "../shared/CloudLogo"
 import type { TodoItem, ExtensionMessage } from "../../types/messages"
 
@@ -35,8 +37,21 @@ export const TaskHeader: Component<TaskHeaderProps> = (props) => {
   const busy = createMemo(() => session.status() === "busy")
   const stop = () => session.abort()
 
-  // Skill banner dismiss state
+  // Banner dismiss state
   const [dismissed, setDismissed] = createSignal(false)
+  const rounds = createMemo(() => messageTurns(session.messages(), session.revert()?.messageID).length)
+  const tips = createMemo(() =>
+    [
+      session.skills().length > 10 ? `当前已加载${session.skills().length}个技能，请注意技能数量` : "",
+      rounds() > 20 ? `已进行 ${rounds()} 轮对话，轮次过多会影响响应速度，建议压缩上下文或新开会话` : "",
+    ].filter(Boolean),
+  )
+  createEffect(
+    on(
+      () => session.currentSessionID(),
+      () => setDismissed(false),
+    ),
+  )
 
   // Title editing state
   const [editing, setEditing] = createSignal(false)
@@ -418,18 +433,8 @@ export const TaskHeader: Component<TaskHeaderProps> = (props) => {
               )
             }}
           </Show>
-          <Show when={session.skills().length > 10 && !dismissed()}>
-            <div class="skill-banner">
-              <Icon name="warning" size="small" />
-              <span class="skill-banner-text">当前已加载{session.skills().length}个技能，请注意技能数量</span>
-              <button
-                class="skill-banner-close"
-                onClick={() => setDismissed(true)}
-                aria-label="关闭提示"
-              >
-                <Icon name="close" size="small" />
-              </button>
-            </div>
+          <Show when={tips().length > 0 && !dismissed()}>
+            <Banner texts={tips()} onClose={() => setDismissed(true)} />
           </Show>
         </div>
       </Show>
