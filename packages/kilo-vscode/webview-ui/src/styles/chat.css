@@ -2607,6 +2607,12 @@ body.vscode-light
 }
 /* testagent_change end */
 
+/* testagent_change start - keep cloud transfer actions visible without hovering */
+.session-list [data-slot="session-upload-button"] {
+  opacity: 1;
+}
+/* testagent_change end */
+
 /* History View (unified Local + Cloud tabs) */
 .history-view {
   display: flex;
