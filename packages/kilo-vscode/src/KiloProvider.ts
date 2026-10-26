@@ -4863,6 +4863,17 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
     const notifyErrors = notifications.get<boolean>("errors", true)
     if (!notifyErrors) return
 
+    const missing = /default agent "(.*?)" not found/.exec(error)
+    if (missing) {
+      void vscode.window
+        .showErrorMessage(`默认智能体 "${missing[1]}" 不存在，请修改配置`, "打开全局配置文件", "打开项目配置文件")
+        .then((pick) => {
+          if (pick === "打开全局配置文件") void this.handleOpenConfigFile("global")
+          if (pick === "打开项目配置文件") void this.handleOpenConfigFile("local")
+        })
+      return
+    }
+
     const isChild = syncedChildSessions.has(sessionID)
     if (isChild) {
       const notifySubagent = notifications.get<boolean>("subagent", true)
