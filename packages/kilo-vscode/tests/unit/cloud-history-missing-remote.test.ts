@@ -18,7 +18,8 @@ afterEach(async () => {
 it("keeps Cloud history available without a remote and reports the list error on request", async () => {
   const root = await fs.mkdtemp(path.join(os.tmpdir(), "testagent-cloud-history-no-remote-"))
   roots.push(root)
-  await simpleGit(root).raw(["init", "-b", "main"])
+  await simpleGit(root).init()
+  await simpleGit(root).raw(["symbolic-ref", "HEAD", "refs/heads/main"])
   const reg = new WorkspaceSyncRegistry()
   regs.push(reg)
   const messages: unknown[] = []

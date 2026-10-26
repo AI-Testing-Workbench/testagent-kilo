@@ -33,7 +33,8 @@ async function setup(
 ) {
   const root = await fs.mkdtemp(path.join(os.tmpdir(), "testagent-cloud-append-"))
   roots.push(root)
-  await simpleGit(root).raw(["init", "-b", "main"])
+  await simpleGit(root).init()
+  await simpleGit(root).raw(["symbolic-ref", "HEAD", "refs/heads/main"])
   const services = opts.services ?? [{ id: "service-1", expires: new Date(Date.now() + 3_600_000).toISOString() }]
   if (!opts.noInfo) await writeCloudInfo(root, { serviceIds: services.map((item) => item.id) })
   let exports = 0

@@ -8,7 +8,7 @@ export async function pullImportedRepository(root: string, state: ContainerStatu
   const branch = state.gitee_branch?.trim()
   const git = simpleGit(root)
   const remote = target ? await fetchRemote(git, target.url) : undefined
-  const current = await git.raw(["branch", "--show-current"]).then(
+  const current = await git.raw(["symbolic-ref", "--quiet", "--short", "HEAD"]).then(
     (raw) => raw.trim(),
     () => "",
   )
@@ -103,7 +103,7 @@ async function fastForward(
 
   const check = await git.status().catch(() => undefined)
   if (!check || check.files.length) return "拉取期间本地 Git 工作区发生变化，已停止快进。会话已导入。"
-  const branchNow = await git.raw(["branch", "--show-current"]).then(
+  const branchNow = await git.raw(["symbolic-ref", "--quiet", "--short", "HEAD"]).then(
     (raw) => raw.trim(),
     () => "",
   )

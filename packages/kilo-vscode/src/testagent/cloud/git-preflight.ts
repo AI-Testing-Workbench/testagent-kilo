@@ -155,7 +155,7 @@ async function selectGitRoot(root: string, ui: CloudGitUi): Promise<CloudGitSele
   // testagent_change end
 
   const current = await git
-    .raw(["branch", "--show-current"])
+    .raw(["symbolic-ref", "--quiet", "--short", "HEAD"]) // testagent_change
     .then((name) => name.trim())
     .catch(() => "")
   const remoteBranches = await listRemoteBranches(git, remote.name)

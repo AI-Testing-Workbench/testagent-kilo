@@ -21,7 +21,8 @@ describe("Cloud history availability", () => {
     roots.push(root)
     // testagent_change start - model a Git workspace without a supported HTTP(S) remote
     const git = simpleGit(root)
-    await git.raw(["init", "-b", "main"])
+    await git.init()
+    await git.raw(["symbolic-ref", "HEAD", "refs/heads/main"])
     await git.addRemote("origin", "git@github.com:alice/repo.git")
     // testagent_change end
     const reg = new WorkspaceSyncRegistry()
