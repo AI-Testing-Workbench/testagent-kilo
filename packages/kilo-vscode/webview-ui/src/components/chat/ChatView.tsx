@@ -33,6 +33,10 @@ interface ChatViewProps {
   onShowHistory?: () => void
   onForkMessage?: (sessionId: string, messageId: string) => void
   readonly?: boolean
+  // testagent_change start - archive previews use the ordinary ChatView with a fork-only footer
+  archiveForking?: boolean
+  onForkArchive?: (key: string) => void
+  // testagent_change end
   /** When true, show the "Continue in Worktree" button. Defaults to true in the sidebar. */
   continueInWorktree?: boolean
   promptBoxId?: string
@@ -50,9 +54,14 @@ export const ChatView: Component<ChatViewProps> = (props) => {
   const isSidebar = () => worktreeMode === undefined
   // Show "Continue in Worktree": only when explicitly enabled via prop
   const canContinueInWorktree = () => props.continueInWorktree === true
+  // testagent_change start - distinguish local archive read-only state from the SaaS cloud preview
+  const archivePreview = () => session.archivePreview()
+  const archiveReadonly = () => !!archivePreview()
+  const readonly = () => props.readonly || archiveReadonly()
+  // testagent_change end
 
   // Show tab strip when multiple tabs are open
-  const showTabStrip = () => isSidebar() && !props.readonly && tabs && tabs.ids().length > 1
+  const showTabStrip = () => isSidebar() && !readonly() && tabs && tabs.ids().length > 1 // testagent_change - hide tabs for archive previews
 
   const id = () => session.currentSessionID()
   const hasMessages = () => session.messages().length > 0
@@ -96,13 +105,19 @@ export const ChatView: Component<ChatViewProps> = (props) => {
   // Tool-linked questions render inline at their tool part position via AssistantMessage.
   // Only this session's own standalone questions render in the message list — questions
   // from child subagents surface in the bottom dock instead (mirroring PermissionDock).
-  const standaloneQuestions = createMemo(() => familyQuestions().filter((q) => !q.tool && q.sessionID === id()))
-  const standaloneSuggestions = createMemo(() => familySuggestions().filter((s) => !s.tool))
-  const permissionRequest = () => familyPermissions().find((p) => p.sessionID === id()) ?? familyPermissions()[0]
+  const standaloneQuestions = createMemo(
+    () => (archiveReadonly() ? [] : familyQuestions().filter((q) => !q.tool && q.sessionID === id())), // testagent_change - archive prompts are historical
+  )
+  const standaloneSuggestions = createMemo(
+    () => (archiveReadonly() ? [] : familySuggestions().filter((s) => !s.tool)), // testagent_change - suppress live suggestion actions
+  )
+  const permissionRequest = () =>
+    archiveReadonly() ? undefined : (familyPermissions().find((p) => p.sessionID === id()) ?? familyPermissions()[0]) // testagent_change - archive permissions are not actionable
   // A pending question from a child subagent. The child's message list isn't visible
   // here, so surface the QuestionDock in the bottom dock so the user can answer the
   // subagent directly — same pattern as the PermissionDock for child permissions.
-  const delegatedQuestionRequest = () => familyQuestions().find((q) => q.sessionID !== id())
+  const delegatedQuestionRequest = () =>
+    archiveReadonly() ? undefined : familyQuestions().find((q) => q.sessionID !== id()) // testagent_change - archive questions are not actionable
   // Prompt input is decoupled from questions/suggestions — only permissions block.
   // Pending questions and suggestions are auto-dismissed in sendMessage/sendCommand.
   const blocked = () => isPromptBlocked(familyPermissions().length)
@@ -111,8 +126,9 @@ export const ChatView: Component<ChatViewProps> = (props) => {
   // Session is busy only because a question tool call is pending — prompt should behave as idle
   const questioning = () => isQuestioning(blocked(), familyQuestions().length)
   // testagent_change - 检查点重置确认时也展示 dock 区域
-  const dock = () =>
+  const docked = () =>
     !props.readonly || !!permissionRequest() || !!delegatedQuestionRequest() || !!session.revertConfirm()
+  const dock = () => archiveReadonly() || docked() // testagent_change - keep the fork footer visible
 
   // When a bottom-dock permission disappears while the session is busy,
   // the scroll container grows taller. Dispatch a custom event so MessageList can
@@ -126,9 +142,9 @@ export const ChatView: Component<ChatViewProps> = (props) => {
   )
 
   onMount(() => {
-    if (props.readonly) return
+    // if (props.readonly) return // testagent_change
     const handler = (e: KeyboardEvent) => {
-      if (e.key !== "Escape" || session.status() === "idle" || e.defaultPrevented) return
+      if (readonly() || e.key !== "Escape" || session.status() === "idle" || e.defaultPrevented) return // testagent_change - Escape cannot abort an archive preview
       e.preventDefault()
       session.abort()
     }
@@ -170,21 +186,33 @@ export const ChatView: Component<ChatViewProps> = (props) => {
     session.respondToPermission(perm.id, response, approvedAlways, deniedAlways)
   }
 
+  // testagent_change start - archive imports no longer require confirmation
+  function importArchive() {
+    const preview = archivePreview()
+    if (!preview || props.archiveForking) return
+    props.onForkArchive?.(preview.key)
+  }
+  // testagent_change end
+
   return (
     <div class="chat-view">
       <Show when={showTabStrip()}>
         <SessionTabStrip />
       </Show>
-      <TaskHeader readonly={props.readonly} />
+      <TaskHeader readonly={/* testagent_change - archived sessions cannot rename */ readonly()} />
       <div class="chat-messages-wrapper">
         <div class="chat-messages">
           <MessageList
             onSelectSession={props.onSelectSession}
             onShowHistory={props.onShowHistory}
-            onForkMessage={props.onForkMessage}
+            onForkMessage={
+              /* testagent_change - hide message-level fork in archive mode */ readonly()
+                ? undefined
+                : props.onForkMessage
+            }
             questions={standaloneQuestions}
             suggestions={standaloneSuggestions}
-            readonly={props.readonly}
+            readonly={/* testagent_change - turn renderer receives archive write restrictions */ readonly()}
           />
         </div>
       </div>
@@ -211,7 +239,15 @@ export const ChatView: Component<ChatViewProps> = (props) => {
             <RevertConfirmDock />
           </Show>
           {/* testagent_change end */}
-          <Show when={!props.readonly && hasMessages() && idle() && !blocked() && !session.revertConfirm()}>
+          <Show
+            when={
+              /* testagent_change - archive preview cannot start a new task */ !readonly() &&
+              hasMessages() &&
+              idle() &&
+              !blocked() &&
+              !session.revertConfirm()
+            }
+          >
             <div class="new-task-button-wrapper">
               <div class="session-actions-row">
                 {/* testagent_change start - 继续按钮：仅在出错或中断时显示 */}
@@ -299,7 +335,20 @@ export const ChatView: Component<ChatViewProps> = (props) => {
           <Show when={session.sdtProgress()}>
             {(progress) => <SdtProgressCard progress={progress()} onDismiss={session.dismissSdtProgress} />}
           </Show>
-          <Show when={!props.readonly}>
+          <Show when={archiveReadonly()}>
+            <div class="archive-readonly-composer" role="group" aria-label={language.t("cloud.archive.fork.title")}>
+              <span class="archive-readonly-composer-prompt">{language.t("cloud.archive.fork.note")}</span>
+              <Button
+                variant="primary"
+                size="small"
+                disabled={!props.onForkArchive || props.archiveForking}
+                onClick={importArchive}
+              >
+                {language.t(props.archiveForking ? "cloud.archive.forking" : "cloud.archive.fork.button")}
+              </Button>
+            </div>
+          </Show>
+          <Show when={/* testagent_change - only real sessions mount the editable prompt */ !readonly()}>
             <ChatTip />
             <PromptInput
               blocked={blocked}

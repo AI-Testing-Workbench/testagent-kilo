@@ -110,6 +110,22 @@ export const PermissionDock: Component<{
     return value
   }
 
+  // testagent_change start - 检测是否是危险删除命令
+  const isDeleteCommand = () => {
+    if (props.request.toolName !== "bash") return false
+    const patterns = props.request.patterns || []
+    const deletePatterns = [
+      /^rm\s/i,
+      /^rmdir\s/i,
+      /^del\s/i,
+      /^erase\s/i,
+      /^remove-item\s/i,
+      /^rd\s/i,
+    ]
+    return patterns.some(pattern => deletePatterns.some(regex => regex.test(pattern.trim())))
+  }
+  // testagent_change end
+
   const title = () =>
     fromChild() ? language.t("notification.permission.titleSubagent") : language.t("notification.permission.title")
 
@@ -160,12 +176,23 @@ export const PermissionDock: Component<{
       <DockPrompt
         kind="permission"
         header={
-          <div data-slot="permission-row" data-variant="header">
-            <span data-slot="permission-icon">
-              <Icon name="warning" size="small" />
-            </span>
-            <div data-slot="permission-header-title">{title()}</div>
-          </div>
+          isDeleteCommand() ? (
+            <div data-slot="permission-row" data-variant="header">
+              <span data-slot="permission-icon">
+                <span style={{ "margin-right": "4px" }}>⚠️</span>
+              </span>
+              <div data-slot="permission-header-title" style={{ color: "var(--text-on-critical-base)" }}>
+                {title()}（危险删除命令）
+              </div>
+            </div>
+          ) : (
+            <div data-slot="permission-row" data-variant="header">
+              <span data-slot="permission-icon">
+                <Icon name="warning" size="small" />
+              </span>
+              <div data-slot="permission-header-title">{title()}</div>
+            </div>
+          )
         }
         footer={
           <Show when={hasRules()}>

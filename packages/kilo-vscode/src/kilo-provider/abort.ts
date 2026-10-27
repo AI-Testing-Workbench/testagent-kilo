@@ -11,9 +11,11 @@ export async function abortSession(input: {
   dir: string
   queuedMessageIDs: string[]
   reason?: "completed" | "user_abort" | "error"
+  // testagent_change - 取消范围："tree" 用于停止 subagent 及其子会话
+  scope?: "session" | "tree"
 }) {
   await input.client.session.abort(
-    { sessionID: input.sessionID, directory: input.dir, reason: input.reason },
+    { sessionID: input.sessionID, directory: input.dir, reason: input.reason, scope: input.scope },
     { throwOnError: true },
   )
 

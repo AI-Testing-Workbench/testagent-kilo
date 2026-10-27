@@ -13,6 +13,10 @@
     "script/*.ts"
   ],
   "project": ["src/**/*.ts", "webview-ui/**/*.{ts,tsx}"],
+  "ignore": [
+    "webview-ui/src/components/chat/CloudImportDialog.tsx",
+    "webview-ui/src/components/history/CloudSessionList.tsx"
+  ],
   "ignoreExportsUsedInFile": true,
   "exclude": ["dependencies", "devDependencies", "optionalPeerDependencies", "unlisted", "unresolved", "binaries"]
 }

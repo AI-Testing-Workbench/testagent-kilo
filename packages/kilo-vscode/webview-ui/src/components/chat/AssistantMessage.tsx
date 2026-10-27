@@ -64,6 +64,7 @@ function matchToolRequest<T extends { tool?: { callID: string; messageID: string
 
 interface AssistantMessageProps {
   message: SDKAssistantMessage
+  readonly?: boolean
   showAssistantCopyPartID?: string | null
 }
 
@@ -414,10 +415,16 @@ export const AssistantMessage: Component<AssistantMessageProps> = (props) => {
             part.type === "tool" && UPSTREAM_SUPPRESSED_TOOLS.has((part as SDKPart & { tool: string }).tool)
 
           // Active question tool parts render the interactive QuestionDock inline
-          const activeQuestion = createMemo(() => matchToolRequest(part, "question", session.questions()))
+          // testagent_change start - archived tool calls are history, not live question/suggestion prompts
+          const activeQuestion = createMemo(() =>
+            props.readonly ? undefined : matchToolRequest(part, "question", session.questions()),
+          )
 
           // Active suggestion tool parts render the interactive SuggestBar inline
-          const activeSuggestion = createMemo(() => matchToolRequest(part, "suggest", session.suggestions()))
+          const activeSuggestion = createMemo(() =>
+            props.readonly ? undefined : matchToolRequest(part, "suggest", session.suggestions()),
+          )
+          // testagent_change end
 
           // testagent_change: shell timeout renders the tool part with a yellow warning variant
           const isTimedOut = createMemo(() => {

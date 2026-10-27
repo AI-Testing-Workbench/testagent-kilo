@@ -57,6 +57,12 @@ import { handleContinueInWorktree } from "./kilo-provider/continue-worktree"
 import { parseMessageFiles, type MessageFile } from "./kilo-provider/message-files"
 import { handleFileSearch } from "./kilo-provider/file-search"
 import { getTerminalContents } from "./services/terminal/context"
+// testagent_change start - cloud history stays on the local HTTP archive path
+import { CloudHistory as History } from "./testagent/cloud/history"
+import { cloudSyncRegistry as registry } from "./testagent/cloud/coordinator"
+import { isRemoteSshOutdated } from "./testagent/cloud/ssh-api"
+import type { CloudGitUi } from "./testagent/cloud/git-preflight"
+// testagent_change end
 import { matchFollowup, recordFollowup, type Followup } from "./kilo-provider/followup-session"
 import { clearCommandsCache, loadCommands } from "./kilo-provider/commands"
 import { fetchMessagePage, MESSAGE_PAGE_LIMIT } from "./kilo-provider/message-page"
@@ -363,11 +369,54 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
   // testagent_change start - 所有存活实例，供外部命令广播 yolo 等全局状态
   public static readonly instances = new Set<KiloProvider>()
   // testagent_change end
+  // testagent_change start - rediscover projects after a Git repository is created in an open folder
+  private static readonly refreshing = new Set<string>()
+
+  public static async refreshGitRepository(dir: string): Promise<void> {
+    const norm = (value: string) => {
+      const resolved = path.resolve(value)
+      return process.platform === "win32" ? resolved.toLowerCase() : resolved
+    }
+    const root = norm(dir)
+    if (KiloProvider.refreshing.has(root)) return
+    KiloProvider.refreshing.add(root)
+    try {
+      const all = [...KiloProvider.instances].filter((provider) => norm(provider.getWorkspaceDirectory()) === root)
+      if (!all.length) return
+      for (const provider of all) provider.pendingGitRepository = dir
+
+      const ready = all.filter((provider) => provider.gitStateReady && provider.connectionState === "connected")
+      if (!ready.length) return
+      if (ready.every((provider) => provider.cachedGitRepo)) {
+        for (const provider of all) provider.pendingGitRepository = undefined
+        return
+      }
+
+      const client = ready.find((provider) => provider.client)?.client
+      if (!client) return
+      for (const provider of ready) provider.projectID = undefined
+      await client.instance.dispose({ directory: dir })
+      for (const provider of ready) {
+        provider.cachedGitRepo = true
+        provider.pendingGitRepository = undefined
+        provider.postMessage({ type: "gitStatus", repo: true })
+        provider.startStatsPolling()
+      }
+      await Promise.all(ready.map((provider) => provider.handleLoadSessions()))
+      for (const provider of all) provider.pendingGitRepository = undefined
+    } finally {
+      KiloProvider.refreshing.delete(root)
+    }
+  }
+  // testagent_change end
   private readonly instanceId = crypto.randomUUID()
   private webviewType: "sidebar" | "panel" | "unknown" = "unknown" // testagent_change
 
   private webview: vscode.Webview | null = null
   private webviewView: vscode.WebviewView | null = null // testagent_change - store view reference for visibility check
+  // testagent_change start - cache cloud history service per provider
+  private readonly history: History
+  // testagent_change end
 
   // testagent_change start - System notification service
   private systemNotification: SystemNotificationService
@@ -476,6 +525,10 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
   private statsGitOps: GitOps | null = null
   private cachedStats: unknown = null
   private cachedGitRepo = false
+  // testagent_change start - defer Git project refresh until the backend connection is initialized
+  private gitStateReady = false
+  private pendingGitRepository: string | undefined
+  // testagent_change end
 
   /** Optional interceptor called before the standard message handler.
    *  Return null to consume the message, or return a (possibly transformed) message. */
@@ -499,6 +552,67 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
     this.projectDirectory = options?.projectDirectory
     this.slimEditMetadata = options?.slimEditMetadata ?? true
     KiloProvider.instances.add(this) // testagent_change
+    // testagent_change start - use the shared workspace registry for cloud history
+    const ui: CloudGitUi = {
+      pick: (items, opts) => vscode.window.showQuickPick(items, opts),
+      confirm: async (message, accept, cancel) => {
+        const result = await vscode.window.showWarningMessage(
+          message,
+          { modal: true },
+          { title: accept },
+          { title: cancel, isCloseAffordance: true },
+        )
+        return result?.title
+      },
+      warn: async (message) =>
+        (await vscode.window.showWarningMessage(message, { modal: true }, "继续")) === "继续", // testagent_change
+      modal: async (message) => {
+        await vscode.window.showWarningMessage(message, { modal: true }, "确定")
+      },
+    }
+    this.history = new History({
+      connection: this.connectionService,
+      registry,
+      dir: () => this.getWorkspaceDirectory(),
+      sessionDir: (id) => this.resolveSessionDirectory(id),
+      context: (dir) => ({ directory: dir, workspace: process.env.OPENCODE_WORKSPACE_ID }),
+      pluginId: "test-tech.TestAgent",
+      ui,
+      local: !isCloudMode(),
+      progress: async <T>(task: (finish: () => void) => Promise<T>): Promise<T> => {
+        const state: { run?: Promise<T> } = {}
+        await vscode.window.withProgress(
+          {
+            location: vscode.ProgressLocation.Notification,
+            title: "正在准备会话上云...",
+            cancellable: false,
+          },
+          () =>
+            new Promise<void>((resolve) => {
+              state.run = task(resolve)
+              void state.run.then(
+                () => resolve(),
+                () => resolve(),
+              )
+            }),
+        )
+        if (!state.run) throw new Error("会话上云任务未启动")
+        return state.run
+      },
+      rename: async (id, title, dir) => {
+        const client = await this.connectionService.getClientAsync(dir)
+        await client.session.update({ sessionID: id, directory: dir, title }, { throwOnError: true })
+      },
+      post: (message) => this.postMessage(message),
+      onError: (err) => {
+        this.log(err)
+        if (isRemoteSshOutdated(err)) return
+        void vscode.window.showErrorMessage(err instanceof Error ? err.message : String(err))
+      },
+      warning: (message) => vscode.window.showWarningMessage(message, { modal: true }, "确定"),
+      success: (message) => void vscode.window.showInformationMessage(message),
+    })
+    // testagent_change end
 
     TelemetryProxy.getInstance().setProvider(this)
 
@@ -506,10 +620,10 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
     this.systemNotification = new SystemNotificationService(extensionUri)
     // testagent_change end
 
-    // testagent_change start - provide current session ID for auto-compaction retry abort
-    this.connectionService.setCurrentSessionIdGetter(() => this.currentSession?.id)
+    // testagent_change start - provide the current session ID and tolerate hosts without optional hooks
+    this.connectionService.setCurrentSessionIdGetter?.(() => this.currentSession?.id)
     // 当用户点击"确定"开启自动压缩时，走统一 abort 流程
-    this.connectionService.onAutoCompaction(() => {
+    this.connectionService.onAutoCompaction?.(() => {
       const sid = this.currentSession?.id
       if (sid) {
         // 直接通知前端 UI 更新状态（cancelRetry 内部依赖 retryAbortControllers，可能没有注册）
@@ -851,6 +965,59 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
     void this.handleLoadSessions()
   }
 
+  // testagent_change start - refresh visible archive metadata after sync writes
+  public refreshArchives(): void {
+    void this.history.list().catch(() => undefined)
+  }
+
+  private log(err: unknown): void {
+    const data = err && typeof err === "object" ? err : {}
+    const code = "code" in data && typeof data.code === "string" ? data.code : "unknown"
+    const serviceId = "serviceId" in data && typeof data.serviceId === "string" ? data.serviceId : "-"
+    console.error(`[TestAgent] stage=cloud_history serviceId=${serviceId} code=${code}`)
+  }
+
+  private async handleCloudHistoryMessage(message: Record<string, unknown>): Promise<void> {
+    switch (message.type) {
+      case "requestCloudArchiveList":
+        // testagent_change start - answer eligibility probes without scanning or creating files
+        if (message.availabilityOnly === true) {
+          await this.history.availability()
+          return
+        }
+        // testagent_change end
+        await this.history.list().catch(() => undefined)
+        return
+      case "requestCloudArchive":
+        if (typeof message.key === "string") {
+          await this.history.read(message.key).catch(() => undefined)
+        }
+        return
+      case "requestCloudArchiveFork": {
+        if (typeof message.key !== "string") return
+        const result = await this.history.fork(message.key).catch(() => undefined)
+        if (!result) return
+        await this.handleLoadSessions()
+        this.postMessage({
+          type: "cloudArchiveForked",
+          key: message.key,
+          sourceSessionID: result.sourceSessionID,
+          sessionID: result.sessionID,
+        })
+        return
+      }
+      case "requestCloudUpload":
+        if (typeof message.sessionID === "string")
+          void this.history.upload(message.sessionID, message.append === true) // testagent_change
+        return
+      case "requestCloudExport":
+        if (typeof message.sessionID === "string") void this.history.export(message.sessionID)
+        return
+    }
+  }
+
+  // testagent_change end
+
   /** Register a listener invoked when a plan follow-up session is adopted. */
   public onFollowupAdopted(cb: (session: Session, directory: string) => void): void {
     this.followupListeners.push(cb)
@@ -956,11 +1123,15 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
 
       await routeSuggestionWebviewMessage(this.questionCtx, message)
       if (await ModelState.handleMessage(message.type, message, this.client, (msg) => this.postMessage(msg))) return
+      // testagent_change start - route archive actions through the HTTP history service
+      await this.handleCloudHistoryMessage(message)
+      // testagent_change end
       switch (message.type) {
         case "webviewReady":
           console.log("[TestAgent]  ✅ webviewReady received")
           this.isWebviewReady = true
           await this.syncWebviewState("webviewReady")
+          this.history.push() // testagent_change - replay cached archive metadata after webview reload
           this.flushPendingReviewComments()
           this.recoverPendingPrompts()
           this.flushPendingOpenSession() // testagent_change - cross-window handoff
@@ -1012,7 +1183,12 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
         // testagent_change end
         case "abort":
           this.cancelRetry(message.sessionID ?? "")
-          await this.handleAbort(message.sessionID, parseQueued(message.queuedMessageIDs), message.reason)
+          await this.handleAbort(
+            message.sessionID,
+            parseQueued(message.queuedMessageIDs),
+            message.reason,
+            message.scope, // testagent_change - 停止 subagent 走 tree
+          )
           break
         // testagent_change start - testflow message handlers
         case "testflow.syncChildSession":
@@ -1919,6 +2095,19 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
       }, 5000)
 
       if (this.cachedGitRepo) this.startStatsPolling()
+
+      // testagent_change start - apply Git repository events received during connection startup
+      this.gitStateReady = true
+      if (this.pendingGitRepository) {
+        const dir = this.pendingGitRepository
+        void KiloProvider.refreshGitRepository(dir).catch((err) => {
+          this.postMessage({
+            type: "error",
+            message: `会话刷新失败：${getErrorMessage(err) || "未知错误"}`,
+          })
+        })
+      }
+      // testagent_change end
 
       console.log("[TestAgent]  ✅ initializeConnection completed successfully")
     } catch (error) {
@@ -4095,7 +4284,12 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
   }
   // testagent_change end
 
-  private async handleAbort(sessionID?: string, queuedMessageIDs: string[] = [], reason?: string): Promise<void> {
+  private async handleAbort(
+    sessionID?: string,
+    queuedMessageIDs: string[] = [],
+    reason?: string,
+    scope?: "session" | "tree", // testagent_change - 停止 subagent 时传 "tree"
+  ): Promise<void> {
     if (!this.client) {
       return
     }
@@ -4113,6 +4307,7 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
         dir: this.getWorkspaceDirectory(targetSessionID),
         queuedMessageIDs,
         reason: reason as "completed" | "user_abort" | "error" | undefined,
+        scope, // testagent_change - 透传取消范围
       })
       // testagent_change start - reconcile session status after abort
       // The session.status:idle event may be lost if SSE drops during abort,
@@ -4682,6 +4877,17 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
     const notifications = vscode.workspace.getConfiguration("testagent.new.notifications")
     const notifyErrors = notifications.get<boolean>("errors", true)
     if (!notifyErrors) return
+
+    const missing = /default agent "(.*?)" not found/.exec(error)
+    if (missing) {
+      void vscode.window
+        .showErrorMessage(`默认智能体 "${missing[1]}" 不存在，请修改配置`, "打开全局配置文件", "打开项目配置文件")
+        .then((pick) => {
+          if (pick === "打开全局配置文件") void this.handleOpenConfigFile("global")
+          if (pick === "打开项目配置文件") void this.handleOpenConfigFile("local")
+        })
+      return
+    }
 
     const isChild = syncedChildSessions.has(sessionID)
     if (isChild) {

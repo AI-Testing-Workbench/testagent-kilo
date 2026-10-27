@@ -5,11 +5,13 @@ import { ErrorDetails } from "@kilocode/kilo-ui/error-details"
 import { Button } from "@kilocode/kilo-ui/button"
 import type { AssistantMessage } from "@kilocode/sdk/v2"
 import { useLanguage } from "../../context/language"
+import { useVSCode } from "../../context/vscode"
 import {
   unwrapError,
   parseAssistantError,
   isUnauthorizedPaidModelError,
   isUnauthorizedPromotionLimitError,
+  isDefaultAgentMissingError,
 } from "../../utils/errorUtils"
 
 interface ErrorDisplayProps {
@@ -20,6 +22,7 @@ interface ErrorDisplayProps {
 
 export const ErrorDisplay: Component<ErrorDisplayProps> = (props) => {
   const { t } = useLanguage()
+  const vscode = useVSCode()
   const parsed = createMemo(() => parseAssistantError(props.error))
 
   const errorText = createMemo(() => {
@@ -28,6 +31,8 @@ export const ErrorDisplay: Component<ErrorDisplayProps> = (props) => {
     if (msg === undefined || msg === null) return ""
     return unwrapError(String(msg))
   })
+
+  const agentMissing = createMemo(() => isDefaultAgentMissingError(errorText()))
 
   return (
     <Switch
@@ -46,6 +51,20 @@ export const ErrorDisplay: Component<ErrorDisplayProps> = (props) => {
         </Card>
       }
     >
+      <Match when={agentMissing()}>
+        <Card variant="error" class="error-card">
+          {errorText()}
+          <p>请打开配置文件，将 default_agent 改为已存在的智能体，或删除该项后重新选择。</p>
+          <div data-slot="error-actions" style={{ display: "flex", gap: "8px", "margin-top": "8px" }}>
+            <Button variant="primary" size="small" onClick={() => vscode.postMessage({ type: "openConfigFile", scope: "global" })}>
+              打开全局配置文件
+            </Button>
+            <Button variant="secondary" size="small" onClick={() => vscode.postMessage({ type: "openConfigFile", scope: "local" })}>
+              打开项目配置文件
+            </Button>
+          </div>
+        </Card>
+      </Match>
       <Match when={isUnauthorizedPaidModelError(parsed())}>
         <div data-component="auth-prompt">
           <div data-slot="auth-prompt-header">

@@ -130,12 +130,14 @@ const TaskToolRenderer: Component<ToolProps> = (props) => {
     vscode.postMessage({ type: "openSubAgentViewer", sessionID: id, title: description() })
   }
 
+  // testagent_change - 停止这个 subagent 及其启动的子会话；父会话继续运行
   const stop = (e: MouseEvent) => {
     e.stopPropagation()
     const id = childSessionId()
     if (!id) return
-    session.abort(id)
+    session.abort(id, "tree")
   }
+  const stoppable = () => !!childSessionId() && (running() || busy())
 
   const trigger = () => (
     <div data-slot="basic-tool-tool-info-structured">
@@ -168,17 +170,19 @@ const TaskToolRenderer: Component<ToolProps> = (props) => {
         </Show>
       </div>
       {/* testagent_change start - sub-agent stop functionality */}
-      {/* <Show when={childSessionId() && (running() || busy())}>
+      <Show when={stoppable()}>
         <Tooltip value={language.t("prompt.action.stop")} placement="top">
           <IconButton
             icon="stop"
             size="small"
             variant="ghost"
+            data-slot="task-tool-stop"
             aria-label={language.t("prompt.action.stop")}
             onClick={stop}
           />
         </Tooltip>
-      </Show> */}
+      </Show>
+      {/* testagent_change end */}
       <Show when={childSessionId()}>
         <IconButton
           icon="square-arrow-top-right"
