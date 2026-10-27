@@ -2,4 +2,4 @@
 "TestAgent": patch
 ---
 
-Fix stale sub-agent cards and a hanging "continue task" after reloading VS Code mid-task: sub-agent cards no longer show a permanent "starting" state with a stop button that does nothing, interrupted tool calls are finalized when a session is resumed, and continuing a session that is still running now fails fast with a clear error instead of hanging.
+Fix sub-agent task cards around stop and resume: a cancelled card no longer comes back to life or offers a stop button when the same sub-agent is resumed, each card lists only the tool calls made during its own invocation, stale cards stop showing a permanent "starting" state after reloading VS Code mid-task, and continuing a running session fails fast with a clear error instead of hanging.
