@@ -53,11 +53,14 @@ const TaskToolRenderer: Component<ToolProps> = (props) => {
       state: { metadata: props.metadata as { sessionId?: string } },
     })
 
-  const running = createMemo(() => props.status === "pending" || props.status === "running")
+  // testagent_change - part 状态可能是进程崩溃前遗留的（被杀时 processor 来不及收尾），
+  // 必须以子会话实时状态为准：子会话不忙时不显示"启动中"，也不给停止按钮
   const busy = createMemo(() => {
     const id = childSessionId()
-    return id ? session.allStatusMap()[id]?.type === "busy" : false
+    const status = id ? session.allStatusMap()[id]?.type : undefined
+    return status === "busy" || status === "retry"
   })
+  const running = createMemo(() => (props.status === "pending" || props.status === "running") && busy())
 
   // Warm child session data immediately so completed task tools already have
   // their compact child tool list available when the user expands them.
@@ -112,7 +115,8 @@ const TaskToolRenderer: Component<ToolProps> = (props) => {
     if (!id) return
     session.abort(id, "tree")
   }
-  const stoppable = () => !!childSessionId() && (running() || busy())
+  // testagent_change - 只有子会话确实在跑才可停止；崩溃遗留的 running part 不给停止按钮
+  const stoppable = () => !!childSessionId() && busy()
 
   const trigger = () => (
     <div data-slot="basic-tool-tool-info-structured">

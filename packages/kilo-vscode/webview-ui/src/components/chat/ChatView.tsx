@@ -66,6 +66,8 @@ export const ChatView: Component<ChatViewProps> = (props) => {
   const id = () => session.currentSessionID()
   const hasMessages = () => session.messages().length > 0
   const idle = () => session.status() !== "busy"
+  // testagent_change - 家族（含 subagent）运行状态：恢复按钮据此隐藏；memo 避免每次渲染都走一遍 BFS
+  const familyStatus = createMemo(() => session.familyData(id()).status)
 
   // testagent_change start - 判断最后一条 assistant 消息是否处于可继续状态（出错或被中断）
   const lastAssistantMsg = () => {
@@ -78,6 +80,9 @@ export const ChatView: Component<ChatViewProps> = (props) => {
   const canContinue = () => {
     // 重试中不显示继续按钮
     if (session.status() !== "idle") return false
+    // testagent_change - 家族内任一 session（如 subagent）仍在运行时，父 runner 实际被 task 工具
+    // 阻塞，恢复会被服务端拒绝——直接隐藏按钮，避免假 idle 状态误导用户
+    if (Object.values(familyStatus()).some((s) => s.type === "busy" || s.type === "retry")) return false
     const msg = lastAssistantMsg()
     if (!msg) return false
     // 有 error 字段 → 出错
@@ -88,6 +93,9 @@ export const ChatView: Component<ChatViewProps> = (props) => {
     return true
   }
   // testagent_change end
+
+  // testagent_change - 继续按钮防连点：3s 内的重复点击忽略，避免连点产生多个 resume 请求
+  const [clicked, setClicked] = createSignal(0)
 
   // "Continue in Worktree" state
   const [transferring, setTransferring] = createSignal(false)
@@ -257,6 +265,9 @@ export const ChatView: Component<ChatViewProps> = (props) => {
                       variant="secondary"
                       size="small"
                       onClick={() => {
+                        // testagent_change - 3s 内重复点击忽略，防止连点产生多个 resume 请求
+                        if (Date.now() - clicked() < 3000) return
+                        setClicked(Date.now())
                         session.continueTask()
                       }}
                       aria-label={language.t("command.session.continue")}
