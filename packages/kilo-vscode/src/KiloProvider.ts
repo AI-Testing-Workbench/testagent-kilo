@@ -4294,6 +4294,11 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
         reason: reason as "completed" | "user_abort" | "error" | undefined,
         scope, // testagent_change - 透传取消范围
       })
+      // testagent_change start - 停止强制同步：abort HTTP 是同步等待 server 完成 cleanup
+      // （尾部落盘+工具标记）后才返回的，此刻拉取即权威终态；经 messagesLoaded 一次性
+      // 推回 webview，完全绕开被积压堵住的 SSE 事件流
+      await this.handleLoadMessages(targetSessionID, { mode: "replace" })
+      // testagent_change end
       // testagent_change start - reconcile session status after abort
       // The session.status:idle event may be lost if SSE drops during abort,
       // so we query the backend to get the current status and update the UI.

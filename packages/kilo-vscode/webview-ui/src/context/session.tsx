@@ -964,6 +964,21 @@ export const SessionProvider: ParentComponent = (props) => {
   }
 
   function handleSessionExtensionMessage(message: ExtensionMessage): void {
+    // testagent_change start - 停止强制同步：丢弃被停会话的在途渲染事件（终态由 messagesLoaded 恢复）。
+    // 其他会话（含子会话）与交互类事件不丢；messagesLoaded 本身不丢
+    const stopSid = stopping()
+    if (stopSid) {
+      if (
+        (message.type === "partUpdated" || message.type === "messageCreated") &&
+        (message.type === "partUpdated" ? message.sessionID === stopSid : message.message.sessionID === stopSid)
+      ) {
+        return
+      }
+      if (message.type === "partsUpdated" && message.updates.every((u) => u.sessionID === stopSid)) {
+        return
+      }
+    }
+    // testagent_change end
     // testagent_change start 增加sdt进度卡片
     if (message.type === "sdt.started" || message.type === "sdt.progress" || message.type === "sdt.finished") {
       handleSdtMessage(message)
@@ -1183,6 +1198,8 @@ export const SessionProvider: ParentComponent = (props) => {
     messages: Message[],
     input: { mode?: Exclude<MessageLoadMode, "focus">; cursor?: string; hasMore?: boolean } = {},
   ) {
+    // testagent_change - 停止强制同步：扩展拉回的权威终态到达即解闸，后续 idle 不再重复刷新
+    if (stopping() === sessionID && (input.mode ?? "replace") === "replace") endStopping()
     const mode = input.mode ?? "replace"
     const reset = mode === "prepend"
 
@@ -1367,6 +1384,14 @@ export const SessionProvider: ParentComponent = (props) => {
     message?: string,
     next?: number,
   ) {
+    // testagent_change start - 停止强制同步：窗口内残留 busy/retry 直接忽略；
+    // idle 作为兜底解闸信号（主路径是扩展的 messagesLoaded，先到的解闸）
+    if (stopping() === sessionID) {
+      if (newStatus !== "idle") return
+      endStopping()
+      vscode.postMessage({ type: "loadMessages", sessionID, mode: "replace", limit: MESSAGE_PAGE_LIMIT })
+    }
+    // testagent_change end
     const prev = statusMap[sessionID] ?? { type: "idle" }
     const info: SessionStatusInfo =
       newStatus === "retry"
@@ -2079,6 +2104,7 @@ export const SessionProvider: ParentComponent = (props) => {
 
   /** Create an optimistic user message + parts in the store so the UI updates instantly. */
   function addOptimistic(sid: string, messageID: string, text: string, files?: FileAttachment[]) {
+    endStopping() // testagent_change - 用户主动发送视为新一轮开始，立即恢复流消费
     const now = Date.now()
     const temp: Message = {
       id: messageID,
@@ -2291,6 +2317,29 @@ export const SessionProvider: ParentComponent = (props) => {
   }
   // testagent_change end
 
+  // testagent_change start - 停止强制同步：点击停止后本地立即置 idle 并丢弃在途渲染类事件，
+  // 权威终态由扩展在 abort HTTP 返回后（server 已完成落盘）经 loadMessages replace 一次性推回。
+  // SSE 队列里的旧 delta 全部作废，不再排队渲染。
+  const [stopping, setStopping] = createSignal<string | undefined>(undefined)
+  let stopTimer: ReturnType<typeof setTimeout> | undefined
+
+  function beginStopping(sid: string) {
+    setStopping(sid)
+    if (stopTimer) clearTimeout(stopTimer)
+    // 兜底：扩展端 abort HTTP 失败等导致 messagesLoaded/idle 都未到达时，主动恢复
+    stopTimer = setTimeout(() => {
+      if (stopping() !== sid) return
+      setStopping(undefined)
+      vscode.postMessage({ type: "loadMessages", sessionID: sid, mode: "replace", limit: MESSAGE_PAGE_LIMIT })
+    }, 10_000)
+  }
+
+  function endStopping() {
+    if (stopTimer) clearTimeout(stopTimer)
+    setStopping(undefined)
+  }
+  // testagent_change end
+
   function abort(sessionID?: string, scope?: "session" | "tree") {
     const sid = sessionID ?? currentSessionID()
     if (isArchiveSession(sid)) return
@@ -2300,6 +2349,11 @@ export const SessionProvider: ParentComponent = (props) => {
     }
 
     const queuedMessageIDs = queuedUserMessageIDs(store.messages[sid] ?? [], statusMap[sid] ?? idle)
+
+    // testagent_change start - 乐观置 idle：按钮/转圈当场停止，不等后端事件穿队列
+    setStatusMap(sid, { type: "idle" })
+    beginStopping(sid)
+    // testagent_change end
 
     vscode.postMessage({
       type: "abort",
