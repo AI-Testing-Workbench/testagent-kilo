@@ -56,14 +56,15 @@ export class SdtRunner {
     this.onBranch = opts.onBranch
     this.bridge.start({ sessionID: opts.sessionID, userText: opts.userText, userMessageID: opts.userMessageID, post: opts.post })
 
-    // Use bundled testflow binary from extension's bin/ directory
+    // Use bundled testflow JS file from extension's bin/ directory.
+    // 入口 cli-entry.ts 已自行用 import.meta.url 定位并写入 _TESTFLOW_RESOURCES_DIR，此处无需再注入。
+    // punycode 弃用警告由 bundle 内部（cli-entry.ts 的首个 side-effect import）统一屏蔽，无需此处传 flag。
     const extDir = path.resolve(__dirname, '..')
-    const testflowBin = path.join(extDir, 'bin', process.platform === 'win32' ? 'testflow.exe' : 'testflow')
+    const testflowMjs = path.join(extDir, 'bin', 'testflow.mjs')
 
-    const testflowResDir = path.join(extDir, 'bin', 'testflow-res')
-    this.proc = spawn(testflowBin, [opts.cmd, ...opts.args], {
+    this.proc = spawn('node', [testflowMjs, opts.cmd, ...opts.args], {
       cwd: opts.cwd,
-      env: { ...process.env, ...opts.env, KILO_INTEGRATION: "1", _TESTFLOW_RESOURCES_DIR: testflowResDir },
+      env: { ...process.env, ...opts.env, KILO_INTEGRATION: "1" },
       stdio: ["pipe", "pipe", "pipe"],
     })
 
@@ -116,13 +117,12 @@ export class SdtRunner {
    */
   async queryOnce(opts: SdtRunnerOpts): Promise<Record<string, unknown>> {
     const extDir = path.resolve(__dirname, '..')
-    const testflowBin = path.join(extDir, 'bin', process.platform === 'win32' ? 'testflow.exe' : 'testflow')
-    const testflowResDir = path.join(extDir, 'bin', 'testflow-res')
+    const testflowMjs = path.join(extDir, 'bin', 'testflow.mjs')
 
     return new Promise((resolve, reject) => {
-      const proc = spawn(testflowBin, [opts.cmd, ...opts.args], {
+      const proc = spawn('node', [testflowMjs, opts.cmd, ...opts.args], {
         cwd: opts.cwd,
-        env: { ...process.env, ...opts.env, KILO_INTEGRATION: "1", _TESTFLOW_RESOURCES_DIR: testflowResDir },
+        env: { ...process.env, ...opts.env, KILO_INTEGRATION: "1" },
         stdio: ["pipe", "pipe", "pipe"],
       })
 
