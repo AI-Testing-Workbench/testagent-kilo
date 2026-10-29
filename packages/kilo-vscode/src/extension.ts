@@ -14,6 +14,12 @@ import { SettingsEditorProvider } from "./SettingsEditorProvider"
 import { SubAgentViewerProvider } from "./SubAgentViewerProvider"
 import { EXTENSION_DISPLAY_NAME } from "./constants"
 import { KiloConnectionService } from "./services/cli-backend"
+// testagent_change start - workspace archive synchronization
+import { createCoreArchiveApi } from "./testagent/cloud/archive-api"
+import { cloudSyncRegistry } from "./testagent/cloud/coordinator"
+import { loadRemoteSshApi } from "./testagent/cloud/ssh-api"
+import { CloudArchiveSyncService } from "./testagent/cloud/sync-service"
+// testagent_change end
 import { formatWebUiLink, sessionPath } from "./services/cli-backend/share-link" // testagent_change - copy web UI share link
 import { registerAutocompleteProvider } from "./services/autocomplete"
 import { ensureBackendForAutocomplete } from "./services/autocomplete/ensure-backend"
@@ -42,6 +48,21 @@ import {
   SKILL_EVALUATION_SESSION_COMMAND,
   SKILL_EVALUATION_RESULTS_COMMAND,
 } from "./agent-manager/skill-evaluation"
+
+// testagent_change start - observe repositories created after a folder is opened
+interface GitRepository {
+  rootUri: vscode.Uri
+}
+
+interface GitAPI {
+  repositories: GitRepository[]
+  onDidOpenRepository: vscode.Event<GitRepository>
+}
+
+interface GitExtensionExports {
+  getAPI(version: number): GitAPI
+}
+// testagent_change end
 
 // Activated via "onStartupFinished" (package.json) so that commands, code actions, keybindings,
 // autocomplete, commit-message generation, and URI deep links all work immediately — without
@@ -75,6 +96,71 @@ export function activate(context: vscode.ExtensionContext) {
 
   // Create shared connection service (one server for all webviews)
   const connectionService = new KiloConnectionService(context)
+
+  // testagent_change start - start local/cloud archive synchronization from TestAgent's own mode signal
+  const log = (msg: string) => console.error(`[TestAgent] ${msg}`)
+  // testagent_change end
+  // testagent_change start - rediscover backend project identity when Git opens in the active folder
+  const gitExt = vscode.extensions.getExtension<GitExtensionExports>("vscode.git")
+  if (gitExt) {
+    const out = vscode.window.createOutputChannel("TestAgent")
+    context.subscriptions.push(out)
+    void (async () => {
+      const api = gitExt.isActive ? gitExt.exports?.getAPI(1) : (await gitExt.activate()).getAPI(1)
+      if (!api) return
+      const refresh = (dir: string) => {
+        void KiloProvider.refreshGitRepository(dir).catch((err: unknown) => {
+          const code = err instanceof Error ? err.name : "unknown"
+          out.appendLine(`[TestAgent] stage=git_project_refresh code=${code}`)
+          void vscode.window.showErrorMessage("刷新会话记录失败。")
+        })
+      }
+      context.subscriptions.push(api.onDidOpenRepository((repo) => refresh(repo.rootUri.fsPath)))
+      for (const repo of api.repositories) refresh(repo.rootUri.fsPath)
+    })().catch((err: unknown) => {
+      const code = err instanceof Error ? err.name : "unknown"
+      out.appendLine(`[TestAgent] stage=git_api code=${code}`)
+    })
+  }
+  // testagent_change end
+  // testagent_change start - start local/cloud archive synchronization from TestAgent's own mode signal
+  const cloudSync = new CloudArchiveSyncService({
+    mode: isCloudMode() ? "cloud" : "local",
+    registry: cloudSyncRegistry,
+    archive: createCoreArchiveApi(connectionService),
+    remote: loadRemoteSshApi,
+    context: (dir) => ({ directory: dir, workspace: process.env.OPENCODE_WORKSPACE_ID }),
+    onImported: () => {
+      for (const provider of KiloProvider.instances) provider.refreshSessions()
+    },
+    onError: (issue) => log(`stage=${issue.stage} serviceId=${issue.serviceId ?? "-"} code=${issue.code}`),
+  })
+  context.subscriptions.push(new vscode.Disposable(() => void cloudSync.dispose()))
+  const refreshCloud = (uri: vscode.Uri) => {
+    void cloudSync.refresh(uri.fsPath).catch((err) => {
+      const code = err instanceof Error && "code" in err && typeof err.code === "string" ? err.code : "unknown"
+      log(`stage=workspace serviceId=- code=${code}`)
+    })
+  }
+  const refreshImports = (uri: vscode.Uri) => {
+    refreshCloud(uri)
+    for (const provider of KiloProvider.instances) provider.refreshArchives()
+  }
+  const infoWatch = vscode.workspace.createFileSystemWatcher("**/.testagent/cloud/info.json")
+  const importWatch = vscode.workspace.createFileSystemWatcher("**/.testagent/cloud/import/**/*.json")
+  context.subscriptions.push(
+    infoWatch,
+    importWatch,
+    infoWatch.onDidCreate(refreshCloud),
+    infoWatch.onDidChange(refreshCloud),
+    importWatch.onDidCreate(refreshImports),
+    importWatch.onDidChange(refreshImports),
+    vscode.workspace.onDidChangeWorkspaceFolders((event) => {
+      event.added.forEach((folder) => refreshCloud(folder.uri))
+    }),
+  )
+  vscode.workspace.workspaceFolders?.forEach((folder) => refreshCloud(folder.uri))
+  // testagent_change end
 
   // testagent_change - relay TestAgent pet states to the TSCode desktop pet
   context.subscriptions.push(registerDesktopPetBridge(connectionService))
@@ -693,7 +779,7 @@ export function activate(context: vscode.ExtensionContext) {
           dark: vscode.Uri.file(context.asAbsolutePath("assets/icons/testagent_chat.png")),
         },
         location: { viewColumn: vscode.ViewColumn.Beside },
-        env: { TESTAGENT_CALLER: "vscode" }, // testagent_change - start with basic env
+        env: { TESTAGENT_CALLER: "vscode" },
         // On Windows, use PowerShell so quoted paths with spaces work correctly
         ...(process.platform === "win32" && {
           shellPath: "powershell.exe",

@@ -13,7 +13,8 @@ import { join } from "node:path"
 // testagent_change start - use testagent-core instead of opencode
 const kiloVscodeDir = join(import.meta.dir, "..")
 const testagentDir = join(kiloVscodeDir, "..", "testagent-core")
-const script = process.platform === "win32" ? "bun:windows" : "bun:mac"
+const script =
+  process.platform === "win32" ? (process.arch === "arm64" ? "bun:windows-arm64" : "bun:windows") : "bun:mac"
 
 function log(msg: string) {
   console.log(`[local-bin] ${msg}`)

@@ -20,6 +20,7 @@ interface GranularConfig {
   wildcardKey: string
   addKey: string
   placeholderKey: string
+  quickPatterns?: string[] // testagent_change - 快速添加的预置模式列表
 }
 
 interface ToolDef {
@@ -56,6 +57,9 @@ const GRANULAR_TOOLS: GranularToolDef[] = [
       wildcardKey: "settings.autoApprove.wildcardLabel.commands",
       addKey: "settings.autoApprove.addCommand",
       placeholderKey: "settings.autoApprove.placeholder.command",
+      // testagent_change start - 预置常用删除命令，方便用户快速添加
+      quickPatterns: ["rm *", "rm -rf *", "rmdir *", "del *", "erase *", "Remove-Item *", "rd *"],
+      // testagent_change end
     },
   },
   {
@@ -381,6 +385,60 @@ const GranularToolRow: Component<{
         </div>
         <ActionSelect level={level()} onChange={props.onWildcardChange} />
       </div>
+
+      {/* testagent_change start - 快速添加预置模式 */}
+      <Show when={props.tool.granular.quickPatterns && props.tool.granular.quickPatterns.length > 0}>
+        <div 
+          style={{ 
+            "margin-top": "8px",
+            padding: "12px",
+            background: "var(--surface-critical-base)",
+            border: "1px solid var(--surface-critical-strong)",
+            "border-radius": "4px",
+          }}
+        >
+          <div
+            style={{
+              "font-size": "12px",
+              color: "var(--text-on-critical-base)",
+              "margin-bottom": "8px",
+              "font-weight": "500",
+            }}
+          >
+            ⚠️ 危险删除命令（以下删除命令默认「询问」，点击下方按钮可设置为自动允许）
+          </div>
+          <div style={{ display: "flex", "flex-wrap": "wrap", gap: "4px" }}>
+            <For each={props.tool.granular.quickPatterns}>
+              {(pattern) => (
+                <Show when={!excs().some(exc => exc.pattern === pattern)}>
+                  <button
+                    style={{
+                      display: "flex",
+                      gap: "4px",
+                      "align-items": "center",
+                      padding: "4px 8px",
+                      background: "none",
+                      border: "none",
+                      cursor: "pointer",
+                      "font-size": "12px",
+                      color: "var(--text-link-base, #3794ff)",
+                      "font-family": "var(--vscode-editor-font-family, monospace)",
+                      transition: "opacity 0.1s",
+                    }}
+                    onClick={() => props.onExceptionAdd(pattern)}
+                    onMouseOver={(e) => (e.currentTarget.style.opacity = "0.8")}
+                    onMouseOut={(e) => (e.currentTarget.style.opacity = "1")}
+                  >
+                    <span>+</span>
+                    {pattern}
+                  </button>
+                </Show>
+              )}
+            </For>
+          </div>
+        </div>
+      </Show>
+      {/* testagent_change end */}
 
       {/* Exceptions */}
       <Show when={excs().length > 0}>

@@ -12,6 +12,9 @@ import { useServer } from "./server"
 import { useProvider } from "./provider"
 import { useConfig } from "./config"
 import { useLanguage } from "./language"
+// testagent_change start - hydrate archives with the tested shared session adapter
+import { preview } from "./archive-preview"
+// testagent_change end
 import { showToast } from "@kilocode/kilo-ui/toast"
 import type {
   SessionInfo,
@@ -53,6 +56,9 @@ import { resolveSessionAgent } from "./session-agent"
 import { queuedUserMessageIDs } from "./session-queue"
 import { PartStash } from "./part-stash"
 import { KILO_AUTO, parseModelString } from "../../../src/shared/provider-model"
+// testagent_change start - archive previews share the local ChatView without becoming writable sessions
+import type { CloudArchiveData } from "../../../src/testagent/cloud/archive-data"
+// testagent_change end
 // testagent_change start 增加sdt进度卡片
 import type { SdtProgressState } from "../types/sdt"
 // testagent_change end
@@ -93,6 +99,34 @@ interface SessionStore {
   sdtProgress: Record<string, SdtProgressState | undefined> // testagent_change start 增加sdt进度卡片
   dismissedSdtRuns: Set<string> // testagent_change - 记录被用户关闭的 runID
 }
+
+// testagent_change start - preserve a database session with the same ID while its archive is previewed
+interface ArchivePreviewBackup {
+  current?: string
+  draft?: string
+  session?: SessionInfo
+  messages?: Message[]
+  parts: Record<string, Part[] | undefined>
+  todos?: TodoItem[]
+  override?: ModelSelection
+  agent?: string
+  progress?: SdtProgressState
+  status?: SessionStatusInfo
+  busySince?: number
+  page?: MessagePageState
+  loaded: boolean
+  revert: string | null
+}
+// testagent_change end
+
+// testagent_change start - keep Core events for an underlying same-ID session away from the archive overlay
+function archiveEventTargets(message: ExtensionMessage, id: string) {
+  if ("sessionID" in message && message.sessionID === id) return true
+  if (message.type === "sessionUpdated" || message.type === "sessionCreated") return message.session.id === id
+  if (message.type === "messageCreated") return message.message.sessionID === id
+  return false
+}
+// testagent_change end
 
 interface SessionContextValue {
   // Current session
@@ -247,7 +281,7 @@ interface SessionContextValue {
     draftID?: string,
   ) => void
   continueTask: () => void // testagent_change - 添加继续任务方法
-  abort: (sessionID?: string) => void
+  abort: (sessionID?: string, scope?: "session" | "tree") => void
   compact: () => void
   respondToPermission: (
     permissionId: string,
@@ -271,6 +305,11 @@ interface SessionContextValue {
   // Cloud session preview
   cloudPreviewId: Accessor<string | null>
   selectCloudSession: (cloudSessionId: string) => void
+  // testagent_change start - local archive preview is read-only and distinct from SaaS import-then-send
+  archivePreview: Accessor<{ key: string; sessionID: string } | null>
+  selectArchivePreview: (key: string, archive: CloudArchiveData) => void
+  clearArchivePreview: () => void
+  // testagent_change end
   draftSessionID: Accessor<string | undefined>
   setDraftSessionID: (id: string | undefined) => void
 }
@@ -405,6 +444,15 @@ export const SessionProvider: ParentComponent = (props) => {
 
   // Cloud session preview state
   const [cloudPreviewId, setCloudPreviewId] = createSignal<string | null>(null)
+  // testagent_change start - selected local archive uses a synthetic read-only session identity
+  const [archivePreview, setArchivePreview] = createSignal<{ key: string; sessionID: string } | null>(null)
+  const [archiveBackup, setArchiveBackup] = createSignal<ArchivePreviewBackup>()
+  const isArchiveSession = (id?: string) => {
+    const preview = archivePreview()
+    if (!preview) return false
+    return (id ?? currentSessionID()) === preview.sessionID
+  }
+  // testagent_change end
 
   // Live worktree diff stats from extension polling
   const [worktreeStats, setWorktreeStats] = createSignal<
@@ -912,6 +960,12 @@ export const SessionProvider: ParentComponent = (props) => {
   // testagent_change end
 
   function handleExtensionMessage(message: ExtensionMessage): void {
+    const archive = archivePreview()
+    if (archive && archiveEventTargets(message, archive.sessionID)) return
+    handleSessionExtensionMessage(message)
+  }
+
+  function handleSessionExtensionMessage(message: ExtensionMessage): void {
     // testagent_change start 增加sdt进度卡片
     if (message.type === "sdt.started" || message.type === "sdt.progress" || message.type === "sdt.finished") {
       handleSdtMessage(message)
@@ -1587,6 +1641,7 @@ export const SessionProvider: ParentComponent = (props) => {
 
   function handleSessionsLoaded(loaded: SessionInfo[], preserve?: string[]) {
     const kept = preserve?.length ? new Set(preserve) : undefined
+    const archiveID = archivePreview()?.sessionID
     batch(() => {
       // Reconcile: remove sessions not in the loaded list to prevent stale
       // entries from other projects accumulating in the store.
@@ -1599,6 +1654,7 @@ export const SessionProvider: ParentComponent = (props) => {
         produce((sessions) => {
           for (const id of Object.keys(sessions)) {
             if (id.startsWith("cloud:")) continue
+            if (id === archiveID) continue // testagent_change - keep the archive overlay until it closes
             if (kept?.has(id)) continue
             if (!ids.has(id)) delete sessions[id]
           }
@@ -1608,6 +1664,7 @@ export const SessionProvider: ParentComponent = (props) => {
         console.log("[testagent] handleSessionsLoaded: deleted sessions", { count: toDelete.length, ids: toDelete })
       }
       for (const s of loaded) {
+        if (s.id === archiveID) continue // testagent_change - do not replace archive data with a local same-ID session
         setStore("sessions", s.id, s)
       }
       console.log("[testagent] handleSessionsLoaded: done", {
@@ -1755,6 +1812,184 @@ export const SessionProvider: ParentComponent = (props) => {
     })
   }
 
+  // testagent_change start - hydrate a local archive into the shared read-only ChatView store
+  function selectArchivePreview(key: string, archive: CloudArchiveData) {
+    clearArchivePreview()
+    const data = preview(key, archive)
+    const id = data.id
+    const info = data.info
+    const messages = data.messages
+    const ids = new Set([...(store.messages[id] ?? []).map((msg) => msg.id), ...messages.map((msg) => msg.id)])
+    const backup: ArchivePreviewBackup = {
+      current: currentSessionID(),
+      draft: draftSessionID(),
+      session: store.sessions[id],
+      messages: store.messages[id],
+      parts: Object.fromEntries([...ids].map((msgID) => [msgID, store.parts[msgID]])),
+      todos: store.todos[id],
+      override: store.sessionOverrides[id],
+      agent: store.agentSelections[id],
+      progress: store.sdtProgress[id],
+      status: statusMap[id],
+      busySince: busySinceMap[id],
+      page: pages[id],
+      loaded: loaded().has(id),
+      revert: revertConfirm(),
+    }
+
+    batch(() => {
+      setCloudPreviewId(null)
+      setArchiveBackup(backup)
+      setArchivePreview({ key: data.key, sessionID: data.sessionID })
+      setStore("sessions", id, info)
+      setStore("messages", id, messages)
+      setStore("todos", id, [])
+      setStore(
+        "sessionOverrides",
+        produce((items) => {
+          delete items[id]
+        }),
+      )
+      setStore(
+        "agentSelections",
+        produce((items) => {
+          delete items[id]
+        }),
+      )
+      setStore("sdtProgress", id, undefined)
+      setStore(
+        "parts",
+        produce((items) => {
+          for (const old of backup.messages ?? []) {
+            if (!messages.some((msg) => msg.id === old.id)) delete items[old.id]
+          }
+        }),
+      )
+      setLoaded((prev) => new Set(prev).add(id))
+      patchPage(id, {
+        initialLoaded: true,
+        loadingInitial: false,
+        loadingOlder: false,
+        hasMore: false,
+        lastMutation: "replace",
+      })
+      setStatusMap(id, idle)
+      setBusySinceMap(
+        produce((items) => {
+          delete items[id]
+        }),
+      )
+      for (const msg of messages) {
+        if (msg.parts?.length) setStore("parts", msg.id, msg.parts)
+      }
+      setCurrentSessionID(id)
+      setDraftSessionID(id)
+      setRevertConfirm(null)
+      setLoading(false)
+    })
+  }
+
+  function clearArchivePreview() {
+    const preview = archivePreview()
+    if (!preview) return
+    const id = preview.sessionID
+    const backup = archiveBackup()
+    const msgs = store.messages[id] ?? []
+    const used = new Set(
+      Object.entries(store.messages)
+        .filter(([sid]) => sid !== id)
+        .flatMap(([, items]) => items.map((item) => item.id)),
+    )
+
+    batch(() => {
+      setArchivePreview(null)
+      setArchiveBackup(undefined)
+      if (backup?.session) setStore("sessions", id, backup.session)
+      else
+        setStore(
+          "sessions",
+          produce((items) => {
+            delete items[id]
+          }),
+        )
+      if (backup?.messages) setStore("messages", id, backup.messages)
+      else
+        setStore(
+          "messages",
+          produce((items) => {
+            delete items[id]
+          }),
+        )
+      if (backup?.todos) setStore("todos", id, backup.todos)
+      else
+        setStore(
+          "todos",
+          produce((items) => {
+            delete items[id]
+          }),
+        )
+      if (backup?.override) setStore("sessionOverrides", id, backup.override)
+      else
+        setStore(
+          "sessionOverrides",
+          produce((items) => {
+            delete items[id]
+          }),
+        )
+      if (backup?.agent) setStore("agentSelections", id, backup.agent)
+      else
+        setStore(
+          "agentSelections",
+          produce((items) => {
+            delete items[id]
+          }),
+        )
+      setStore("sdtProgress", id, backup?.progress)
+      setStore(
+        "parts",
+        produce((items) => {
+          for (const msgID of new Set([...msgs.map((msg) => msg.id), ...Object.keys(backup?.parts ?? {})])) {
+            const parts = backup?.parts[msgID]
+            if (parts) items[msgID] = parts
+            else if (!used.has(msgID)) delete items[msgID]
+          }
+        }),
+      )
+      if (backup?.status) setStatusMap(id, backup.status)
+      else
+        setStatusMap(
+          produce((items) => {
+            delete items[id]
+          }),
+        )
+      if (backup?.busySince !== undefined) setBusySinceMap(id, backup.busySince)
+      else
+        setBusySinceMap(
+          produce((items) => {
+            delete items[id]
+          }),
+        )
+      if (backup?.page) setPages(id, backup.page)
+      else
+        setPages(
+          produce((items) => {
+            delete items[id]
+          }),
+        )
+      setLoaded((prev) => {
+        const next = new Set(prev)
+        if (backup?.loaded) next.add(id)
+        else next.delete(id)
+        return next
+      })
+      setCurrentSessionID(backup?.current)
+      setDraftSessionID(backup?.draft)
+      setRevertConfirm(backup?.revert ?? null)
+      setLoading(false)
+    })
+  }
+  // testagent_change end
+
   function handleCloudSessionImported(cloudSessionId: string, session: SessionInfo) {
     const cloudKey = `cloud:${cloudSessionId}`
     const cloudMessages = store.messages[cloudKey] ?? []
@@ -1887,6 +2122,7 @@ export const SessionProvider: ParentComponent = (props) => {
     files?: FileAttachment[],
     draftID?: string,
   ) {
+    if (isArchiveSession()) return // testagent_change - prevent writes from an archive preview
     if (!server.isConnected()) {
       console.warn("[testagent] Cannot send message: not connected")
       return
@@ -1954,6 +2190,7 @@ export const SessionProvider: ParentComponent = (props) => {
     files?: FileAttachment[],
     draftID?: string,
   ) {
+    if (isArchiveSession()) return // testagent_change - prevent commands from an archive preview
     if (!server.isConnected()) {
       console.warn("[testagent] Cannot send command: not connected")
       return
@@ -2019,6 +2256,7 @@ export const SessionProvider: ParentComponent = (props) => {
 
   // testagent_change start - 添加继续任务方法
   function continueTask() {
+    if (isArchiveSession()) return
     if (!server.isConnected()) {
       console.warn("[testagent] Cannot continue task: not connected")
       return
@@ -2055,8 +2293,9 @@ export const SessionProvider: ParentComponent = (props) => {
   }
   // testagent_change end
 
-  function abort(sessionID?: string) {
+  function abort(sessionID?: string, scope?: "session" | "tree") {
     const sid = sessionID ?? currentSessionID()
+    if (isArchiveSession(sid)) return
     if (!sid) {
       console.warn("[testagent] Cannot abort: no current session")
       return
@@ -2069,11 +2308,13 @@ export const SessionProvider: ParentComponent = (props) => {
       sessionID: sid,
       queuedMessageIDs,
       reason: "user_abort",
+      ...(scope ? { scope } : {}),
     })
   }
   // testagent_change end
 
   function compact() {
+    if (isArchiveSession()) return // testagent_change - archives cannot be compacted
     if (!server.isConnected()) {
       console.warn("[testagent] Cannot compact: not connected")
       return
@@ -2103,6 +2344,7 @@ export const SessionProvider: ParentComponent = (props) => {
     // Resolve sessionID from the stored permission request
     const permission = permissions().find((p) => p.id === permissionId)
     const sessionID = permission?.sessionID ?? currentSessionID() ?? ""
+    if (isArchiveSession(sessionID)) return // testagent_change - archives have no live permission requests
 
     // Mark as responding so the UI disables the buttons.
     // The permission is removed when the server confirms via permission.replied SSE.
@@ -2140,6 +2382,7 @@ export const SessionProvider: ParentComponent = (props) => {
     clearQuestionError(requestID)
     const question = questions().find((item) => item.id === requestID)
     const sessionID = question?.sessionID ?? currentSessionID() ?? ""
+    if (isArchiveSession(sessionID)) return // testagent_change - archives have no live question requests
     vscode.postMessage({
       type: "questionReply",
       requestID,
@@ -2152,6 +2395,7 @@ export const SessionProvider: ParentComponent = (props) => {
     clearQuestionError(requestID)
     const question = questions().find((item) => item.id === requestID)
     const sessionID = question?.sessionID ?? currentSessionID() ?? ""
+    if (isArchiveSession(sessionID)) return // testagent_change - archives have no live question requests
     vscode.postMessage({
       type: "questionReject",
       requestID,
@@ -2161,8 +2405,10 @@ export const SessionProvider: ParentComponent = (props) => {
 
   function acceptSuggestion(requestID: string, index: number) {
     clearSuggestionError(requestID)
-    setRespondingSuggestions((prev) => new Set(prev).add(requestID))
     const sid = suggestions().find((s) => s.id === requestID)?.sessionID ?? currentSessionID() ?? ""
+    if (isArchiveSession(sid)) return // testagent_change - archives have no live suggestions
+    setRespondingSuggestions((prev) => new Set(prev).add(requestID))
+    // const sid = suggestions().find((s) => s.id === requestID)?.sessionID ?? currentSessionID() ?? "" // testagent_change
     vscode.postMessage({
       type: "suggestionAccept",
       requestID,
@@ -2173,8 +2419,10 @@ export const SessionProvider: ParentComponent = (props) => {
 
   function dismissSuggestion(requestID: string) {
     clearSuggestionError(requestID)
-    setRespondingSuggestions((prev) => new Set(prev).add(requestID))
     const sid = suggestions().find((s) => s.id === requestID)?.sessionID ?? currentSessionID() ?? ""
+    if (isArchiveSession(sid)) return // testagent_change - archives have no live suggestions
+    setRespondingSuggestions((prev) => new Set(prev).add(requestID))
+    // const sid = suggestions().find((s) => s.id === requestID)?.sessionID ?? currentSessionID() ?? "" // testagent_change
     vscode.postMessage({
       type: "suggestionDismiss",
       requestID,
@@ -2194,6 +2442,9 @@ export const SessionProvider: ParentComponent = (props) => {
   }
 
   function clearCurrentSession() {
+    // testagent_change start - clear ephemeral archive data with the active view
+    clearArchivePreview()
+    // testagent_change end
     setCurrentSessionID(undefined)
     setDraftSessionID(undefined)
     setCloudPreviewId(null)
@@ -2238,6 +2489,9 @@ export const SessionProvider: ParentComponent = (props) => {
       console.warn("[testagent] Cannot select cloud preview session via selectSession")
       return
     }
+    // testagent_change start - leave archive preview before loading a database session
+    clearArchivePreview()
+    // testagent_change end
     const ready = loaded().has(id)
     setCurrentSessionID(id)
     setDraftSessionID(id)
@@ -2256,6 +2510,9 @@ export const SessionProvider: ParentComponent = (props) => {
       console.warn("[testagent] Cannot select cloud session: not connected")
       return
     }
+    // testagent_change start - SaaS preview and local archive preview are mutually exclusive
+    clearArchivePreview()
+    // testagent_change end
     const key = `cloud:${cloudSessionId}`
     setCloudPreviewId(cloudSessionId)
     setCurrentSessionID(key)
@@ -2266,8 +2523,12 @@ export const SessionProvider: ParentComponent = (props) => {
   }
 
   function deleteSession(id: string) {
+    if (isArchiveSession(id)) return // testagent_change - archived files cannot be deleted through session actions
     if (!server.isConnected()) {
       console.warn("[testagent] Cannot delete session: not connected")
+      return
+    }
+    if (cloudPreviewId() && id === `cloud:${cloudPreviewId()}`) {
       return
     }
     // Optimistically remove from the list so the UI updates immediately
@@ -2288,8 +2549,13 @@ export const SessionProvider: ParentComponent = (props) => {
   }
 
   function renameSession(id: string, title: string) {
+    if (isArchiveSession(id)) return // testagent_change - archived titles cannot be renamed
     if (!server.isConnected()) {
       console.warn("[testagent] Cannot rename session: not connected")
+      return
+    }
+    if (cloudPreviewId() && id === `cloud:${cloudPreviewId()}`) {
+      vscode.postMessage({ type: "renameSession", sessionID: cloudPreviewId()!, title })
       return
     }
     vscode.postMessage({ type: "renameSession", sessionID: id, title })
@@ -2348,6 +2614,7 @@ export const SessionProvider: ParentComponent = (props) => {
   const [revertConfirm, setRevertConfirm] = createSignal<string | null>(null)
 
   function requestRevert(messageID: string) {
+    if (isArchiveSession()) return
     setRevertConfirm(messageID)
   }
 
@@ -2358,6 +2625,7 @@ export const SessionProvider: ParentComponent = (props) => {
   function confirmRevert() {
     const messageID = revertConfirm()
     if (!messageID) return
+    if (isArchiveSession()) return
     setRevertConfirm(null)
     revertSession(messageID)
   }
@@ -2376,7 +2644,7 @@ export const SessionProvider: ParentComponent = (props) => {
 
   function revertSession(messageID: string) {
     const id = currentSessionID()
-    if (!id) return
+    if (!id || isArchiveSession(id)) return // testagent_change - archive content is immutable
     // Restore the reverted user message's prompt text into the input.
     // Dispatch as a window message so PromptInput picks it up via onMessage.
     const parts = store.parts[messageID]
@@ -2392,13 +2660,14 @@ export const SessionProvider: ParentComponent = (props) => {
 
   function unrevertSession() {
     const id = currentSessionID()
-    if (!id) return
+    if (!id || isArchiveSession(id)) return // testagent_change - archive content is immutable
     // Clear the prompt input on full redo (matching TUI/desktop behavior)
     window.postMessage({ type: "setChatBoxMessage", text: "" }, "*")
     vscode.postMessage({ type: "unrevertSession", sessionID: id })
   }
 
   function syncSession(sessionID: string) {
+    if (isArchiveSession(sessionID)) return // testagent_change - archives cannot be attached to another session
     vscode.postMessage({ type: "syncSession", sessionID, parentSessionID: currentSessionID() })
   }
 
@@ -2408,10 +2677,12 @@ export const SessionProvider: ParentComponent = (props) => {
   }
 
   const sessions = createMemo(() =>
+    // testagent_change start
     Object.values(store.sessions)
-      .filter((s) => !s.id.startsWith("cloud:"))
+      .filter((s) => !s.id.startsWith("cloud:") && s.id !== archivePreview()?.sessionID)
       .sort((a, b) => new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime()),
   )
+  // testagent_change end
 
   /** Per-session cost — only reads store.messages (not parts). */
   const familyCosts = createMemo<Map<string, number>>(() => {
@@ -2522,7 +2793,8 @@ export const SessionProvider: ParentComponent = (props) => {
     userMessages,
     getParts,
     hydrateParts,
-    sdtProgress, // testagent_change start 增加sdt进度卡片
+    sdtProgress, // testagent_change - expose SDT progress state
+    dismissSdtProgress, // testagent_change - expose SDT progress dismissal
     todos,
     permissions,
     respondingPermissions,
@@ -2619,10 +2891,17 @@ export const SessionProvider: ParentComponent = (props) => {
     syncSession,
     cloudPreviewId,
     selectCloudSession,
+    // testagent_change start - local archive preview state and lifecycle
+    archivePreview,
+    selectArchivePreview,
+    clearArchivePreview,
+    // testagent_change end
     draftSessionID,
     setDraftSessionID,
-    sdtProgress, // testagent_change - 添加到返回值
-    dismissSdtProgress, // testagent_change
+    /* testagent_change start - duplicate SDT return entries retained after moving them above
+    sdtProgress,
+    dismissSdtProgress,
+    testagent_change end */
   }
 
   return <SessionContext.Provider value={value}>{props.children}</SessionContext.Provider>
