@@ -825,6 +825,15 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
     this.initializeConnection()
   }
 
+  // testagent_change start - re-serve the webview HTML so the crash card's reload button can recover the view
+  private reloadWebview(): void {
+    const webview = this.webview
+    if (!webview) return
+    this.isWebviewReady = false
+    webview.html = this._getHtmlForWebview(webview)
+  }
+  // testagent_change end
+
   /**
    * Resolve a WebviewPanel for displaying the Kilo webview in an editor tab.
    */
@@ -1132,6 +1141,14 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
           this.flushPendingOpenSession() // testagent_change - cross-window handoff
           this.readyResolvers.splice(0).forEach((r) => r())
           break
+        // testagent_change start - white-screen self-diagnostics: persist webview crashes in the extension log
+        case "webviewCrash":
+          console.error(`[TestAgent] ❌ webview crash (${message.source}): ${message.message}`, message.stack ?? "")
+          break
+        case "reloadWebview":
+          this.reloadWebview()
+          break
+        // testagent_change end
         case "sendMessage": {
           const files = parseMessageFiles(message.files)
           await this.handleSendMessage(
