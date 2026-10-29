@@ -20,7 +20,7 @@ const modeArg = process.argv.find((arg: string) => arg.startsWith("--env="))
 const buildEnv = modeArg ? (modeArg.split("=")[1] || "production") : "production"
 
 if (!targetPlatform) {
-  throw new Error("--target= argument is required. Use: linux-x64, linux-arm64, alpine-x64, alpine-arm64, darwin-x64, darwin-arm64, win32-x64")
+  throw new Error("--target= argument is required. Use: linux-x64, linux-arm64, alpine-x64, alpine-arm64, darwin-x64, darwin-arm64, win32-x64, win32-arm64")
 }
 
 if (!["production", "dev"].includes(buildEnv)) {
@@ -36,6 +36,7 @@ const targetMap: Record<string, { target: string; binaryName: string }> = {
   "darwin-x64": { target: "bun-darwin-x64", binaryName: "testflow" },
   "darwin-arm64": { target: "bun-darwin-arm64", binaryName: "testflow" },
   "win32-x64": { target: "bun-windows-x64", binaryName: "testflow.exe" },
+  "win32-arm64": { target: "bun-windows-arm64", binaryName: "testflow.exe" },
 }
 
 const config = targetMap[targetPlatform]
