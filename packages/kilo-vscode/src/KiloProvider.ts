@@ -3913,12 +3913,14 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
 
         // Non-retryable status codes fail immediately without retry
         if (!retryable(status)) {
+          this.sessionStatusMap.set(sid, "idle") // testagent_change - keep the map in sync so reconcile can detect drift
           this.postMessage({ type: "sessionStatus", sessionID: sid, status: "idle" })
           throw result.error
         }
 
         // Stop retrying after MAX_RETRIES attempts
         if (attempt >= MAX_RETRIES) {
+          this.sessionStatusMap.set(sid, "idle") // testagent_change
           this.postMessage({ type: "sessionStatus", sessionID: sid, status: "idle" })
           throw result.error
         }
@@ -3926,6 +3928,7 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
         const delay = backoff(attempt, result.response?.headers)
         console.log(`[TestAgent]  Retry on ${status}, attempt ${attempt}/${MAX_RETRIES}, delay ${delay}ms`)
 
+        this.sessionStatusMap.set(sid, "retry") // testagent_change
         this.postMessage({
           type: "sessionStatus",
           sessionID: sid,
@@ -3948,17 +3951,22 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
         if (this.confirmations.has(messageID)) return
       }
     } finally {
-      this.retryAbortControllers.delete(sid)
+      // testagent_change - 只删除本次注册的 controller，避免覆盖后误删新请求的句柄
+      if (this.retryAbortControllers.get(sid) === abortController) this.retryAbortControllers.delete(sid)
     }
   }
 
   /** Cancel an active retry loop for a session */
   private cancelRetry(sid: string): void {
     const controller = this.retryAbortControllers.get(sid)
-    if (controller) {
-      controller.abort()
-      this.postMessage({ type: "sessionStatus", sessionID: sid, status: "idle" })
-    }
+    if (!controller) return
+    controller.abort()
+    // testagent_change start - 不再盲发 idle：后端可能仍在取消中（runner 尚未 idle），
+    // 提前置 idle 会让"恢复任务"按钮在取消窗口期出现；此时点击 resume 会被
+    // ensureRunning 静默挂起（awaitDone），既不启动新 run 也不发 busy 事件，
+    // 导致按钮常驻且点击无反应。改为按后端真实状态同步 UI。
+    void this.reconcileSessionStatus(sid)
+    // testagent_change end
   }
 
   // testagent_change start
@@ -4255,6 +4263,13 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
 
       this.connectionService.recordMessageSessionId(messageID, sessionID)
 
+      // testagent_change start - 乐观置 busy：若后端旧 run 仍在取消中，resume 会被
+      // ensureRunning 挂起等待旧 run（不发新 busy 事件），前端按钮会一直停留。
+      // 先按"即将运行"同步 UI，真实状态由 SSE 事件与 finally 的对账兜底。
+      this.sessionStatusMap.set(sessionID, "busy")
+      this.postMessage({ type: "sessionStatus", sessionID, status: "busy" })
+      // testagent_change end
+
       console.log("[TestAgent] 📤 Calling resume API:", { sessionID, messageID, dir, providerID, modelID })
 
       await runWithMessageConfirmation(this.confirmations, messageID, "Resume task request", () =>
@@ -4282,6 +4297,11 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
         code: error?.code,
         stack: error?.stack,
       })
+    } finally {
+      // testagent_change - 自愈兜底：resume 结束（含失败/取消窗口竞态）后与后端对账，
+      // 保证 webview 的按钮状态最终与真实会话状态一致
+      await this.reconcileSessionStatus(sessionID)
+      // testagent_change end
     }
   }
   // testagent_change end
