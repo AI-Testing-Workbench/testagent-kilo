@@ -19,7 +19,7 @@ import { useI18n } from "@kilocode/kilo-ui/context/i18n"
 import { createAutoScroll } from "@kilocode/kilo-ui/hooks"
 import { useSession } from "../../context/session"
 import { useVSCode } from "../../context/vscode"
-import { childID } from "../../context/session-utils"
+import { childID, inSpan } from "../../context/session-utils"
 import type { ToolPart, Message as SDKMessage } from "@kilocode/sdk/v2"
 
 /** Collect all tool parts from all assistant messages in a given session. */
@@ -53,11 +53,14 @@ const TaskToolRenderer: Component<ToolProps> = (props) => {
       state: { metadata: props.metadata as { sessionId?: string } },
     })
 
-  const running = createMemo(() => props.status === "pending" || props.status === "running")
+  // testagent_change - part 状态可能是进程崩溃前遗留的（被杀时 processor 来不及收尾），
+  // 必须以子会话实时状态为准：子会话不忙时不显示"启动中"，也不给停止按钮
   const busy = createMemo(() => {
     const id = childSessionId()
-    return id ? session.allStatusMap()[id]?.type === "busy" : false
+    const status = id ? session.allStatusMap()[id]?.type : undefined
+    return status === "busy" || status === "retry"
   })
+  const running = createMemo(() => (props.status === "pending" || props.status === "running") && busy())
 
   // Warm child session data immediately so completed task tools already have
   // their compact child tool list available when the user expands them.
@@ -87,11 +90,15 @@ const TaskToolRenderer: Component<ToolProps> = (props) => {
     return short ? `${short}/${first.modelID}` : first.modelID
   })
 
-  // All tool parts from the child session — the compact summary list
+  // All tool parts from the child session — the compact summary list.
+  // testagent_change - 按本次 task 调用的时间窗裁剪：同一个子会话可能被多次调用复用
+  // （task_id 恢复），旧卡片不能镜像后续执行产生的工具项
   const childToolParts = createMemo(() => {
     const id = childSessionId()
     if (!id) return []
-    return getSessionToolParts(data.store, id)
+    return getSessionToolParts(data.store, id).filter((p) =>
+      inSpan("time" in p.state ? p.state.time.start : undefined, props.time),
+    )
   })
 
   const autoScroll = createAutoScroll({
@@ -112,7 +119,20 @@ const TaskToolRenderer: Component<ToolProps> = (props) => {
     if (!id) return
     session.abort(id, "tree")
   }
-  const stoppable = () => !!childSessionId() && (running() || busy())
+  // testagent_change - 只有「本次调用在飞」才可停止：同一个子会话可能被多次调用复用，
+  // 已结束的旧卡片不应再给出停止按钮（否则点任一张都会停掉同一个子会话）
+  const stoppable = () => running()
+
+  // testagent_change - 本次调用结束后子会话又被后续调用复用（task_id 恢复）。
+  // 此时不能再提供“打开子任务”入口：那边展示的是子会话的最新状态（还在跑、还在计时），
+  // 与这张已结束的卡片不是同一次运行
+  const superseded = createMemo(() => {
+    const id = childSessionId()
+    const end = props.time?.end
+    if (!id || !end) return false
+    const msgs = (data.store.message as Record<string, SDKMessage[]> | undefined)?.[id] ?? []
+    return msgs.some((m) => (m.time?.created ?? 0) > end)
+  })
 
   const trigger = () => (
     <div data-slot="basic-tool-tool-info-structured">
@@ -148,7 +168,7 @@ const TaskToolRenderer: Component<ToolProps> = (props) => {
         </Tooltip>
       </Show>
       {/* testagent_change end */}
-      <Show when={childSessionId()}>
+      <Show when={childSessionId() && !superseded()}>
         <IconButton
           icon="square-arrow-top-right"
           size="small"
