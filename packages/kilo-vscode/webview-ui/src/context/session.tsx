@@ -63,7 +63,7 @@ import type { CloudArchiveData } from "../../../src/testagent/cloud/archive-data
 import type { SdtProgressState } from "../types/sdt"
 // testagent_change end
 const RECENT_LIMIT = 5
-const MESSAGE_PAGE_LIMIT = 80
+  const MESSAGE_PAGE_LIMIT = 10 // testagent_change - 消息历史分页:每页 10 条(上游默认 80,过大首屏折叠不明显)
 
 type MessageMutation = Exclude<MessageLoadMode, "focus"> | "append" | "update"
 
@@ -1255,7 +1255,15 @@ export const SessionProvider: ParentComponent = (props) => {
       // preserve the existing pagination cursor/hasMore so "load earlier"
       // keeps working.
       if (mode === "reconcile") {
-        patchPage(sessionID, { initialLoaded: true, lastMutation: "update" })
+        // testagent_change start - if this session never got a successful paged
+        // replace (page state has no cursor), adopt the tail cursor from this
+        // reconcile response so "load earlier" can start from it.
+        const existing = pages[sessionID]
+        const adopt = existing !== undefined && !existing.before && !existing.hasMore && input.cursor !== undefined
+        patchPage(sessionID, adopt
+          ? { initialLoaded: true, lastMutation: "update", before: input.cursor, hasMore: input.hasMore ?? true }
+          : { initialLoaded: true, lastMutation: "update" })
+        // testagent_change end
       } else {
         setPages(sessionID, {
           initialLoaded: true,

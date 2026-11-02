@@ -2229,6 +2229,7 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
         limit: options.limit ?? MESSAGE_PAGE_LIMIT,
         before: options.before,
         signal: abort?.signal,
+        fillHead: mode !== "reconcile", // testagent_change - 尾部刷新不做历史补齐,避免连续 assistant 会话被整段重吃
       })
       if (abort?.signal.aborted) return
       // Drop results for a session deleted mid-fetch. Prepend/reconcile have

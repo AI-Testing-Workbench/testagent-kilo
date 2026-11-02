@@ -1,7 +1,7 @@
 import type { KiloClient } from "@kilocode/sdk/v2/client"
 import { retry } from "../services/cli-backend/retry"
 
-export const MESSAGE_PAGE_LIMIT = 80
+export const MESSAGE_PAGE_LIMIT = 10 // testagent_change - 消息历史分页:每页 10 条(上游默认 80,过大首屏折叠不明显)
 
 /**
  * Build the same base64url-encoded cursor format the server emits so a
@@ -21,8 +21,11 @@ export async function fetchMessagePage(
     limit: number
     before?: string
     signal?: AbortSignal
+    fillHead?: boolean
   },
 ) {
+  // testagent_change - fillHead 默认开启;reconcile 等尾部刷新不需要补齐历史页
+  const fillHead = input.fillHead ?? true
   // limit: 0 is the server contract for "return every message" — used by
   // the sub-agent viewer, which has no "load earlier" UI.
   const full = input.limit === 0
@@ -46,13 +49,18 @@ export async function fetchMessagePage(
     return { items, cursor }
   }
 
-  const fill = async (page: Awaited<ReturnType<typeof read>>): Promise<Awaited<ReturnType<typeof read>>> => {
-    if (page.items[0]?.info.role !== "assistant") return page
-    if (!page.cursor || input.signal?.aborted) return page
+  // testagent_change start - cap head-fill at 2 extra pages. Sessions with
+  // consecutive assistant messages (subtasks, multi-part replies) would
+  // otherwise re-page all the way to the start on every load, accumulating
+  // the entire history and forcing hasMore=false.
+  const fill = async (page: Awaited<ReturnType<typeof read>>, depth = 0): Promise<Awaited<ReturnType<typeof read>>> => {
+    if (!fillHead || page.items[0]?.info.role !== "assistant") return page
+    if (!page.cursor || depth >= 2 || input.signal?.aborted) return page
     const next = await read(page.cursor)
     const items = [...next.items, ...page.items]
-    return fill({ items, cursor: next.cursor })
+    return fill({ items, cursor: next.cursor }, depth + 1)
   }
 
   return fill(await read(input.before))
+  // testagent_change end
 }
