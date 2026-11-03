@@ -115,9 +115,10 @@ if (hasNodeModules) {
     "darwin-x64": ["darwin-x64"],
     "darwin-arm64": ["darwin-arm64"],
     "win32-x64": ["win32-x64"],
+    "win32-arm64": ["win32-arm64"],
   }
 
-  // jieba uses -msvc suffix on win32-x64
+  // jieba uses -msvc suffix on win32
   const jiebaPlatformMap: Record<string, string[]> = {
     "linux-x64": ["linux-x64-gnu"],
     "linux-arm64": ["linux-arm64-gnu"],
@@ -126,6 +127,7 @@ if (hasNodeModules) {
     "darwin-x64": ["darwin-x64"],
     "darwin-arm64": ["darwin-arm64"],
     "win32-x64": ["win32-x64-msvc"],
+    "win32-arm64": ["win32-arm64-msvc"],
   }
 
   const platforms = targetPlatform ? targetMap[targetPlatform] || [] : Object.values(targetMap).flat()
@@ -183,6 +185,7 @@ const platformMap: Record<string, string[]> = {
   "darwin-x64": ["darwin-x64"],
   "darwin-arm64": ["darwin-arm64"],
   "win32-x64": ["win32-x64"],
+  "win32-arm64": ["win32-arm64"],
 }
 const jiebaPlatformMap: Record<string, string[]> = {
   "linux-x64": ["linux-x64-gnu"],
@@ -192,6 +195,7 @@ const jiebaPlatformMap: Record<string, string[]> = {
   "darwin-x64": ["darwin-x64"],
   "darwin-arm64": ["darwin-arm64"],
   "win32-x64": ["win32-x64-msvc"],
+  "win32-arm64": ["win32-arm64-msvc"],
 }
 const platforms = targetPlatform ? platformMap[targetPlatform] || [] : Object.values(platformMap).flat()
 const uniquePlatforms = [...new Set(platforms)]

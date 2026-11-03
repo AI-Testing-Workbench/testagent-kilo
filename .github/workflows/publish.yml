@@ -27,6 +27,7 @@ on:
           - linux-x64
           - darwin-arm64
           - win32-x64
+          - win32-arm64
         default: "all"
       # testagent_change - optionally skip pushing VSIX to the workbench prebuilt repo
       trigger_workbench:
@@ -137,6 +138,10 @@ jobs:
             script: bun:windows
             binary: testagent.exe
             output_dir: testagent-windows-x64-baseline
+          - target: win32-arm64
+            script: bun:windows-arm64
+            binary: testagent.exe
+            output_dir: testagent-windows-arm64
     steps:
       # testagent_change - skip if platform not selected
       - name: Check if platform should be built
@@ -265,6 +270,9 @@ jobs:
             binary: testagent
           - target: win32-x64
             cli_target: win32-x64
+            binary: testagent.exe
+          - target: win32-arm64
+            cli_target: win32-arm64
             binary: testagent.exe
     steps:
       # testagent_change - skip if platform not selected
@@ -586,6 +594,7 @@ jobs:
           stage linux-x64 linux x64
           stage darwin-arm64 darwin arm64
           stage win32-x64 win32 x64
+          stage win32-arm64 win32 arm64
           echo "Staged VSIX files:"
           find prebuilt -name "*.vsix" | sort || true
 
@@ -606,6 +615,7 @@ jobs:
         run: |
           case "${{ inputs.platform }}" in
             win32-x64) PLATFORMS="win32-x64" ;;
+            win32-arm64) PLATFORMS="win32-arm64" ;;
             linux-x64) PLATFORMS="linux" ;;
             darwin-arm64) PLATFORMS="darwin" ;;
             *) PLATFORMS="all" ;;

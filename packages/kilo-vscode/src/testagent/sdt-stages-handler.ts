@@ -118,14 +118,14 @@ export async function handleRequestStages(
     return
   }
 
-  // 定位 bundled testflow binary
+  // 定位 bundled testflow JS 文件。入口 cli-entry.ts 已自行用 import.meta.url
+  // 定位资源目录并写入 _TESTFLOW_RESOURCES_DIR，此处无需再注入。
   const extDir = path.resolve(__dirname, "..")
-  const testflowBin = path.join(extDir, "bin", process.platform === "win32" ? "testflow.exe" : "testflow")
-  const testflowResDir = path.join(extDir, "bin", "testflow-res")
+  const testflowMjs = path.join(extDir, "bin", "testflow.mjs")
 
   try {
-    const { stdout } = await exec(testflowBin, ["stages", "--dir", dir], {
-      env: { ...process.env, KILO_INTEGRATION: "1", _TESTFLOW_RESOURCES_DIR: testflowResDir },
+    const { stdout } = await exec("node", [testflowMjs, "stages", "--dir", dir], {
+      env: { ...process.env, KILO_INTEGRATION: "1" },
     })
 
     // 从 stdout 中解析 JSON result 行

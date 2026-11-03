@@ -38,6 +38,7 @@ on:
           - darwin-x64
           - darwin-arm64
           - win32-x64
+          - win32-arm64
         default: "all"
 
 concurrency: ${{ github.workflow }}-${{ github.ref }}-${{ inputs.platform || 'all' }}
@@ -152,6 +153,10 @@ jobs:
             script: bun:windows
             binary: testagent.exe
             output_dir: testagent-windows-x64-baseline
+          - target: win32-arm64
+            script: bun:windows-arm64
+            binary: testagent.exe
+            output_dir: testagent-windows-arm64
     steps:
       # testagent_change - skip if platform not selected
       - name: Check if platform should be built
@@ -295,6 +300,9 @@ jobs:
             binary: testagent
           - target: win32-x64
             cli_target: win32-x64
+            binary: testagent.exe
+          - target: win32-arm64
+            cli_target: win32-arm64
             binary: testagent.exe
     steps:
       # testagent_change - skip if platform not selected
