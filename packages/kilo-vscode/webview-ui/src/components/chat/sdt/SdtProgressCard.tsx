@@ -67,6 +67,13 @@ export const SdtProgressCard: Component<SdtProgressCardProps> = (props) => {
     return "当前阶段：等待执行"
   })
   const progress = () => Math.max(0, Math.min(100, props.progress.percent))
+  // 输出门禁失败自动重试进度：仅在有重试计数时展示
+  const retryLabel = createMemo(() => {
+    const attempt = props.progress.retryAttempt
+    const max = props.progress.retryMax
+    if (!attempt || attempt <= 0) return null
+    return max ? `重试 ${attempt}/${max}` : `重试 ${attempt}`
+  })
   const stageCount = () => {
     const completed = props.progress.completedCount
     // 优先判断任务状态：如果任务已经终止（completed/failed/aborted），直接返回已完成数
@@ -121,6 +128,10 @@ export const SdtProgressCard: Component<SdtProgressCardProps> = (props) => {
         </span>
         <span class="sdt-progress-card__metrics">
           第 {stageCount()} / {props.progress.totalCount} 阶段 · {progress()}%
+          <Show when={retryLabel()}>
+            {" · "}
+            <span class="sdt-progress-card__retry">{retryLabel()}</span>
+          </Show>
         </span>
         <Icon
           name="chevron-down"
