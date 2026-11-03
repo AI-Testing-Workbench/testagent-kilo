@@ -900,8 +900,6 @@ export const SessionProvider: ParentComponent = (props) => {
         nextHint: null,
         exceptionHint: null,
         errorMessage: null,
-        retryAttempt: null,
-        retryMax: null,
         detail: null,
       })
       return
@@ -931,8 +929,6 @@ export const SessionProvider: ParentComponent = (props) => {
         nextHint: message.nextHint,
         exceptionHint: message.exceptionHint,
         errorMessage: message.errorMessage,
-        retryAttempt: message.retryAttempt ?? null,
-        retryMax: message.retryMax ?? null,
         detail: null,
       })
       return
@@ -959,8 +955,6 @@ export const SessionProvider: ParentComponent = (props) => {
       stages,
       errorMessage: message.errorMessage ?? message.detail ?? current.errorMessage,
       detail: message.detail ?? current.detail,
-      retryAttempt: message.retryAttempt ?? null,
-      retryMax: message.retryMax ?? null,
     })
   }
   // testagent_change end

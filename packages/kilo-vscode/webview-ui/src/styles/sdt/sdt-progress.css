@@ -105,9 +105,6 @@
   color: var(--vscode-progressBar-background);
   font-weight: 500;
 }
-.sdt-progress-card__retry {
-  color: var(--vscode-editorWarning-foreground);
-}
 .sdt-progress-card__stage-summary {
   grid-column: 2 / 6;
   grid-row: 2;

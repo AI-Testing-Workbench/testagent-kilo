@@ -211,8 +211,6 @@ export class SdtRunner {
           event.current_stage_index as number | null,
           event.error_message as string | null,
           event.branch as string | null,
-          typeof event.retry_attempt === "number" ? event.retry_attempt : null,
-          typeof event.retry_max === "number" ? event.retry_max : null,
         )
         break
       case "finished":

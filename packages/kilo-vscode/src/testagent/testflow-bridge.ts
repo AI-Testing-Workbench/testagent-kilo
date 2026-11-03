@@ -49,9 +49,6 @@ export class TestflowMessageBridge {
     nextHint: string | null
     exceptionHint: string | null
     errorMessage: string | null
-    /** 输出门禁失败自动重试进度；非重试期间为 null */
-    retryAttempt: number | null
-    retryMax: number | null
   } | null = null
   private finished = false
   private post: ((msg: unknown) => void) | null = null
@@ -164,8 +161,6 @@ export class TestflowMessageBridge {
     currentStageIndex: number | null = null,
     errorMessage: string | null = null,
     branch: string | null = null,
-    retryAttempt: number | null = null,
-    retryMax: number | null = null,
   ): void {
     this.latestProgress = {
       taskName,
@@ -179,8 +174,6 @@ export class TestflowMessageBridge {
       currentStageID,
       currentStageIndex,
       errorMessage,
-      retryAttempt,
-      retryMax,
     }
     this.sequence += 1
     this.post?.({
@@ -199,8 +192,6 @@ export class TestflowMessageBridge {
       nextHint,
       exceptionHint,
       errorMessage,
-      retryAttempt,
-      retryMax,
     })
   }
 
@@ -223,8 +214,6 @@ export class TestflowMessageBridge {
       stages: latest?.stages ?? [],
       detail,
       errorMessage: latest?.errorMessage ?? detail,
-      retryAttempt: latest?.retryAttempt ?? null,
-      retryMax: latest?.retryMax ?? null,
     })
   }
 

@@ -36,9 +36,6 @@ export interface SdtProgressState {
   nextHint: string | null
   exceptionHint: string | null
   errorMessage: string | null
-  /** 输出门禁失败自动重试进度；非重试期间为 null */
-  retryAttempt: number | null
-  retryMax: number | null
   detail: string | null
 }
 
@@ -66,9 +63,6 @@ export interface SdtProgressMessage {
   nextHint: string | null
   exceptionHint: string | null
   errorMessage: string | null
-  /** 输出门禁失败自动重试进度；非重试期间为 null */
-  retryAttempt?: number | null
-  retryMax?: number | null
 }
 
 export interface SdtFinishedMessage {
@@ -86,6 +80,4 @@ export interface SdtFinishedMessage {
   stages: SdtStage[]
   detail: string | null
   errorMessage: string | null
-  retryAttempt?: number | null
-  retryMax?: number | null
 }
