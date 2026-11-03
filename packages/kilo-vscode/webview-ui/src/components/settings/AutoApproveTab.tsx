@@ -119,6 +119,7 @@ const TOOL_DEFAULTS: Partial<Record<string, PermissionLevel>> = {
   doom_loop: "ask",
   external_directory: "ask",
   sandbox: "deny",
+  jev: "deny", // testagent_change
 }
 
 const RESTRICTION_ORDER: Record<PermissionLevel, number> = { allow: 0, ask: 1, deny: 2 }
