@@ -1200,6 +1200,7 @@ export const SessionProvider: ParentComponent = (props) => {
   ) {
     // testagent_change - 停止强制同步：扩展拉回的权威终态到达即解闸，后续 idle 不再重复刷新
     if (stopping() === sessionID && (input.mode ?? "replace") === "replace") endStopping()
+    famBump() // testagent_change - S2: 整表加载后 family 需重新发现
     const mode = input.mode ?? "replace"
     const reset = mode === "prepend"
 
@@ -1302,6 +1303,7 @@ export const SessionProvider: ParentComponent = (props) => {
     }
 
     const exists = (store.messages[message.sessionID] ?? []).some((msg) => msg.id === message.id)
+    if (!exists) famBump() // testagent_change - S2: 新消息可引入新的子会话边
     setStore("messages", message.sessionID, (msgs = []) => {
       // Check if message already exists (optimistic or update case).
       // Since we now use the same messageID for optimistic and server messages,
@@ -1345,6 +1347,8 @@ export const SessionProvider: ParentComponent = (props) => {
     }
 
     if (sessionID) patchPage(sessionID, { lastMutation: "update" })
+    // testagent_change - S2: task part 携带子会话 id 时 family 可能新增成员，失效缓存
+    if (part.type === "tool" && childID(part as Parameters<typeof childID>[0])) famBump()
 
     // If the stash has parts for this message, hydrate them first so the
     // SSE update merges into the full part list rather than an empty array.
@@ -1553,6 +1557,7 @@ export const SessionProvider: ParentComponent = (props) => {
       pendingOptimistic.get(message.sessionID)?.delete(message.messageID)
       stash.remove(message.messageID)
       batch(() => {
+        famBump() // testagent_change - S2: 乐观消息回滚同样影响 family
         setStore("messages", message.sessionID!, (msgs = []) => msgs.filter((m) => m.id !== message.messageID))
         setStore(
           "parts",
@@ -1579,7 +1584,18 @@ export const SessionProvider: ParentComponent = (props) => {
    * family tree (self + subagents + sub-subagents). Reads directly from the
    * store so it's reactive — automatically updates when new parts arrive.
    */
+  // testagent_change start - S2 BFS 结果缓存：familyData 每个 part/message 事件都会触发，
+  // 全库 BFS（遍历所有 parts 找子会话边）是流式渲染最大的常数成本。
+  // 仅结构变化时失效；缓存失效最坏是多算一次 BFS，语义与每事件重算完全一致
+  let famVer = 0
+  let famCache: { root: string; ver: number; set: Set<string> } | undefined
+  function famBump() {
+    famVer++
+    famCache = undefined
+  }
+
   function sessionFamily(rootID: string): Set<string> {
+    if (famCache && famCache.root === rootID && famCache.ver === famVer) return famCache.set
     const family = new Set<string>([rootID])
     const queue = [rootID]
     while (queue.length > 0) {
@@ -1607,6 +1623,7 @@ export const SessionProvider: ParentComponent = (props) => {
         }
       }
     }
+    famCache = { root: rootID, ver: famVer, set: family } // testagent_change - S2 回填缓存
     return family
   }
 
@@ -1802,6 +1819,7 @@ export const SessionProvider: ParentComponent = (props) => {
   // Matches desktop app's event-reducer.ts: message.removed handler.
   // Splices the message from the store and deletes its parts.
   function handleMessageRemoved(sessionID: string, messageID: string) {
+    famBump() // testagent_change - S2: 消息移除可能断开子会话边
     setStore("messages", sessionID, (msgs = []) => msgs.filter((m) => m.id !== messageID))
     setStore(
       "parts",

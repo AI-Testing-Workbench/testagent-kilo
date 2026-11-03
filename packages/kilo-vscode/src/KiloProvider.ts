@@ -5184,6 +5184,11 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
       const prevStatus = this.sessionStatusMap.get(sid)
       const newStatus = event.properties.status.type
       this.sessionStatusMap.set(sid, newStatus)
+      // testagent_change start - S1 busy→busy 去重：server 每个 step 重复 set busy（实测 11-19 条/5s），
+      // 每条都触发 webview 全树重渲。先更新 map 再跳过转发，保证扩展状态永不与服务端脱同步；
+      // 首个 idle→busy 转变不受影响（prev 非 busy）
+      if (prevStatus === "busy" && newStatus === "busy") return
+      // testagent_change end
       const msg = mapSSEEventToWebviewMessage(event, sid)
       if (msg) {
         this.streams.flush(sid)
