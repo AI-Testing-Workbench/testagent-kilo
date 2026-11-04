@@ -39,10 +39,30 @@ function stripId(id: unknown): string | undefined {
   return id.startsWith("testagent:") ? id.slice("testagent:".length) : id
 }
 
+// testagent_change start - 性能：桌面宠物桥接的两次短路。
+// 1) 状态未变化时不重复 executeCommand（插件在每轮 step 都会推 working）
+// 2) 命令不存在时永久停用，避免每个事件都产生一次 rejected promise
+// 实测 pet.state 是最高频的 SSE 事件之一，每次 executeCommand 失败都要走一遍
+// promise 拒绝路径，在扩展宿主里是纯粹的浪费。
+let last = ""
+let available: boolean | undefined
+
 function send(state: string): void {
+  if (state === last) return
+  if (available === false) return
+  last = state
   // Fire-and-forget: reject when the command is not registered (plain VS Code).
-  void vscode.commands.executeCommand(SET_STATE_COMMAND, state).then(undefined, () => { /* no TSCode desktop pet */ })
+  void vscode.commands.executeCommand(SET_STATE_COMMAND, state).then(
+    () => {
+      available = true
+    },
+    () => {
+      available = false
+      last = ""
+    },
+  )
 }
+// testagent_change end
 
 /**
  * The editor-mode state machine. Returns without emitting when a raw state must

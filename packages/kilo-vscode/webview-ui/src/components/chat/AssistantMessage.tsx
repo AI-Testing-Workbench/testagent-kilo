@@ -18,10 +18,10 @@ import type {
   Message as SDKMessage,
   ToolPart,
 } from "@kilocode/sdk/v2"
-import { useData } from "@kilocode/kilo-ui/context/data"
 import { useSession } from "../../context/session"
 import { QuestionDock } from "./QuestionDock"
 import { SuggestBar } from "./SuggestBar"
+import { trackRender } from "../../utils/latency-probe" // testagent_change - 渲染探针
 
 // Tools that the upstream message-part renderer suppresses (returns null for).
 // We render these ourselves via ToolRegistry when they complete,
@@ -321,13 +321,15 @@ const TestflowResultCard: Component<{ input: TestflowResultInput; output: string
 // testagent_change end
 
 export const AssistantMessage: Component<AssistantMessageProps> = (props) => {
-  const data = useData()
+  trackRender("AssistantMessage") // testagent_change - 渲染耗时探针
   const session = useSession()
 
+  // testagent_change - 性能：直接读 session store，绕开 DataBridge 全量快照。
+  // 走 data.store.part 时任意 part 变化都会重建整份 data 快照，令此 memo 反复重算。
   const parts = createMemo(() => {
-    const stored = data.store.part?.[props.message.id]
-    if (!stored) return []
-    return (stored as SDKPart[]).filter((part) => isRenderable(part))
+    const stored = session.getParts(props.message.id)
+    if (!stored?.length) return []
+    return (stored as unknown as SDKPart[]).filter((part) => isRenderable(part))
   })
 
   return (

@@ -1,4 +1,4 @@
-import { marked } from "marked"
+import { Marked } from "marked"
 import markedKatex from "marked-katex-extension"
 // kilocode_change: marked-shiki highlighted code blocks synchronously during
 // parse, freezing the main thread on session switches with many code blocks
@@ -631,7 +631,11 @@ export const { use: useMarked, provider: MarkedProvider } = createSimpleContext(
     // to avoid blocking the main thread with Oniguruma WASM regex (issue #6221).
     // Code blocks render as plain <pre><code data-lang="..."> immediately.
     // The Markdown component calls deferredHighlight() after DOM paint.
-    const parser = marked.use(
+    // testagent_change start - 性能：仅当文本可能包含数学公式时才挂 KaTeX 扩展。
+    // marked-katex-extension 是全量 tokenizer 扩展，每次 parse 都会扫描全文；
+    // 实测无公式的大段文本单次 parse 达 137ms（峰值 249ms）。绝大多数消息不含
+    // 公式，跳过它可直接消掉这部分开销。
+    const base = new Marked().use(
       {
         renderer: {
           link({ href, title, text }) {
@@ -675,16 +679,29 @@ export const { use: useMarked, provider: MarkedProvider } = createSimpleContext(
           // kilocode_change end
         },
       },
-      markedKatex({
-        throwOnError: false,
-        nonStandard: true,
-      }),
       // kilocode_change: markedShiki removed — the custom `code` renderer
       // above returns plain <pre><code data-lang="..."> and markdown.tsx
       // calls deferredHighlight() after paint. Running Shiki inside parse
       // blocks the main thread on session switches (issue #6221).
     )
-    // kilocode_change end
+
+    // KaTeX 单独一个实例，避免 use() 污染 base 实例
+    const math = new Marked().use(
+      markedKatex({
+        throwOnError: false,
+        nonStandard: true,
+      }),
+    )
+
+    // 含 $..$ / $$..$$ / \( \) / \[ \] 的文本才走 KaTeX 版本
+    const likelyMath = (text: string) => text.includes("$") || text.includes("\\(") || text.includes("\\[")
+
+    const parser = {
+      parse(text: string) {
+        return (likelyMath(text) ? math : base).parse(text)
+      },
+    }
+    // testagent_change end
 
     if (props.nativeParser) {
       const nativeParser = props.nativeParser

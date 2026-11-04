@@ -54,6 +54,9 @@ import { Identifier } from "../utils/id"
 import { resolveModelSelection } from "./model-selection"
 import { resolveSessionAgent } from "./session-agent"
 import { queuedUserMessageIDs } from "./session-queue"
+import { mergeMessagePatch } from "./message-merge" // testagent_change
+import { familySnapshot } from "./family-snapshot" // testagent_change
+import { markApplied, markRender } from "../utils/latency-probe" // testagent_change - 链路探针
 import { PartStash } from "./part-stash"
 import { KILO_AUTO, parseModelString } from "../../../src/shared/provider-model"
 // testagent_change start - archive previews share the local ChatView without becoming writable sessions
@@ -960,7 +963,10 @@ export const SessionProvider: ParentComponent = (props) => {
   function handleExtensionMessage(message: ExtensionMessage): void {
     const archive = archivePreview()
     if (archive && archiveEventTargets(message, archive.sessionID)) return
+    // testagent_change - 链路探针⑦⑧: 应用完成后记录 store 与渲染耗时
     handleSessionExtensionMessage(message)
+    markApplied(message)
+    markRender(message)
   }
 
   function handleSessionExtensionMessage(message: ExtensionMessage): void {
@@ -1226,11 +1232,13 @@ export const SessionProvider: ParentComponent = (props) => {
         mode === "prepend" || mode === "reconcile"
           ? mergeMessages(current, messages, mode)
           : withPending(sessionID, messages)
-      // "replace" mode (session switch): assign directly — reconcile's O(n)
-      // diff is unnecessary when the entire list is new, and its reactive
-      // proxy creation for each message object dominated the trace (~900ms).
-      // "prepend" / "reconcile": reconcile to preserve existing proxies.
-      if (mode === "replace") {
+      // "replace" 有两种语义，必须区分：
+      //   1) 首次加载（本地没有消息）—— 整表都是新的，直接赋值最快
+      //   2) 同一会话的权威终态同步（stop 后、错误恢复）—— 内容基本一致，
+      //      直接赋值会替换全部消息对象身份，导致 virtua 重建所有可见轮次、
+      //      每个 AssistantMessage 重新挂载（实测一次 stop 触发 20+ 次首挂，~450ms）。
+      // 后者用 reconcile 按 id 匹配，保住已有代理，只有真正变化的字段触发更新。
+      if (mode === "replace" && current.length === 0) {
         setStore("messages", sessionID, merged)
       } else {
         setStore("messages", sessionID, reconcile(merged, { key: "id" }))
@@ -1238,16 +1246,14 @@ export const SessionProvider: ParentComponent = (props) => {
 
       for (const msg of messages) {
         if (!msg.parts || msg.parts.length === 0) continue
-        if (mode === "reconcile" && store.parts[msg.id]) {
-          // Reconcile on a message already hydrated into the reactive store:
-          // write parts directly so visible turns pick up the server-
-          // authoritative state immediately instead of waiting for the
-          // virtualizer to re-render.
+        // 已经水合进 store 的 part 直接 reconcile：可见轮次立刻拿到权威状态，
+        // 不必等虚拟列表重新渲染。replace 的"同会话终态同步"也走这条路径，
+        // 否则 store 里的旧 part 会与消息对不上。
+        if (store.parts[msg.id]) {
           setStore("parts", msg.id, reconcile(msg.parts, { key: "id" }))
           stash.remove(msg.id)
         } else {
-          // Stash parts outside the reactive store — they'll be hydrated
-          // on demand when the virtualizer renders the corresponding turn.
+          // 未渲染过的消息：part 先放 stash，等虚拟列表渲染到该轮时再水合。
           stash.put(msg.id, msg.parts)
         }
       }
@@ -1302,20 +1308,21 @@ export const SessionProvider: ParentComponent = (props) => {
       )
     }
 
-    const exists = (store.messages[message.sessionID] ?? []).some((msg) => msg.id === message.id)
+    const current = store.messages[message.sessionID] ?? []
+    const index = current.findIndex((m) => m.id === message.id)
+    const exists = index >= 0
     if (!exists) famBump() // testagent_change - S2: 新消息可引入新的子会话边
-    setStore("messages", message.sessionID, (msgs = []) => {
-      // Check if message already exists (optimistic or update case).
-      // Since we now use the same messageID for optimistic and server messages,
-      // this naturally handles the optimistic→real transition.
-      const idx = msgs.findIndex((m) => m.id === message.id)
-      if (idx >= 0) {
-        const updated = [...msgs]
-        updated[idx] = { ...msgs[idx], ...message }
-        return updated
-      }
-      return [...msgs, message]
-    })
+    // testagent_change - 字段级合并，保住 message 对象引用，避免 AssistantMessage 被 For 重建
+    if (index >= 0) {
+      const patch = mergeMessagePatch(
+        current[index] as unknown as Record<string, unknown>,
+        message as unknown as Record<string, unknown>,
+      )
+      if (Object.keys(patch).length > 0) setStore("messages", message.sessionID, index, patch)
+    } else {
+      setStore("messages", message.sessionID, current.length, message)
+    }
+    // testagent_change end
     patchPage(message.sessionID, { initialLoaded: true, lastMutation: exists ? "update" : "append" })
 
     // Sync mode picker from any message role (user or assistant).
@@ -1584,15 +1591,14 @@ export const SessionProvider: ParentComponent = (props) => {
    * family tree (self + subagents + sub-subagents). Reads directly from the
    * store so it's reactive — automatically updates when new parts arrive.
    */
-  // testagent_change start - S2 BFS 结果缓存：familyData 每个 part/message 事件都会触发，
-  // 全库 BFS（遍历所有 parts 找子会话边）是流式渲染最大的常数成本。
-  // 仅结构变化时失效；缓存失效最坏是多算一次 BFS，语义与每事件重算完全一致
+  // testagent_change - S2 BFS 结果缓存：全库 BFS 是流式渲染最大的常数成本，仅结构变化时失效
   let famVer = 0
   let famCache: { root: string; ver: number; set: Set<string> } | undefined
   function famBump() {
     famVer++
     famCache = undefined
   }
+  let famSnapCache: ReturnType<typeof familySnapshot<Message, Part, SessionStatusInfo>> | undefined
 
   function sessionFamily(rootID: string): Set<string> {
     if (famCache && famCache.root === rootID && famCache.ver === famVer) return famCache.set
@@ -1636,31 +1642,30 @@ export const SessionProvider: ParentComponent = (props) => {
       }
     }
 
-    const family = sessionFamily(sessionID)
-    const messages: Record<string, Message[]> = {}
-    const parts: Record<string, Part[]> = {}
-    const status: Record<string, SessionStatusInfo> = {}
-
-    for (const sid of family) {
-      const msgs = store.messages[sid]
-      if (msgs?.length) {
-        messages[sid] = msgs
-        for (const msg of msgs) {
-          const item = store.parts[msg.id]
-          if (!item?.length) continue
-          parts[msg.id] = item
+    famSnapCache = familySnapshot<Message, Part, SessionStatusInfo>({
+      root: sessionID,
+      ver: famVer,
+      previous: famSnapCache,
+      collect: () => {
+        const messages: Record<string, Message[]> = {}
+        const parts: Record<string, Part[]> = {}
+        const status: Record<string, SessionStatusInfo> = {}
+        for (const sid of sessionFamily(sessionID)) {
+          const msgs = store.messages[sid]
+          if (msgs?.length) {
+            messages[sid] = msgs
+            for (const msg of msgs) {
+              const item = store.parts[msg.id]
+              if (item?.length) parts[msg.id] = item
+            }
+          }
+          const info = statusMap[sid]
+          if (info) status[sid] = info
         }
-      }
-
-      const info = statusMap[sid]
-      if (info) status[sid] = info
-    }
-
-    return {
-      messages,
-      parts,
-      status,
-    }
+        return { messages, parts, status }
+      },
+    })
+    return famSnapCache
   }
 
   /** Return permissions scoped to the given session's family (self + subagents). */

@@ -31,6 +31,8 @@ import {
   activeUserMessageID as getActiveUserMessageID,
   messageTurns,
   queuedUserMessageIDs,
+  reuseTurns,
+  type MessageTurn,
 } from "../../context/session-queue"
 import type { QuestionRequest, SuggestionRequest } from "../../types/messages"
 import { PromptRail } from "./PromptRail"
@@ -84,7 +86,8 @@ export const MessageList: Component<MessageListProps> = (props) => {
   const positions = new Map<string, { top: number; userScrolled: boolean }>()
 
   const boundary = () => session.revert()?.messageID
-  const turns = createMemo(() => messageTurns(session.messages(), boundary()))
+  // testagent_change - 结构共享：未变化的 turn 复用对象身份，避免 virtua 重挂载全部可见轮次
+  const turns = createMemo<MessageTurn[]>((prev) => reuseTurns(prev, messageTurns(session.messages(), boundary())))
   const isEmpty = () => turns().length === 0 && !session.loading() && !boundary()
 
   const recent = createMemo(() =>

@@ -80,3 +80,35 @@ export function queuedUserMessageIDs(messages: Message[], status: SessionStatusI
   if (idx < 0) return []
   return users.slice(idx + 1).map((msg) => msg.id)
 }
+
+function sameTurn(previous: MessageTurn, next: MessageTurn): boolean {
+  if (previous.id !== next.id) return false
+  if (previous.user !== next.user) return false
+  if (previous.assistant.length !== next.assistant.length) return false
+  for (let i = 0; i < next.assistant.length; i++) {
+    if (previous.assistant[i] !== next.assistant[i]) return false
+  }
+  return true
+}
+
+/**
+ * turn 列表的结构共享。
+ *
+ * `messageTurns` 每次都构造全新 turn 对象，而 virtua 按对象引用做 key
+ * （`For each={data.slice(...)}`）。不做共享时，追加一条消息会让每个可见
+ * turn 都换成新对象 → 所有可见 `VscodeSessionTurn` 被卸载重建，
+ * markdown 全部重新解析，Shiki 重新高亮。
+ *
+ * 结果长度始终跟随 `next`，所以清空会话/新任务（next 为空）不会被旧列表挡住。
+ */
+export function reuseTurns(previous: MessageTurn[] | undefined, next: MessageTurn[]): MessageTurn[] {
+  if (!previous || previous.length === 0) return next
+  let changed = previous.length !== next.length
+  const merged = next.map((turn, index) => {
+    const prior = previous[index]
+    if (prior && sameTurn(prior, turn)) return prior
+    changed = true
+    return turn
+  })
+  return changed ? merged : previous
+}

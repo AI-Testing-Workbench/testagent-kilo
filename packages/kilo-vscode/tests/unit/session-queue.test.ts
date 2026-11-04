@@ -1,5 +1,10 @@
 import { describe, expect, it } from "bun:test"
-import { activeUserMessageID, messageTurns, queuedUserMessageIDs } from "../../webview-ui/src/context/session-queue"
+import {
+  activeUserMessageID,
+  messageTurns,
+  queuedUserMessageIDs,
+  reuseTurns,
+} from "../../webview-ui/src/context/session-queue"
 import type { Message } from "../../webview-ui/src/types/messages"
 
 const base = {
@@ -123,5 +128,39 @@ describe("activeUserMessageID", () => {
     ]
 
     expect(activeUserMessageID(messages, { type: "busy" })).toBe("message_3")
+  })
+})
+
+describe("reuseTurns", () => {
+  it("复用未变化的 turn 对象，避免虚拟列表重挂载", () => {
+    const base = [user("m1"), assistant("m2", "m1"), user("m3"), assistant("m4", "m3")]
+    const first = messageTurns(base)
+    expect(first).toHaveLength(2)
+
+    const next = reuseTurns(first, messageTurns([...base, user("m5"), assistant("m6", "m5")]))
+
+    expect(next[0]).toBe(first[0])
+    expect(next[1]).toBe(first[1])
+    expect(next).toHaveLength(3)
+  })
+
+  it("内容未变时返回原数组", () => {
+    const base = [user("m1"), assistant("m2", "m1")]
+    const first = messageTurns(base)
+
+    expect(reuseTurns(first, messageTurns(base))).toBe(first)
+  })
+
+  it("清空会话时必须返回空数组（新建任务）", () => {
+    const first = messageTurns([user("m1"), assistant("m2", "m1")])
+
+    expect(reuseTurns(first, messageTurns([]))).toEqual([])
+  })
+
+  it("列表变短时跟随新长度", () => {
+    const base = [user("m1"), assistant("m2", "m1"), user("m3"), assistant("m4", "m3")]
+    const first = messageTurns(base)
+
+    expect(reuseTurns(first, messageTurns(base.slice(0, 2)))).toHaveLength(1)
   })
 })

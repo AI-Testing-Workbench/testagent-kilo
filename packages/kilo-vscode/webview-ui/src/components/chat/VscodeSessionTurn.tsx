@@ -18,7 +18,6 @@ import { DiffChanges } from "@kilocode/kilo-ui/diff-changes"
 import { Icon } from "@kilocode/kilo-ui/icon"
 import { Tooltip } from "@kilocode/kilo-ui/tooltip"
 import { StickyAccordionHeader } from "@kilocode/kilo-ui/sticky-accordion-header"
-import { useData } from "@kilocode/kilo-ui/context/data"
 import { useFileComponent } from "@kilocode/kilo-ui/context/file"
 import { normalize } from "@kilocode/kilo-ui/session-diff"
 import { useI18n } from "@kilocode/kilo-ui/context/i18n"
@@ -34,6 +33,7 @@ import { useServer } from "../../context/server"
 import { useSession } from "../../context/session"
 import { useLanguage } from "../../context/language"
 import type { Message as WebMessage } from "../../types/messages"
+import { trackRender } from "../../utils/latency-probe" // testagent_change - 渲染探针
 
 
 
@@ -88,7 +88,7 @@ interface VscodeSessionTurnProps {
 }
 
 export const VscodeSessionTurn: Component<VscodeSessionTurnProps> = (props) => {
-  const data = useData()
+  trackRender("VscodeSessionTurn") // testagent_change - 渲染耗时探针
   const i18n = useI18n()
   const fileComponent = useFileComponent()
   const server = useServer()
@@ -105,9 +105,11 @@ export const VscodeSessionTurn: Component<VscodeSessionTurnProps> = (props) => {
 
   const message = createMemo(() => props.turn.user as SDKMessage & { role: "user" })
 
+  // testagent_change - 性能：直接读 session store，绕开 DataBridge 全量快照
   const parts = createMemo(() => {
     const msg = message()
-    return (data.store.part?.[msg.id] ?? emptyParts) as SDKPart[]
+    const stored = session.getParts(msg.id)
+    return (stored.length ? stored : emptyParts) as unknown as SDKPart[]
   })
 
   const assistantMessages = createMemo(() => props.turn.assistant as SDKAssistantMessage[])
@@ -148,7 +150,7 @@ export const VscodeSessionTurn: Component<VscodeSessionTurnProps> = (props) => {
     for (let i = msgs.length - 1; i >= 0; i--) {
       const msg = msgs[i]
       if (!msg) continue
-      const msgParts = (data.store.part?.[msg.id] ?? emptyParts) as SDKPart[]
+      const msgParts = session.getParts(msg.id) as unknown as SDKPart[]
       for (let j = msgParts.length - 1; j >= 0; j--) {
         const part = msgParts[j]
         if (!part || part.type !== "text") continue

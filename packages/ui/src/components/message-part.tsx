@@ -183,7 +183,10 @@ export type PartComponent = Component<MessagePartProps>
 
 export const PART_MAPPING: Record<string, PartComponent | undefined> = {}
 
-const TEXT_RENDER_PACE_MS = 24
+// kilocode_change: 24ms → 64ms。实测单次 markdown.parse 达 137ms(长文本),
+// 24ms 的节流会在 parse 未完成时继续排下一帧,把主线程压满;
+// 64ms 仍保持打字机观感,但把 parse 次数降到约 1/3。
+const TEXT_RENDER_PACE_MS = 64
 const TEXT_RENDER_SNAP = /[\s.,!?;:)\]]/
 
 function step(size: number) {

@@ -13,8 +13,23 @@ type Entry = {
   html: string
 }
 
-const max = 200
+// kilocode_change: 200 → 2000。流式按 token 分块后,单条长消息就可能产生数百个块,
+// 200 条容量会导致频繁淘汰、缓存命中率骤降。
+const max = 2000
 const cache = new Map<string, Entry>()
+
+// kilocode_change start: 渲染计数/耗时探针
+// 由宿主(webview)注入 globalThis 上的钩子;未注入时为空操作。
+function perfCount(name: string) {
+  const hook = (globalThis as { __TESTAGENT_PERF_COUNT__?: (name: string) => void }).__TESTAGENT_PERF_COUNT__
+  if (hook) hook(name)
+}
+
+function perfTime(name: string, elapsed: number) {
+  const hook = (globalThis as { __TESTAGENT_PERF_TIME__?: (name: string, ms: number) => void }).__TESTAGENT_PERF_TIME__
+  if (hook) hook(name, elapsed)
+}
+// kilocode_change end
 
 if (typeof window !== "undefined" && DOMPurify.isSupported) {
   DOMPurify.addHook("afterSanitizeAttributes", (node: Element) => {
@@ -250,32 +265,41 @@ export function Markdown(
   const marked = useMarked()
   const i18n = useI18n()
   const [root, setRoot] = createSignal<HTMLDivElement>()
+  // kilocode_change: 多依赖 source 会逐项比较,避免每次返回新对象导致
+  // 文本未变时也重跑 parse（原来 source 返回对象,=== 永远不等）。
   const [html] = createResource(
-    () => ({
-      text: local.text,
-      key: local.cacheKey,
-      streaming: local.streaming ?? false,
-    }),
-    async (src) => {
+    () => [local.text, local.cacheKey, local.streaming ?? false] as const,
+    async ([text, cacheKey, streaming]) => {
+      const src = { text, key: cacheKey, streaming }
+
       if (isServer) return fallback(src.text)
       if (!src.text) return ""
 
-      const base = src.key ?? checksum(src.text)
       return Promise.all(
-        stream(src.text, src.streaming).map(async (block, index) => {
-          const hash = checksum(block.raw)
-          const key = base ? `${base}:${index}:${block.mode}` : hash
+        stream(src.text, src.streaming).map(async (block) => {
+          // kilocode_change start - 缓存 key 改为"内容 hash"。
+          // 原来用 `${cacheKey}:${index}:${mode}`,index 恒定而内容每次变化,
+          // 导致流式期间永远 miss、整段重复解析。
+          // 按内容 hash 后,已完成的前缀块能稳定命中,只重新解析尾部块。
+          const key = checksum(block.raw)
+          const hash = key
 
-          if (key && hash) {
+          if (key) {
             const cached = cache.get(key)
             if (cached && cached.hash === hash) {
               touch(key, cached)
               return cached.html
             }
           }
+          // kilocode_change end
 
+          // kilocode_change: 分别测 marked.parse 与 sanitize
+          const parseStart = performance.now()
           const next = await Promise.resolve(marked.parse(block.src))
+          const parseEnd = performance.now()
           const safe = sanitize(next)
+          perfTime("markdown.parse", parseEnd - parseStart)
+          perfTime("markdown.sanitize", performance.now() - parseEnd)
           if (key && hash) touch(key, { hash, html: safe })
           return safe
         }),
@@ -319,6 +343,7 @@ export function Markdown(
     }
     // kilocode_change end
 
+    const patchStart = performance.now() // kilocode_change: morphdom 耗时探针起点
     const temp = document.createElement("div")
     temp.innerHTML = content
     decorate(temp, labels)
@@ -367,6 +392,8 @@ export function Markdown(
     })
     // kilocode_change end
 
+    perfCount("markdown.patch") // kilocode_change
+    perfTime("markdown.morphdom", performance.now() - patchStart) // kilocode_change
     kickHighlight(container, labels)
   })
 

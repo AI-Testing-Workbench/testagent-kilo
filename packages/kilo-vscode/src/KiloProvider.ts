@@ -72,6 +72,7 @@ import { abortSession, parseQueued } from "./kilo-provider/abort"
 import * as ModelState from "./kilo-provider/model-state"
 import { handleForkSession } from "./kilo-provider/fork-session"
 import { retryable, backoff, MAX_RETRIES } from "./util/retry"
+import * as Latency from "./util/latency-probe" // testagent_change - 链路探针
 import { hasGit } from "./kilo-provider/git-status"
 import { exec } from "./util/process"
 // testagent_change start - testflow integration
@@ -5159,6 +5160,18 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
    * Filters events by project ID and tracked session IDs so each webview only sees its own sessions.
    */
   private handleEvent(event: Event): void {
+    // testagent_change start - 链路探针④: 扩展宿主收到 SSE
+    if (Latency.enabled()) {
+      const props = (event as { properties?: { sessionID?: string; messageID?: string; part?: { id?: string; messageID?: string }; info?: { id?: string } } }).properties
+      const part = props?.part
+      Latency.markReceive({
+        sessionID: props?.sessionID,
+        messageID: props?.messageID ?? part?.messageID ?? props?.info?.id,
+        partID: part?.id,
+        type: event.type,
+      })
+    }
+    // testagent_change end
     if ((event as any).type === "kilo-sessions.remote-status-changed") {
       const ev = event as any
       this.remoteService?.updateFromEvent({ enabled: ev.properties.enabled, connected: ev.properties.connected })
@@ -5444,6 +5457,17 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
   }
   /** Post a message to the webview. Public so toolbar button commands can send messages. */
   public postMessage(message: unknown): void {
+    // testagent_change start - 链路探针⑤: 扩展转发到 webview（附带转发时刻供 webview 计算传输耗时）
+    if (Latency.enabled() && message && typeof message === "object") {
+      const id = Latency.identityOf(message)
+      const type =
+        "type" in message && typeof (message as { type?: unknown }).type === "string"
+          ? (message as { type: string }).type
+          : "<unknown>"
+      ;(message as { sentAt?: number }).sentAt = Date.now()
+      Latency.markForward({ ...id, type })
+    }
+    // testagent_change end
     if (!this.webview) {
       const type =
         typeof message === "object" &&

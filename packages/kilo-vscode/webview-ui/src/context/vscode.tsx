@@ -5,6 +5,7 @@
 
 import { createContext, useContext, onCleanup, ParentComponent } from "solid-js"
 import type { VSCodeAPI, WebviewMessage, ExtensionMessage } from "../types/messages"
+import { enabled as latencyEnabled, markReceive, attachStatsSender } from "../utils/latency-probe" // testagent_change - 链路探针
 
 // Get the VS Code API (only available in webview context)
 let vscodeApi: VSCodeAPI | undefined
@@ -44,10 +45,40 @@ export const VSCodeProvider: ParentComponent = (props) => {
   // Listen for messages from the extension
   const messageListener = (event: MessageEvent) => {
     const message = event.data as ExtensionMessage
+    // testagent_change start - 链路探针⑥: webview 收到扩展消息
+    if (latencyEnabled()) {
+      const msg = message as {
+        type: string
+        sessionID?: string
+        messageID?: string
+        part?: { id?: string; messageID?: string }
+        message?: { id?: string }
+        sentAt?: number
+      }
+      markReceive({
+        sessionID: msg.sessionID,
+        messageID: msg.messageID ?? msg.part?.messageID ?? msg.message?.id,
+        partID: msg.part?.id,
+        type: msg.type,
+        sentAt: msg.sentAt,
+      })
+    }
+    // testagent_change end
     handlers.forEach((handler) => handler(message))
   }
 
   window.addEventListener("message", messageListener)
+
+  // testagent_change start - 渲染汇总回传扩展宿主,由扩展写入文件
+  attachStatsSender((payload) => {
+    api.postMessage({
+      type: "perfReport",
+      windowMs: 5000,
+      summary: payload.rows.map((r) => `${r.name} ${r.count}次 总${r.total}ms 均${r.avg}ms 峰${r.max}ms`).join(" | "),
+      counters: Object.fromEntries(payload.rows.map((r) => [r.name, r.total])),
+    })
+  })
+  // testagent_change end
 
   onCleanup(() => {
     window.removeEventListener("message", messageListener)
