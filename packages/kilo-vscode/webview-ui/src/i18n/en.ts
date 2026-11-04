@@ -1374,7 +1374,8 @@ export const dict = {
     "Prevent repeated identical actions. Triggered when the same tool call repeats with identical input.",
 
   "settings.checkpoints.enable.title": "Enable Snapshots",
-  "settings.checkpoints.enable.description": "Create checkpoints before file edits so you can restore previous states",
+  "settings.checkpoints.enable.description":
+    "Record snapshots before file edits so previous file states can be restored. When disabled, no snapshots are recorded and Revert cannot restore file changes. Git repositories only",
 
   "settings.context.autoCompaction.title": "Auto Compaction",
   "settings.context.autoCompaction.description":
