@@ -456,6 +456,7 @@ const PermissionRuleset: Component<RulesetProps> = (props) => {
     "todowrite",
     "skill",
     "sandbox",
+    "jev", // testagent_change
     // "toast",   //testagent_change
   ]
 
