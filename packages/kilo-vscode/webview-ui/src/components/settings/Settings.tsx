@@ -161,6 +161,10 @@ const Settings: Component<SettingsProps> = (props) => {
             <Icon name="server" />
             <span class="label">{language.t("settings.context.title")}</span>
           </Tabs.Trigger>
+          <Tabs.Trigger value="checkpoints" aria-label={language.t("settings.checkpoints.title")}>
+            <Icon name="branch" />
+            <span class="label">{language.t("settings.checkpoints.title")}</span>
+          </Tabs.Trigger>
           <Tabs.Trigger value="memorySettings">
             <Icon name="brain" />
             <span class="label">记忆设置</span>
@@ -215,6 +219,10 @@ const Settings: Component<SettingsProps> = (props) => {
           <h3>{language.t("settings.context.title")}</h3>
           <ContextTab />
         </Tabs.Content>
+        <Tabs.Content value="checkpoints">
+          <h3>{language.t("settings.checkpoints.title")}</h3>
+          <CheckpointsTab />
+        </Tabs.Content>
         <Tabs.Content value="memorySettings">
           <h3>记忆设置</h3>
           <MemorySettingTab
@@ -257,9 +265,8 @@ const Settings: Component<SettingsProps> = (props) => {
                   aria-expanded={errorExpanded()}
                 >
                   <span
-                    class={`settings-save-bar-error-chevron${
-                      errorExpanded() ? " settings-save-bar-error-chevron-expanded" : ""
-                    }`}
+                    class={`settings-save-bar-error-chevron${errorExpanded() ? " settings-save-bar-error-chevron-expanded" : ""
+                      }`}
                   >
                     <Icon name="chevron-right" size="small" />
                   </span>

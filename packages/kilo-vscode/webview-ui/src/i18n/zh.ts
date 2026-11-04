@@ -1333,7 +1333,8 @@ export const dict = {
   "settings.autoApprove.tool.external_directory": "访问工作区外部的文件。访问当前项目目录之外的文件时触发。",
   "settings.autoApprove.tool.doom_loop": "防止重复相同操作。当相同的工具调用以相同的输入重复时触发。",
   "settings.checkpoints.enable.title": "启用快照",
-  "settings.checkpoints.enable.description": "在文件编辑前创建检查点，以便恢复之前的状态",
+  "settings.checkpoints.enable.description":
+    "在文件编辑前记录快照，便于还原之前的文件状态。关闭后将不再记录快照，还原（Revert）也无法恢复文件改动。仅对 Git 仓库生效",
   "settings.context.autoCompaction.title": "自动压缩",
   "settings.context.autoCompaction.description":
     "当上下文接近容量上限时，将对话历史（不含最近 2 轮对话、工具调用以及系统提示词等）发给专用压缩 agent 进行压缩",
