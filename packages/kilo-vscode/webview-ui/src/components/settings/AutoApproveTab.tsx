@@ -58,7 +58,7 @@ const GRANULAR_TOOLS: GranularToolDef[] = [
       addKey: "settings.autoApprove.addCommand",
       placeholderKey: "settings.autoApprove.placeholder.command",
       // testagent_change start - 预置常用删除命令，方便用户快速添加
-      quickPatterns: ["rm *", "rm -rf *", "rmdir *", "del *", "erase *", "Remove-Item *", "rd *"],
+      quickPatterns: ["rm", "rmdir", "del", "erase", "Remove-Item", "rd", "delete", "unlink", "remove", "uninstall"],
       // testagent_change end
     },
   },
@@ -410,7 +410,7 @@ const GranularToolRow: Component<{
           <div style={{ display: "flex", "flex-wrap": "wrap", gap: "4px" }}>
             <For each={props.tool.granular.quickPatterns}>
               {(pattern) => (
-                <Show when={!excs().some(exc => exc.pattern === pattern)}>
+                <Show when={!excs().some(exc => exc.pattern.toLowerCase() === pattern.toLowerCase())}>
                   <button
                     style={{
                       display: "flex",

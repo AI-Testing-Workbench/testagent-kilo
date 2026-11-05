@@ -114,15 +114,13 @@ export const PermissionDock: Component<{
   const isDeleteCommand = () => {
     if (props.request.toolName !== "bash") return false
     const patterns = props.request.patterns || []
-    const deletePatterns = [
-      /^rm\s/i,
-      /^rmdir\s/i,
-      /^del\s/i,
-      /^erase\s/i,
-      /^remove-item\s/i,
-      /^rd\s/i,
-    ]
-    return patterns.some(pattern => deletePatterns.some(regex => regex.test(pattern.trim())))
+    
+    // 简化方案：检测命令字符串中是否包含删除关键词（带词边界）
+    // 匹配所有常见的删除命令，无论它们在命令中的位置
+    // \b 确保是完整单词，避免误匹配（如 "format" 不会匹配 "rm"）
+    const deleteKeywords = /\b(rm|rmdir|del|erase|remove-item|rd|delete|unlink|remove|uninstall)\b/i
+    
+    return patterns.some(pattern => deleteKeywords.test(pattern))
   }
   // testagent_change end
 
