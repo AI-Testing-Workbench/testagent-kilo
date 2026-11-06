@@ -49,6 +49,18 @@ export function childID(part: TaskPart): string | undefined {
 }
 
 /**
+ * testagent_change - 判断一个时间点是否落在给定窗口内。
+ * 同一个子会话可以被多次 task 调用复用（task_id 恢复），卡片必须只展示自己那次调用
+ * 产生的工具项，否则旧卡片会镜像恢复后的新执行。
+ */
+export function inSpan(start: number | undefined, span?: { start?: number; end?: number }): boolean {
+  if (span?.start === undefined) return true
+  // 没有开始时间的 part（pending）只在仍在进行的调用里展示
+  if (start === undefined) return span.end === undefined
+  return start >= span.start && (span.end === undefined || start <= span.end)
+}
+
+/**
  * Derive a human-readable status string from the last streaming part.
  * Returns undefined for part types that don't map to a status.
  */

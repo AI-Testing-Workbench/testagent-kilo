@@ -2099,6 +2099,19 @@ export interface WebviewReadyRequest {
   type: "webviewReady"
 }
 
+// testagent_change start - white-screen self-diagnostics
+export interface WebviewCrashMessage {
+  type: "webviewCrash"
+  source: string
+  message: string
+  stack?: string
+}
+
+export interface ReloadWebviewRequest {
+  type: "reloadWebview"
+}
+// testagent_change end
+
 export interface RequestProvidersMessage {
   type: "requestProviders"
 }
@@ -3028,6 +3041,10 @@ export type WebviewMessage =
   | CancelLoginRequest
   | SetOrganizationRequest
   | WebviewReadyRequest
+  // testagent_change start - white-screen self-diagnostics
+  | WebviewCrashMessage
+  | ReloadWebviewRequest
+  // testagent_change end
   | RequestProvidersMessage
   | CompactRequest
   | RequestAgentsMessage

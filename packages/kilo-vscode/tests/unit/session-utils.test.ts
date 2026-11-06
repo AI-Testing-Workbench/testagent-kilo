@@ -9,6 +9,7 @@ import {
   buildFamilyTiming,
   collapseCostBreakdown,
   childID,
+  inSpan,
 } from "../../webview-ui/src/context/session-utils"
 import type { Part } from "../../webview-ui/src/types/messages"
 
@@ -476,5 +477,35 @@ describe("buildFamilyTiming", () => {
     // tool spans: [3500,4000] ∪ [3800,4300] = 800（Σ=1000 被去重）
     expect(result?.tool).toBe(800)
     expect(result?.total).toBe(4_000)
+  })
+})
+
+describe("inSpan", () => {
+  const span = { start: 100, end: 200 }
+
+  it("keeps parts that started inside the window", () => {
+    expect(inSpan(150, span)).toBe(true)
+  })
+
+  it("drops parts from an earlier invocation", () => {
+    expect(inSpan(50, span)).toBe(false)
+  })
+
+  it("drops parts from a later invocation", () => {
+    expect(inSpan(250, span)).toBe(false)
+  })
+
+  it("keeps everything when there is no window", () => {
+    expect(inSpan(50, undefined)).toBe(true)
+  })
+
+  it("keeps open-ended parts only while the invocation is still running", () => {
+    expect(inSpan(undefined, { start: 100 })).toBe(true)
+    expect(inSpan(undefined, span)).toBe(false)
+  })
+
+  it("treats a running window as open-ended", () => {
+    expect(inSpan(150, { start: 100 })).toBe(true)
+    expect(inSpan(50, { start: 100 })).toBe(false)
   })
 })
