@@ -89,6 +89,21 @@ await fs.cp(serverDist, TARGET, { recursive: true })
 //   }
 // }
 
+// Step 2.5: Bundle the Windows POSIX shell (ps-bash) into bin/ps-bash/.
+// Without this the bash tool falls back to Windows PowerShell, which strips
+// embedded double quotes from native-command arguments and corrupts inline JSON.
+console.log("Step 2.5: Bundling ps-bash archive...")
+const psBashName = "ps-bash-v0.14.0-win-x64.zip"
+const psBashSource = join(ROOT, "resources", "ps-bash", psBashName)
+const psBashTarget = join(ROOT, "bin", "ps-bash")
+if (existsSync(psBashSource)) {
+  await fs.mkdir(psBashTarget, { recursive: true })
+  await fs.copyFile(psBashSource, join(psBashTarget, psBashName))
+  console.log(`  ✓ Bundled ${psBashName} into bin/ps-bash/`)
+} else {
+  console.warn(`  ⚠️ ps-bash archive not found at ${psBashSource}; Windows bash tool will fall back to PowerShell`)
+}
+
 // Step 3: Install dependencies (for native node-pty bindings)
 console.log("Step 3: Installing nodejs-server dependencies...")
 

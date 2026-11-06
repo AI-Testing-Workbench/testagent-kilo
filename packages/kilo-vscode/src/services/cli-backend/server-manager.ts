@@ -19,6 +19,7 @@ import {
   writeServerState,
   type ServerState,
 } from "./server-state"
+import { ensurePsBash } from "./ps-bash-installer"
 
 export interface ServerInstance {
   port: number
@@ -32,6 +33,7 @@ export class ServerManager {
   private instance: ServerInstance | null = null
   private startupPromise: Promise<ServerInstance> | null = null
   private logLevel: string | undefined
+  private psbash: string | undefined
 
   constructor(
     private readonly context: vscode.ExtensionContext,
@@ -165,6 +167,8 @@ export class ServerManager {
   private async startServer(): Promise<ServerInstance> {
     const password = crypto.randomBytes(32).toString("hex")
     const cliPath = this.getCliPath()
+    const psbash = await ensurePsBash(this.context)
+    this.psbash = psbash
     console.log("[TestAgent] ServerManager: 📍 CLI path:", cliPath)
     console.log("[TestAgent] ServerManager: 🔐 Generated password (length):", password.length)
 
@@ -234,6 +238,7 @@ export class ServerManager {
     console.log("[TestAgent] ServerManager: 🌐 Platform:", process.platform)
 
     const env = this.buildServerEnv(input)
+    if (this.psbash) env.TESTAGENT_PS_BASH = this.psbash
     if (input.shared) {
       return this.runCloudServer(input, env)
     }

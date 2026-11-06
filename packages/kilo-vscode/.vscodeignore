@@ -35,3 +35,6 @@ AGENTS.md
 # testagent_change start - Include node-notifier vendor for system notifications
 !node_modules/node-notifier/**
 # testagent_change end
+
+# testagent_change - ps-bash archive is bundled into bin/ps-bash/ at build time
+resources/**

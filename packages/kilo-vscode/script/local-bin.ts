@@ -1,6 +1,7 @@
 #!/usr/bin/env bun
 import { $ } from "bun"
 import { join } from "node:path"
+import { copyFileSync, existsSync, mkdirSync } from "node:fs"
 
 /**
  * Ensures the VS Code extension has a CLI binary at `packages/kilo-vscode/bin/testagent`.
@@ -31,6 +32,25 @@ async function main() {
   log(`Building CLI binary via '${script}' in packages/testagent-core...`)
   await $`bun run ${script}`.cwd(testagentDir)
   log(`Build complete. Binary copied to ${binDir}`)
+  bundlePsBash(binDir)
+}
+
+/**
+ * Copy the ps-bash Windows archive into the extension so the bash tool can use a
+ * POSIX-compatible shell on Windows. The file is fetched once and cached under
+ * bin/ps-bash/; see src/services/cli-backend/ps-bash-installer.ts for extraction.
+ */
+function bundlePsBash(binDir: string) {
+  const name = "ps-bash-v0.14.0-win-x64.zip"
+  const source = join(kiloVscodeDir, "resources", "ps-bash", name)
+  if (!existsSync(source)) {
+    log(`ps-bash archive not found at ${source}; skipping Windows POSIX shell bundle`)
+    return
+  }
+  const targetDir = join(binDir, "ps-bash")
+  mkdirSync(targetDir, { recursive: true })
+  copyFileSync(source, join(targetDir, name))
+  log(`Bundled ps-bash archive into ${targetDir}`)
 }
 
 try {
