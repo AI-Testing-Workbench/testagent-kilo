@@ -54,6 +54,8 @@ import { retry } from "./services/cli-backend/retry"
 import { isCloudMode } from "./services/cli-backend/cloud-mode" // testagent_change
 import { slimPart, slimParts } from "./kilo-provider/slim-metadata"
 import { handleContinueInWorktree } from "./kilo-provider/continue-worktree"
+import { handleReplaySession } from "./kilo-provider/replay-worktree"
+import type { ReplayArgs } from "./agent-manager/replay-in-worktree"
 import { parseMessageFiles, type MessageFile } from "./kilo-provider/message-files"
 import { handleFileSearch } from "./kilo-provider/file-search"
 import { getTerminalContents } from "./services/terminal/context"
@@ -478,6 +480,10 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
     | ((sessionId: string, progress: (status: string, detail?: string, error?: string) => void) => Promise<void>)
     | null = null
 
+  private replayInWorktreeHandler:
+    | ((args: ReplayArgs, progress: (status: string, detail?: string, error?: string) => void) => Promise<void>)
+    | null = null
+
   private diffVirtualProvider: import("./DiffVirtualProvider").DiffVirtualProvider | undefined
   private remoteService: RemoteStatusService | null = null
   private unsubscribeRemote: (() => void) | null = null
@@ -883,6 +889,12 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
     this.continueInWorktreeHandler = handler
   }
 
+  public setReplayInWorktreeHandler(
+    handler: (args: ReplayArgs, progress: (status: string, detail?: string, error?: string) => void) => Promise<void>,
+  ): void {
+    this.replayInWorktreeHandler = handler
+  }
+
   public attachToWebview(
     webview: vscode.Webview,
     options?: { onBeforeMessage?: (msg: Record<string, unknown>) => Promise<Record<string, unknown> | null> },
@@ -1096,6 +1108,24 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
           handleContinueInWorktree({
             sessionId: message.sessionId,
             handler: this.continueInWorktreeHandler ?? undefined,
+            post: (msg) => this.postMessage(msg),
+          })
+          break
+        case "replaySession":
+          handleReplaySession({
+            args:
+              message.sessionID && message.messageID && message.partID && message.snapshot
+                ? {
+                    sessionId: message.sessionID,
+                    messageId: message.messageID,
+                    partId: message.partID,
+                    snapshot: message.snapshot,
+                    directory: this.getWorkspaceDirectory(message.sessionID),
+                    mode: message.mode === "loop" ? "loop" : undefined,
+                    span: message.span === "rest" ? "rest" : undefined,
+                  }
+                : undefined,
+            handler: this.replayInWorktreeHandler ?? undefined,
             post: (msg) => this.postMessage(msg),
           })
           break

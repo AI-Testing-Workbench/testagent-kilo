@@ -209,6 +209,8 @@ export function mockSessionValue(overrides?: {
     selectVariant: noop,
     sendMessage: noop,
     sendCommand: noop,
+    continueTask: noop,
+    replayStep: noop,
     abort: noop,
     compact: noop,
     respondToPermission: noop,

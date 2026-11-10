@@ -2868,6 +2868,16 @@ export interface ContinueInWorktreeRequest {
   sessionId: string
 }
 
+export interface ReplaySessionRequest {
+  type: "replaySession"
+  sessionID: string
+  messageID: string
+  partID: string
+  snapshot?: string
+  mode?: "tools" | "loop"
+  span?: "step" | "rest"
+}
+
 // Section CRUD messages (webview → extension)
 export interface CreateSectionRequest {
   type: "agentManager.createSection"
@@ -2915,7 +2925,10 @@ export type ContinueInWorktreeStatus =
   | "creating"
   | "setup"
   | "transferring"
+  | "restoring"
   | "forking"
+  | "replaying"
+  | "running"
   | "done"
   | "error"
 
@@ -3094,6 +3107,7 @@ export type WebviewMessage =
   | SetRemoteEnabledMessage
   | RequestRemoteStatusMessage
   | ContinueInWorktreeRequest
+  | ReplaySessionRequest
   | CreateSectionRequest
   | RenameSectionRequest
   | DeleteSectionRequest

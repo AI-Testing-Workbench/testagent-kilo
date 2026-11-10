@@ -247,6 +247,13 @@ interface SessionContextValue {
     draftID?: string,
   ) => void
   continueTask: () => void // testagent_change - 添加继续任务方法
+  replayStep: (
+    messageID: string,
+    partID: string,
+    snapshot?: string,
+    mode?: "tools" | "loop",
+    span?: "step" | "rest",
+  ) => void
   abort: (sessionID?: string) => void
   compact: () => void
   respondToPermission: (
@@ -2053,6 +2060,29 @@ export const SessionProvider: ParentComponent = (props) => {
   }
   // testagent_change end
 
+  function replayStep(
+    messageID: string,
+    partID: string,
+    snapshot?: string,
+    mode?: "tools" | "loop",
+    span?: "step" | "rest",
+  ) {
+    if (!server.isConnected()) return
+    const sid = currentSessionID()
+    if (!sid) return
+    if (status() !== "idle") return
+    if (revert()) return
+    vscode.postMessage({
+      type: "replaySession",
+      sessionID: sid,
+      messageID,
+      partID,
+      snapshot,
+      mode,
+      span,
+    })
+  }
+
   function abort(sessionID?: string) {
     const sid = sessionID ?? currentSessionID()
     if (!sid) {
@@ -2600,6 +2630,7 @@ export const SessionProvider: ParentComponent = (props) => {
     sendMessage,
     sendCommand,
     continueTask, // testagent_change - 添加继续任务方法
+    replayStep,
     abort,
     compact,
     respondToPermission,

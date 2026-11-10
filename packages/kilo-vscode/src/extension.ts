@@ -174,6 +174,7 @@ export function activate(context: vscode.ExtensionContext) {
   provider.setContinueInWorktreeHandler((sessionId, progress) =>
     agentManagerProvider.continueFromSidebar(sessionId, progress),
   )
+  provider.setReplayInWorktreeHandler((args, progress) => agentManagerProvider.replayFromSidebar(args, progress))
 
   // Register serializer so Agent Manager restores when VS Code restarts
   context.subscriptions.push(
@@ -207,6 +208,9 @@ export function activate(context: vscode.ExtensionContext) {
         if (remoteService) tabProvider.setRemoteService(remoteService)
         tabProvider.setContinueInWorktreeHandler((sessionId, progress) =>
           agentManagerProvider.continueFromSidebar(sessionId, progress),
+        )
+        tabProvider.setReplayInWorktreeHandler((args, progress) =>
+          agentManagerProvider.replayFromSidebar(args, progress),
         )
         tabProvider.setDiffVirtualProvider(diffVirtualProvider)
         tabProvider.resolveWebviewPanel(panel)
@@ -871,6 +875,7 @@ async function openKiloInNewTab(
   tabProvider.setContinueInWorktreeHandler((sessionId, progress) =>
     agentManagerProvider.continueFromSidebar(sessionId, progress),
   )
+  tabProvider.setReplayInWorktreeHandler((args, progress) => agentManagerProvider.replayFromSidebar(args, progress))
   tabProvider.setDiffVirtualProvider(diffVirtualProvider)
   tabProvider.resolveWebviewPanel(panel)
   tabPanels.set(panel, tabProvider)

@@ -25,6 +25,7 @@ import { RunController } from "./run/controller"
 import { handleRunMessage } from "./run/message"
 import { forkSession } from "./fork-session"
 import { continueInWorktree } from "./continue-in-worktree"
+import { replayInWorktree, type ReplayArgs } from "./replay-in-worktree"
 import { WorktreeDiffController } from "./worktree-diff-controller"
 import { WorktreeImporter } from "./worktree-importer"
 import { diffSummary as localDiffSummary, diffFile as localDiffFile } from "./local-diff"
@@ -309,6 +310,25 @@ export class AgentManagerProvider implements Disposable {
     if (this.prBridge.handleMessage(msg)) return null
     if (msg.type === "requestFileSearch" && typeof msg.sessionID !== "string" && this.activeSessionId) {
       return { ...msg, sessionID: this.activeSessionId }
+    }
+    if (msg.type === "replaySession") {
+      const sessionId = typeof msg.sessionID === "string" ? msg.sessionID : ""
+      const dirs = this.panel?.sessions.getSessionDirectories()
+      void this.replayFromSidebar(
+        {
+          sessionId,
+          messageId: typeof msg.messageID === "string" ? msg.messageID : "",
+          partId: typeof msg.partID === "string" ? msg.partID : "",
+          snapshot: typeof msg.snapshot === "string" ? msg.snapshot : "",
+          directory: (sessionId && dirs?.get(sessionId)) || this.getRoot() || "",
+          mode: msg.mode === "loop" ? "loop" : undefined,
+          span: msg.span === "rest" ? "rest" : undefined,
+        },
+        (status, detail, error) => {
+          this.panel?.postMessage({ type: "continueInWorktreeProgress", status, detail, error })
+        },
+      )
+      return null
     }
     const m = msg as unknown as AgentManagerInMessage
 
@@ -1609,6 +1629,39 @@ export class AgentManagerProvider implements Disposable {
         log: (...args) => this.log(...args),
       },
       sessionId,
+      progress,
+    )
+  }
+
+  /**
+   * Replay a sidebar model step in a new worktree.
+   * Restores the step snapshot, then re-emits recorded text and re-runs tools.
+   */
+  public async replayFromSidebar(
+    args: ReplayArgs,
+    progress: (status: string, detail?: string, error?: string) => void,
+  ): Promise<void> {
+    const root = this.getRoot()
+    if (!root) {
+      progress("error", undefined, "No workspace folder open")
+      return
+    }
+
+    this.openPanel()
+    await this.waitForStateReady("replayFromSidebar")
+
+    await replayInWorktree(
+      {
+        getClient: () => this.connectionService.getClient(),
+        createWorktreeOnDisk: (opts) => this.createWorktreeOnDisk(opts),
+        getStateManager: () => this.getStateManager(),
+        registerWorktreeSession: (sid, dir) => this.registerWorktreeSession(sid, dir),
+        registerSession: (session) => this.panel?.sessions.registerSession(session),
+        notifyReady: (sid, result, wid) => this.notifyWorktreeReady(sid, result, wid),
+        capture: (event, props) => this.host.capture(event, props),
+        log: (...args) => this.log(...args),
+      },
+      { ...args, directory: args.directory || root },
       progress,
     )
   }

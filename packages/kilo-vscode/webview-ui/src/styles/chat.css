@@ -3494,3 +3494,68 @@ html[data-theme="kilo-vscode"]
   background: var(--vscode-inputValidation-warningBackground, rgba(204, 122, 0, 0.1));
 }
 /* testagent_change end */
+
+/* ============================================
+   Replay step button
+   ============================================ */
+.assistant-step-head {
+  display: flex;
+  justify-content: flex-end;
+  gap: 6px;
+  margin: 2px 0 6px;
+}
+
+.assistant-step-replay-btn {
+  padding: 2px 8px;
+  border: 1px solid var(--vscode-button-secondaryBorder, var(--vscode-widget-border, #3c3c3c));
+  border-radius: 4px;
+  background: var(--vscode-button-secondaryBackground, transparent);
+  color: var(--vscode-button-secondaryForeground, var(--vscode-foreground, #cccccc));
+  font-family: inherit;
+  font-size: 11px;
+  cursor: pointer;
+}
+
+.assistant-step-replay-btn:hover:not(:disabled) {
+  background: var(--vscode-button-secondaryHoverBackground, rgba(255, 255, 255, 0.08));
+}
+
+.assistant-step-replay-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.assistant-step-replay-wrap {
+  position: relative;
+}
+
+.assistant-step-replay-menu {
+  position: absolute;
+  right: 0;
+  top: calc(100% + 4px);
+  z-index: 6;
+  display: flex;
+  flex-direction: column;
+  min-width: 148px;
+  padding: 4px;
+  border: 1px solid var(--vscode-widget-border, #3c3c3c);
+  border-radius: 4px;
+  background: var(--vscode-dropdown-background, var(--vscode-editorWidget-background, #252526));
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.24);
+}
+
+.assistant-step-replay-menu button {
+  padding: 4px 8px;
+  border: 0;
+  border-radius: 3px;
+  background: transparent;
+  color: var(--vscode-dropdown-foreground, var(--vscode-foreground, #cccccc));
+  font-family: inherit;
+  font-size: 11px;
+  text-align: left;
+  cursor: pointer;
+}
+
+.assistant-step-replay-menu button:hover {
+  background: var(--vscode-list-hoverBackground, rgba(255, 255, 255, 0.08));
+}

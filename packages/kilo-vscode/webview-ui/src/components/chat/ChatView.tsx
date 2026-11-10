@@ -143,7 +143,10 @@ export const ChatView: Component<ChatViewProps> = (props) => {
       creating: "Creating worktree...",
       setup: "Running setup...",
       transferring: "Transferring changes...",
+      restoring: "Restoring snapshot...",
       forking: "Starting session...",
+      replaying: "Replaying step...",
+      running: "Starting model...",
     }
     const cleanup = vscode.onMessage((msg) => {
       if (msg.type !== "continueInWorktreeProgress") return
@@ -159,6 +162,7 @@ export const ChatView: Component<ChatViewProps> = (props) => {
         showToast({ title: m.error ?? "Failed to continue in worktree" })
         return
       }
+      setTransferring(true)
       setTransferDetail(labels[m.status] ?? "Working...")
     })
     onCleanup(cleanup)

@@ -7,7 +7,7 @@
  * Active questions render inline via QuestionDock; permissions are in the bottom dock.
  */
 
-import { Component, For, Show, createMemo } from "solid-js"
+import { Component, For, Show, createMemo, createSignal, onCleanup } from "solid-js"
 import { Dynamic } from "solid-js/web"
 import { Part, PART_MAPPING, ToolRegistry } from "@kilocode/kilo-ui/message-part"
 import { BasicTool } from "@kilocode/kilo-ui/basic-tool"
@@ -20,6 +20,7 @@ import type {
 } from "@kilocode/sdk/v2"
 import { useData } from "@kilocode/kilo-ui/context/data"
 import { useSession } from "../../context/session"
+import { useLanguage } from "../../context/language"
 import { QuestionDock } from "./QuestionDock"
 import { SuggestBar } from "./SuggestBar"
 
@@ -50,6 +51,36 @@ function isRenderable(part: SDKPart): boolean {
   if (part.type === "text") return !!(part as SDKPart & { text: string }).text?.trim()
   if (part.type === "reasoning") return !!(part as SDKPart & { text: string }).text?.trim()
   return !!PART_MAPPING[part.type]
+}
+
+type Step = {
+  id: string
+  snapshot?: string
+  replay: boolean
+  parts: SDKPart[]
+}
+
+function groupSteps(all: SDKPart[] | undefined): Step[] {
+  if (!all?.length) return []
+  return all.reduce<Step[]>((out, part) => {
+    const last = out[out.length - 1]
+    if (part.type === "step-start") {
+      const rec = part as SDKPart & { snapshot?: string }
+      out.push({ id: part.id, snapshot: rec.snapshot, replay: false, parts: [] })
+      return out
+    }
+    if (part.type === "step-finish") {
+      if (last) last.replay = true
+      return out
+    }
+    if (!isRenderable(part)) return out
+    if (!last) {
+      out.push({ id: part.id, replay: false, parts: [part] })
+      return out
+    }
+    last.parts.push(part)
+    return out
+  }, [])
 }
 function matchToolRequest<T extends { tool?: { callID: string; messageID: string } }>(
   part: SDKPart,
@@ -322,16 +353,80 @@ const TestflowResultCard: Component<{ input: TestflowResultInput; output: string
 export const AssistantMessage: Component<AssistantMessageProps> = (props) => {
   const data = useData()
   const session = useSession()
+  const language = useLanguage()
 
-  const parts = createMemo(() => {
-    const stored = data.store.part?.[props.message.id]
-    if (!stored) return []
-    return (stored as SDKPart[]).filter((part) => isRenderable(part))
-  })
+  const steps = createMemo(() => groupSteps(data.store.part?.[props.message.id] as SDKPart[] | undefined))
+  const canReplay = () => session.status() === "idle" && !session.revert()
+  const [open, setOpen] = createSignal<string>()
+  const hide = (event: MouseEvent) => {
+    const node = event.target
+    if (node instanceof Element && node.closest(".assistant-step-replay-wrap")) return
+    setOpen(undefined)
+  }
+  document.addEventListener("click", hide)
+  onCleanup(() => document.removeEventListener("click", hide))
 
   return (
     <>
-      <For each={parts()}>
+      <For each={steps()}>
+        {(step) => (
+          <div class="assistant-step">
+            <Show when={step.replay && canReplay()}>
+              <div class="assistant-step-head">
+                <button
+                  type="button"
+                  class="assistant-step-replay-btn"
+                  disabled={!step.snapshot}
+                  title={step.snapshot ? language.t("replay.hint") : language.t("replay.disabled.noSnapshot")}
+                  onClick={() => {
+                    if (!step.snapshot) return
+                    session.replayStep(props.message.id, step.id, step.snapshot)
+                  }}
+                >
+                  {language.t("replay.step")}
+                </button>
+                <div class="assistant-step-replay-wrap">
+                <button
+                  type="button"
+                  class="assistant-step-replay-btn"
+                  disabled={!step.snapshot}
+                  title={step.snapshot ? language.t("replay.loop.hint") : language.t("replay.disabled.noSnapshot")}
+                  onClick={(event) => {
+                    event.stopPropagation()
+                    if (!step.snapshot) return
+                    setOpen((id) => (id === step.id ? undefined : step.id))
+                  }}
+                >
+                  {language.t("replay.loop")}
+                </button>
+                <Show when={open() === step.id && step.snapshot}>
+                  <div class="assistant-step-replay-menu">
+                    <button
+                      type="button"
+                      title={language.t("replay.loop.step.hint")}
+                      onClick={() => {
+                        setOpen(undefined)
+                        session.replayStep(props.message.id, step.id, step.snapshot, "loop", "step")
+                      }}
+                    >
+                      {language.t("replay.loop.step")}
+                    </button>
+                    <button
+                      type="button"
+                      title={language.t("replay.loop.rest.hint")}
+                      onClick={() => {
+                        setOpen(undefined)
+                        session.replayStep(props.message.id, step.id, step.snapshot, "loop", "rest")
+                      }}
+                    >
+                      {language.t("replay.loop.rest")}
+                    </button>
+                  </div>
+                </Show>
+                </div>
+              </div>
+            </Show>
+            <For each={step.parts}>
         {(part) => {
           // testagent_change start - testflow tools bypass ToolPartDisplay entirely
           const isTestflow =
@@ -423,6 +518,9 @@ export const AssistantMessage: Component<AssistantMessageProps> = (props) => {
             </Show>
           )
         }}
+            </For>
+          </div>
+        )}
       </For>
     </>
   )
