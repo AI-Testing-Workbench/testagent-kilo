@@ -1114,6 +1114,8 @@ export interface ToolProps {
   callID?: string
   output?: string
   status?: string
+  /** Time window of this tool call; renderers can use it to scope data to one invocation. */
+  time?: { start?: number; end?: number }
   hideDetails?: boolean
   defaultOpen?: boolean
   forceOpen?: boolean
@@ -1353,6 +1355,7 @@ PART_MAPPING["tool"] = function ToolPartDisplay(props) {
               // @ts-expect-error
               output={part.state.output}
               status={part.state.status}
+              time={part.state.status === "pending" ? undefined : part.state.time}
               hideDetails={props.hideDetails}
               defaultOpen={props.defaultOpen}
               animate
