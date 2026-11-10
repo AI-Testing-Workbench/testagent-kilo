@@ -7,6 +7,8 @@ import type {
   AppAgentsResponses,
   AppLogErrors,
   AppLogResponses,
+  AppReloadAgentsResponses,
+  AppReloadCommandsResponses,
   AppReloadSkillsResponses,
   AppSkillsResponses,
   Auth as Auth3,
@@ -129,6 +131,7 @@ import type {
   QuestionReplyResponses,
   SessionAbortErrors,
   SessionAbortResponses,
+  SessionArchive,
   SessionChildrenErrors,
   SessionChildrenResponses,
   SessionClearContextErrors,
@@ -145,13 +148,21 @@ import type {
   SessionDeleteResponses,
   SessionDelivery,
   SessionDiffResponses,
+  SessionExportErrors,
+  SessionExportResponses,
   SessionForkErrors,
   SessionForkResponses,
   SessionGetErrors,
   SessionGetResponses,
+  SessionImportErrors,
+  SessionImportForkErrors,
+  SessionImportForkResponses,
+  SessionImportResponses,
   SessionInitErrors,
   SessionInitResponses,
   SessionListResponses,
+  SessionMaterializeErrors,
+  SessionMaterializeResponses,
   SessionMessageErrors,
   SessionMessageResponses,
   SessionMessagesErrors,
@@ -160,6 +171,8 @@ import type {
   SessionPromptAsyncResponses,
   SessionPromptErrors,
   SessionPromptResponses,
+  SessionReplayErrors,
+  SessionReplayResponses,
   SessionResumeErrors,
   SessionResumeResponses,
   SessionRevertErrors,
@@ -195,8 +208,11 @@ import type {
   TestagentCustomEnvVarsBatchUpdateResponses,
   TestagentEnvVarsBatchQueryErrors,
   TestagentEnvVarsBatchQueryResponses,
+  TestagentEnvVarsClearRemoteResponses,
+  TestagentEnvVarsEnsureRemoteResponses,
   TestagentEnvVarsListErrors,
   TestagentEnvVarsListResponses,
+  TestagentServerAuthResponses,
   TestagentUserSetResponses,
   TestagentYoloGetResponses,
   TestagentYoloSetResponses,
@@ -489,6 +505,66 @@ export class App extends HeyApiClient {
       ...params,
     })
   }
+
+  /**
+   * Reload agents
+   *
+   * Invalidate agent cache and reload all agents from config/disk
+   */
+  public reloadAgents<ThrowOnError extends boolean = false>(
+    parameters?: {
+      directory?: string
+      workspace?: string
+    },
+    options?: Options<never, ThrowOnError>,
+  ) {
+    const params = buildClientParams(
+      [parameters],
+      [
+        {
+          args: [
+            { in: "query", key: "directory" },
+            { in: "query", key: "workspace" },
+          ],
+        },
+      ],
+    )
+    return (options?.client ?? this.client).post<AppReloadAgentsResponses, unknown, ThrowOnError>({
+      url: "/agent/reload",
+      ...options,
+      ...params,
+    })
+  }
+
+  /**
+   * Reload commands
+   *
+   * Invalidate command cache and reload all commands from config/disk
+   */
+  public reloadCommands<ThrowOnError extends boolean = false>(
+    parameters?: {
+      directory?: string
+      workspace?: string
+    },
+    options?: Options<never, ThrowOnError>,
+  ) {
+    const params = buildClientParams(
+      [parameters],
+      [
+        {
+          args: [
+            { in: "query", key: "directory" },
+            { in: "query", key: "workspace" },
+          ],
+        },
+      ],
+    )
+    return (options?.client ?? this.client).post<AppReloadCommandsResponses, unknown, ThrowOnError>({
+      url: "/command/reload",
+      ...options,
+      ...params,
+    })
+  }
 }
 
 export class Config extends HeyApiClient {
@@ -740,6 +816,66 @@ export class EnvVars extends HeyApiClient {
         ...options?.headers,
         ...params.headers,
       },
+    })
+  }
+
+  /**
+   * Ensure remote environment variables exist
+   *
+   * If no TESTAGENT-prefixed variable exists yet, fetch them from the remote interface and persist them. Existing values are kept as-is.
+   */
+  public ensureRemote<ThrowOnError extends boolean = false>(
+    parameters?: {
+      directory?: string
+      workspace?: string
+    },
+    options?: Options<never, ThrowOnError>,
+  ) {
+    const params = buildClientParams(
+      [parameters],
+      [
+        {
+          args: [
+            { in: "query", key: "directory" },
+            { in: "query", key: "workspace" },
+          ],
+        },
+      ],
+    )
+    return (options?.client ?? this.client).post<TestagentEnvVarsEnsureRemoteResponses, unknown, ThrowOnError>({
+      url: "/testagent/env-vars/remote/ensure",
+      ...options,
+      ...params,
+    })
+  }
+
+  /**
+   * Clear remote environment variables
+   *
+   * Remove interface-fetched environment variables from storage and from the running process environment. Called on logout.
+   */
+  public clearRemote<ThrowOnError extends boolean = false>(
+    parameters?: {
+      directory?: string
+      workspace?: string
+    },
+    options?: Options<never, ThrowOnError>,
+  ) {
+    const params = buildClientParams(
+      [parameters],
+      [
+        {
+          args: [
+            { in: "query", key: "directory" },
+            { in: "query", key: "workspace" },
+          ],
+        },
+      ],
+    )
+    return (options?.client ?? this.client).delete<TestagentEnvVarsClearRemoteResponses, unknown, ThrowOnError>({
+      url: "/testagent/env-vars/remote",
+      ...options,
+      ...params,
     })
   }
 }
@@ -1068,6 +1204,38 @@ export class Yolo extends HeyApiClient {
   }
 }
 
+export class Server extends HeyApiClient {
+  /**
+   * Get server Basic auth credential
+   *
+   * Returns the username and base64 credential (base64 of `user:password`) that the web UI share link embeds as `?auth_token=`. When no server password is configured the token is null and no auth is required. When a password is configured this route is reachable without credentials from loopback, or from any host when TESTAGENT_SERVER_AUTH_PUBLIC is set.
+   */
+  public auth<ThrowOnError extends boolean = false>(
+    parameters?: {
+      directory?: string
+      workspace?: string
+    },
+    options?: Options<never, ThrowOnError>,
+  ) {
+    const params = buildClientParams(
+      [parameters],
+      [
+        {
+          args: [
+            { in: "query", key: "directory" },
+            { in: "query", key: "workspace" },
+          ],
+        },
+      ],
+    )
+    return (options?.client ?? this.client).get<TestagentServerAuthResponses, unknown, ThrowOnError>({
+      url: "/testagent/server/auth",
+      ...options,
+      ...params,
+    })
+  }
+}
+
 export class Testagent extends HeyApiClient {
   private _user?: User
   get user(): User {
@@ -1097,6 +1265,11 @@ export class Testagent extends HeyApiClient {
   private _yolo?: Yolo
   get yolo(): Yolo {
     return (this._yolo ??= new Yolo({ client: this.client }))
+  }
+
+  private _server?: Server
+  get server(): Server {
+    return (this._server ??= new Server({ client: this.client }))
   }
 }
 
@@ -4149,6 +4322,7 @@ export class Session2 extends HeyApiClient {
       format?: OutputFormat
       system?: string
       variant?: string
+      maxConcurrency?: number | "NaN" | "Infinity" | "-Infinity" | "Infinity" | "-Infinity" | "NaN"
       parts?: Array<TextPartInput | FilePartInput | AgentPartInput | SubtaskPartInput>
     },
     options?: Options<never, ThrowOnError>,
@@ -4170,6 +4344,7 @@ export class Session2 extends HeyApiClient {
             { in: "body", key: "format" },
             { in: "body", key: "system" },
             { in: "body", key: "variant" },
+            { in: "body", key: "maxConcurrency" },
             { in: "body", key: "parts" },
           ],
         },
@@ -4260,6 +4435,118 @@ export class Session2 extends HeyApiClient {
   }
 
   /**
+   * Export session
+   *
+   * Export a session and its complete message history as a CLI-compatible archive.
+   */
+  public export<ThrowOnError extends boolean = false>(
+    parameters: {
+      sessionID: string
+      directory?: string
+      workspace?: string
+      sanitize?: boolean | "true" | "false"
+    },
+    options?: Options<never, ThrowOnError>,
+  ) {
+    const params = buildClientParams(
+      [parameters],
+      [
+        {
+          args: [
+            { in: "path", key: "sessionID" },
+            { in: "query", key: "directory" },
+            { in: "query", key: "workspace" },
+            { in: "query", key: "sanitize" },
+          ],
+        },
+      ],
+    )
+    return (options?.client ?? this.client).get<SessionExportResponses, SessionExportErrors, ThrowOnError>({
+      url: "/session/{sessionID}/export",
+      ...options,
+      ...params,
+    })
+  }
+
+  /**
+   * Import session
+   *
+   * Import a CLI-compatible session archive while preserving its session, message, and part IDs.
+   */
+  public import<ThrowOnError extends boolean = false>(
+    parameters: {
+      sessionID: string
+      directory?: string
+      workspace?: string
+      sessionArchive?: SessionArchive
+    },
+    options?: Options<never, ThrowOnError>,
+  ) {
+    const params = buildClientParams(
+      [parameters],
+      [
+        {
+          args: [
+            { in: "path", key: "sessionID" },
+            { in: "query", key: "directory" },
+            { in: "query", key: "workspace" },
+            { key: "sessionArchive", map: "body" },
+          ],
+        },
+      ],
+    )
+    return (options?.client ?? this.client).post<SessionImportResponses, SessionImportErrors, ThrowOnError>({
+      url: "/session/{sessionID}/import",
+      ...options,
+      ...params,
+      headers: {
+        "Content-Type": "application/json",
+        ...options?.headers,
+        ...params.headers,
+      },
+    })
+  }
+
+  /**
+   * Fork imported session
+   *
+   * Import a session archive as a new session with remapped session, message, and part IDs.
+   */
+  public importFork<ThrowOnError extends boolean = false>(
+    parameters: {
+      sessionID: string
+      directory?: string
+      workspace?: string
+      sessionArchive?: SessionArchive
+    },
+    options?: Options<never, ThrowOnError>,
+  ) {
+    const params = buildClientParams(
+      [parameters],
+      [
+        {
+          args: [
+            { in: "path", key: "sessionID" },
+            { in: "query", key: "directory" },
+            { in: "query", key: "workspace" },
+            { key: "sessionArchive", map: "body" },
+          ],
+        },
+      ],
+    )
+    return (options?.client ?? this.client).post<SessionImportForkResponses, SessionImportForkErrors, ThrowOnError>({
+      url: "/session/{sessionID}/import/fork",
+      ...options,
+      ...params,
+      headers: {
+        "Content-Type": "application/json",
+        ...options?.headers,
+        ...params.headers,
+      },
+    })
+  }
+
+  /**
    * Fork session
    *
    * Create a new session by forking an existing session at a specific message point.
@@ -4309,6 +4596,7 @@ export class Session2 extends HeyApiClient {
       directory?: string
       workspace?: string
       reason?: "completed" | "user_abort" | "error"
+      scope?: "session" | "tree"
     },
     options?: Options<never, ThrowOnError>,
   ) {
@@ -4321,6 +4609,7 @@ export class Session2 extends HeyApiClient {
             { in: "query", key: "directory" },
             { in: "query", key: "workspace" },
             { in: "body", key: "reason" },
+            { in: "body", key: "scope" },
           ],
         },
       ],
@@ -4511,6 +4800,7 @@ export class Session2 extends HeyApiClient {
       format?: OutputFormat
       system?: string
       variant?: string
+      maxConcurrency?: number | "NaN" | "Infinity" | "-Infinity" | "Infinity" | "-Infinity" | "NaN"
       parts?: Array<TextPartInput | FilePartInput | AgentPartInput | SubtaskPartInput>
     },
     options?: Options<never, ThrowOnError>,
@@ -4532,6 +4822,7 @@ export class Session2 extends HeyApiClient {
             { in: "body", key: "format" },
             { in: "body", key: "system" },
             { in: "body", key: "variant" },
+            { in: "body", key: "maxConcurrency" },
             { in: "body", key: "parts" },
           ],
         },
@@ -4766,6 +5057,137 @@ export class Session2 extends HeyApiClient {
     )
     return (options?.client ?? this.client).post<SessionResumeResponses, SessionResumeErrors, ThrowOnError>({
       url: "/session/{sessionID}/resume",
+      ...options,
+      ...params,
+      headers: {
+        "Content-Type": "application/json",
+        ...options?.headers,
+        ...params.headers,
+      },
+    })
+  }
+
+  /**
+   * Replay a model step
+   *
+   * Replay a recorded model step. Default mode re-runs tools without calling the LLM. Loop mode feeds recorded output through the real agent loop.
+   */
+  public replay<ThrowOnError extends boolean = false>(
+    parameters: {
+      sessionID: string
+      directory?: string
+      workspace?: string
+      messageID?: string
+      partID?: string
+      mode?: "tools" | "loop"
+      script?: {
+        text?: string
+        reasoning?: string
+        tools: Array<{
+          tool: string
+          callID: string
+          input: {
+            [key: string]: unknown
+          }
+        }>
+        reason?: string
+      }
+      scripts?: Array<{
+        text?: string
+        reasoning?: string
+        tools: Array<{
+          tool: string
+          callID: string
+          input: {
+            [key: string]: unknown
+          }
+        }>
+        reason?: string
+      }>
+      turns?: Array<{
+        parts: Array<TextPartInput | FilePartInput | AgentPartInput | SubtaskPartInput>
+        scripts: Array<{
+          text?: string
+          reasoning?: string
+          tools: Array<{
+            tool: string
+            callID: string
+            input: {
+              [key: string]: unknown
+            }
+          }>
+          reason?: string
+        }>
+        agent?: string
+        model?: {
+          providerID: string
+          modelID: string
+        }
+      }>
+    },
+    options?: Options<never, ThrowOnError>,
+  ) {
+    const params = buildClientParams(
+      [parameters],
+      [
+        {
+          args: [
+            { in: "path", key: "sessionID" },
+            { in: "query", key: "directory" },
+            { in: "query", key: "workspace" },
+            { in: "body", key: "messageID" },
+            { in: "body", key: "partID" },
+            { in: "body", key: "mode" },
+            { in: "body", key: "script" },
+            { in: "body", key: "scripts" },
+            { in: "body", key: "turns" },
+          ],
+        },
+      ],
+    )
+    return (options?.client ?? this.client).post<SessionReplayResponses, SessionReplayErrors, ThrowOnError>({
+      url: "/session/{sessionID}/replay",
+      ...options,
+      ...params,
+      headers: {
+        "Content-Type": "application/json",
+        ...options?.headers,
+        ...params.headers,
+      },
+    })
+  }
+
+  /**
+   * Materialize a snapshot
+   *
+   * Write a session snapshot into a target directory without changing the original workspace.
+   */
+  public materialize<ThrowOnError extends boolean = false>(
+    parameters: {
+      sessionID: string
+      directory?: string
+      workspace?: string
+      snapshot?: string
+      target?: string
+    },
+    options?: Options<never, ThrowOnError>,
+  ) {
+    const params = buildClientParams(
+      [parameters],
+      [
+        {
+          args: [
+            { in: "path", key: "sessionID" },
+            { in: "query", key: "directory" },
+            { in: "query", key: "workspace" },
+            { in: "body", key: "snapshot" },
+            { in: "body", key: "target" },
+          ],
+        },
+      ],
+    )
+    return (options?.client ?? this.client).post<SessionMaterializeResponses, SessionMaterializeErrors, ThrowOnError>({
+      url: "/session/{sessionID}/snapshot/materialize",
       ...options,
       ...params,
       headers: {

@@ -410,6 +410,7 @@ export type UserMessage = {
     [key: string]: boolean
   }
   thinkingEnabled?: boolean
+  maxConcurrency?: number | "NaN" | "Infinity" | "-Infinity" | "Infinity" | "-Infinity" | "NaN"
 }
 
 export type AssistantMessage = {
@@ -1746,6 +1747,20 @@ export type ProviderAuthAuthorization = {
   instructions: string
 }
 
+export type SessionArchive = {
+  info: Session
+  messages: Array<{
+    info: Message
+    parts: Array<Part>
+  }>
+}
+
+export type SessionImportResult = {
+  sourceSessionID: string
+  sessionID: string
+  forked: boolean
+}
+
 export type TextPartInput = {
   id?: string
   type: "text"
@@ -1877,6 +1892,33 @@ export type WorkspaceWarpError = {
   data: {
     message: string
   }
+}
+
+export type UserMessage1 = {
+  id: string
+  sessionID: string
+  role: "user"
+  time: {
+    created: number
+  }
+  format?: OutputFormat
+  summary?: {
+    title?: string
+    body?: string
+    diffs: Array<SnapshotFileDiff>
+  }
+  agent: string
+  model: {
+    providerID: string
+    modelID: string
+    variant?: string
+  }
+  system?: string
+  tools?: {
+    [key: string]: boolean
+  }
+  thinkingEnabled?: boolean
+  maxConcurrency?: number | "NaN" | "Infinity" | "-Infinity"
 }
 
 export type SyncEventMessageUpdated = {
@@ -3677,6 +3719,12 @@ export type TestagentEnvVarsListResponses = {
         value: string
       }
     }
+    remote: {
+      [key: string]: {
+        key: string
+        value: string
+      }
+    }
   }
 }
 
@@ -3717,6 +3765,12 @@ export type TestagentEnvVarsBatchQueryResponses = {
       }
     }
     custom: {
+      [key: string]: {
+        key: string
+        value: string
+      }
+    }
+    remote: {
       [key: string]: {
         key: string
         value: string
@@ -3807,6 +3861,49 @@ export type TestagentCustomEnvVarsBatchUpdateResponses = {
 
 export type TestagentCustomEnvVarsBatchUpdateResponse =
   TestagentCustomEnvVarsBatchUpdateResponses[keyof TestagentCustomEnvVarsBatchUpdateResponses]
+
+export type TestagentEnvVarsEnsureRemoteData = {
+  body?: never
+  path?: never
+  query?: {
+    directory?: string
+    workspace?: string
+  }
+  url: "/testagent/env-vars/remote/ensure"
+}
+
+export type TestagentEnvVarsEnsureRemoteResponses = {
+  /**
+   * 远程接口变量补齐结果
+   */
+  200: {
+    created: boolean
+    keys: Array<string>
+  }
+}
+
+export type TestagentEnvVarsEnsureRemoteResponse =
+  TestagentEnvVarsEnsureRemoteResponses[keyof TestagentEnvVarsEnsureRemoteResponses]
+
+export type TestagentEnvVarsClearRemoteData = {
+  body?: never
+  path?: never
+  query?: {
+    directory?: string
+    workspace?: string
+  }
+  url: "/testagent/env-vars/remote"
+}
+
+export type TestagentEnvVarsClearRemoteResponses = {
+  /**
+   * 远程接口变量清理成功
+   */
+  200: boolean
+}
+
+export type TestagentEnvVarsClearRemoteResponse =
+  TestagentEnvVarsClearRemoteResponses[keyof TestagentEnvVarsClearRemoteResponses]
 
 export type TestagentZhAnswerSetData = {
   body?: {
@@ -3927,6 +4024,28 @@ export type TestagentYoloSetResponses = {
 }
 
 export type TestagentYoloSetResponse = TestagentYoloSetResponses[keyof TestagentYoloSetResponses]
+
+export type TestagentServerAuthData = {
+  body?: never
+  path?: never
+  query?: {
+    directory?: string
+    workspace?: string
+  }
+  url: "/testagent/server/auth"
+}
+
+export type TestagentServerAuthResponses = {
+  /**
+   * 服务器认证凭据（未设置密码时 token 为 null）
+   */
+  200: {
+    username: string
+    token: string
+  }
+}
+
+export type TestagentServerAuthResponse = TestagentServerAuthResponses[keyof TestagentServerAuthResponses]
 
 export type EventSubscribeData = {
   body?: never
@@ -4796,6 +4915,48 @@ export type AppReloadSkillsResponses = {
 }
 
 export type AppReloadSkillsResponse = AppReloadSkillsResponses[keyof AppReloadSkillsResponses]
+
+export type AppReloadAgentsData = {
+  body?: never
+  path?: never
+  query?: {
+    directory?: string
+    workspace?: string
+  }
+  url: "/agent/reload"
+}
+
+export type AppReloadAgentsResponses = {
+  /**
+   * Agents reloaded successfully
+   */
+  200: {
+    success: boolean
+  }
+}
+
+export type AppReloadAgentsResponse = AppReloadAgentsResponses[keyof AppReloadAgentsResponses]
+
+export type AppReloadCommandsData = {
+  body?: never
+  path?: never
+  query?: {
+    directory?: string
+    workspace?: string
+  }
+  url: "/command/reload"
+}
+
+export type AppReloadCommandsResponses = {
+  /**
+   * Commands reloaded successfully
+   */
+  200: {
+    success: boolean
+  }
+}
+
+export type AppReloadCommandsResponse = AppReloadCommandsResponses[keyof AppReloadCommandsResponses]
 
 export type McpReloadData = {
   body?: never
@@ -6087,6 +6248,7 @@ export type SessionPromptData = {
     format?: OutputFormat
     system?: string
     variant?: string
+    maxConcurrency?: number | "NaN" | "Infinity" | "-Infinity" | "Infinity" | "-Infinity" | "NaN"
     parts: Array<TextPartInput | FilePartInput | AgentPartInput | SubtaskPartInput>
   }
   path: {
@@ -6197,6 +6359,101 @@ export type SessionMessageResponses = {
 
 export type SessionMessageResponse = SessionMessageResponses[keyof SessionMessageResponses]
 
+export type SessionExportData = {
+  body?: never
+  path: {
+    sessionID: string
+  }
+  query?: {
+    directory?: string
+    workspace?: string
+    sanitize?: boolean | "true" | "false"
+  }
+  url: "/session/{sessionID}/export"
+}
+
+export type SessionExportErrors = {
+  /**
+   * Bad request
+   */
+  400: BadRequestError
+  /**
+   * NotFoundError
+   */
+  404: NotFoundError
+}
+
+export type SessionExportError = SessionExportErrors[keyof SessionExportErrors]
+
+export type SessionExportResponses = {
+  /**
+   * Session archive
+   */
+  200: SessionArchive
+}
+
+export type SessionExportResponse = SessionExportResponses[keyof SessionExportResponses]
+
+export type SessionImportData = {
+  body?: SessionArchive
+  path: {
+    sessionID: string
+  }
+  query?: {
+    directory?: string
+    workspace?: string
+  }
+  url: "/session/{sessionID}/import"
+}
+
+export type SessionImportErrors = {
+  /**
+   * Bad request
+   */
+  400: BadRequestError
+}
+
+export type SessionImportError = SessionImportErrors[keyof SessionImportErrors]
+
+export type SessionImportResponses = {
+  /**
+   * Imported session
+   */
+  200: SessionImportResult
+}
+
+export type SessionImportResponse = SessionImportResponses[keyof SessionImportResponses]
+
+export type SessionImportForkData = {
+  body?: SessionArchive
+  path: {
+    sessionID: string
+  }
+  query?: {
+    directory?: string
+    workspace?: string
+  }
+  url: "/session/{sessionID}/import/fork"
+}
+
+export type SessionImportForkErrors = {
+  /**
+   * Bad request
+   */
+  400: BadRequestError
+}
+
+export type SessionImportForkError = SessionImportForkErrors[keyof SessionImportForkErrors]
+
+export type SessionImportForkResponses = {
+  /**
+   * Forked session
+   */
+  200: SessionImportResult
+}
+
+export type SessionImportForkResponse = SessionImportForkResponses[keyof SessionImportForkResponses]
+
 export type SessionForkData = {
   body?: {
     messageID?: string
@@ -6232,6 +6489,7 @@ export type SessionForkResponse = SessionForkResponses[keyof SessionForkResponse
 export type SessionAbortData = {
   body?: {
     reason?: "completed" | "user_abort" | "error"
+    scope?: "session" | "tree"
   }
   path: {
     sessionID: string
@@ -6425,6 +6683,7 @@ export type SessionPromptAsyncData = {
     format?: OutputFormat
     system?: string
     variant?: string
+    maxConcurrency?: number | "NaN" | "Infinity" | "-Infinity" | "Infinity" | "-Infinity" | "NaN"
     parts: Array<TextPartInput | FilePartInput | AgentPartInput | SubtaskPartInput>
   }
   path: {
@@ -6671,6 +6930,128 @@ export type SessionResumeResponses = {
 }
 
 export type SessionResumeResponse = SessionResumeResponses[keyof SessionResumeResponses]
+
+export type SessionReplayData = {
+  body?: {
+    messageID: string
+    partID: string
+    mode?: "tools" | "loop"
+    script?: {
+      text?: string
+      reasoning?: string
+      tools: Array<{
+        tool: string
+        callID: string
+        input: {
+          [key: string]: unknown
+        }
+      }>
+      reason?: string
+    }
+    scripts?: Array<{
+      text?: string
+      reasoning?: string
+      tools: Array<{
+        tool: string
+        callID: string
+        input: {
+          [key: string]: unknown
+        }
+      }>
+      reason?: string
+    }>
+    turns?: Array<{
+      parts: Array<TextPartInput | FilePartInput | AgentPartInput | SubtaskPartInput>
+      scripts: Array<{
+        text?: string
+        reasoning?: string
+        tools: Array<{
+          tool: string
+          callID: string
+          input: {
+            [key: string]: unknown
+          }
+        }>
+        reason?: string
+      }>
+      agent?: string
+      model?: {
+        providerID: string
+        modelID: string
+      }
+    }>
+  }
+  path: {
+    sessionID: string
+  }
+  query?: {
+    directory?: string
+    workspace?: string
+  }
+  url: "/session/{sessionID}/replay"
+}
+
+export type SessionReplayErrors = {
+  /**
+   * Bad request
+   */
+  400: BadRequestError
+  /**
+   * Not found
+   */
+  404: NotFoundError
+}
+
+export type SessionReplayError = SessionReplayErrors[keyof SessionReplayErrors]
+
+export type SessionReplayResponses = {
+  /**
+   * Replayed message
+   */
+  200: {
+    info: Message
+    parts: Array<Part>
+  }
+}
+
+export type SessionReplayResponse = SessionReplayResponses[keyof SessionReplayResponses]
+
+export type SessionMaterializeData = {
+  body?: {
+    snapshot: string
+    target: string
+  }
+  path: {
+    sessionID: string
+  }
+  query?: {
+    directory?: string
+    workspace?: string
+  }
+  url: "/session/{sessionID}/snapshot/materialize"
+}
+
+export type SessionMaterializeErrors = {
+  /**
+   * Bad request
+   */
+  400: BadRequestError
+  /**
+   * Not found
+   */
+  404: NotFoundError
+}
+
+export type SessionMaterializeError = SessionMaterializeErrors[keyof SessionMaterializeErrors]
+
+export type SessionMaterializeResponses = {
+  /**
+   * Snapshot materialized
+   */
+  200: boolean
+}
+
+export type SessionMaterializeResponse = SessionMaterializeResponses[keyof SessionMaterializeResponses]
 
 export type SessionClearContextData = {
   body?: never
