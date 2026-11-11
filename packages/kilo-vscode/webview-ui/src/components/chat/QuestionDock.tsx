@@ -14,6 +14,7 @@ import { useData } from "@kilocode/kilo-ui/context/data" // testagent_change
 import { extractFilePathFromHref } from "@kilocode/kilo-ui/file-path" // testagent_change
 import { useSession } from "../../context/session"
 import { useLanguage } from "../../context/language"
+import { useVSCode } from "../../context/vscode" // testagent_change
 import type { QuestionRequest } from "../../types/messages"
 import {
   pickOutcome,
@@ -27,6 +28,7 @@ export const QuestionDock: Component<{ request: QuestionRequest }> = (props) => 
   const session = useSession()
   const language = useLanguage()
   const data = useData() // testagent_change
+  const vscode = useVSCode() // testagent_change
 
   const questions = createMemo(() => props.request.questions)
   const single = createMemo(() => questions().length === 1 && questions()[0]?.multiple !== true)
@@ -70,17 +72,31 @@ export const QuestionDock: Component<{ request: QuestionRequest }> = (props) => 
 
   // testagent_change start
   const clickMarkdown = (e: MouseEvent) => {
-    if (!data.openFile) return
     const target = e.target
     if (!(target instanceof HTMLElement)) return
     const anchor = target.closest("a.external-link") as HTMLAnchorElement | null
     if (!anchor) return
+    
     const href = anchor.getAttribute("href")
     if (!href) return
-    const file = extractFilePathFromHref(href)
-    if (!file) return
+    
+    // Always prevent default to avoid navigation in webview
     e.preventDefault()
-    data.openFile(file)
+    
+    // Check if it's a file path
+    const file = extractFilePathFromHref(href)
+    if (file && data.openFile) {
+      data.openFile(file)
+      return
+    }
+    
+    // For URLs, open in external browser
+    if (href.includes("://")) {
+      vscode.postMessage({
+        type: "openExternal",
+        url: href,
+      })
+    }
   }
   // testagent_change end
 
