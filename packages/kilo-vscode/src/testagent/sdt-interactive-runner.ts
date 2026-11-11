@@ -21,6 +21,8 @@ export interface DeferredEntry {
 export interface InteractiveRunContext {
   sdtRunner: SdtRunner
   localQuestionMap: Map<string, DeferredEntry>
+  /** 本 session 绑定的执行 branch（缺省 default），随 spawn 注入 SDT_BRANCH */
+  sdtBranch: string
   postMessage(msg: unknown): void
   showErrorMessage(message: string): void
 }
@@ -59,6 +61,7 @@ export async function handleInteractiveRun(
         OPENCODE_SERVER_URL: serverConfig.baseUrl,
         OPENCODE_SERVER_PASSWORD: serverConfig.password,
         OPENCODE_SESSION_ID: resolved.sid,
+        SDT_BRANCH: ctx.sdtBranch,
       },
       sessionID: resolved.sid,
       userText: '/sdt-stages',
@@ -90,6 +93,7 @@ export async function handleInteractiveRun(
         OPENCODE_MODEL_ID: meta.modelID || '',
         OPENCODE_AGENT: meta.agent,
         SDT_USER_TEXT: `/sdt-run ${stages[0].stage_id}`,
+        SDT_BRANCH: ctx.sdtBranch,
       },
       sessionID: resolved.sid,
       userText: `/sdt-run ${stages[0].stage_id}`,

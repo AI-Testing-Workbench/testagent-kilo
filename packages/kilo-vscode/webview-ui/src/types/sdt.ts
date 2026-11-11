@@ -21,6 +21,8 @@ export interface SdtProgressState {
   sessionID: string
   runID: string
   taskName: string
+  /** 本次执行所属的 testflow branch（缺省 default） */
+  branch?: string | null
   status: "starting" | "running" | "completed" | "failed" | "aborted"
   sequence: number
   startedAt: number
@@ -51,6 +53,7 @@ export interface SdtProgressMessage {
   runID: string
   sequence: number
   taskName: string
+  branch?: string | null
   totalCount: number
   completedCount: number
   percent: number
