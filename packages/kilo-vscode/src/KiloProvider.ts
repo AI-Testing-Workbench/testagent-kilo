@@ -78,7 +78,7 @@ import { exec } from "./util/process"
 import { SdtRunner } from "./testagent/sdt-runner"
 import { handleInteractiveRun } from "./testagent/sdt-interactive-runner"
 import { handleRequestStages } from "./testagent/sdt-stages-handler"
-import { parseCommandArgs } from "./testagent/command-args"
+import { parseCommandArgs, SDT_MODE_FLAGS } from "./testagent/command-args"
 // testagent_change end
 // legacy-migration start
 import {
@@ -4002,6 +4002,16 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
     const parts = parseCommandArgs(text)
     const cmd = parts[0]?.slice(5) ?? ""
     const args = parts.slice(1)
+    // testagent_change start - 抽出 YOLO / Goal 模式开关 flag。
+    // 这类 flag 不带位置参数，若留在 args 里会让「/sdt-run --yolo」被误判为
+    // 「指定了名为 --yolo 的阶段」，也拿不到阶段选择面板。
+    const modeFlags: string[] = []
+    const restArgs: string[] = []
+    for (const arg of args) {
+      if (SDT_MODE_FLAGS.has(arg)) modeFlags.push(arg)
+      else restArgs.push(arg)
+    }
+    // testagent_change end
 
     const serverConfig = this.connectionService.getServerConfig()
     if (!serverConfig) {
@@ -4018,12 +4028,14 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
 
     // testagent_change start
     // ===== 交互式分支：/sdt-run 无 stage_id 参数，弹出阶段选择面板 =====
-    if (cmd === "run" && args.length === 0) {
+    // 判定只看位置参数——模式开关 flag 不算阶段参数，"/sdt-run --yolo" 仍应弹面板。
+    if (cmd === "run" && restArgs.length === 0) {
       await handleInteractiveRun(
         {
           sdtRunner: runner,
           localQuestionMap: this.localQuestionMap,
           sdtBranch: this.getSdtBranch(resolved.sid),
+          modeFlags,
           postMessage: (msg) => this.postMessage(msg),
           showErrorMessage: (msg) => void vscode.window.showErrorMessage(msg),
         },
@@ -4037,7 +4049,7 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
 
     runner.run({
       cmd,
-      args,
+      args: restArgs.concat(modeFlags),
       cwd: resolved.dir,
       env: {
         OPENCODE_SERVER_URL: serverConfig.baseUrl,

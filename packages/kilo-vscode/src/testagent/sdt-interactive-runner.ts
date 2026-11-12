@@ -23,6 +23,12 @@ export interface InteractiveRunContext {
   localQuestionMap: Map<string, DeferredEntry>
   /** 本 session 绑定的执行 branch（缺省 default），随 spawn 注入 SDT_BRANCH */
   sdtBranch: string
+  /**
+   * YOLO / Goal 模式开关 flag（--yolo / --no-yolo / --goal / --no-goal）。
+   * 从 chat 输入里摘出来的，需要原样带到最终 run 的 CLI 参数里，
+   * 否则交互式路径会把开关丢掉。
+   */
+  modeFlags: string[]
   postMessage(msg: unknown): void
   showErrorMessage(message: string): void
 }
@@ -83,7 +89,7 @@ export async function handleInteractiveRun(
   if (stages.length === 1) {
     ctx.sdtRunner.run({
       cmd: 'run',
-      args: [stages[0].stage_id],
+      args: [stages[0].stage_id, ...ctx.modeFlags],
       cwd: resolved.dir,
       env: {
         OPENCODE_SERVER_URL: serverConfig.baseUrl,
@@ -183,7 +189,7 @@ export async function handleInteractiveRun(
   // 6. 执行选中的阶段
   ctx.sdtRunner.run({
     cmd: 'run',
-    args: [selectedStageId],
+    args: [selectedStageId, ...ctx.modeFlags],
     cwd: resolved.dir,
     env: {
       OPENCODE_SERVER_URL: serverConfig.baseUrl,

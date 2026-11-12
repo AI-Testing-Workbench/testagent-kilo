@@ -1210,6 +1210,21 @@ export type Config = {
   langfuse?: boolean
   goal?: {
     enabled?: boolean
+    auto_continue?: boolean
+    /**
+     * Maximum number of auto-continuations per goal (default: 25)
+     */
+    max_auto_turns?: number | "NaN" | "Infinity" | "-Infinity" | "Infinity" | "-Infinity" | "NaN"
+    /**
+     * Minimum interval between two auto-continuations in seconds (default: 3)
+     */
+    min_continue_interval_seconds?: number | "NaN" | "Infinity" | "-Infinity" | "Infinity" | "-Infinity" | "NaN"
+    /**
+     * Auto-pause the goal after this many consecutive auto-continue failures (default: 3)
+     */
+    max_prompt_failures?: number | "NaN" | "Infinity" | "-Infinity" | "Infinity" | "-Infinity" | "NaN"
+    register_command?: boolean
+    command_name?: string
   }
   share?: "manual" | "auto" | "disabled"
   autoshare?: boolean
@@ -4024,6 +4039,98 @@ export type TestagentYoloSetResponses = {
 }
 
 export type TestagentYoloSetResponse = TestagentYoloSetResponses[keyof TestagentYoloSetResponses]
+
+export type TestagentGoalGetData = {
+  body?: never
+  path?: never
+  query?: {
+    directory?: string
+    workspace?: string
+  }
+  url: "/testagent/goal"
+}
+
+export type TestagentGoalGetResponses = {
+  /**
+   * Current Goal mode
+   */
+  200: {
+    enabled: boolean
+  }
+}
+
+export type TestagentGoalGetResponse = TestagentGoalGetResponses[keyof TestagentGoalGetResponses]
+
+export type TestagentGoalSetData = {
+  body?: {
+    enabled: boolean
+  }
+  path?: never
+  query?: {
+    directory?: string
+    workspace?: string
+  }
+  url: "/testagent/goal"
+}
+
+export type TestagentGoalSetResponses = {
+  /**
+   * Goal mode set successfully
+   */
+  200: {
+    applied: boolean
+  }
+}
+
+export type TestagentGoalSetResponse = TestagentGoalSetResponses[keyof TestagentGoalSetResponses]
+
+export type TestagentGoalCreateData = {
+  body?: {
+    sessionID: string
+    objective: string
+  }
+  path?: never
+  query?: {
+    directory?: string
+    workspace?: string
+  }
+  url: "/testagent/goal/create"
+}
+
+export type TestagentGoalCreateResponses = {
+  /**
+   * Goal created successfully
+   */
+  200: {
+    created: boolean
+    objective: string
+    status: string
+  }
+}
+
+export type TestagentGoalCreateResponse = TestagentGoalCreateResponses[keyof TestagentGoalCreateResponses]
+
+export type TestagentServerAuthData = {
+  body?: never
+  path?: never
+  query?: {
+    directory?: string
+    workspace?: string
+  }
+  url: "/testagent/server/auth"
+}
+
+export type TestagentServerAuthResponses = {
+  /**
+   * 服务器认证凭据（未设置密码时 token 为 null）
+   */
+  200: {
+    username: string
+    token: string
+  }
+}
+
+export type TestagentServerAuthResponse = TestagentServerAuthResponses[keyof TestagentServerAuthResponses]
 
 export type EventSubscribeData = {
   body?: never

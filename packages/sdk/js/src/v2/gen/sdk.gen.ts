@@ -208,6 +208,10 @@ import type {
   TestagentEnvVarsEnsureRemoteResponses,
   TestagentEnvVarsListErrors,
   TestagentEnvVarsListResponses,
+  TestagentGoalCreateResponses,
+  TestagentGoalGetResponses,
+  TestagentGoalSetResponses,
+  TestagentServerAuthResponses,
   TestagentUserSetResponses,
   TestagentYoloGetResponses,
   TestagentYoloSetResponses,
@@ -1199,6 +1203,146 @@ export class Yolo extends HeyApiClient {
   }
 }
 
+export class Goal extends HeyApiClient {
+  /**
+   * Get Goal mode (global)
+   *
+   * Query whether the goal tracking capability is currently enabled.
+   */
+  public get<ThrowOnError extends boolean = false>(
+    parameters?: {
+      directory?: string
+      workspace?: string
+    },
+    options?: Options<never, ThrowOnError>,
+  ) {
+    const params = buildClientParams(
+      [parameters],
+      [
+        {
+          args: [
+            { in: "query", key: "directory" },
+            { in: "query", key: "workspace" },
+          ],
+        },
+      ],
+    )
+    return (options?.client ?? this.client).get<TestagentGoalGetResponses, unknown, ThrowOnError>({
+      url: "/testagent/goal",
+      ...options,
+      ...params,
+    })
+  }
+
+  /**
+   * Toggle Goal mode (global)
+   *
+   * Enable or disable the goal tracking capability globally. When enabled, sessions can hold a long-running goal with completion-audit tooling. The goal itself is tracked per session and is unaffected by this switch. State resets on server restart.
+   */
+  public set<ThrowOnError extends boolean = false>(
+    parameters?: {
+      directory?: string
+      workspace?: string
+      enabled?: boolean
+    },
+    options?: Options<never, ThrowOnError>,
+  ) {
+    const params = buildClientParams(
+      [parameters],
+      [
+        {
+          args: [
+            { in: "query", key: "directory" },
+            { in: "query", key: "workspace" },
+            { in: "body", key: "enabled" },
+          ],
+        },
+      ],
+    )
+    return (options?.client ?? this.client).put<TestagentGoalSetResponses, unknown, ThrowOnError>({
+      url: "/testagent/goal",
+      ...options,
+      ...params,
+      headers: {
+        "Content-Type": "application/json",
+        ...options?.headers,
+        ...params.headers,
+      },
+    })
+  }
+
+  /**
+   * Create a goal for a session
+   *
+   * Create (or replace) the long-running goal of the given session. Replaces an existing open goal so that repeated calls stay idempotent.
+   */
+  public create<ThrowOnError extends boolean = false>(
+    parameters?: {
+      directory?: string
+      workspace?: string
+      sessionID?: string
+      objective?: string
+    },
+    options?: Options<never, ThrowOnError>,
+  ) {
+    const params = buildClientParams(
+      [parameters],
+      [
+        {
+          args: [
+            { in: "query", key: "directory" },
+            { in: "query", key: "workspace" },
+            { in: "body", key: "sessionID" },
+            { in: "body", key: "objective" },
+          ],
+        },
+      ],
+    )
+    return (options?.client ?? this.client).post<TestagentGoalCreateResponses, unknown, ThrowOnError>({
+      url: "/testagent/goal/create",
+      ...options,
+      ...params,
+      headers: {
+        "Content-Type": "application/json",
+        ...options?.headers,
+        ...params.headers,
+      },
+    })
+  }
+}
+
+export class Server extends HeyApiClient {
+  /**
+   * Get server Basic auth credential
+   *
+   * Returns the username and base64 credential (base64 of `user:password`) that the web UI share link embeds as `?auth_token=`. When no server password is configured the token is null and no auth is required. When a password is configured this route is reachable without credentials from loopback, or from any host when TESTAGENT_SERVER_AUTH_PUBLIC is set.
+   */
+  public auth<ThrowOnError extends boolean = false>(
+    parameters?: {
+      directory?: string
+      workspace?: string
+    },
+    options?: Options<never, ThrowOnError>,
+  ) {
+    const params = buildClientParams(
+      [parameters],
+      [
+        {
+          args: [
+            { in: "query", key: "directory" },
+            { in: "query", key: "workspace" },
+          ],
+        },
+      ],
+    )
+    return (options?.client ?? this.client).get<TestagentServerAuthResponses, unknown, ThrowOnError>({
+      url: "/testagent/server/auth",
+      ...options,
+      ...params,
+    })
+  }
+}
+
 export class Testagent extends HeyApiClient {
   private _user?: User
   get user(): User {
@@ -1228,6 +1372,16 @@ export class Testagent extends HeyApiClient {
   private _yolo?: Yolo
   get yolo(): Yolo {
     return (this._yolo ??= new Yolo({ client: this.client }))
+  }
+
+  private _goal?: Goal
+  get goal(): Goal {
+    return (this._goal ??= new Goal({ client: this.client }))
+  }
+
+  private _server?: Server
+  get server(): Server {
+    return (this._server ??= new Server({ client: this.client }))
   }
 }
 
