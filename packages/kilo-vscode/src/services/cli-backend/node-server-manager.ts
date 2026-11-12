@@ -20,8 +20,6 @@ import {
 } from "./server-state"
 import { type ServerInstance, ServerStartupError, toErrorMessage } from "./server-manager"
 import { spawnOwnerWatcher } from "./server-lifetime"
-import { ensurePsBash } from "./ps-bash-installer"
-
 const STARTUP_TIMEOUT_SECONDS = 30
 
 /**
@@ -36,7 +34,6 @@ export class NodeServerManager {
   private instance: ServerInstance | null = null
   private startupPromise: Promise<ServerInstance> | null = null
   private logLevel: string | undefined
-  private psbash: string | undefined
 
   constructor(
     private readonly context: vscode.ExtensionContext,
@@ -181,8 +178,6 @@ export class NodeServerManager {
 
     const spawnCwd = vscode.workspace.workspaceFolders?.[0]?.uri.fsPath ?? process.env.HOME ?? require("os").homedir()
 
-    this.psbash = await ensurePsBash(this.context)
-
     const shared = shouldShareServer()
     const port = shared ? await pickFreePort(CLOUD_SERVER_PORT) : 0
     // testagent_change start - 启动时环境变量激活源：开关开启注入 TESTAGENT_ZH_ANSWER_ENABLED=1（与运行时按钮切换相互独立）。
@@ -231,7 +226,6 @@ export class NodeServerManager {
           KILO_VSCODE_VERSION: vscode.version,
           KILOCODE_EDITOR_NAME: `${vscode.env.appName} ${vscode.version}`,
           ...(zhAnswerEnabled && { TESTAGENT_ZH_ANSWER_ENABLED: "1" }),
-          ...(this.psbash && { TESTAGENT_PS_BASH: this.psbash }),
         },
       }
 

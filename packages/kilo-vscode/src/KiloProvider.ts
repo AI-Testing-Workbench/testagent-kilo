@@ -52,6 +52,7 @@ import { resolveProjectDirectory } from "./project-directory"
 import { getBusySessionCount, seedSessionStatuses } from "./session-status"
 import { retry } from "./services/cli-backend/retry"
 import { isCloudMode } from "./services/cli-backend/cloud-mode" // testagent_change
+import { downloadPsBash, isInstalled, psBashPath } from "./services/cli-backend/ps-bash-installer" // testagent_change
 import { slimPart, slimParts } from "./kilo-provider/slim-metadata"
 import { handleContinueInWorktree } from "./kilo-provider/continue-worktree"
 import { parseMessageFiles, type MessageFile } from "./kilo-provider/message-files"
@@ -559,8 +560,7 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
         )
         return result?.title
       },
-      warn: async (message) =>
-        (await vscode.window.showWarningMessage(message, { modal: true }, "继续")) === "继续", // testagent_change
+      warn: async (message) => (await vscode.window.showWarningMessage(message, { modal: true }, "继续")) === "继续", // testagent_change
       modal: async (message) => {
         await vscode.window.showWarningMessage(message, { modal: true }, "确定")
       },
@@ -1002,8 +1002,7 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
         return
       }
       case "requestCloudUpload":
-        if (typeof message.sessionID === "string")
-          void this.history.upload(message.sessionID, message.append === true) // testagent_change
+        if (typeof message.sessionID === "string") void this.history.upload(message.sessionID, message.append === true) // testagent_change
         return
       case "requestCloudExport":
         if (typeof message.sessionID === "string") void this.history.export(message.sessionID)
@@ -1495,7 +1494,26 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
         // testagent_change start - available terminals
         case "getAvailableTerminals": {
           const terminals = await this.getAvailableTerminals()
-          this.webview?.postMessage({ type: "availableTerminalsResult", terminals })
+          this.webview?.postMessage({ type: "availableTerminalsResult", terminals, platform: process.platform })
+          break
+        }
+        // testagent_change end
+        // testagent_change start - on-demand ps-bash download (user click only, never automatic)
+        case "downloadPsBash": {
+          if (!this.extensionContext) {
+            this.webview?.postMessage({ type: "psBashDownloadResult", ok: false, error: "扩展上下文不可用" })
+            break
+          }
+          try {
+            const file = await downloadPsBash(this.extensionContext)
+            this.webview?.postMessage({ type: "psBashDownloadResult", ok: true, path: file })
+          } catch (err) {
+            this.webview?.postMessage({
+              type: "psBashDownloadResult",
+              ok: false,
+              error: err instanceof Error ? err.message : String(err),
+            })
+          }
           break
         }
         // testagent_change end
@@ -5811,6 +5829,13 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
     const platform = process.platform
 
     if (platform === "win32") {
+      // testagent_change start - ps-bash downloaded from the settings UI (POSIX-compatible shell)
+      if (this.extensionContext && isInstalled(this.extensionContext)) {
+        const psBash = psBashPath(this.extensionContext)
+        result.push({ name: "ps-bash", path: psBash.replace(/\\/g, "/"), description: "POSIX 兼容 shell（手动下载）" })
+      }
+      // testagent_change end
+
       // PowerShell
       const psPaths = [
         "C:/Windows/System32/WindowsPowerShell/v1.0/powershell.exe",

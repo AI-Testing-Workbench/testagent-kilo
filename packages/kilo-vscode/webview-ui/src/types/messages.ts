@@ -1926,6 +1926,7 @@ export type ExtensionMessage =
   | RemoteStatusMessage
   | ShellPathResolvedMessage
   | AvailableTerminalsResultMessage // testagent_change
+  | PsBashDownloadResultMessage // testagent_change
 // testagent_change start - testflow messages
 // (extension→webview dedicated message types are no longer used; testflow
 //  renders via standard messageCreated / partUpdated events on the SSE pipeline)
@@ -2411,6 +2412,18 @@ export interface GetAvailableTerminalsMessage {
 export interface AvailableTerminalsResultMessage {
   type: "availableTerminalsResult"
   terminals: AvailableTerminalInfo[]
+  platform?: string
+}
+
+export interface DownloadPsBashMessage {
+  type: "downloadPsBash"
+}
+
+export interface PsBashDownloadResultMessage {
+  type: "psBashDownloadResult"
+  ok: boolean
+  path?: string
+  error?: string
 }
 // testagent_change end
 
@@ -3180,6 +3193,7 @@ export type WebviewMessage =
   | ReloadMcpRequest // testagent_change
   | ResolveShellPathMessage
   | GetAvailableTerminalsMessage // testagent_change
+  | DownloadPsBashMessage // testagent_change
   | GetRuntimeRequest // testagent_change
   | ChangeRuntimeRequest // testagent_change
   | RequestMemorySettingsMessage // testagent_change
