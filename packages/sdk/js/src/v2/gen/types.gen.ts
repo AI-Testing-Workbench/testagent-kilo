@@ -4110,6 +4110,32 @@ export type TestagentGoalCreateResponses = {
 
 export type TestagentGoalCreateResponse = TestagentGoalCreateResponses[keyof TestagentGoalCreateResponses]
 
+export type TestagentGoalAutoContinueData = {
+  body?: {
+    sessionID: string
+    suppressed: boolean
+  }
+  path?: never
+  query?: {
+    directory?: string
+    workspace?: string
+  }
+  url: "/testagent/goal/auto-continue"
+}
+
+export type TestagentGoalAutoContinueResponses = {
+  /**
+   * Goal auto-continue suppression applied
+   */
+  200: {
+    applied: boolean
+    suppressed: boolean
+  }
+}
+
+export type TestagentGoalAutoContinueResponse =
+  TestagentGoalAutoContinueResponses[keyof TestagentGoalAutoContinueResponses]
+
 export type TestagentServerAuthData = {
   body?: never
   path?: never

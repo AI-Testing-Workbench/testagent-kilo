@@ -208,6 +208,7 @@ import type {
   TestagentEnvVarsEnsureRemoteResponses,
   TestagentEnvVarsListErrors,
   TestagentEnvVarsListResponses,
+  TestagentGoalAutoContinueResponses,
   TestagentGoalCreateResponses,
   TestagentGoalGetResponses,
   TestagentGoalSetResponses,
@@ -1300,6 +1301,45 @@ export class Goal extends HeyApiClient {
     )
     return (options?.client ?? this.client).post<TestagentGoalCreateResponses, unknown, ThrowOnError>({
       url: "/testagent/goal/create",
+      ...options,
+      ...params,
+      headers: {
+        "Content-Type": "application/json",
+        ...options?.headers,
+        ...params.headers,
+      },
+    })
+  }
+
+  /**
+   * Suppress or release goal auto-continue for a session
+   *
+   * Control whether the goal plugin may auto-continue the given session when it goes idle. Suppress it when an external orchestrator drives the session turn-taking, so the two loops do not interleave prompts on the same session.
+   */
+  public autoContinue<ThrowOnError extends boolean = false>(
+    parameters?: {
+      directory?: string
+      workspace?: string
+      sessionID?: string
+      suppressed?: boolean
+    },
+    options?: Options<never, ThrowOnError>,
+  ) {
+    const params = buildClientParams(
+      [parameters],
+      [
+        {
+          args: [
+            { in: "query", key: "directory" },
+            { in: "query", key: "workspace" },
+            { in: "body", key: "sessionID" },
+            { in: "body", key: "suppressed" },
+          ],
+        },
+      ],
+    )
+    return (options?.client ?? this.client).post<TestagentGoalAutoContinueResponses, unknown, ThrowOnError>({
+      url: "/testagent/goal/auto-continue",
       ...options,
       ...params,
       headers: {
