@@ -35,9 +35,20 @@ describe("slimPart", () => {
     expect(slimPart(text)).toBe(text)
   })
 
-  it("passes through unknown tool types unchanged", () => {
-    const p = part("some_new_tool", { status: "completed", metadata: { big: BIG } })
-    expect(slimPart(p)).toBe(p)
+  it("caps unbounded output on unknown tool types", () => {
+    const p = part("some_new_tool", { status: "completed", output: BIG, metadata: { output: BIG, big: BIG } })
+    const slim = slimPart(p) as Record<string, any>
+    // The two output fields grow with command output, so they are capped.
+    expect(slim.state.output.length).toBeLessThan(BIG.length)
+    expect(slim.state.metadata.output.length).toBeLessThan(BIG.length)
+    // Unknown metadata is preserved — only known-heavy shapes get stripped.
+    expect(slim.state.metadata.big).toBe(BIG)
+  })
+
+  it("marks truncated output so the UI can tell it apart", () => {
+    const p = part("webfetch", { status: "completed", output: BIG })
+    const slim = slimPart(p) as Record<string, any>
+    expect(slim.state.output).toContain("truncated")
   })
 
   // -----------------------------------------------------------------------
