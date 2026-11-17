@@ -1989,6 +1989,12 @@ export interface ShowWarningDialogMessage {
 }
 // testagent_change end
 
+export interface StreamSessionVisibleMessage {
+  type: "streamSessionVisible"
+  sessionID: string
+  visible: boolean
+}
+
 export interface PermissionResponseRequest {
   type: "permissionResponse"
   permissionId: string
@@ -3028,6 +3034,7 @@ export type WebviewMessage =
   | AbortRequest
   | RevertSessionRequest
   | UnrevertSessionRequest
+  | StreamSessionVisibleMessage
   | SidebarOpenSessionsRequest // testagent_change: local tabs
   | ShowWarningDialogMessage // testagent_change: local tabs
   | PermissionResponseRequest

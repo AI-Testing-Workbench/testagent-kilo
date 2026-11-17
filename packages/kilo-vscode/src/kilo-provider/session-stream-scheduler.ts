@@ -17,6 +17,7 @@ export type StreamSchedulerStats = {
   emitted: number
   batches: number
   active: number
+  visible: number
   background: number
 }
 
@@ -32,6 +33,8 @@ export type StreamSchedulerOptions = {
   backgroundStepMs?: number
   /** Hard cap for the background cadence. Defaults to 400ms. */
   backgroundMaxMs?: number
+  /** Flush cadence for visible inline child sessions. Defaults to 50ms. */
+  visibleMs?: number
 }
 
 // Scheduler tuning — rationale:
@@ -41,12 +44,12 @@ export type StreamSchedulerOptions = {
 // and the webview message loop, which applies updates through Solid `batch()` and
 // triggers DOM / style / layout work on the renderer main thread.
 //
-// - DEFAULT_ACTIVE_MS = 32
-//   Two 60Hz animation frames. The focused session should still feel smooth while
-//   allowing more deltas to coalesce per emission. At typical model output rates
-//   (~10-20ms between deltas) a 32ms window captures 1-2 tokens before flushing,
-//   cutting the active emission rate roughly in half compared to 16ms.
-//   Raising above ~64ms starts to feel laggy for live text.
+// - DEFAULT_ACTIVE_MS = 16
+//   One 60Hz animation frame. The focused session should feel indistinguishable
+//   from immediate streaming, so we coalesce within a single paint window but no
+//   longer. Raising this to 32ms visibly stutters live text; lowering below ~8ms
+//   stops coalescing meaningfully because SSE delta arrival is already ~10-20ms
+//   apart at typical model rates.
 //
 // - DEFAULT_BG_BASE_MS = 150
 //   Background (non-focused) sessions don't need frame-perfect updates — the user
@@ -70,7 +73,8 @@ export type StreamSchedulerOptions = {
 //   recognizably "live" and keeps the `drop()`-on-delete path timely. Above
 //   ~500ms the UI starts feeling disconnected; below 300ms the many-agent
 //   backoff stops providing meaningful throttling.
-const DEFAULT_ACTIVE_MS = 32
+const DEFAULT_ACTIVE_MS = 16
+const DEFAULT_VISIBLE_MS = 50
 const DEFAULT_BG_BASE_MS = 150
 const DEFAULT_BG_STEP_MS = 20
 const DEFAULT_BG_MAX_MS = 400
@@ -110,10 +114,14 @@ function mergePartUpdate(prev: PartUpdate | undefined, msg: PartUpdate): PartUpd
 export class SessionStreamScheduler {
   private active: string | undefined
   private atimer: ReturnType<typeof setTimeout> | null = null
+  private vtimer: ReturnType<typeof setTimeout> | null = null
   private btimer: ReturnType<typeof setTimeout> | null = null
   private bgFirstQueuedAt = 0
+  private visibleFirstQueuedAt = 0
   private readonly queues = new Map<string, Map<string, PartUpdate>>()
+  private readonly visible = new Set<string>()
   private readonly activeMs: number
+  private readonly visibleMs: number
   private readonly bgBase: number
   private readonly bgStep: number
   private readonly bgMax: number
@@ -122,6 +130,7 @@ export class SessionStreamScheduler {
     emitted: 0,
     batches: 0,
     active: 0,
+    visible: 0,
     background: 0,
   }
 
@@ -130,6 +139,7 @@ export class SessionStreamScheduler {
     opts?: StreamSchedulerOptions,
   ) {
     this.activeMs = opts?.activeMs ?? DEFAULT_ACTIVE_MS
+    this.visibleMs = opts?.visibleMs ?? DEFAULT_VISIBLE_MS
     this.bgBase = opts?.backgroundBaseMs ?? DEFAULT_BG_BASE_MS
     this.bgStep = opts?.backgroundStepMs ?? DEFAULT_BG_STEP_MS
     this.bgMax = opts?.backgroundMaxMs ?? DEFAULT_BG_MAX_MS
@@ -143,8 +153,29 @@ export class SessionStreamScheduler {
       this.atimer = null
     }
     this.active = sessionID
-    if (prev && this.queues.get(prev)?.size) this.scheduleBackground()
+    if (prev && this.queues.get(prev)?.size) this.schedule(prev)
     if (sessionID) this.flush(sessionID)
+  }
+
+  /** Currently focused (active-lane) session ID, if any. */
+  get focused(): string | undefined {
+    return this.active
+  }
+
+  setVisible(sessionID: string, visible: boolean): void {
+    const changed = visible ? !this.visible.has(sessionID) : this.visible.has(sessionID)
+    if (!changed) return
+    if (visible) this.visible.add(sessionID)
+    else this.visible.delete(sessionID)
+    if (this.queues.get(sessionID)?.size) this.schedule(sessionID)
+    if (this.vtimer && !this.hasVisible()) {
+      clearTimeout(this.vtimer)
+      this.vtimer = null
+    }
+    if (this.btimer && !this.hasBackground()) {
+      clearTimeout(this.btimer)
+      this.btimer = null
+    }
   }
 
   push(msg: PartUpdate): void {
@@ -183,6 +214,11 @@ export class SessionStreamScheduler {
 
     this.emit(this.take(sessionID))
 
+    if (this.vtimer && !this.hasVisible()) {
+      clearTimeout(this.vtimer)
+      this.vtimer = null
+    }
+
     if (this.btimer && !this.hasBackground()) {
       clearTimeout(this.btimer)
       this.btimer = null
@@ -200,6 +236,10 @@ export class SessionStreamScheduler {
    */
   drop(sessionID: string): void {
     this.queues.delete(sessionID)
+    if (this.vtimer && !this.hasVisible()) {
+      clearTimeout(this.vtimer)
+      this.vtimer = null
+    }
     if (this.btimer && !this.hasBackground()) {
       clearTimeout(this.btimer)
       this.btimer = null
@@ -209,6 +249,7 @@ export class SessionStreamScheduler {
   dispose(): void {
     this.clearTimers()
     this.queues.clear()
+    this.visible.clear()
   }
 
   stats(): Readonly<StreamSchedulerStats> {
@@ -230,7 +271,21 @@ export class SessionStreamScheduler {
       this.atimer = setTimeout(() => this.flushActive(), this.activeMs)
       return
     }
+    if (this.visible.has(sessionID)) {
+      this.scheduleVisible()
+      return
+    }
     this.scheduleBackground()
+  }
+
+  private scheduleVisible(): void {
+    if (!this.hasVisible()) return
+    const now = Date.now()
+    if (!this.vtimer) this.visibleFirstQueuedAt = now
+    const elapsed = now - this.visibleFirstQueuedAt
+    const remaining = Math.max(0, this.visibleMs - elapsed)
+    if (this.vtimer) clearTimeout(this.vtimer)
+    this.vtimer = setTimeout(() => this.flushVisible(), remaining)
   }
 
   private scheduleBackground(): void {
@@ -259,6 +314,12 @@ export class SessionStreamScheduler {
     this.emit(this.takeBackground())
   }
 
+  private flushVisible(): void {
+    this.vtimer = null
+    this.visibleFirstQueuedAt = 0
+    this.emit(this.takeVisible())
+  }
+
   private take(sessionID: string): PartUpdate[] {
     const queue = this.queues.get(sessionID)
     if (!queue) return []
@@ -276,18 +337,41 @@ export class SessionStreamScheduler {
     const updates: PartUpdate[] = []
     for (const [sid, queue] of this.queues) {
       if (sid === this.active) continue
+      if (this.visible.has(sid)) continue
       updates.push(...queue.values())
       this.queues.delete(sid)
     }
     return updates
   }
 
+  private takeVisible(): PartUpdate[] {
+    const updates: PartUpdate[] = []
+    for (const [sid, queue] of this.queues) {
+      if (sid === this.active || !this.visible.has(sid)) continue
+      updates.push(...queue.values())
+      this.queues.delete(sid)
+    }
+    return updates
+  }
+
+  private visibleCount(): number {
+    let n = 0
+    for (const [sid, queue] of this.queues) {
+      if (sid !== this.active && this.visible.has(sid) && queue.size > 0) n++
+    }
+    return n
+  }
+
   private backgroundCount(): number {
     let n = 0
     for (const [sid, queue] of this.queues) {
-      if (sid !== this.active && queue.size > 0) n++
+      if (sid !== this.active && !this.visible.has(sid) && queue.size > 0) n++
     }
     return n
+  }
+
+  private hasVisible(): boolean {
+    return this.visibleCount() > 0
   }
 
   private hasBackground(): boolean {
@@ -315,12 +399,15 @@ export class SessionStreamScheduler {
 
   private countLane(sessionID: string): void {
     if (sessionID === this.active) this.counters.active++
+    else if (this.visible.has(sessionID)) this.counters.visible++
     else this.counters.background++
   }
 
   private clearTimers(): void {
     if (this.atimer) clearTimeout(this.atimer)
     this.atimer = null
+    if (this.vtimer) clearTimeout(this.vtimer)
+    this.vtimer = null
     if (this.btimer) clearTimeout(this.btimer)
     this.btimer = null
   }

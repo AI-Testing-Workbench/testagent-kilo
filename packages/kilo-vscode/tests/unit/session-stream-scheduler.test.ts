@@ -255,6 +255,17 @@ describe("SessionStreamScheduler / focus and lifecycle", () => {
     expect(stats.active).toBe(0)
   })
 
+  it("exposes the focused session id via the getter so pruneDeletedSession can match it", () => {
+    const queue = new SessionStreamScheduler(() => {})
+    expect(queue.focused).toBeUndefined()
+    queue.focus("sess-1")
+    expect(queue.focused).toBe("sess-1")
+    queue.focus("sess-2")
+    expect(queue.focused).toBe("sess-2")
+    queue.focus(undefined)
+    expect(queue.focused).toBeUndefined()
+  })
+
   it("dispose() stops further emissions from queued work", async () => {
     const sent: Sent[] = []
     const queue = new SessionStreamScheduler((msg) => sent.push(msg), {
@@ -326,6 +337,66 @@ describe("SessionStreamScheduler / adaptive scheduling", () => {
     expect(sent).toHaveLength(2)
     expect(queue.stats().active).toBe(1)
     expect(queue.stats().background).toBe(1)
+    queue.dispose()
+  })
+
+  it("visible sessions flush faster than background sessions", async () => {
+    const sent: Sent[] = []
+    const queue = new SessionStreamScheduler((msg) => sent.push(msg), {
+      activeMs: 5,
+      visibleMs: 10,
+      backgroundBaseMs: 100,
+      backgroundStepMs: 0,
+      backgroundMaxMs: 100,
+    })
+    queue.focus("active")
+    queue.setVisible("visible", true)
+    queue.push(update("v", "v", "visible"))
+    queue.push(update("b", "b", "background"))
+    await sleep(25)
+    const first = items(sent)
+    expect(first).toHaveLength(1)
+    expect(first[0]!.sessionID).toBe("visible")
+    expect(queue.stats().visible).toBe(1)
+    expect(queue.stats().background).toBe(0)
+    await sleep(100)
+    expect(items(sent).some((msg) => msg.sessionID === "background")).toBe(true)
+    queue.dispose()
+  })
+
+  it("active sessions still win over visible sessions", async () => {
+    const sent: Sent[] = []
+    const queue = new SessionStreamScheduler((msg) => sent.push(msg), {
+      activeMs: 5,
+      visibleMs: 40,
+      backgroundBaseMs: 100,
+      backgroundStepMs: 0,
+      backgroundMaxMs: 100,
+    })
+    queue.focus("sess-1")
+    queue.setVisible("sess-1", true)
+    queue.push(update("a", "a", "sess-1"))
+    await sleep(15)
+    expect(items(sent).map((msg) => msg.sessionID)).toEqual(["sess-1"])
+    expect(queue.stats().active).toBe(1)
+    expect(queue.stats().visible).toBe(0)
+    queue.dispose()
+  })
+
+  it("focus flushes queued visible updates immediately", () => {
+    const sent: Sent[] = []
+    const queue = new SessionStreamScheduler((msg) => sent.push(msg), {
+      activeMs: 50,
+      visibleMs: 100,
+      backgroundBaseMs: 100,
+      backgroundStepMs: 0,
+      backgroundMaxMs: 100,
+    })
+    queue.setVisible("sess-2", true)
+    queue.push(update("v", "v", "sess-2"))
+    queue.focus("sess-2")
+    expect(items(sent).map((msg) => msg.sessionID)).toEqual(["sess-2"])
+    expect(queue.stats().active).toBe(1)
     queue.dispose()
   })
 
@@ -401,6 +472,6 @@ describe("SessionStreamScheduler / stats", () => {
     // Single flush produces one batch message.
     expect(stats.batches).toBe(1)
     // Lane counters are incremented once per emission (batch or single).
-    expect(stats.active + stats.background).toBe(stats.batches)
+    expect(stats.active + stats.visible + stats.background).toBe(stats.batches)
   })
 })
