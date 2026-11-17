@@ -158,6 +158,21 @@ function slimBash(state: Record<string, unknown>): Record<string, unknown> {
   return next
 }
 
+/**
+ * Fallback for tools not in the whitelist (task subagent transcripts,
+ * webfetch, MCP tools, search variants). Keeps the shape intact but caps the
+ * two fields that grow with command output, so an unknown tool can no longer
+ * ship an unbounded string into the webview.
+ */
+function slimGeneric(state: Record<string, unknown>): Record<string, unknown> {
+  const next = slimOutput(state)
+  const meta = state.metadata
+  if (isObj(meta) && typeof meta.output === "string" && meta.output.length > OUTPUT_CAP) {
+    next.metadata = { ...meta, output: cap(meta.output) }
+  }
+  return next
+}
+
 // ---------------------------------------------------------------------------
 // Public API
 // ---------------------------------------------------------------------------
@@ -184,8 +199,7 @@ export function slimPart<T>(part: T): T {
   const tool = obj.tool
   if (typeof tool !== "string") return part
 
-  const fn = slimmers[tool]
-  if (!fn) return part
+  const fn = slimmers[tool] ?? slimGeneric
 
   const state = obj.state
   if (!isObj(state)) return part

@@ -5,6 +5,7 @@ import { ErrorBoundary, type Component } from "solid-js"
 import { render } from "solid-js/web"
 import App from "./App"
 import { reload } from "./utils/beacon"
+import { startMemoryGuard } from "./utils/memory-guard" // testagent_change - 堆用量守卫
 
 const root = document.getElementById("root")
 
@@ -35,3 +36,6 @@ render(
   ),
   root,
 )
+
+// testagent_change - 在渲染挂载后启动堆用量守卫
+startMemoryGuard()

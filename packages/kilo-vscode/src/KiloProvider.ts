@@ -2317,15 +2317,20 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
 
     try {
       const workspaceDir = this.getWorkspaceDirectory(sessionID)
-      const { data: messagesData } = await retry(() =>
-        this.client!.session.messages({ sessionID, directory: workspaceDir }, { throwOnError: true }),
-      )
+      // testagent_change start - 子会话按页加载:全量拉取会让长时间运行的多子代理任务常驻
+      // 整个家族的历史,webview 堆只增不减。这里只取首页,"加载更早"走 cursor。
+      const page = await fetchMessagePage(this.client, {
+        sessionID,
+        workspaceDir,
+        limit: MESSAGE_PAGE_LIMIT,
+      })
 
-      const messages = messagesData.map((m) => ({
+      const messages = page.items.map((m) => ({
         ...m.info,
         parts: this.slimParts(m.parts),
         createdAt: new Date(m.info.time.created).toISOString(),
       }))
+      // testagent_change end
 
       for (const message of messages) {
         this.connectionService.recordMessageSessionId(message.id, message.sessionID)
@@ -2339,7 +2344,8 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
         sessionID,
         messages,
         mode: "replace",
-        hasMore: false,
+        cursor: page.cursor,
+        hasMore: Boolean(page.cursor),
       })
 
       // Recover any prompts emitted by the child before we started tracking it.

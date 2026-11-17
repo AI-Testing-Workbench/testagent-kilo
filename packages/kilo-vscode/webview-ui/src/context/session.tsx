@@ -55,6 +55,8 @@ import { resolveModelSelection } from "./model-selection"
 import { resolveSessionAgent } from "./session-agent"
 import { queuedUserMessageIDs } from "./session-queue"
 import { PartStash } from "./part-stash"
+import { pruneParts } from "./part-prune"
+import { onMemoryPressure } from "../utils/memory-guard"
 import { KILO_AUTO, parseModelString } from "../../../src/shared/provider-model"
 // testagent_change start - archive previews share the local ChatView without becoming writable sessions
 import type { CloudArchiveData } from "../../../src/testagent/cloud/archive-data"
@@ -64,6 +66,10 @@ import type { SdtProgressState } from "../types/sdt"
 // testagent_change end
 const RECENT_LIMIT = 5
 const MESSAGE_PAGE_LIMIT = 80
+// testagent_change - 单个会话在 webview 内驻留的消息总量上限(含"加载更早"累加)
+const MAX_LOADED_MESSAGES = 400
+// testagent_change - 单个 text/reasoning part 的流式累积上限,超出后停止追加
+const MAX_PART_TEXT = 200_000
 
 type MessageMutation = Exclude<MessageLoadMode, "focus"> | "append" | "update"
 
@@ -1349,7 +1355,10 @@ export const SessionProvider: ParentComponent = (props) => {
             (existing.type === "text" || existing.type === "reasoning")
           ) {
             // Append text delta to text or reasoning parts
-            ;(existing as { text: string }).text += delta.textDelta
+            // testagent_change - 累积上限:超长输出(子代理 transcript、大文件)会让单个
+            // part 的字符串无限增长,历史快照随后会覆盖成服务端权威值
+            const target = existing as { text: string }
+            if (target.text.length < MAX_PART_TEXT) target.text += delta.textDelta
           } else {
             // Replace entire part
             parts[effectiveMessageID][existingIndex] = part
@@ -2469,6 +2478,18 @@ export const SessionProvider: ParentComponent = (props) => {
     if (!id || !server.isConnected()) return false
     const page = pages[id] ?? emptyPageState
     if (!page.hasMore || page.loadingOlder || page.loadingInitial || !page.before) return false
+    // testagent_change start - 历史是无限累加的,没有上限时长期会话会把整条历史常驻内存。
+    // 到顶后停止继续加载,而不是静默截断。
+    if ((store.messages[id]?.length ?? 0) >= MAX_LOADED_MESSAGES) {
+      patchPage(id, { hasMore: false })
+      showToast({
+        variant: "default",
+        title: language.t("session.messages.loadEarlier") ?? "Load earlier",
+        description: `已达到 ${MAX_LOADED_MESSAGES} 条消息的加载上限,更早的历史请使用历史会话列表打开。`,
+      })
+      return false
+    }
+    // testagent_change end
     patchPage(id, { loadingOlder: true })
     vscode.postMessage({
       type: "loadMessages",
@@ -2595,6 +2616,41 @@ export const SessionProvider: ParentComponent = (props) => {
       }),
     )
   }
+
+  // testagent_change start - 内存压力下裁剪不可见会话的 tool 大输出。
+  // 只针对"当前会话族之外"的子会话,保留 part 结构(状态、标题、input)与 text 正文,
+  // 把没有上限的 output 字段裁到头部摘要。根会话不动,保证标签页切换仍然是瞬时的。
+  function releaseHiddenOutput(): number {
+    const active = currentSessionID()
+    const visible = active ? sessionFamily(active) : new Set<string>()
+
+    const owner = new Map<string, string>()
+    for (const [sid, list] of Object.entries(store.messages)) {
+      for (const msg of list) owner.set(msg.id, sid)
+    }
+
+    const patches: Array<[string, unknown[]]> = []
+    let freed = 0
+    for (const [messageID, parts] of Object.entries(store.parts)) {
+      if (!parts?.length) continue
+      const sid = owner.get(messageID)
+      if (!sid || visible.has(sid)) continue
+      if (!store.sessions[sid]?.parentID) continue
+      const result = pruneParts(parts)
+      if (!result.changed) continue
+      freed += result.freed
+      patches.push([messageID, result.parts])
+    }
+    if (patches.length === 0) return 0
+    batch(() => {
+      for (const [messageID, parts] of patches) setStore("parts", messageID, parts as never)
+    })
+    return freed
+  }
+
+  onMemoryPressure(() => releaseHiddenOutput())
+  onCleanup(() => onMemoryPressure(() => 0))
+  // testagent_change end
 
   const allMessages = () => store.messages
 
