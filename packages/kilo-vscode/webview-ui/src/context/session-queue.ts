@@ -27,6 +27,26 @@ export function messageTurns(messages: Message[], boundary?: string) {
   return result
 }
 
+/**
+ * Reuse previous turn objects when a turn's member messages are unchanged
+ * (compared by store proxy identity). Part streaming lives in the parts
+ * store, so during streaming every completed turn keeps its reference and
+ * the virtualizer never remounts it. Borrowed from upstream Kilo's
+ * stableMessageTurns idea, simplified to turn-level rows.
+ */
+export function stableTurns(prev: MessageTurn[] | undefined, next: MessageTurn[]): MessageTurn[] {
+  if (!prev) return next
+  const prior = new Map(prev.map((turn) => [turn.id, turn]))
+  const same = next.map((turn) => {
+    const old = prior.get(turn.id)
+    if (!old || old.user !== turn.user || old.assistant.length !== turn.assistant.length) return turn
+    for (let i = 0; i < turn.assistant.length; i++) if (old.assistant[i] !== turn.assistant[i]) return turn
+    return old
+  })
+  if (same.length === prev.length && same.every((turn, i) => turn === prev[i])) return prev
+  return same
+}
+
 function active(messages: Message[]) {
   for (let i = messages.length - 1; i >= 0; i -= 1) {
     const msg = messages[i]

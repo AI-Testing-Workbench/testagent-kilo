@@ -1,5 +1,10 @@
 import { describe, expect, it } from "bun:test"
-import { activeUserMessageID, messageTurns, queuedUserMessageIDs } from "../../webview-ui/src/context/session-queue"
+import {
+  activeUserMessageID,
+  messageTurns,
+  queuedUserMessageIDs,
+  stableTurns,
+} from "../../webview-ui/src/context/session-queue"
 import type { Message } from "../../webview-ui/src/types/messages"
 
 const base = {
@@ -123,5 +128,40 @@ describe("activeUserMessageID", () => {
     ]
 
     expect(activeUserMessageID(messages, { type: "busy" })).toBe("message_3")
+  })
+})
+
+describe("stableTurns", () => {
+  it("returns the previous array unchanged when every turn is identical", () => {
+    const messages = [user("message_1"), assistant("message_2", "message_1")]
+    const first = messageTurns(messages)
+    const second = messageTurns(messages)
+
+    expect(stableTurns(first, second)).toBe(first)
+  })
+
+  it("reuses untouched turns and replaces only the mutated turn", () => {
+    const before = messageTurns([user("message_1"), assistant("message_2", "message_1"), user("message_3")])
+    const freshUser = user("message_3")
+    const mutated = [before[0]!, { ...before[1]!, user: freshUser }]
+
+    const result = stableTurns(before, mutated)
+
+    expect(result[0]).toBe(before[0])
+    expect(result[1]).toBe(mutated[1])
+  })
+
+  it("treats a changed assistant message reference as a new turn", () => {
+    const messages = [user("message_1"), assistant("message_2", "message_1")]
+    const before = messageTurns(messages)
+    const rebuilt = messageTurns([...messages, assistant("message_3", "message_1")])
+
+    expect(stableTurns(before, rebuilt)[0]).toBe(rebuilt[0])
+  })
+
+  it("returns the next list when there is no previous", () => {
+    const turns = messageTurns([user("message_1")])
+
+    expect(stableTurns(undefined, turns)).toBe(turns)
   })
 })

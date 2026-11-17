@@ -31,6 +31,8 @@ import {
   activeUserMessageID as getActiveUserMessageID,
   messageTurns,
   queuedUserMessageIDs,
+  stableTurns,
+  type MessageTurn,
 } from "../../context/session-queue"
 import type { QuestionRequest, SuggestionRequest } from "../../types/messages"
 import { PromptRail } from "./PromptRail"
@@ -84,7 +86,9 @@ export const MessageList: Component<MessageListProps> = (props) => {
   const positions = new Map<string, { top: number; userScrolled: boolean }>()
 
   const boundary = () => session.revert()?.messageID
-  const turns = createMemo(() => messageTurns(session.messages(), boundary()))
+  const turns = createMemo((prev: MessageTurn[] | undefined) =>
+    stableTurns(prev, messageTurns(session.messages(), boundary())),
+  )
   const isEmpty = () => turns().length === 0 && !session.loading() && !boundary()
 
   const recent = createMemo(() =>
@@ -98,6 +102,10 @@ export const MessageList: Component<MessageListProps> = (props) => {
   const visibleTurns = createMemo(() => turns().filter((turn) => !queuedIDs().has(turn.user.id)))
   const queuedTurns = createMemo(() => turns().filter((turn) => queuedIDs().has(turn.user.id)))
   const indexes = createMemo(() => new Map(visibleTurns().map((turn, index) => [turn.id, index])))
+  // Row keys + lookup so virtua is fed stable strings; turn objects resolved by
+  // id keep fine-grained updates without recreating rows mid-stream.
+  const keys = createMemo(() => visibleTurns().map((turn) => turn.id))
+  const rowMap = createMemo(() => new Map(visibleTurns().map((turn) => [turn.id, turn])))
 
   const activeUserIndex = createMemo(() => {
     const active = activeUserID()
@@ -387,13 +395,14 @@ export const MessageList: Component<MessageListProps> = (props) => {
             <Show when={scrollEl()}>
               <Virtualizer
                 ref={setVirtualizer}
-                data={visibleTurns()}
+                data={keys()}
                 scrollRef={scrollEl()}
                 shift={session.messageMutation() === "prepend"}
                 overscan={6}
                 itemSize={260}
               >
-                {(turn, index) => {
+                {(key, index) => {
+                  const turn = createMemo(() => rowMap().get(key))
                   const queued = createMemo(() => {
                     const active = activeUserIndex()
                     if (active === -1) return false
@@ -405,12 +414,16 @@ export const MessageList: Component<MessageListProps> = (props) => {
                   testagent_change end */
                   // testagent_change start - share the Local renderer while suppressing archive mutations
                   return (
-                    <VscodeSessionTurn
-                      turn={turn}
-                      queued={queued()}
-                      readonly={props.readonly}
-                      onForkMessage={props.readonly ? undefined : props.onForkMessage}
-                    />
+                    <Show when={turn()}>
+                      {(t) => (
+                        <VscodeSessionTurn
+                          turn={t()}
+                          queued={queued()}
+                          readonly={props.readonly}
+                          onForkMessage={props.readonly ? undefined : props.onForkMessage}
+                        />
+                      )}
+                    </Show>
                   )
                   // testagent_change end
                 }}

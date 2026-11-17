@@ -4,7 +4,17 @@
  * Also owns global (extension-lifetime) model selection (provider context is catalog-only).
  */
 
-import { createContext, useContext, createSignal, createMemo, createEffect, onMount, onCleanup, batch } from "solid-js"
+import {
+  createContext,
+  useContext,
+  createSignal,
+  createMemo,
+  createEffect,
+  on,
+  onMount,
+  onCleanup,
+  batch,
+} from "solid-js"
 import type { ParentComponent, Accessor } from "solid-js"
 import { createStore, produce, reconcile } from "solid-js/store"
 import { useVSCode } from "./vscode"
@@ -54,6 +64,7 @@ import { Identifier } from "../utils/id"
 import { resolveModelSelection } from "./model-selection"
 import { resolveSessionAgent } from "./session-agent"
 import { queuedUserMessageIDs } from "./session-queue"
+import { createFrameQueue, streamMessage } from "./frame-queue"
 import { PartStash } from "./part-stash"
 import { KILO_AUTO, parseModelString } from "../../../src/shared/provider-model"
 // testagent_change start - archive previews share the local ChatView without becoming writable sessions
@@ -852,6 +863,7 @@ export const SessionProvider: ParentComponent = (props) => {
   }
 
   function handleStreamMessage(message: ExtensionMessage): boolean {
+    if (!streamMessage(message)) return false
     if (message.type === "partUpdated") {
       handlePartUpdated(message.sessionID, message.messageID, message.part, message.delta)
       return true
@@ -1096,8 +1108,16 @@ export const SessionProvider: ParentComponent = (props) => {
 
   // Handle messages from extension
   onMount(() => {
-    const unsubscribe = vscode.onMessage(handleExtensionMessage)
-    onCleanup(unsubscribe)
+    // Borrowed from upstream Kilo: coalesce streaming part updates into one
+    // reactive batch per animation frame. Control messages flush the queue
+    // first and stay synchronous to preserve ordering.
+    const apply = (items: ExtensionMessage[]) => batch(() => items.forEach(handleExtensionMessage))
+    const frames = createFrameQueue(apply, streamMessage)
+    const unsubscribe = vscode.onMessage((message) => frames.push(message))
+    onCleanup(() => {
+      unsubscribe()
+      frames.cancel()
+    })
   })
 
   // Event handlers
@@ -2905,6 +2925,25 @@ export const SessionProvider: ParentComponent = (props) => {
   }
 
   return <SessionContext.Provider value={value}>{props.children}</SessionContext.Provider>
+}
+
+export function useSessionVisibility(visible: Accessor<string | null | undefined>) {
+  const vscode = useVSCode()
+  // Mark the visible session as a visible stream so the host lifts it out of
+  // the throttled background lane. The host gates reports with setActive, so
+  // hidden panels stop counting even while this effect still holds a value.
+  const mark = (id: string, v: boolean) =>
+    vscode.postMessage({ type: "streamSessionVisible", sessionID: id, visible: v })
+  createEffect(
+    on(visible, (id, prev) => {
+      if (prev && prev !== id) mark(prev, false)
+      if (id && id !== prev) mark(id, true)
+    }),
+  )
+  onCleanup(() => {
+    const id = visible()
+    if (id) mark(id, false)
+  })
 }
 
 export function useSession(): SessionContextValue {

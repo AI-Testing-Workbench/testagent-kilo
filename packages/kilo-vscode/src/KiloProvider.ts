@@ -42,6 +42,8 @@ import {
   SessionStreamScheduler,
   type SessionRefreshContext,
 } from "./kilo-provider-utils"
+import { VisibleTaskStreams } from "./kilo-provider/visible-task-streams"
+import { ToolInputStream } from "./kilo-provider/tool-input-stream"
 import { GitOps } from "./agent-manager/GitOps"
 import { GitStatsPoller, type LocalStats } from "./agent-manager/GitStatsPoller"
 import { diffSummary as localDiffSummary } from "./agent-manager/local-diff"
@@ -474,6 +476,8 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
    *  Cleared and retried once the connection transitions to "connected". */
   private pendingSessionRefresh = false
   private readonly streams = new SessionStreamScheduler((msg) => this.postMessage(msg))
+  private readonly inputs = new ToolInputStream((msg) => this.streams.push(msg))
+  private readonly visibleTaskStreams = new VisibleTaskStreams((id, visible) => this.streams.setVisible(id, visible))
   private readonly confirmations = new MessageConfirmation()
   private unsubscribeEvent: (() => void) | null = null
   private unsubscribeState: (() => void) | null = null
@@ -821,6 +825,7 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
     this.visibilityDisposable?.dispose()
     this.visibilityDisposable = webviewView.onDidChangeVisibility(() => {
       vscode.commands.executeCommand("setContext", "testagent.new.sidebarVisible", webviewView.visible)
+      this.visibleTaskStreams.setActive(webviewView.visible)
       if (this.statsPoller) {
         this.statsPoller.setEnabled(webviewView.visible)
         this.statsPoller.setVisible(webviewView.visible)
@@ -857,9 +862,11 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
 
     this.setupWebviewMessageHandler(panel.webview)
     this.viewStateDisposable?.dispose()
-    this.viewStateDisposable = panel.onDidChangeViewState(() =>
-      this.focusSession(panel.active ? this.currentSession?.id : undefined),
-    )
+    this.visibleTaskStreams.setActive(panel.active)
+    this.viewStateDisposable = panel.onDidChangeViewState(() => {
+      this.visibleTaskStreams.setActive(panel.active)
+      this.focusSession(panel.active ? this.currentSession?.id : undefined)
+    })
     this.initializeConnection()
   }
 
@@ -1131,6 +1138,7 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
       }
 
       await routeSuggestionWebviewMessage(this.questionCtx, message)
+      if (this.visibleTaskStreams.handle(message)) return
       if (await ModelState.handleMessage(message.type, message, this.client, (msg) => this.postMessage(msg))) return
       // testagent_change start - route archive actions through the HTTP history service
       await this.handleCloudHistoryMessage(message)
@@ -5452,12 +5460,22 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
       }
     }
 
+    // Streamed tool input becomes pending part updates, so a tool row shows its
+    // arguments while the model still generates them. Emitted by newer CLI
+    // builds; older backends never send it and the tracker stays dormant.
+    if ((event as { type?: string }).type === "session.next.tool.input.delta") {
+      const props = (event as unknown as { properties?: { callID?: string; delta?: string } }).properties
+      if (props?.callID && typeof props.delta === "string" && sessionID)
+        this.inputs.delta({ callID: props.callID, delta: props.delta })
+      return
+    }
+
     handleNetworkEvent(event.type as string, event.properties as any, this.client, (s) => this.getWorkspaceDirectory(s))
 
     const msg = mapSSEEventToWebviewMessage(event, sessionID)
     if (!msg) return
     if (msg.type === "partUpdated") {
-      this.streams.push({ ...msg, part: this.slimPart(msg.part) })
+      this.streams.push({ ...msg, part: this.inputs.track(this.slimPart(msg.part)) })
       return
     }
     this.streams.flush(sessionID)
@@ -5808,6 +5826,8 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
     this.viewStateDisposable?.dispose()
     this.visibilityDisposable?.dispose()
     this.webviewMessageDisposable?.dispose()
+    this.visibleTaskStreams.clear()
+    this.inputs.dispose()
     this.streams.dispose()
     this.sdtRunners.clear()
     this.isWebviewReady = false

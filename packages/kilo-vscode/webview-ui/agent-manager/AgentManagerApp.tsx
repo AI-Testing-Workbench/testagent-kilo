@@ -77,7 +77,7 @@ import { ServerProvider } from "../src/context/server"
 import { ProviderProvider } from "../src/context/provider"
 import { ConfigProvider } from "../src/context/config"
 import { NotificationsProvider } from "../src/context/notifications"
-import { SessionProvider, useSession } from "../src/context/session"
+import { SessionProvider, useSession, useSessionVisibility } from "../src/context/session"
 import { WorktreeModeProvider } from "../src/context/worktree-mode"
 import { ChatView } from "../src/components/chat"
 import HistoryView from "../src/components/history/HistoryView"
@@ -828,6 +828,8 @@ const AgentManagerContent: Component = () => {
   const visibleTabId = createMemo(() =>
     reviewActive() ? REVIEW_TAB_ID : (session.currentSessionID() ?? activePendingId()),
   )
+  // Lift the transcript session on screen out of the background streaming lane.
+  useSessionVisibility(() => (reviewActive() ? undefined : session.currentSessionID()))
   const tabScroll = useTabScroll(activeTabs, visibleTabId)
 
   const worktreeLabel = (wt: WorktreeState): string => {

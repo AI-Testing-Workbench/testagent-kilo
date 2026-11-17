@@ -16,7 +16,7 @@ import { VSCodeProvider, useVSCode } from "./context/vscode"
 import { ServerProvider, useServer } from "./context/server"
 import { ProviderProvider, useProvider } from "./context/provider"
 import { ConfigProvider } from "./context/config"
-import { SessionProvider, useSession } from "./context/session"
+import { SessionProvider, useSession, useSessionVisibility } from "./context/session"
 import { LocalTabsProvider, useLocalTabs } from "./context/local-tabs"
 import { LanguageProvider } from "./context/language"
 import { ChatView } from "./components/chat"
@@ -44,6 +44,13 @@ const VALID_VIEWS = new Set<string>(["newTask", "marketplace", "history", "profi
 
 /**
  * Bridge our session store to the DataProvider's expected Data shape.
+ *
+ * Borrowed from upstream Kilo DataBridge:
+ * CRITICAL: `data` is a plain object with getters — NOT a createMemo wrapping
+ * the whole shape. A memo around the shape would re-run on every part delta,
+ * rebuild fresh Records, and invalidate every downstream consumer — O(N)
+ * cascade per token in long sessions. Getters pass the Solid store through so
+ * consumers subscribing to `data.part[X]` only track that specific key.
  */
 export const DataBridge: Component<{ children: any }> = (props) => {
   const session = useSession()
@@ -51,43 +58,67 @@ export const DataBridge: Component<{ children: any }> = (props) => {
   const prov = useProvider()
   const server = useServer()
 
-  const data = createMemo(() => {
-    const id = session.currentSessionID()
-    const family = session.familyData(id)
-    // testagent_change start - synthetic archive sessions are omitted from the history list but required by DataProvider
+  // testagent_change start - synthetic archive sessions are omitted from the history list but required by DataProvider
+  const sessionList = createMemo(() => {
     const rows = session.sessions()
     const preview = session.archivePreview()
     const current = session.currentSession()
     const sessions = preview && current ? [...rows.filter((row) => row.id !== preview.sessionID), current] : rows
-    // testagent_change end
-    return {
-      session: sessions.map((s) => ({ ...s, id: s.id, role: "user" as const })) as unknown as any[],  // testagent_change
-      session_status: family.status as unknown as Record<string, any>,
-      session_diff: {} as Record<string, any[]>,
-      // Restrict chat data to the selected session family (self + subagents).
-      // This keeps unrelated tracked sessions from invalidating the visible
-      // chat tree during streaming or background updates.
-      message: family.messages as Record<string, SDKMessage[]>,
-      part: family.parts as Record<string, SDKPart[]>,
-      permission: (() => {
-        const grouped: Record<string, any[]> = {}
-        for (const p of session.permissions()) {
-          const sid = p.sessionID
-          if (!sid) continue
-          ;(grouped[sid] ??= []).push(p)
-        }
-        return grouped
-      })(),
-      // Questions are handled directly by QuestionDock via session.questions(),
-      // not through DataProvider. The DataProvider's question field is unused here.
-      question: {},
-      provider: {
+    return sessions.map((s) => ({ ...s, id: s.id, role: "user" as const })) as unknown as any[]
+  })
+  // testagent_change end
+
+  const permissionsBySession = createMemo(() => {
+    const grouped: Record<string, any[]> = {}
+    for (const p of session.permissions()) {
+      const sid = p.sessionID
+      if (!sid) continue
+      ;(grouped[sid] ??= []).push(p)
+    }
+    return grouped
+  })
+
+  const providerData = createMemo(
+    () =>
+      ({
         all: Object.values(prov.providers()) as unknown as any[],
         connected: prov.connected(),
         default: prov.defaults(),
-      } as unknown as any,
-    }
-  })
+      }) as unknown as any,
+  )
+
+  // Stable object with reactive getters — consumers keep per-key fine-grained
+  // reactivity. The family filter was removed upstream (and here) because
+  // consumers only ever do per-session / per-message lookups, and the filter
+  // pass itself was the source of the streaming recascade.
+  const data = {
+    get session() {
+      return sessionList()
+    },
+    get session_status() {
+      return session.allStatusMap() as unknown as Record<string, any>
+    },
+    get session_diff() {
+      return {} as Record<string, any[]>
+    },
+    get message() {
+      return session.allMessages() as Record<string, SDKMessage[]>
+    },
+    get part() {
+      return session.allParts() as Record<string, SDKPart[]>
+    },
+    get permission() {
+      return permissionsBySession()
+    },
+    // Questions are handled directly by QuestionDock via session.questions(),
+    // not through DataProvider. The DataProvider's question field is unused here.
+    get question() {
+      return {}
+    },
+    get provider() {
+      return providerData()
+    },
+  }
 
   const respond = (input: { sessionID: string; permissionID: string; response: "once" | "always" | "reject" }) => {
     session.respondToPermission(input.permissionID, input.response, [], [])
@@ -117,7 +148,7 @@ export const DataBridge: Component<{ children: any }> = (props) => {
 
   return (
     <DataProvider
-      data={data()}
+      data={data}
       directory={directory()}
       // @ts-expect-error — onPermissionRespond/onQuestion* are extension-specific props not yet in kilo-ui's DataProvider types
       onPermissionRespond={respond}
@@ -158,6 +189,14 @@ const AppContent: Component = () => {
   const tabs = useLocalTabs()
   const server = useServer()
   const vscode = useVSCode()
+
+  // Report the transcript session currently on screen so the host can lift it
+  // out of the throttled background streaming lane.
+  useSessionVisibility(() =>
+    !migrationNeeded() && (currentView() === "newTask" || currentView() === "subAgentViewer")
+      ? session.currentSessionID()
+      : undefined,
+  )
 
   const handleViewAction = (message: { action: string; agent?: string; providerID?: string; modelID?: string }) => {
     switch (message.action) {
