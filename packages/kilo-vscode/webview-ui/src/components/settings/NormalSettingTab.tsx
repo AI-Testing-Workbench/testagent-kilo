@@ -1,7 +1,9 @@
 import { Component, createSignal, onMount, onCleanup, createMemo, Show, For } from "solid-js"
 import { Card } from "@kilocode/kilo-ui/card"
 import { Select } from "@kilocode/kilo-ui/select"
+import { Switch } from "@kilocode/kilo-ui/switch"
 import { showToast } from "@kilocode/kilo-ui/toast"
+import { shellAutoExpand, setShellAutoExpand } from "@kilocode/kilo-ui/context/display"
 import { useConfig } from "../../context/config"
 import { useVSCode } from "../../context/vscode"
 import SettingsRow from "./SettingsRow"
@@ -37,6 +39,8 @@ const NormalSetting: Component = () => {
     vscode.postMessage({ type: "getRuntime" })
     // Load available terminals
     vscode.postMessage({ type: "getAvailableTerminals" })
+    // Sync shell auto-expand from the extension host
+    vscode.postMessage({ type: "requestShellAutoExpand" })
   })
 
   const unsubMsg = vscode.onMessage((msg: ExtensionMessage) => {
@@ -76,6 +80,11 @@ const NormalSetting: Component = () => {
 
   const handleTerminalClick = (term: AvailableTerminalInfo) => {
     updateConfig({ shell: term.path })
+  }
+
+  const handleShellAutoExpand = (value: boolean) => {
+    setShellAutoExpand(value)
+    vscode.postMessage({ type: "updateShellAutoExpand", value })
   }
 
 
@@ -145,6 +154,12 @@ const NormalSetting: Component = () => {
             />
 
           </div>
+        </SettingsRow>
+        <SettingsRow
+          title="自动展开 Shell 输出"
+          description="开启后 Shell 输出默认展开；关闭后默认折叠，并在展开时才渲染输出，可减少长会话的渲染开销"
+        >
+          <Switch checked={shellAutoExpand()} onChange={handleShellAutoExpand} hideLabel />
         </SettingsRow>
         <Show when={availableTerminals().length > 0}>
           <div style={{ "margin": "10px 10px" }}>
