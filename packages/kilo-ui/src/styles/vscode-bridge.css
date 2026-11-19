@@ -30,8 +30,8 @@ html[data-theme="kilo-vscode"] {
 
   --surface-inset-base: var(--vscode-editor-background);
   --surface-inset-base-hover: var(--vscode-list-hoverBackground);
-  /* testagent_change - panel surface for expanded tool/reasoning content */
-  --surface-tool-output-base: color-mix(in srgb, var(--vscode-sideBar-background, var(--surface-base)) 88%, black 12%);
+  /* testagent_change - panel surface for expanded tool/reasoning content (dark default) */
+  --surface-tool-output-base: color-mix(in srgb, var(--vscode-sideBar-background, var(--surface-base)) 64%, black 36%);
   --surface-inset-strong: var(--vscode-editorWidget-background, var(--vscode-editor-background));
   --surface-inset-strong-hover: var(--vscode-editorWidget-background, var(--vscode-editor-background));
 
@@ -310,4 +310,9 @@ html[data-theme="kilo-vscode"] {
   --avatar-text-purple: var(--vscode-charts-purple, var(--vscode-charts-blue));
   --avatar-text-cyan: var(--vscode-charts-blue);
   --avatar-text-lime: var(--vscode-charts-green);
+}
+
+/* testagent_change - lighter tool-output panel on light themes (match upstream) */
+html[data-theme="kilo-vscode"] body.vscode-light {
+  --surface-tool-output-base: color-mix(in srgb, var(--vscode-sideBar-background, var(--surface-base)) 96%, black 4%);
 }
