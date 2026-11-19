@@ -4,17 +4,23 @@
  *
  * This script:
  * 1. Builds the nodejs-server dist from testagent-core
- * 2. Copies the dist into kilo-vscode/nodejs-server/
- * 3. Installs node_modules for the nodejs-server (node-pty native bindings)
+ * 2. Copies the dist into kilo-vscode/nodejs-server/ (keeping node_modules cache)
+ * 3. Installs node_modules for the nodejs-server (skipped when cache is valid)
  * 4. Runs the extension build with BACKEND_RUNTIME=testagent-nodejs
  * 5. Packages the VSIX
  *
  * Usage:
  *   bun script/package-nodejs-server.ts [--skip-server-build] [--skip-vsix]
+ *                                       [--target=<platform>] [--force-deps]
+ *
+ * Native binaries are cached in ~/.cache/testagent-vsix/tarballs and reused
+ * across builds. Use --force-deps to wipe node_modules and re-install.
  */
 
 import { $ } from "bun"
 import { join } from "node:path"
+import { homedir } from "node:os"
+import { createHash } from "node:crypto"
 import { existsSync } from "node:fs"
 import { promises as fs } from "node:fs"
 
@@ -25,6 +31,7 @@ const TARGET = join(ROOT, "nodejs-server")
 
 const skipBuild = process.argv.includes("--skip-server-build")
 const skipVsix = process.argv.includes("--skip-vsix")
+const forceDeps = process.argv.includes("--force-deps")
 
 // testagent_change - support target platform argument
 const targetArg = process.argv.find((arg: string) => arg.startsWith("--target="))
@@ -45,10 +52,14 @@ if (!existsSync(serverDist)) {
   process.exit(1)
 }
 
-// Step 2: Copy dist to kilo-vscode/nodejs-server/
+// Step 2: Copy dist to kilo-vscode/nodejs-server/, keeping node_modules as cache
 console.log("Step 2: Copying nodejs-server dist...")
-await fs.rm(TARGET, { recursive: true, force: true })
 await fs.mkdir(TARGET, { recursive: true })
+if (forceDeps) await fs.rm(join(TARGET, "node_modules"), { recursive: true, force: true })
+for (const entry of await fs.readdir(TARGET)) {
+  if (entry === "node_modules" && !forceDeps) continue
+  await fs.rm(join(TARGET, entry), { recursive: true, force: true })
+}
 await fs.cp(serverDist, TARGET, { recursive: true })
 
 // // Step 2.5: Copy Bun binary for runtime switching
@@ -92,151 +103,158 @@ await fs.cp(serverDist, TARGET, { recursive: true })
 // Step 3: Install dependencies (for native node-pty bindings)
 console.log("Step 3: Installing nodejs-server dependencies...")
 
-// testagent_change - check if node_modules already exists (from cache)
-const nodeModulesPath = join(TARGET, "node_modules")
-const hasNodeModules = existsSync(nodeModulesPath)
+// testagent_change start - incremental native binary cache with correct platform names
+const NATIVE: Record<string, { pty: string; parcel: string; jieba: string }> = {
+  "linux-x64": { pty: "linux-x64", parcel: "linux-x64-glibc", jieba: "linux-x64-gnu" },
+  "linux-arm64": { pty: "linux-arm64", parcel: "linux-arm64-glibc", jieba: "linux-arm64-gnu" },
+  "alpine-x64": { pty: "linux-x64", parcel: "linux-x64-musl", jieba: "linux-x64-musl" },
+  "alpine-arm64": { pty: "linux-arm64", parcel: "linux-arm64-musl", jieba: "linux-arm64-musl" },
+  "darwin-x64": { pty: "darwin-x64", parcel: "darwin-x64", jieba: "darwin-x64" },
+  "darwin-arm64": { pty: "darwin-arm64", parcel: "darwin-arm64", jieba: "darwin-arm64" },
+  "win32-x64": { pty: "win32-x64", parcel: "win32-x64", jieba: "win32-x64-msvc" },
+  "win32-arm64": { pty: "win32-arm64", parcel: "win32-arm64", jieba: "win32-arm64-msvc" },
+}
 
-if (hasNodeModules) {
-  console.log("✅ node_modules found (from cache), skipping installation")
-  console.log("Step 3: Verifying cached dependencies...")
-} else {
-  console.log("📥 node_modules not found, installing dependencies...")
+if (targetPlatform && !NATIVE[targetPlatform]) {
+  console.error(`Error: unknown --target=${targetPlatform}`)
+  console.error(`Supported targets: ${Object.keys(NATIVE).join(", ")}`)
+  process.exit(1)
+}
 
-  // testagent_change start - install platform-specific binaries based on target
+const scopes = {
+  pty: "@lydell/node-pty",
+  parcel: "@parcel/watcher",
+  jieba: "@node-rs/jieba",
+}
+
+const serverPkg = JSON.parse(await fs.readFile(join(SERVER_PKG, "package.json"), "utf8"))
+const depHash = createHash("sha256")
+  .update(JSON.stringify(serverPkg.dependencies) + JSON.stringify(serverPkg.optionalDependencies))
+  .digest("hex")
+  .slice(0, 16)
+
+const root = join(TARGET, "node_modules")
+const stampPath = join(root, ".native-stamp.json")
+
+async function resolve(scope: string) {
+  const placed = join(root, scope, "package.json")
+  if (existsSync(placed)) return String(JSON.parse(await fs.readFile(placed, "utf8")).version)
+  return String(serverPkg.dependencies[scope]).replace(/^[\^~>= ]+/, "")
+}
+
+async function needed() {
+  const keys = targetPlatform ? [targetPlatform] : Object.keys(NATIVE)
+  const out: { name: string; version: string }[] = []
+  const seen = new Set<string>()
+  for (const kind of Object.keys(scopes) as (keyof typeof scopes)[]) {
+    const version = await resolve(scopes[kind])
+    for (const key of keys) {
+      const name = `${scopes[kind]}-${NATIVE[key][kind]}`
+      if (seen.has(name)) continue
+      seen.add(name)
+      out.push({ name, version })
+    }
+  }
+  return out
+}
+
+let stamp: { npm?: string; bins?: string } | undefined
+if (existsSync(root) && existsSync(stampPath)) {
+  stamp = JSON.parse(await fs.readFile(stampPath, "utf8"))
+}
+
+const stale = !existsSync(root) || !stamp || stamp.npm !== depHash
+if (stale) {
   console.log("Step 3.1: Installing base dependencies...")
+  await fs.rm(root, { recursive: true, force: true })
   await $`cd ${TARGET} && npm install --omit=dev --omit=optional`
+} else {
+  console.log("Step 3.1: ✅ node_modules cache valid (npm), checking native binaries...")
+}
 
-  // testagent_change - map VS Code target to platform names
-  const targetMap: Record<string, string[]> = {
-    "linux-x64": ["linux-x64"],
-    "linux-arm64": ["linux-arm64"],
-    "alpine-x64": ["linux-x64"],
-    "alpine-arm64": ["linux-arm64"],
-    "darwin-x64": ["darwin-x64"],
-    "darwin-arm64": ["darwin-arm64"],
-    "win32-x64": ["win32-x64"],
-    "win32-arm64": ["win32-arm64"],
-  }
+const pkgs = await needed()
+const bins = pkgs.map((pkg) => `${pkg.name}@${pkg.version}`).sort().join("\n")
+const cached = !stale && stamp?.bins === bins && pkgs.every((pkg) => existsSync(join(root, pkg.name)))
 
-  // jieba uses -msvc suffix on win32
-  const jiebaPlatformMap: Record<string, string[]> = {
-    "linux-x64": ["linux-x64-gnu"],
-    "linux-arm64": ["linux-arm64-gnu"],
-    "alpine-x64": ["linux-x64-gnu"],
-    "alpine-arm64": ["linux-arm64-gnu"],
-    "darwin-x64": ["darwin-x64"],
-    "darwin-arm64": ["darwin-arm64"],
-    "win32-x64": ["win32-x64-msvc"],
-    "win32-arm64": ["win32-arm64-msvc"],
-  }
-
-  const platforms = targetPlatform ? targetMap[targetPlatform] || [] : Object.values(targetMap).flat()
-  const uniquePlatforms = [...new Set(platforms)]
-
-  console.log(`Step 3.2: Manually downloading platform binaries for: ${uniquePlatforms.join(", ")}...`)
-
-  for (const platform of uniquePlatforms) {
-    const packages = [
-      { name: `@lydell/node-pty-${platform}`, version: "1.2.0-beta.10" },
-      { name: `@parcel/watcher-${platform}`, version: "2.5.0" },
-    ]
-
-    const jiebaPlatform = targetPlatform ? (jiebaPlatformMap[targetPlatform] || [])[0] : platform
-    if (jiebaPlatform) {
-      packages.push({ name: `@node-rs/jieba-${jiebaPlatform}`, version: "2.0.1" })
+if (cached) {
+  console.log("Step 3.2: ✅ Native binaries cached, skipping download")
+} else {
+  // Prune stale platform dirs from previous --target builds so they don't bloat the VSIX
+  const keep = new Set(pkgs.map((pkg) => pkg.name))
+  for (const scope of Object.values(scopes)) {
+    const dir = join(root, scope.split("/")[0])
+    if (!existsSync(dir)) continue
+    for (const entry of await fs.readdir(dir)) {
+      const name = `${scope.split("/")[0]}/${entry}`
+      if (name === scope || keep.has(name)) continue
+      await fs.rm(join(dir, entry), { recursive: true, force: true })
     }
+  }
 
-    for (const pkg of packages) {
-      const tarballUrl = `https://registry.npmjs.org/${pkg.name}/-/${pkg.name.split("/")[1]}-${pkg.version}.tgz`
-      const targetDir = join(TARGET, "node_modules", pkg.name)
+  const cacheDir = join(process.env.XDG_CACHE_HOME || join(homedir(), ".cache"), "testagent-vsix", "tarballs")
 
-      console.log(`  Downloading ${pkg.name}@${pkg.version}...`)
+  async function untar(tgz: string, dir: string) {
+    await fs.mkdir(dir, { recursive: true })
+    try {
+      await $`tar -xzf ${tgz} -C ${dir} --strip-components=1`
+    } catch (err) {
+      await fs.rm(tgz, { force: true })
+      throw err
+    }
+  }
 
-      try {
-        // Download tarball
-        const response = await fetch(tarballUrl)
-        if (!response.ok) {
-          throw new Error(`Failed to download ${pkg.name}: ${response.status}`)
+  async function pull(pkg: { name: string; version: string }) {
+    try {
+      const short = pkg.name.split("/")[1]
+      const tgz = join(cacheDir, `${short}@${pkg.version}.tgz`)
+      const dir = join(root, pkg.name)
+      if (existsSync(tgz)) {
+        try {
+          await untar(tgz, dir)
+          console.log(`  ✓ Installed ${pkg.name}@${pkg.version} (cached)`)
+          return
+        } catch {
+          console.warn(`  ⚠️  Cached tarball for ${pkg.name} is corrupt, re-downloading`)
         }
-
-        const tarballPath = join(TARGET, `${pkg.name.replace("/", "-")}.tgz`)
-        await fs.writeFile(tarballPath, Buffer.from(await response.arrayBuffer()))
-
-        // Extract tarball
-        await fs.mkdir(targetDir, { recursive: true })
-        await $`cd ${targetDir} && tar -xzf ${tarballPath} --strip-components=1`
-        await fs.unlink(tarballPath)
-
-        console.log(`  ✓ Installed ${pkg.name}`)
-      } catch (err) {
-        console.warn(`  ⚠️  Failed to install ${pkg.name}: ${err}`)
       }
+      const res = await fetch(`https://registry.npmjs.org/${pkg.name}/-/${short}-${pkg.version}.tgz`)
+      if (!res.ok) throw new Error(`Failed to download ${pkg.name}: ${res.status}`)
+      await fs.mkdir(cacheDir, { recursive: true })
+      await fs.writeFile(`${tgz}.tmp`, Buffer.from(await res.arrayBuffer()))
+      await fs.rename(`${tgz}.tmp`, tgz)
+      await untar(tgz, dir)
+      console.log(`  ✓ Installed ${pkg.name}@${pkg.version}`)
+    } catch (err) {
+      console.warn(`  ⚠️  Failed to install ${pkg.name}: ${err}`)
     }
+  }
+
+  console.log(`Step 3.2: Fetching platform binaries for ${targetPlatform || "all targets"} (${pkgs.length} packages, in parallel)...`)
+  await Promise.all(pkgs.map(pull))
+
+  if (pkgs.every((pkg) => existsSync(join(root, pkg.name)))) {
+    await fs.writeFile(stampPath, JSON.stringify({ npm: depHash, bins }))
   }
 }
 
 // Verify critical platform packages were installed
 console.log("Step 3.3: Verifying platform binaries...")
-const platformMap: Record<string, string[]> = {
-  "linux-x64": ["linux-x64"],
-  "linux-arm64": ["linux-arm64"],
-  "alpine-x64": ["linux-x64"],
-  "alpine-arm64": ["linux-arm64"],
-  "darwin-x64": ["darwin-x64"],
-  "darwin-arm64": ["darwin-arm64"],
-  "win32-x64": ["win32-x64"],
-  "win32-arm64": ["win32-arm64"],
-}
-const jiebaPlatformMap: Record<string, string[]> = {
-  "linux-x64": ["linux-x64-gnu"],
-  "linux-arm64": ["linux-arm64-gnu"],
-  "alpine-x64": ["linux-x64-gnu"],
-  "alpine-arm64": ["linux-arm64-gnu"],
-  "darwin-x64": ["darwin-x64"],
-  "darwin-arm64": ["darwin-arm64"],
-  "win32-x64": ["win32-x64-msvc"],
-  "win32-arm64": ["win32-arm64-msvc"],
-}
-const platforms = targetPlatform ? platformMap[targetPlatform] || [] : Object.values(platformMap).flat()
-const uniquePlatforms = [...new Set(platforms)]
-
-const missing = []
-for (const platform of uniquePlatforms) {
-  const pkgPath = join(TARGET, "node_modules", `@lydell/node-pty-${platform}`)
-  if (!existsSync(pkgPath)) {
-    missing.push(platform)
-    console.log(`  ✗ node-pty-${platform} NOT FOUND`)
+const missing = pkgs.filter((pkg) => !existsSync(join(root, pkg.name)))
+for (const pkg of pkgs) {
+  if (missing.includes(pkg)) {
+    console.log(`  ✗ ${pkg.name} NOT FOUND`)
   } else {
-    console.log(`  ✓ node-pty-${platform}`)
-  }
-}
-
-if (targetPlatform) {
-  const jiebaPlatforms = jiebaPlatformMap[targetPlatform] || []
-  for (const platform of jiebaPlatforms) {
-    const pkgPath = join(TARGET, "node_modules", `@node-rs/jieba-${platform}`)
-    if (!existsSync(pkgPath)) {
-      missing.push(`jieba-${platform}`)
-      console.log(`  ✗ jieba-${platform} NOT FOUND`)
-    } else {
-      console.log(`  ✓ jieba-${platform}`)
-    }
+    console.log(`  ✓ ${pkg.name}`)
   }
 }
 
 if (missing.length > 0 && targetPlatform) {
-  const nodeptyMissing = missing.filter((m) => !String(m).startsWith("jieba"))
-  const jiebaMissing = missing.filter((m) => String(m).startsWith("jieba"))
-  if (nodeptyMissing.length > 0) {
-    console.error(`\n❌ Error: Missing node-pty binaries for: ${nodeptyMissing.join(", ")}`)
-    console.error("   Extension will not work on these platforms!")
-  }
-  if (jiebaMissing.length > 0) {
-    console.error(`\n❌ Error: Missing jieba binaries: ${jiebaMissing.join(", ")}`)
-  }
+  console.error(`\n❌ Error: Missing platform binaries: ${missing.map((pkg) => pkg.name).join(", ")}`)
+  console.error("   Extension will not work on these platforms!")
   process.exit(1)
-} else if (missing.length > 0) {
-  console.warn(`\n⚠️  Warning: Missing binaries: ${missing.join(", ")}`)
+}
+if (missing.length > 0) {
+  console.warn(`\n⚠️  Warning: Missing binaries: ${missing.map((pkg) => pkg.name).join(", ")}`)
   console.warn("   Extension may not work on these platforms!")
 }
 // testagent_change end
@@ -252,7 +270,7 @@ if (!skipVsix) {
   const vsixName = targetPlatform
     ? `testagent-nodejs-tscode-${targetPlatform}.vsix`
     : "testagent-nodejs-tscode.vsix"
-  
+
   // Build vsce command with proper argument handling
   if (targetPlatform) {
     await $`cd ${ROOT} && npx @vscode/vsce package --no-dependencies --target ${targetPlatform} -o ${vsixName}`
