@@ -30,6 +30,8 @@ html[data-theme="kilo-vscode"] {
 
   --surface-inset-base: var(--vscode-editor-background);
   --surface-inset-base-hover: var(--vscode-list-hoverBackground);
+  /* testagent_change - panel surface for expanded tool/reasoning content */
+  --surface-tool-output-base: color-mix(in srgb, var(--vscode-sideBar-background, var(--surface-base)) 88%, black 12%);
   --surface-inset-strong: var(--vscode-editorWidget-background, var(--vscode-editor-background));
   --surface-inset-strong-hover: var(--vscode-editorWidget-background, var(--vscode-editor-background));
 

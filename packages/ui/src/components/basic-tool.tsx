@@ -114,6 +114,33 @@ export function BasicTool(props: BasicToolProps) {
     if (props.forceOpen) setState("open", true)
   })
 
+  // kilocode_change start - apply live defaultOpen changes (e.g. the shell
+  // auto-expand setting) without resetting manual toggles on unrelated renders.
+  createEffect(
+    on(
+      () => props.defaultOpen,
+      (value, prev) => {
+        if (value === undefined || prev === undefined) return
+        setState("open", value)
+      },
+    ),
+  )
+
+  // kilocode_change start - when a row becomes deferred while closed, unmount
+  // its children so the lazy-rendering setting takes effect immediately.
+  createEffect(
+    on(
+      () => props.defer,
+      (value, prev) => {
+        if (!value || prev === undefined) return
+        if (open()) return
+        cancel()
+        setState("ready", false)
+      },
+    ),
+  )
+  // kilocode_change end
+
   createEffect(
     on(
       open,

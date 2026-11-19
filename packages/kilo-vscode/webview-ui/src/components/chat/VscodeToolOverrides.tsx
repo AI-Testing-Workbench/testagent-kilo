@@ -1,7 +1,7 @@
 /**
  * VS Code-specific tool registry overrides.
- * Wraps upstream tool renderers to inject VS Code sidebar preferences
- * (e.g. expanded by default) without duplicating render logic.
+ * Wraps upstream tool renderers to apply VS Code sidebar defaults
+ * (e.g. shell rows start collapsed) without duplicating render logic.
  *
  * Call registerVscodeToolOverrides() once at app startup, after the
  * upstream tool registrations have run (i.e. after importing message-part).
@@ -10,7 +10,7 @@
 import { Dynamic } from "solid-js/web"
 import { ToolRegistry } from "@kilocode/kilo-ui/message-part"
 
-/** Tools that should be open by default in the VS Code sidebar. */
+/** Tools that stay collapsed unless a caller passes defaultOpen explicitly. */
 const DEFAULT_OPEN_TOOLS = ["bash"]
 const registered = new Set<string>()
 
@@ -22,7 +22,7 @@ export function registerVscodeToolOverrides() {
 
     ToolRegistry.register({
       name,
-      render: (props) => <Dynamic component={upstream} {...props} defaultOpen />,
+      render: (props) => <Dynamic component={upstream} {...props} />,
     })
     registered.add(name)
   }

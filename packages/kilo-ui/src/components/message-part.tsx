@@ -29,6 +29,7 @@ import {
   QuestionInfo,
 } from "@kilocode/sdk/v2"
 import { useData } from "../context"
+import { shellAutoExpand } from "../context/display"
 import { useFileComponent } from "../context/file"
 import { useDialog } from "../context/dialog"
 import { type UiI18n, useI18n } from "../context/i18n"
@@ -1730,6 +1731,7 @@ function ToolTriggerRow(props: {
   action?: JSX.Element
   animate?: boolean
   revealOnMount?: boolean
+  onClick?: (e: MouseEvent) => void
 }) {
   const reveal = useToolReveal(
     () => props.pending,
@@ -1744,7 +1746,7 @@ function ToolTriggerRow(props: {
   })
 
   return (
-    <div data-slot="basic-tool-tool-info-structured">
+    <div data-slot="basic-tool-tool-info-structured" onClick={props.onClick}>
       <div data-slot="basic-tool-tool-info-main">
         <span data-slot="basic-tool-tool-title">
           <TextShimmer text={props.title} active={props.pending} />
@@ -1837,7 +1839,8 @@ ToolRegistry.register({
           hideDetails
           {...props}
           icon="glasses"
-          onSubtitleClick={
+          clickable={!!(data.openFile && props.input.filePath)}
+          onTriggerClick={
             data.openFile && props.input.filePath ? () => data.openFile!(props.input.filePath) : undefined
           }
           trigger={
@@ -1847,6 +1850,14 @@ ToolRegistry.register({
               subtitle={props.input.filePath ? getFilename(props.input.filePath) : ""}
               args={args}
               animate={props.reveal}
+              onClick={
+                data.openFile && props.input.filePath
+                  ? (event) => {
+                      event.stopPropagation()
+                      data.openFile!(props.input.filePath)
+                    }
+                  : undefined
+              }
             />
           }
         />
@@ -2163,7 +2174,8 @@ ToolRegistry.register({
         {...props}
         icon="console"
         animated
-        defaultOpen
+        defer={!shellAutoExpand()}
+        defaultOpen={shellAutoExpand()}
         trigger={
           <div data-slot="basic-tool-tool-info-structured">
             <div data-slot="basic-tool-tool-info-main">

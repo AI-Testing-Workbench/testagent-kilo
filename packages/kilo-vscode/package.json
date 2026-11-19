@@ -557,6 +557,11 @@
     "configuration": {
       "title": "TestAgent",
       "properties": {
+        "testagent.new.shell.autoExpand": {
+          "type": "boolean",
+          "default": false,
+          "description": "Shell 输出默认展开；关闭后默认折叠并在展开时才渲染输出，可减少长会话的渲染开销。"
+        },
         "testagent.new.language": {
           "type": "string",
           "default": "",

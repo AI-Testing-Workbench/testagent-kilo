@@ -68,6 +68,7 @@
     "./context": "./src/context/index.ts",
     "./context/code": "./src/context/code.tsx",
     "./context/data": "./src/context/data.tsx",
+    "./context/display": "./src/context/display.ts",
     "./context/dialog": "./src/context/dialog.tsx",
     "./context/diff": "./src/context/diff.tsx",
     "./context/helper": "./src/context/helper.tsx",

@@ -1722,6 +1722,22 @@ export interface RuntimeResultMessage {
   runtime: "bun" | "nodejs"
 }
 
+// testagent_change start - shell auto-expand (extension host, globalState-backed)
+export interface RequestShellAutoExpandMessage {
+  type: "requestShellAutoExpand"
+}
+
+export interface UpdateShellAutoExpandMessage {
+  type: "updateShellAutoExpand"
+  value: boolean
+}
+
+export interface ShellAutoExpandLoadedMessage {
+  type: "shellAutoExpandLoaded"
+  shellAutoExpand: boolean
+}
+// testagent_change end
+
 export interface ShellPathResolvedMessage {
   type: "shellPathResolved"
   name: string
@@ -1912,6 +1928,7 @@ export type ExtensionMessage =
   | FavoritesLoadedMessage
   | EnableThinkingsLoadedMessage
   | RuntimeResultMessage // testagent_change
+  | ShellAutoExpandLoadedMessage // testagent_change
   | ShellPathResolvedMessage // testagent_change
   | MemorySettingsLoadedMessage // testagent_change
   | MemorySettingsSavedMessage // testagent_change
@@ -3220,6 +3237,8 @@ export type WebviewMessage =
   | DownloadPsBashMessage // testagent_change
   | GetRuntimeRequest // testagent_change
   | ChangeRuntimeRequest // testagent_change
+  | RequestShellAutoExpandMessage // testagent_change
+  | UpdateShellAutoExpandMessage // testagent_change
   | RequestMemorySettingsMessage // testagent_change
   | UpdateMemorySettingsMessage // testagent_change
   // testagent_change start - testflow messages

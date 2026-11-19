@@ -9,6 +9,7 @@ import { Code } from "@kilocode/kilo-ui/code"
 import { Diff } from "@kilocode/kilo-ui/diff"
 import { File } from "@kilocode/kilo-ui/file"
 import { DataProvider } from "@kilocode/kilo-ui/context/data"
+import { setShellAutoExpand } from "@kilocode/kilo-ui/context/display"
 import { Toast } from "@kilocode/kilo-ui/toast"
 import Settings from "./components/settings/Settings"
 import ProfileView from "./components/profile/ProfileView"
@@ -338,6 +339,15 @@ const AppContent: Component = () => {
   const handleForkMessage = (sessionId: string, messageId: string) => {
     vscode.postMessage({ type: "forkSession", sessionId, messageId })
   }
+
+  // testagent_change start - shell auto-expand lives in the extension host; subscribe
+  // at the component top level (like NotificationsTab) so early pushes are not missed.
+  const unsubShell = vscode.onMessage((message) => {
+    if (message.type === "shellAutoExpandLoaded") setShellAutoExpand(message.shellAutoExpand)
+  })
+  onCleanup(unsubShell)
+  vscode.postMessage({ type: "requestShellAutoExpand" })
+  // testagent_change end
 
   return (
     <div class="container">

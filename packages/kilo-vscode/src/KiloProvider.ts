@@ -425,6 +425,8 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
   private systemNotification: SystemNotificationService
   // testagent_change end
   private currentSession: Session | null = null
+  // testagent_change - rebroadcast shell auto-expand when the shared config changes
+  private shellConfigDisposable: vscode.Disposable | null = null
   /** Remembers the last selected session so /new can stay in the same worktree after clearSession. */
   private contextSessionID: string | undefined
   private connectionState: "connecting" | "connected" | "disconnected" | "error" = "connecting"
@@ -1122,6 +1124,12 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
   }
 
   private setupWebviewMessageHandler(webview: vscode.Webview): void {
+    // testagent_change start - rebroadcast shell auto-expand on shared config change
+    this.shellConfigDisposable?.dispose()
+    this.shellConfigDisposable = vscode.workspace.onDidChangeConfiguration((e) => {
+      if (e.affectsConfiguration("testagent.new.shell.autoExpand")) this.sendShellAutoExpand()
+    })
+    // testagent_change end
     this.webviewMessageDisposable?.dispose()
     this.webviewMessageDisposable = webview.onDidReceiveMessage(async (message) => {
       // Run interceptor if attached (e.g., AgentManagerProvider worktree logic)
@@ -1544,6 +1552,21 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
               error: err instanceof Error ? err.message : String(err),
             })
           }
+          break
+        }
+        // testagent_change end
+        // testagent_change start - shell auto-expand (globalState-backed, cached push)
+        case "requestShellAutoExpand":
+          this.sendShellAutoExpand()
+          break
+        case "updateShellAutoExpand": {
+          const value = message.value === true
+          void vscode.workspace
+            .getConfiguration("testagent.new.shell")
+            .update("autoExpand", value, vscode.ConfigurationTarget.Global)
+            .then(undefined, (err) => {
+              console.error("[TestAgent] Failed to persist shell auto-expand:", err)
+            })
           break
         }
         // testagent_change end
@@ -3600,6 +3623,13 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
   /**
    * Read notification/sound settings from VS Code config and push to webview.
    */
+  private sendShellAutoExpand(): void {
+    const shellAutoExpand = vscode.workspace
+      .getConfiguration("testagent.new.shell")
+      .get<boolean>("autoExpand", false)
+    this.webview?.postMessage({ type: "shellAutoExpandLoaded", shellAutoExpand })
+  }
+
   private sendNotificationSettings(): void {
     const notifications = vscode.workspace.getConfiguration("testagent.new.notifications")
     const sounds = vscode.workspace.getConfiguration("testagent.new.sounds")
@@ -4591,22 +4621,74 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
    * a worktree path registered via setSessionDirectory), falling back to workspace root.
    * Absolute paths (Unix `/…` or Windows `C:\…`) are used as-is.
    */
+  private showDocument(doc: vscode.TextDocument, line?: number, column?: number): void {
+    const options: vscode.TextDocumentShowOptions = { preview: true }
+    if (line !== undefined && line > 0) {
+      const col = column !== undefined && column > 0 ? column - 1 : 0
+      const pos = new vscode.Position(line - 1, col)
+      options.selection = new vscode.Range(pos, pos)
+    }
+    void vscode.window.showTextDocument(doc, options)
+  }
+
+  private async openDocument(
+    uri: vscode.Uri,
+    line?: number,
+    column?: number,
+    quiet = false,
+  ): Promise<boolean> {
+    const doc = await vscode.workspace.openTextDocument(uri).then(
+      (value) => value,
+      (err) => {
+        if (!quiet) console.error("[TestAgent]  Failed to open file:", uri.fsPath, err)
+        return undefined
+      },
+    )
+    if (!doc) return false
+    this.showDocument(doc, line, column)
+    return true
+  }
+
   private handleOpenFile(filePath: string, line?: number, column?: number): void {
     const uri = isAbsolutePath(filePath)
       ? vscode.Uri.file(filePath)
       : vscode.Uri.joinPath(vscode.Uri.file(this.getWorkspaceDirectory(this.currentSession?.id)), filePath)
-    vscode.workspace.openTextDocument(uri).then(
-      (doc) => {
-        const options: vscode.TextDocumentShowOptions = { preview: true }
-        if (line !== undefined && line > 0) {
-          const col = column !== undefined && column > 0 ? column - 1 : 0
-          const pos = new vscode.Position(line - 1, col)
-          options.selection = new vscode.Range(pos, pos)
-        }
-        vscode.window.showTextDocument(doc, options)
-      },
-      (err) => console.error("[TestAgent]  Failed to open file:", uri.fsPath, err),
-    )
+
+    void (async () => {
+      if (await this.openDocument(uri, line, column, true)) return
+
+      const stat = await vscode.workspace.fs.stat(uri).then(
+        (value) => value,
+        () => undefined,
+      )
+      if (stat && (stat.type & vscode.FileType.Directory) !== 0) {
+        void vscode.commands.executeCommand("revealInExplorer", uri)
+        return
+      }
+
+      // Short relative references (e.g. a bare filename in chat text) do not
+      // resolve against the workspace root. Fall back to a workspace-wide match.
+      if (isAbsolutePath(filePath)) {
+        console.error("[TestAgent]  Failed to open file:", uri.fsPath)
+        return
+      }
+
+      const glob = `**/${filePath.replace(/^\.?\//, "").replace(/\\/g, "/")}`
+      const matches = await vscode.workspace.findFiles(glob, "**/node_modules/**", 20)
+      if (matches.length === 1) {
+        await this.openDocument(matches[0], line, column)
+        return
+      }
+      if (matches.length > 1) {
+        const pick = await vscode.window.showQuickPick(
+          matches.map((match) => ({ label: vscode.workspace.asRelativePath(match), uri: match })),
+          { placeHolder: "选择要打开的文件" },
+        )
+        if (pick) await this.openDocument(pick.uri, line, column)
+        return
+      }
+      console.error("[TestAgent]  File not found:", filePath)
+    })()
   }
 
   /**
@@ -5845,6 +5927,7 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
     this.viewStateDisposable?.dispose()
     this.visibilityDisposable?.dispose()
     this.webviewMessageDisposable?.dispose()
+    this.shellConfigDisposable?.dispose()
     this.visibleTaskStreams.clear()
     this.inputs.dispose()
     this.streams.dispose()
