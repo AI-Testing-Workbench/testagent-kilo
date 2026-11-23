@@ -142,6 +142,18 @@ export const LocalTabsProvider: ParentComponent = (props) => {
       return existing
     }
     const id = pending()
+    // testagent_change start - 达到 tab 上限时不再阻止新建任务，默认关闭最左边的 tab
+    if (state.ids.length >= MAX_TABS) {
+      const evicted = state.ids[0]
+      apply({ ids: [...state.ids.slice(1), id], active: id })
+      if (isPendingTab(evicted)) {
+        if (isPendingSend(evicted)) discardPendingDraft(evicted)
+        queueMicrotask(() => deletePendingDraft(evicted))
+      }
+      focus(id)
+      return id
+    }
+    // testagent_change end
     if (!applyTab(addPendingTab(state, id))) return ""
     focus(id)
     return id
