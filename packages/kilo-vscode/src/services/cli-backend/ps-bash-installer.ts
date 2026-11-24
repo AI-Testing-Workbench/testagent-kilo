@@ -25,6 +25,22 @@ const URL = `${decodeURIComponent(atob("aHR0cHMlM0ElMkYlMkZ0ZXN0YWdlbnQtcHMtYmFz
 
 let inflight: Promise<string> | undefined
 
+// 与 KiloProvider.getAvailableTerminals 同一份探测列表：扩展宿主的 PATH 可能不含
+// WindowsPowerShell 目录（裸 powershell.exe 会 ENOENT），仅装 PS7 的机器回退 pwsh。
+const hosts = [
+  "C:/Windows/System32/WindowsPowerShell/v1.0/powershell.exe",
+  "C:/Windows/System32/powershell.exe",
+  "C:/Program Files/PowerShell/7/pwsh.exe",
+  "C:/Program Files (x86)/PowerShell/7/pwsh.exe",
+]
+
+/** PowerShell executable to run download/extract commands, resolved by absolute path. */
+function host(): string {
+  const found = hosts.find((p) => fs.existsSync(p))
+  if (found) return found
+  throw new Error("未找到可用的 PowerShell（powershell.exe 或 pwsh.exe）")
+}
+
 /** Installed ps-bash executable under the extension bin directory. */
 export function psBashPath(context: vscode.ExtensionContext): string {
   return path.join(context.globalStorageUri.fsPath, "ps-bash", EXE)
@@ -78,7 +94,7 @@ export async function fetchZip(zip: string, url = URL): Promise<void> {
       `Invoke-WebRequest -UseBasicParsing -Uri '${escape(url)}' -OutFile '${escape(zip)}' -TimeoutSec 120`,
     ].join("; ")
     try {
-      await exec("powershell.exe", ["-NoProfile", "-NonInteractive", "-Command", command], { timeout: 130_000 })
+      await exec(host(), ["-NoProfile", "-NonInteractive", "-Command", command], { timeout: 130_000 })
       if (fs.statSync(zip).size === 0) throw new Error("下载内容为空")
     } catch (fallback) {
       throw new Error(
@@ -110,7 +126,7 @@ function detail(err: unknown, depth = 0): string {
 
 async function extract(zip: string, dest: string) {
   const command = `$global:ProgressPreference = 'SilentlyContinue'; Expand-Archive -LiteralPath '${escape(zip)}' -DestinationPath '${escape(dest)}' -Force`
-  await exec("powershell.exe", ["-NoProfile", "-NonInteractive", "-Command", command])
+  await exec(host(), ["-NoProfile", "-NonInteractive", "-Command", command])
 }
 
 function place(source: string, target: string) {
