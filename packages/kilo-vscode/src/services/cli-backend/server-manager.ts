@@ -19,7 +19,6 @@ import {
   writeServerState,
   type ServerState,
 } from "./server-state"
-
 export interface ServerInstance {
   port: number
   password: string

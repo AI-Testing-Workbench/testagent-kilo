@@ -1,0 +1,130 @@
+import * as fs from "fs"
+import * as path from "path"
+import type * as vscode from "vscode"
+import { exec } from "../../util/process"
+
+/**
+ * On-demand ps-bash installer.
+ *
+ * ps-bash (https://github.com/standardbeagle/ps-bash) is a POSIX-compatible shell for
+ * Windows. Windows PowerShell 5.1 strips embedded double quotes when handing arguments
+ * to native executables, which corrupts inline JSON bodies; ps-bash runs commands
+ * through the PowerShell SDK instead of rebuilding a command line, so the quotes
+ * survive.
+ *
+ * Unlike ripgrep, ps-bash is never downloaded automatically: the settings UI shows a
+ * download button and only fetches the zip when the user clicks it. The archive is
+ * mirrored on the intranet (GitHub release path layout) and extracted into the
+ * VS Code's writable global storage directory. The user then picks the path from
+ * the available terminals list; the CLI never defaults to ps-bash.
+ */
+const VERSION = "0.14.0"
+const ZIP = `ps-bash-v${VERSION}-win-x64.zip`
+const EXE = "ps-bash.exe"
+const URL = `${decodeURIComponent(atob("aHR0cHMlM0ElMkYlMkZ0ZXN0YWdlbnQtcHMtYmFzaC1kb3dubG9hZC5wYWFzdWF0LmNtYmNoaW5hLmNu"))}/standardbeagle/ps-bash/releases/download/v${VERSION}/${ZIP}`
+
+let inflight: Promise<string> | undefined
+
+/** Installed ps-bash executable under the extension bin directory. */
+export function psBashPath(context: vscode.ExtensionContext): string {
+  return path.join(context.globalStorageUri.fsPath, "ps-bash", EXE)
+}
+
+export function isInstalled(context: vscode.ExtensionContext): boolean {
+  return process.platform === "win32" && fs.existsSync(psBashPath(context))
+}
+
+/** Download and install ps-bash on demand. Only triggered by an explicit user click. */
+export async function downloadPsBash(context: vscode.ExtensionContext): Promise<string> {
+  if (process.platform !== "win32") throw new Error("ps-bash 仅支持 Windows")
+  if (inflight) return inflight
+  inflight = install(context)
+  try {
+    return await inflight
+  } finally {
+    // 下载失败后允许再次点击重试。
+    inflight = undefined
+  }
+}
+
+async function install(context: vscode.ExtensionContext): Promise<string> {
+  const exe = psBashPath(context)
+  if (fs.existsSync(exe)) return exe
+
+  const root = path.join(context.globalStorageUri.fsPath, "ps-bash")
+  const tmp = path.join(context.globalStorageUri.fsPath, `.ps-bash-${process.pid}-${Date.now()}`)
+  try {
+    fs.mkdirSync(tmp, { recursive: true })
+    await fetchZip(path.join(tmp, ZIP))
+    await extract(path.join(tmp, ZIP), tmp)
+    if (!fs.existsSync(path.join(tmp, EXE))) throw new Error(`压缩包中未找到 ${EXE}`)
+    fs.rmSync(root, { recursive: true, force: true })
+    place(tmp, root)
+    return exe
+  } catch (err) {
+    throw new Error(`ps-bash 安装失败：${err instanceof Error ? err.message : String(err)}`, { cause: err })
+  } finally {
+    fs.rmSync(tmp, { recursive: true, force: true })
+  }
+}
+
+export async function fetchZip(zip: string, url = URL): Promise<void> {
+  const res = await fetch(url, { signal: AbortSignal.timeout(120_000) }).catch(async (err: unknown) => {
+    // 使用 Windows 系统证书和代理重试，避免扩展宿主的网络栈差异影响内网下载。
+    const command = [
+      "$ErrorActionPreference = 'Stop'",
+      "$ProgressPreference = 'SilentlyContinue'",
+      "[Net.ServicePointManager]::SecurityProtocol = [Net.ServicePointManager]::SecurityProtocol -bor [Net.SecurityProtocolType]::Tls12",
+      `Invoke-WebRequest -UseBasicParsing -Uri '${escape(url)}' -OutFile '${escape(zip)}' -TimeoutSec 120`,
+    ].join("; ")
+    try {
+      await exec("powershell.exe", ["-NoProfile", "-NonInteractive", "-Command", command], { timeout: 130_000 })
+      if (fs.statSync(zip).size === 0) throw new Error("下载内容为空")
+    } catch (fallback) {
+      throw new Error(
+        `下载地址：${url}；网络请求失败：${detail(err)}；Windows 系统下载失败：${detail(fallback)}。请检查内网/VPN、代理和证书配置。`,
+        { cause: fallback },
+      )
+    }
+  })
+  if (!res) return
+  if (!res.ok) throw new Error(`下载返回 HTTP ${res.status} ${res.statusText}；下载地址：${url}`)
+  const buf = Buffer.from(await res.arrayBuffer())
+  if (buf.byteLength === 0) throw new Error(`下载内容为空；下载地址：${url}`)
+  fs.writeFileSync(zip, buf)
+}
+
+function detail(err: unknown, depth = 0): string {
+  if (!(err instanceof Error)) return String(err)
+  const code = "code" in err ? ` [${String(err.code)}]` : ""
+  const nested =
+    depth < 5
+      ? err instanceof AggregateError
+        ? err.errors.map((item: unknown) => detail(item, depth + 1)).join("；")
+        : err.cause
+          ? detail(err.cause, depth + 1)
+          : ""
+      : ""
+  return `${err.message}${code}${nested ? `；${nested}` : ""}`
+}
+
+async function extract(zip: string, dest: string) {
+  const command = `$global:ProgressPreference = 'SilentlyContinue'; Expand-Archive -LiteralPath '${escape(zip)}' -DestinationPath '${escape(dest)}' -Force`
+  await exec("powershell.exe", ["-NoProfile", "-NonInteractive", "-Command", command])
+}
+
+function place(source: string, target: string) {
+  try {
+    fs.renameSync(source, target)
+    return
+  } catch (err) {
+    if ((err as NodeJS.ErrnoException).code !== "EXDEV") throw err
+  }
+  fs.mkdirSync(target, { recursive: true })
+  fs.cpSync(source, target, { recursive: true })
+  fs.rmSync(source, { recursive: true, force: true })
+}
+
+function escape(value: string) {
+  return value.replaceAll("'", "''")
+}

@@ -20,7 +20,6 @@ import {
 } from "./server-state"
 import { type ServerInstance, ServerStartupError, toErrorMessage } from "./server-manager"
 import { spawnOwnerWatcher } from "./server-lifetime"
-
 const STARTUP_TIMEOUT_SECONDS = 30
 
 /**

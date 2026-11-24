@@ -1,5 +1,6 @@
 import { Component, createSignal, onMount, onCleanup, createMemo, Show, For } from "solid-js"
 import { Card } from "@kilocode/kilo-ui/card"
+import { Button } from "@kilocode/kilo-ui/button"
 import { Select } from "@kilocode/kilo-ui/select"
 import { showToast } from "@kilocode/kilo-ui/toast"
 import { useConfig } from "../../context/config"
@@ -30,6 +31,8 @@ const NormalSetting: Component = () => {
   const [gitInstalled, setGitInstalled] = createSignal<boolean | null>(null)
   const [runtime, setRuntime] = createSignal<"bun" | "nodejs">("nodejs")
   const [availableTerminals, setAvailableTerminals] = createSignal<AvailableTerminalInfo[]>([])
+  const [platform, setPlatform] = createSignal<string>("")
+  const [downloading, setDownloading] = createSignal(false)
 
   onMount(() => {
     vscode.postMessage({ type: "checkGitInstalled" })
@@ -62,6 +65,16 @@ const NormalSetting: Component = () => {
     }
     if (msg.type === "availableTerminalsResult") {
       setAvailableTerminals(msg.terminals)
+      setPlatform(msg.platform ?? "")
+    }
+    if (msg.type === "psBashDownloadResult") {
+      setDownloading(false)
+      if (msg.ok && msg.path) {
+        showToast({ variant: "success", title: "ps-bash 下载完成", description: `${msg.path}，可在下方列表中点击填入路径` })
+        vscode.postMessage({ type: "getAvailableTerminals" })
+      } else {
+        showToast({ variant: "error", title: "ps-bash 下载失败", description: msg.error ?? "未知错误，请检查内网连通性后重试" })
+      }
     }
   })
   onCleanup(unsubMsg)
@@ -76,6 +89,13 @@ const NormalSetting: Component = () => {
 
   const handleTerminalClick = (term: AvailableTerminalInfo) => {
     updateConfig({ shell: term.path })
+  }
+
+  const psBashInstalled = createMemo(() => availableTerminals().some((term) => term.name === "ps-bash"))
+
+  const handleDownload = () => {
+    setDownloading(true)
+    vscode.postMessage({ type: "downloadPsBash" })
   }
 
 
@@ -143,9 +163,21 @@ const NormalSetting: Component = () => {
                 "box-sizing": "border-box",
               }}
             />
-
           </div>
         </SettingsRow>
+
+        <Show when={platform() === "win32"}>
+          <SettingsRow title="ps-bash Shell" description="AI 写的命令多是 Linux 风格，在 Windows 默认终端里常会报错；用ps-bash兼容解决">
+            <Button
+              variant="secondary"
+              size="small"
+              disabled={downloading() || psBashInstalled()}
+              onClick={handleDownload}
+            >
+              {psBashInstalled() ? "ps-bash 已安装" : downloading() ? "正在下载 ps-bash..." : "下载 ps-bash"}
+            </Button>
+          </SettingsRow>
+        </Show>
         <Show when={availableTerminals().length > 0}>
           <div style={{ "margin": "10px 10px" }}>
             <div style={{ "font-size": "12px", color: "var(--vscode-descriptionForeground, #888)", "margin-bottom": "4px" }}>
