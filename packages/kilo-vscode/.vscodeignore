@@ -36,5 +36,5 @@ AGENTS.md
 !node_modules/node-notifier/**
 # testagent_change end
 
-# testagent_change - ps-bash archive is bundled into bin/ps-bash/ at build time
+# testagent_change - ps-bash is downloaded on demand into ~/.psbash/ps-bash, never shipped in the VSIX
 resources/**
