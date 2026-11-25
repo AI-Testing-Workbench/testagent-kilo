@@ -25,6 +25,9 @@ export class DiffViewerProvider implements vscode.Disposable {
   private gitOps: GitOps
   private outputChannel: vscode.OutputChannel
   private onSendComments: ((comments: unknown[], autoSend: boolean) => void) | undefined
+  // testagent_change start - webview 就绪标记,用于隐藏后重新可见时恢复轮询
+  private ready = false
+  // testagent_change end
 
   constructor(
     private readonly extensionUri: vscode.Uri,
@@ -64,6 +67,7 @@ export class DiffViewerProvider implements vscode.Disposable {
 
   private wirePanel(panel: vscode.WebviewPanel): void {
     this.panel = panel
+    this.ready = false
 
     panel.iconPath = {
       light: vscode.Uri.joinPath(this.extensionUri, "assets", "icons", "kilo-light.png"),
@@ -72,6 +76,20 @@ export class DiffViewerProvider implements vscode.Disposable {
 
     panel.webview.onDidReceiveMessage((msg) => this.onMessage(msg), undefined, [])
     panel.webview.html = this.getHtml(panel.webview)
+
+    // testagent_change start - 面板隐藏即停止 2.5s diff 轮询,重新可见时恢复;retainContextWhenHidden 下 webview 不会再发 webviewReady
+    panel.onDidChangeViewState(
+      (e) => {
+        if (!e.webviewPanel.visible) {
+          this.stopDiffPolling()
+          return
+        }
+        if (this.ready && !this.diffInterval) this.startDiffPolling()
+      },
+      undefined,
+      [],
+    )
+    // testagent_change end
 
     panel.onDidDispose(() => {
       this.log("Panel disposed")
@@ -84,6 +102,7 @@ export class DiffViewerProvider implements vscode.Disposable {
     const type = msg.type as string
 
     if (type === "webviewReady") {
+      this.ready = true
       this.post({
         type: "ready",
         serverInfo: this.connectionService.getServerInfo(), // testagent_change - add serverInfo
@@ -155,13 +174,10 @@ export class DiffViewerProvider implements vscode.Disposable {
   }
 
   private async initialFetch(): Promise<void> {
-    console.log("[TestAgent] DiffViewer: 🔍 initialFetch started") // testagent_change
     this.post({ type: "diffViewer.loading", loading: true })
 
     const target = await this.resolveLocalDiffTarget()
-    console.log("[TestAgent] DiffViewer: 🎯 Resolved target:", target) // testagent_change
     if (!target) {
-      console.log("[TestAgent] DiffViewer: ⚠️ No target resolved, sending empty diffs") // testagent_change
       this.post({ type: "diffViewer.diffs", diffs: [] })
       this.post({ type: "diffViewer.loading", loading: false })
       return
@@ -170,44 +186,20 @@ export class DiffViewerProvider implements vscode.Disposable {
     this.cachedDiffTarget = target
 
     try {
-      console.log("[TestAgent] DiffViewer: 🔌 Connecting to CLI...") // testagent_change
       await this.connectionService.connect(target.directory)
       const client = this.connectionService.getClient()
-      const serverInfo = this.connectionService.getServerInfo() // testagent_change
-      console.log("[TestAgent] DiffViewer: 🌐 Server info:", serverInfo) // testagent_change
-      console.log("[TestAgent] DiffViewer: 📡 Calling worktree.diff API...") // testagent_change
-      console.log("[TestAgent] DiffViewer: 📡 Request params:", {
-        directory: target.directory,
-        base: target.baseBranch,
-      }) // testagent_change
       const response = await client.worktree.diff(
         { directory: target.directory, base: target.baseBranch },
         { throwOnError: true },
       )
-
-      console.log("[TestAgent] DiffViewer: 📦 Full API response:", JSON.stringify(response, null, 2)) // testagent_change
-      console.log("[TestAgent] DiffViewer: 📦 response.data:", response.data) // testagent_change
-      console.log(
-        "[TestAgent] DiffViewer: 📦 response.data type:",
-        typeof response.data,
-        "isArray:",
-        Array.isArray(response.data),
-      ) // testagent_change
-
       // testagent_change start - handle non-array response
       const diffs = Array.isArray(response.data) ? response.data : []
-      if (!Array.isArray(response.data)) {
-        console.warn("[TestAgent] DiffViewer: ⚠️ API returned non-array data, using empty array") // testagent_change
-      }
       // testagent_change end
 
       this.lastDiffHash = hashFileDiffs(diffs)
-
-      console.log("[TestAgent] DiffViewer: ✅ Initial diff complete:", diffs.length, "file(s)") // testagent_change
       this.log(`Initial diff: ${diffs.length} file(s)`)
       this.post({ type: "diffViewer.diffs", diffs })
     } catch (err) {
-      console.error("[TestAgent] DiffViewer: ❌ Failed to fetch initial diff:", err) // testagent_change
       this.log("Failed to fetch initial diff:", err)
       this.post({ type: "diffViewer.diffs", diffs: [] }) // testagent_change - send empty array on error
     } finally {

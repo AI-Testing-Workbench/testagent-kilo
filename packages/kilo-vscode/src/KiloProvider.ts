@@ -146,6 +146,8 @@ import type { Agent } from "@kilocode/sdk/v2/client"
 type KiloProviderOptions = {
   projectDirectory?: string | null
   slimEditMetadata?: boolean
+  /** testagent_change - 徽章统计轮询开关;Settings/Marketplace 等不渲染徽章的面板传 false,避免每个 provider 各起一个 git 轮询器 */
+  statsPolling?: boolean
 }
 
 type ConfigPatch = Partial<Config> & {
@@ -414,6 +416,9 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
   // testagent_change end
   private readonly instanceId = crypto.randomUUID()
   private webviewType: "sidebar" | "panel" | "unknown" = "unknown" // testagent_change
+  // testagent_change start - 面板级徽章轮询开关
+  private readonly statsPolling: boolean
+  // testagent_change end
 
   private webview: vscode.Webview | null = null
   private webviewView: vscode.WebviewView | null = null // testagent_change - store view reference for visibility check
@@ -558,6 +563,7 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
   ) {
     this.projectDirectory = options?.projectDirectory
     this.slimEditMetadata = options?.slimEditMetadata ?? true
+    this.statsPolling = options?.statsPolling ?? true // testagent_change
     KiloProvider.instances.add(this) // testagent_change
     // testagent_change start - use the shared workspace registry for cloud history
     const ui: CloudGitUi = {
@@ -865,10 +871,16 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
     this.setupWebviewMessageHandler(panel.webview)
     this.viewStateDisposable?.dispose()
     this.visibleTaskStreams.setActive(panel.active)
+    // testagent_change start - 面板隐藏时停掉徽章轮询,与侧边栏可见性门控对齐
     this.viewStateDisposable = panel.onDidChangeViewState(() => {
       this.visibleTaskStreams.setActive(panel.active)
       this.focusSession(panel.active ? this.currentSession?.id : undefined)
+      if (this.statsPoller) {
+        this.statsPoller.setEnabled(panel.visible)
+        this.statsPoller.setVisible(panel.visible)
+      }
     })
+    // testagent_change end
     this.initializeConnection()
   }
 
@@ -5877,6 +5889,10 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
   // ── Worktree stats polling (sidebar diff badge) ──────────────────
 
   private startStatsPolling(): void {
+    // testagent_change start - 不渲染徽章的面板(Settings/Marketplace 等)不启动轮询,
+    // 避免每个 provider 实例各自 spawn 一轮 git 命令
+    if (!this.statsPolling) return
+    // testagent_change end
     this.statsPoller?.stop()
     this.statsGitOps?.dispose()
     const git = new GitOps({ log: () => {} })

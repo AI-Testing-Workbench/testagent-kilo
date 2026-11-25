@@ -12,7 +12,7 @@
  * updates bindings in place (unlike React). Even 1000+ bars are fine.
  */
 
-import { Component, Index, createMemo, createEffect, on, onCleanup } from "solid-js"
+import { Component, Index, createEffect, createSignal, on, onCleanup } from "solid-js"
 import { Tooltip } from "@kilocode/kilo-ui/tooltip"
 import { useSession } from "../../context/session"
 import { color, label } from "../../utils/timeline/colors"
@@ -68,8 +68,39 @@ export const TaskTimeline: Component = () => {
     return result
   }
 
-  const bars = createMemo(() => collect(messages(), allParts()))
   const busy = () => session.status() === "busy"
+
+  // testagent_change start
+  // 流式期间 parts 每 ~32ms 批量更新一次;旧实现是 createMemo 全量 collect,
+  // 每次批次都会对全部 part 重新分配 label/color/sizes 字符串与对象,
+  // 会话越长开销越大(O(N)/批 × ~30 批/秒),是任务运行中渲染进程 CPU 与
+  // GC churn 持续上涨的主因之一。这里改为:part 总数或任务状态变化时立即重算,
+  // 纯文本增长最多每 1s 重算一次(高度近似,任务结束立即修正)。
+  const [bars, setBars] = createSignal<TimelineBar[]>([])
+  let timer: ReturnType<typeof setTimeout> | undefined
+  let lastSig = ""
+  const refresh = () => setBars(collect(messages(), allParts()))
+  const stop = () => {
+    if (timer) clearTimeout(timer)
+    timer = undefined
+  }
+  onCleanup(stop)
+  createEffect(() => {
+    const total = messages().reduce((n, m) => n + session.getParts(m.id).length, 0)
+    const sig = `${messages().length}:${busy()}:${total}`
+    if (sig !== lastSig) {
+      lastSig = sig
+      stop()
+      refresh()
+      return
+    }
+    if (!timer)
+      timer = setTimeout(() => {
+        timer = undefined
+        refresh()
+      }, 1000)
+  })
+  // testagent_change end
 
   // Auto-scroll to the latest bar when new bars appear
   let prev = 0

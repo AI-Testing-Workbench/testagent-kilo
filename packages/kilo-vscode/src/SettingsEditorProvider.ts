@@ -74,7 +74,9 @@ export class SettingsEditorProvider implements vscode.Disposable {
       vscode.ViewColumn.One,
       {
         enableScripts: true,
-        retainContextWhenHidden: true,
+        // testagent_change start - 设置页低频访问,隐藏即释放 webview 堆(实测常驻约 500 MB)
+        retainContextWhenHidden: false,
+        // testagent_change end
         localResourceRoots: [this.extensionUri],
       },
     )
@@ -102,6 +104,8 @@ export class SettingsEditorProvider implements vscode.Disposable {
     // backend connectivity (config, providers, agents, profile, auth).
     const provider = new KiloProvider(this.extensionUri, this.connectionService, this.context, {
       projectDirectory,
+      // testagent_change - 设置页不渲染 diff 徽章,禁用统计轮询
+      statsPolling: false,
     })
     if (this.remoteService) {
       provider.setRemoteService(this.remoteService)

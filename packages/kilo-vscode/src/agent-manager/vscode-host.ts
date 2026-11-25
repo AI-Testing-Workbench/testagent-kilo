@@ -82,6 +82,8 @@ export class VscodeHost implements Host {
 
     const provider = new KiloProvider(this.extensionUri, this.connectionService, this.context, {
       slimEditMetadata: true,
+      // Agent Manager 有自己的 GitStatsPoller,这里禁用 provider 级徽章轮询避免重复 spawn git
+      statsPolling: false,
     })
     if (this.diffVirtual) {
       provider.setDiffVirtualProvider(this.diffVirtual)

@@ -71,7 +71,9 @@ export class GitStatsPoller {
   private visible = true
 
   constructor(private readonly options: GitStatsPollerOptions) {
-    this.intervalMs = options.intervalMs ?? 5000
+    // testagent_change start - 5s 轮询每轮 spawn 5~6 个 git 子进程,徽章场景 15s 足够;隐藏时仍为 60s
+    this.intervalMs = options.intervalMs ?? 15_000
+    // testagent_change end
     this.hiddenIntervalMs = options.hiddenIntervalMs ?? 60000
     this.git = options.git
   }
