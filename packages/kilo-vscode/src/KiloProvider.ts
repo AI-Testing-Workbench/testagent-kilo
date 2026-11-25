@@ -4012,6 +4012,7 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
   private async handleSdtCommand(
     text: string,
     sessionID?: string,
+    draftID?: string,
     providerID?: string,
     modelID?: string,
     messageID?: string,
@@ -4027,7 +4028,7 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
       return
     }
 
-    const resolved = await this.resolveSession(sessionID)
+    const resolved = await this.resolveSession(sessionID, draftID)
     if (!resolved) {
       void vscode.window.showErrorMessage("TestAgent: Not connected to CLI backend")
       return
@@ -4091,7 +4092,7 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
     console.log(thinkingEnabled)
     // testagent_change start - intercept /sdt-* commands for testflow
     if (text.startsWith("/sdt-")) {
-      await this.handleSdtCommand(text, sessionID, providerID, modelID, messageID, agent)
+      await this.handleSdtCommand(text, sessionID, draftID, providerID, modelID, messageID, agent)
       return
     }
     // testagent_change end
@@ -4176,7 +4177,7 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
   ): Promise<void> {
     // testagent_change start - intercept sdt-* commands for testflow
     if (command.startsWith("sdt-")) {
-      await this.handleSdtCommand(`/${command} ${args}`.trim(), sessionID, providerID, modelID, messageID, agent)
+      await this.handleSdtCommand(`/${command} ${args}`.trim(), sessionID, draftID, providerID, modelID, messageID, agent)
       return
     }
     // testagent_change end
