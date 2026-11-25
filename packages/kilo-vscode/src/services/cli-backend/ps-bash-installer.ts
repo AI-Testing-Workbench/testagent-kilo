@@ -41,9 +41,15 @@ function host(): string {
   throw new Error("未找到可用的 PowerShell（powershell.exe 或 pwsh.exe）")
 }
 
+// globalStorageUri.fsPath 的盘符被 vscode-uri 规范化为小写（c:\...），统一转大写，
+// 与终端列表里硬编码的系统终端路径（C:/...）保持一致，避免脏检查因大小写重复写配置。
+function upper(file: string) {
+  return file.replace(/^([a-z])/, (m) => m.toUpperCase())
+}
+
 /** Installed ps-bash executable under the extension bin directory. */
 export function psBashPath(context: vscode.ExtensionContext): string {
-  return path.join(context.globalStorageUri.fsPath, "ps-bash", EXE)
+  return upper(path.join(context.globalStorageUri.fsPath, "ps-bash", EXE))
 }
 
 export function isInstalled(context: vscode.ExtensionContext): boolean {
