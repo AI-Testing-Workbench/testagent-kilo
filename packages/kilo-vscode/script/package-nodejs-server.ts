@@ -91,7 +91,8 @@ await fs.cp(serverDist, TARGET, { recursive: true })
 
 // Step 2.5: ps-bash (Windows POSIX shell) is no longer bundled. The settings UI offers a
 // download button that fetches the zip from the intranet on demand and extracts it into
-// bin/ps-bash/; see src/services/cli-backend/ps-bash-installer.ts.
+// ~/.psbash/ps-bash (ps-bash's own user-state dir, where host.log lives);
+// see src/services/cli-backend/ps-bash-installer.ts.
 
 // Step 3: Install dependencies (for native node-pty bindings)
 console.log("Step 3: Installing nodejs-server dependencies...")

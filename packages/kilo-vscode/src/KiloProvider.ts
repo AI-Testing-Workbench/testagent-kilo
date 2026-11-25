@@ -5830,8 +5830,8 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
 
     if (platform === "win32") {
       // testagent_change start - ps-bash downloaded from the settings UI (POSIX-compatible shell)
-      if (this.extensionContext && isInstalled(this.extensionContext)) {
-        const psBash = psBashPath(this.extensionContext)
+      if (isInstalled()) {
+        const psBash = psBashPath()
         result.push({ name: "ps-bash", path: psBash.replace(/\\/g, "/"), description: "POSIX 兼容 shell（手动下载）" })
       }
       // testagent_change end

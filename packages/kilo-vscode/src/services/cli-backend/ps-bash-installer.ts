@@ -1,4 +1,5 @@
 import * as fs from "fs"
+import * as os from "os"
 import * as path from "path"
 import type * as vscode from "vscode"
 import { exec } from "../../util/process"
@@ -14,14 +15,21 @@ import { exec } from "../../util/process"
  *
  * Unlike ripgrep, ps-bash is never downloaded automatically: the settings UI shows a
  * download button and only fetches the zip when the user clicks it. The archive is
- * mirrored on the intranet (GitHub release path layout) and extracted into the
- * VS Code's writable global storage directory. The user then picks the path from
- * the available terminals list; the CLI never defaults to ps-bash.
+ * mirrored on the intranet (GitHub release path layout) and extracted into ps-bash's
+ * own user-state directory (~/.psbash/ps-bash), where host.log already lives, so the
+ * install and its runtime state share one profile-independent location. The user then
+ * picks the path from the available terminals list; the CLI never defaults to ps-bash.
  */
 const VERSION = "0.14.0"
 const ZIP = `ps-bash-v${VERSION}-win-x64.zip`
 const EXE = "ps-bash.exe"
 const URL = `${decodeURIComponent(atob("aHR0cHMlM0ElMkYlMkZ0ZXN0YWdlbnQtcHMtYmFzaC1kb3dubG9hZC5wYWFzdWF0LmNtYmNoaW5hLmNu"))}/standardbeagle/ps-bash/releases/download/v${VERSION}/${ZIP}`
+
+// ps-bash 官方用户态目录：host.log、ai-providers.json、history 都写在这里。
+// 安装包放其下 ps-bash/ 子目录避免与状态文件混放；路径不绑定 VS Code profile，
+// 扩展升级或切换发行版（tscode/insiders）后配置里的绝对路径依然有效。
+const DIR = path.join(os.homedir(), ".psbash")
+const ROOT = path.join(DIR, "ps-bash")
 
 let inflight: Promise<string> | undefined
 
@@ -41,19 +49,19 @@ function host(): string {
   throw new Error("未找到可用的 PowerShell（powershell.exe 或 pwsh.exe）")
 }
 
-// globalStorageUri.fsPath 的盘符被 vscode-uri 规范化为小写（c:\...），统一转大写，
-// 与终端列表里硬编码的系统终端路径（C:/...）保持一致，避免脏检查因大小写重复写配置。
+// 盘符统一转大写，与终端列表里硬编码的系统终端路径（C:/...）保持一致，
+// 避免脏检查因大小写差异重复写配置。
 function upper(file: string) {
   return file.replace(/^([a-z])/, (m) => m.toUpperCase())
 }
 
-/** Installed ps-bash executable under the extension bin directory. */
-export function psBashPath(context: vscode.ExtensionContext): string {
-  return upper(path.join(context.globalStorageUri.fsPath, "ps-bash", EXE))
+/** Installed ps-bash executable under the ps-bash user-state directory. */
+export function psBashPath(): string {
+  return upper(path.join(ROOT, EXE))
 }
 
-export function isInstalled(context: vscode.ExtensionContext): boolean {
-  return process.platform === "win32" && fs.existsSync(psBashPath(context))
+export function isInstalled(): boolean {
+  return process.platform === "win32" && fs.existsSync(psBashPath())
 }
 
 /** Download and install ps-bash on demand. Only triggered by an explicit user click. */
@@ -70,18 +78,25 @@ export async function downloadPsBash(context: vscode.ExtensionContext): Promise<
 }
 
 async function install(context: vscode.ExtensionContext): Promise<string> {
-  const exe = psBashPath(context)
+  const exe = psBashPath()
   if (fs.existsSync(exe)) return exe
 
-  const root = path.join(context.globalStorageUri.fsPath, "ps-bash")
-  const tmp = path.join(context.globalStorageUri.fsPath, `.ps-bash-${process.pid}-${Date.now()}`)
+  // 旧版装在扩展 globalStorage 下，存在则整体迁移，用户无需重新下载。
+  const legacy = path.join(context.globalStorageUri.fsPath, "ps-bash")
+  if (fs.existsSync(path.join(legacy, EXE))) {
+    fs.rmSync(ROOT, { recursive: true, force: true })
+    place(legacy, ROOT)
+    return exe
+  }
+
+  const tmp = path.join(DIR, `.ps-bash-${process.pid}-${Date.now()}`)
   try {
     fs.mkdirSync(tmp, { recursive: true })
     await fetchZip(path.join(tmp, ZIP))
     await extract(path.join(tmp, ZIP), tmp)
     if (!fs.existsSync(path.join(tmp, EXE))) throw new Error(`压缩包中未找到 ${EXE}`)
-    fs.rmSync(root, { recursive: true, force: true })
-    place(tmp, root)
+    fs.rmSync(ROOT, { recursive: true, force: true })
+    place(tmp, ROOT)
     return exe
   } catch (err) {
     throw new Error(`ps-bash 安装失败：${err instanceof Error ? err.message : String(err)}`, { cause: err })
