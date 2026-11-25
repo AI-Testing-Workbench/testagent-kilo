@@ -14,7 +14,14 @@ export interface SdtStage {
   stage_name: string
   status: SdtStageStatus
   status_text: string
-  execute_end_time: string | null
+  /** 开始执行时间：memory 里的 "YYYY-MM-DD HH:mm:ss" 字符串，简单命令上报毫秒时间戳 */
+  execute_start_time?: string | number | null
+  /** 结束执行时间：同上；执行中为 null */
+  execute_end_time?: string | number | null
+  /** 本阶段 AI 输入 token（未采集时为 null/缺省） */
+  token_input?: number | null
+  /** 本阶段 AI 输出 token（未采集时为 null/缺省） */
+  token_output?: number | null
 }
 
 export interface SdtProgressState {
