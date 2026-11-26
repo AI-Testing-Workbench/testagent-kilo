@@ -64,6 +64,8 @@ function matchToolRequest<T extends { tool?: { callID: string; messageID: string
 
 interface AssistantMessageProps {
   message: SDKAssistantMessage
+  /** Rendered part chunk for row-level virtualization; falls back to the store. */
+  parts?: SDKPart[]
   readonly?: boolean
   showAssistantCopyPartID?: string | null
 }
@@ -394,9 +396,9 @@ export const AssistantMessage: Component<AssistantMessageProps> = (props) => {
   const session = useSession()
 
   const parts = createMemo(() => {
-    const stored = data.store.part?.[props.message.id]
-    if (!stored) return []
-    return (stored as SDKPart[]).filter((part) => isRenderable(part))
+    const source = props.parts ?? data.store.part?.[props.message.id]
+    if (!source) return []
+    return (source as SDKPart[]).filter((part) => isRenderable(part))
   })
 
   return (

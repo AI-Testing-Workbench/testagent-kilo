@@ -1,13 +1,15 @@
 /**
  * MessageList component
- * Scrollable turn-based message list with virtualization.
- * Each user message is rendered as a VscodeSessionTurn — a custom component that
- * renders all assistant parts as a flat, verbose list with no context grouping,
- * and fully expands sub-agent (task tool) parts inline.
+ * Scrollable transcript with row-level virtualization.
+ * Turns are split into small rows (user / assistant part chunks / timing /
+ * error / diff) by transcriptRows(); completed history and stable live chunks
+ * are virtualized, while the growing tail of the active turn renders directly
+ * outside the virtualizer so measurement corrections cannot fight the
+ * bottom-pinned auto-scroll.
  * Shows recent sessions in the empty state for quick resumption.
  */
 
-import { Component, For, Show, createEffect, createMemo, createSignal, on, onCleanup } from "solid-js"
+import { type Component, type JSX, For, Show, createEffect, createMemo, createSignal, on, onCleanup } from "solid-js"
 import { Icon } from "@kilocode/kilo-ui/icon"
 import { Spinner } from "@kilocode/kilo-ui/spinner"
 import { useDialog } from "@kilocode/kilo-ui/context/dialog"
@@ -17,7 +19,8 @@ import { useServer } from "../../context/server"
 import { useLanguage } from "../../context/language"
 import { formatRelativeDate } from "../../utils/date"
 import { FeedbackDialog } from "./FeedbackDialog"
-import { VscodeSessionTurn } from "./VscodeSessionTurn"
+import { TranscriptRowView } from "./TranscriptRow"
+import { createRowHandoff } from "./transcript-row-handoff"
 import { RevertBanner } from "./RevertBanner"
 import { AccountSwitcher } from "../shared/AccountSwitcher"
 import { KiloNotifications } from "./KiloNotifications"
@@ -34,6 +37,14 @@ import {
   stableTurns,
   type MessageTurn,
 } from "../../context/session-queue"
+import {
+  closedTurns,
+  partitionRows,
+  retainTurn,
+  transcriptRows,
+  type TranscriptHold,
+  type TranscriptRow,
+} from "../../context/transcript-rows"
 import type { QuestionRequest, SuggestionRequest } from "../../types/messages"
 import { PromptRail } from "./PromptRail"
 import {
@@ -44,6 +55,15 @@ import {
   type PromptRailEntry,
   type PromptRailItem,
 } from "./prompt-rail"
+import {
+  getMeasurement,
+  getScroll,
+  layoutFingerprint,
+  resolveAnchor,
+  rowFingerprint,
+  setMeasurement,
+  setScroll,
+} from "./transcript-cache"
 
 interface MessageListProps {
   onSelectSession?: (id: string) => void
@@ -56,6 +76,23 @@ interface MessageListProps {
   /** When true (subagent viewer), replace the welcome screen with an initializing indicator */
   readonly?: boolean
 }
+
+/**
+ * Container for Virtua rows. Virtua sizes it from estimated row heights and
+ * places rows inside it. A row that mounts taller than its estimate overflows
+ * the container and grows the scroller; the bottom pin then scrolls the row
+ * out of range before it is measured, and this repeats every frame. Clipping
+ * vertically (chat-layout.css) makes only measured sizes set the scroll height.
+ */
+const VirtualBox: Component<{
+  ref?: HTMLDivElement | ((el: HTMLDivElement) => void)
+  style?: JSX.CSSProperties
+  children?: JSX.Element
+}> = (box) => (
+  <div ref={box.ref} style={box.style} data-slot="message-list-virtual">
+    {box.children}
+  </div>
+)
 
 export const MessageList: Component<MessageListProps> = (props) => {
   const session = useSession()
@@ -83,7 +120,7 @@ export const MessageList: Component<MessageListProps> = (props) => {
   const [scrollEl, setScrollEl] = createSignal<HTMLElement>()
   const [virtualizer, setVirtualizer] = createSignal<VirtualizerHandle>()
   const [height, setHeight] = createSignal(0)
-  const positions = new Map<string, { top: number; userScrolled: boolean }>()
+  const [layout, setLayout] = createSignal<string>()
 
   const boundary = () => session.revert()?.messageID
   const turns = createMemo((prev: MessageTurn[] | undefined) =>
@@ -99,24 +136,93 @@ export const MessageList: Component<MessageListProps> = (props) => {
 
   const activeUserID = createMemo(() => getActiveUserMessageID(session.messages(), session.statusInfo()))
   const queuedIDs = createMemo(() => new Set(queuedUserMessageIDs(session.messages(), session.statusInfo())))
-  const visibleTurns = createMemo(() => turns().filter((turn) => !queuedIDs().has(turn.user.id)))
-  const queuedTurns = createMemo(() => turns().filter((turn) => queuedIDs().has(turn.user.id)))
-  const indexes = createMemo(() => new Map(visibleTurns().map((turn, index) => [turn.id, index])))
-  // Row keys + lookup so virtua is fed stable strings; turn objects resolved by
-  // id keep fine-grained updates without recreating rows mid-stream.
-  const keys = createMemo(() => visibleTurns().map((turn) => turn.id))
-  const rowMap = createMemo(() => new Map(visibleTurns().map((turn) => [turn.id, turn])))
+  const closedIDs = createMemo(() => closedTurns(session.messages()))
 
-  const activeUserIndex = createMemo(() => {
-    const active = activeUserID()
-    if (!active) return -1
-    return visibleTurns().findIndex((turn) => turn.user.id === active)
+  const rows = createMemo((prev: TranscriptRow[] | undefined) => {
+    const id = activeUserID()
+    return transcriptRows(
+      turns(),
+      session.getParts,
+      {
+        queued: queuedIDs(),
+        live: id ? new Set([id]) : new Set<string>(),
+        closed: closedIDs(),
+        idle: session.status() === "idle",
+      },
+      prev,
+    )
   })
 
-  const save = (id: string | undefined) => {
+  // The active turn keeps rendering directly after it stops being active
+  // (next turn starts) so its rows hand off to the virtualizer once, not per step.
+  const [held, setHeld] = createSignal<TranscriptHold>()
+  createEffect(() => {
+    const id = activeUserID()
+    const sid = session.currentSessionID()
+    const paused = autoScroll.userScrolled()
+    setHeld((prev) => retainTurn(prev, sid, id, paused))
+  })
+  const direct = createMemo(() => {
+    const item = held()
+    const ids = new Set<string>()
+    if (item && item.sid === session.currentSessionID()) ids.add(item.turn)
+    const active = activeUserID()
+    if (active) ids.add(active)
+    return ids
+  })
+  const partition = createMemo(() => partitionRows(rows(), direct()))
+  const tail = createMemo(() => partition().direct.map((row) => row.key))
+  const lookup = createMemo(() => new Map(rows().map((row) => [row.key, row])))
+  const keys = createMemo(() => partition().virtual.map((row) => row.key))
+  const indexes = createMemo(() => new Map(keys().map((key, index) => [key, index])))
+  const fingerprint = createMemo(() => rowFingerprint(keys()))
+
+  // virtua 0.42 has no findItemIndex; binary-search getItemOffset for the
+  // first virtual row starting at or above the given offset.
+  const topIndex = (handle: VirtualizerHandle, count: number, offset: number) => {
+    let lo = 0
+    let hi = count - 1
+    while (lo < hi) {
+      const mid = (lo + hi + 1) >> 1
+      if (handle.getItemOffset(mid) <= offset + 1) lo = mid
+      else hi = mid - 1
+    }
+    return lo
+  }
+
+  let tracked = { id: session.currentSessionID(), keys: [] as string[], fingerprint: rowFingerprint([]) }
+  createEffect(() => {
+    const id = session.currentSessionID()
+    const current = keys()
+    const value = fingerprint()
+    if (!id || session.loading() || tracked.id !== id) return
+    tracked = { id, keys: current, fingerprint: value }
+  })
+
+  const measurement = createMemo(() => {
+    const id = session.currentSessionID()
+    const token = layout()
+    if (!id || !token || session.loading() || keys().length === 0) return undefined
+    return getMeasurement(id, fingerprint(), token)
+  })
+
+  // Persist measured row sizes and a row-anchored scroll position per session
+  // so re-entering a long transcript restores exactly where the user left off,
+  // without re-measuring every row (scrollbar bounce, position drift).
+  const save = (id: string | undefined, handle?: VirtualizerHandle, saved = tracked) => {
     const el = scrollEl()
-    if (!id || !el) return
-    positions.set(id, { top: el.scrollTop, userScrolled: autoScroll.userScrolled() })
+    if (!id || !el || saved.id !== id) return
+    const token = layout()
+    if (handle && token && saved.keys.length > 0) setMeasurement(id, saved.fingerprint, token, handle.cache)
+    if (!autoScroll.userScrolled()) {
+      setScroll(id, { type: "bottom" })
+      return
+    }
+    if (!handle || saved.keys.length === 0) return
+    const index = topIndex(handle, saved.keys.length, handle.scrollOffset)
+    const key = saved.keys[index]
+    if (!key) return
+    setScroll(id, { type: "anchor", key, offset: handle.scrollOffset - handle.getItemOffset(index) })
   }
 
   const maybeLoadOlder = () => {
@@ -125,32 +231,59 @@ export const MessageList: Component<MessageListProps> = (props) => {
     session.loadOlderMessages()
   }
 
+  // A synthetic scroll only exists to let virtua re-read the offset after a
+  // remount. It must not page history for the session that just became active.
+  let syncing = false
   const handleScroll = () => {
     autoScroll.handleScroll()
-    maybeLoadOlder()
+    if (!syncing) maybeLoadOlder()
     scheduleActive()
   }
 
   let resize: ResizeObserver | undefined
+  const refreshLayout = () => {
+    const el = scrollEl()
+    if (!el) return
+    const style = getComputedStyle(el)
+    setHeight(el.clientHeight)
+    setLayout(
+      layoutFingerprint({
+        width: Math.round(el.clientWidth),
+        ratio: window.devicePixelRatio,
+        font: style.fontFamily,
+        size: style.fontSize,
+        line: style.lineHeight,
+      }),
+    )
+  }
   const setScrollRef = (el: HTMLElement | undefined) => {
     resize?.disconnect()
     setScrollEl(el)
     autoScroll.scrollRef(el)
     if (!el) {
       setHeight(0)
+      setLayout(undefined)
       return
     }
-    setHeight(el.clientHeight)
-    resize = new ResizeObserver(() => setHeight(el.clientHeight))
+    refreshLayout()
+    resize = new ResizeObserver(refreshLayout)
     resize.observe(el)
   }
 
-  onCleanup(() => resize?.disconnect())
+  window.addEventListener("resize", refreshLayout)
+  document.fonts?.addEventListener("loadingdone", refreshLayout)
+  onCleanup(() => {
+    resize?.disconnect()
+    window.removeEventListener("resize", refreshLayout)
+    document.fonts?.removeEventListener("loadingdone", refreshLayout)
+  })
 
   const [pending, setPending] = createSignal<{ sid: string; key: string }>()
 
-  const jump = (key: string) => {
+  // Rail/jump targets are turn ids; land on the turn's first row (user row).
+  const jump = (turn: string) => {
     autoScroll.pause()
+    const key = `${turn}:user`
     const index = indexes().get(key)
     if (index !== undefined) {
       const handle = virtualizer()
@@ -161,7 +294,7 @@ export const MessageList: Component<MessageListProps> = (props) => {
       }
     }
     const el = scrollEl()
-    const target = el?.querySelector<HTMLElement>(`[data-message="${CSS.escape(key)}"]`)
+    const target = el?.querySelector<HTMLElement>(`[data-row-key="${CSS.escape(key)}"]`)
     if (target) {
       setPending(undefined)
       target.scrollIntoView({ block: "start" })
@@ -186,7 +319,7 @@ export const MessageList: Component<MessageListProps> = (props) => {
       handle.scrollToIndex(index, { align: "start" })
       return
     }
-    const row = scrollEl()?.querySelector<HTMLElement>(`[data-message="${CSS.escape(target.key)}"]`)
+    const row = scrollEl()?.querySelector<HTMLElement>(`[data-row-key="${CSS.escape(target.key)}"]`)
     if (!row) return
     setPending(undefined)
     autoScroll.pause()
@@ -245,31 +378,35 @@ export const MessageList: Component<MessageListProps> = (props) => {
     if (item) jump(item.key)
   })
 
+  // Active rail item = the turn owning the row at the top of the viewport.
+  // Binary-search virtua offsets instead of scanning mounted rows: rect reads
+  // force a synchronous layout while streaming mutates the DOM every frame.
   const trackActive = () => {
-    const values = items()
-    if (values.length === 0) {
+    const list = items()
+    if (list.length === 0) {
       setActive(undefined)
       return
     }
+    const last = list.at(-1)?.turn
     const el = scrollEl()
     if (!el || el.scrollHeight <= el.clientHeight + 1) {
-      setActive(values.at(-1)?.key)
+      setActive(last)
       return
     }
-    const top = el.getBoundingClientRect().top + 1
-    const rows = el.querySelectorAll<HTMLElement>("[data-message]")
-    let next: { key: string; top: number } | undefined
-    for (const row of rows) {
-      const rect = row.getBoundingClientRect()
-      const key = row.dataset.message
-      if (!key || rect.bottom <= top) continue
-      if (rect.top <= top) {
-        setActive(key)
-        return
-      }
-      if (!next || rect.top < next.top) next = { key, top: rect.top }
+    const handle = virtualizer()
+    const virtual = partition().virtual
+    if (!handle || virtual.length === 0) {
+      setActive(last)
+      return
     }
-    setActive(next?.key ?? values.at(-1)?.key)
+    const offset = handle.scrollOffset
+    const end = handle.getItemOffset(virtual.length - 1) + handle.getItemSize(virtual.length - 1)
+    if (offset >= end) {
+      // Viewport top sits in the direct tail or queued rows → latest turn.
+      setActive(last)
+      return
+    }
+    setActive(virtual[topIndex(handle, virtual.length, offset)]?.turn ?? last)
   }
 
   let activeFrame: number | undefined
@@ -287,7 +424,7 @@ export const MessageList: Component<MessageListProps> = (props) => {
 
   createEffect(() => {
     items()
-    visibleTurns()
+    rows()
     scheduleActive()
   })
 
@@ -296,6 +433,7 @@ export const MessageList: Component<MessageListProps> = (props) => {
   createEffect(
     on(session.currentSessionID, (id, prev) => {
       save(prev)
+      tracked = { id, keys: [], fingerprint: rowFingerprint([]) }
       setPendingRestore(id)
     }),
   )
@@ -312,9 +450,11 @@ export const MessageList: Component<MessageListProps> = (props) => {
         if (pendingRestore() !== id) return
         const el = scrollEl()
         if (!el) return
-        const pos = positions.get(id)
-        if (pos?.userScrolled) {
-          el.scrollTop = pos.top
+        const state = getScroll(id)
+        const anchor = resolveAnchor(state, keys())
+        const handle = virtualizer()
+        if (state?.type === "anchor" && anchor && handle) {
+          handle.scrollToIndex(anchor.index, { offset: anchor.offset })
           autoScroll.pause()
         } else {
           autoScroll.forceScrollToBottom()
@@ -327,17 +467,45 @@ export const MessageList: Component<MessageListProps> = (props) => {
 
   onCleanup(() => save(session.currentSessionID()))
 
+  const handoff = createRowHandoff()
+  // Virtua keeps measured sizes by index, not by key. Give each session its
+  // own instance so rows never inherit another session's sizes.
+  const instance = () => (scrollEl() && partition().virtual.length > 0 ? session.currentSessionID() : undefined)
+  const Row: Component<{ id: string }> = (entry) => {
+    const key = entry.id
+    const peeked = lookup().get(key) ?? rows().find((row) => row.key === key)
+    if (!peeked) return undefined
+    // testagent_change start - hydrate synchronously before the first read so the
+    // row paints with store objects directly. Deferring to an effect would swap
+    // stash objects for store proxies right after mount; the identity change
+    // fails row equality and remounts every Part in the row (tool-card blink).
+    session.hydrateParts([peeked.message.id])
+    const initial = lookup().get(key) ?? peeked
+    // testagent_change end
+    return handoff(`${session.currentSessionID()}:${key}`, () => {
+      // A removed row can outlive its map entry until the handoff cleanup.
+      const row = createMemo<TranscriptRow>((previous) => lookup().get(key) ?? previous, initial)
+      return (
+        <TranscriptRowView
+          row={row()}
+          readonly={props.readonly}
+          onForkMessage={props.readonly ? undefined : props.onForkMessage}
+        />
+      ) as unknown as HTMLElement
+    })
+  }
+
   return (
     <div class="message-list-container">
+      {/* testagent_change - 沙箱下在首页顶部显示"打开沙箱浏览器"横幅 */}
       <Show when={isEmpty()}>
-        {/* testagent_change - 沙箱下在首页顶部显示"打开沙箱浏览器"横幅 */}
         <SandboxBrowserBanner />
         <div class="welcome-header">
           <AccountSwitcher class="account-switcher-welcome" />
           <KiloNotifications />
         </div>
       </Show>
-      <div ref={setScrollRef} onScroll={handleScroll} class="message-list" role="log" aria-live="polite">
+      <div class="message-list" ref={setScrollRef} onScroll={handleScroll} role="log" aria-live="polite">
         <div ref={autoScroll.contentRef} class={isEmpty() ? "message-list-content-empty" : "message-list-content"}>
           <Show when={session.loading()}>
             <div class="message-list-loading" role="status">
@@ -366,18 +534,18 @@ export const MessageList: Component<MessageListProps> = (props) => {
                     )}
                   </For>
                   <Show when={props.onShowHistory}>
-                    <button class="show-history-btn" onClick={() => props.onShowHistory?.()}>
+                    <button class="show-history-btn" onClick={() => props.onShowHistory}>
                       <Icon name="history" size="small" />
                       {language.t("session.showHistory")}
                     </button>
                   </Show>
-                </div>
-              </Show>
-              {/* testagent_change */}
-              {/* <button class="feedback-button" onClick={() => dialog.show(() => <FeedbackDialog />)}>
+                  {/* testagent_change */}
+                  {/* <button class="feedback-button" onClick={() => dialog.show(() => <FeedbackDialog />)}>
                 <Icon name="bubble-5" size="small" />
                 {language.t("feedback.button")}
               </button> */}
+                </div>
+              </Show>
             </div>
           </Show>
           <Show when={!session.loading() && !isEmpty()}>
@@ -392,59 +560,67 @@ export const MessageList: Component<MessageListProps> = (props) => {
                 {language.t("session.messages.loadEarlier")}
               </button>
             </Show>
-            <Show when={scrollEl()}>
-              <Virtualizer
-                ref={setVirtualizer}
-                data={keys()}
-                scrollRef={scrollEl()}
-                shift={session.messageMutation() === "prepend"}
-                overscan={6}
-                itemSize={260}
+            <Show when={partition().virtual.length > 0 || partition().direct.length > 0}>
+              <div
+                class="message-list-turns"
+                data-loaded-messages={session.messages().length}
+                data-row-count={partition().virtual.length}
+                data-direct-count={partition().direct.length}
+                data-queued-count={partition().queued.length}
               >
-                {(key, index) => {
-                  const turn = createMemo(() => rowMap().get(key))
-                  const queued = createMemo(() => {
-                    const active = activeUserIndex()
-                    if (active === -1) return false
-                    return index() > active
-                  })
-
-                  /* testagent_change start - prior renderer had no archive read-only guard
-                  return <VscodeSessionTurn turn={turn} queued={queued()} onForkMessage={props.onForkMessage} />
-                  testagent_change end */
-                  // testagent_change start - share the Local renderer while suppressing archive mutations
-                  return (
-                    <Show when={turn()}>
-                      {(t) => (
-                        <VscodeSessionTurn
-                          turn={t()}
-                          queued={queued()}
-                          readonly={props.readonly}
-                          onForkMessage={props.readonly ? undefined : props.onForkMessage}
-                        />
-                      )}
-                    </Show>
-                  )
-                  // testagent_change end
-                }}
-              </Virtualizer>
+                <Show when={instance()} keyed>
+                  {(sid) => {
+                    let handle: VirtualizerHandle | undefined
+                    // The old instance is gone before the switch effect runs,
+                    // so persist its sizes and position from its own disposal.
+                    onCleanup(() => save(sid, handle))
+                    const ref = (next?: VirtualizerHandle) => {
+                      if (next) handle = next
+                      setVirtualizer(next)
+                      const el = scrollEl()
+                      if (!next || !el) return
+                      // A new instance starts at offset 0. If the scroller is
+                      // already elsewhere and does not move again, no scroll
+                      // event would sync it, so report the position once.
+                      queueMicrotask(() => {
+                        if (virtualizer() !== next || Math.abs(el.scrollTop - next.scrollOffset) < 1) return
+                        syncing = true
+                        el.dispatchEvent(new Event("scroll"))
+                        syncing = false
+                      })
+                    }
+                    return (
+                      <Virtualizer
+                        ref={ref}
+                        as={VirtualBox}
+                        data={keys()}
+                        scrollRef={scrollEl()}
+                        shift={session.messageMutation() === "prepend"}
+                        cache={measurement()}
+                        overscan={10}
+                        itemSize={260}
+                      >
+                        {(key) => <Row id={key} />}
+                      </Virtualizer>
+                    )
+                  }}
+                </Show>
+                <For each={tail()}>{(key) => <Row id={key} />}</For>
+              </div>
             </Show>
             <Show when={boundary()}>
               <RevertBanner />
             </Show>
-            {/* testagent_change start - queued turns use the same archive action guard
-            <For each={queuedTurns()}>{(turn) => <VscodeSessionTurn turn={turn} queued />}</For>
-            testagent_change end */}
-            {/* testagent_change start - keep queued archive messages read-only */}
-            <For each={queuedTurns()}>
-              {(turn) => <VscodeSessionTurn turn={turn} queued readonly={props.readonly} />}
+            <For each={partition().queued}>
+              {(row) => (
+                <TranscriptRowView
+                  row={row}
+                  readonly={props.readonly}
+                  onForkMessage={props.readonly ? undefined : props.onForkMessage}
+                />
+              )}
             </For>
-            {/* testagent_change end */}
             <WorkingIndicator />
-            {/* testagent_change start - archive questions/suggestions are historical, not live requests
-            <For each={props.questions?.()}>{(req) => <QuestionDock request={req} />}</For>
-            <For each={props.suggestions?.()}>{(req) => <SuggestBar request={req} />}</For>
-            testagent_change end */}
             {/* testagent_change start - live request controls stay disabled in archive previews */}
             <Show when={!props.readonly}>
               <For each={props.questions?.()}>{(req) => <QuestionDock request={req} />}</For>

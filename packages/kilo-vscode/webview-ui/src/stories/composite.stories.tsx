@@ -11,7 +11,7 @@ import type { Meta, StoryObj } from "storybook-solidjs-vite"
 import type { AssistantMessage as SDKAssistantMessage, TextPart, ToolPart } from "@kilocode/sdk/v2"
 import { StoryProviders, defaultMockData, mockSessionValue } from "./StoryProviders"
 import { AssistantMessage } from "../components/chat/AssistantMessage"
-import { VscodeSessionTurn } from "../components/chat/VscodeSessionTurn"
+import { TranscriptRowView } from "../components/chat/TranscriptRow"
 import { ChatView } from "../components/chat/ChatView"
 import { Part } from "@kilocode/kilo-ui/message-part"
 import { registerVscodeToolOverrides } from "../components/chat/VscodeToolOverrides"
@@ -1040,11 +1040,15 @@ export const DiffSummaryCollapsed: Story = {
         <ServerContext.Provider value={server as any}>
           <SessionContext.Provider value={session as any}>
             <div style={{ width: "380px", padding: "12px" }}>
-              <VscodeSessionTurn
-                turn={{
-                  id: USER_MSG_ID,
-                  user: data.message[SESSION_ID][0] as any,
-                  assistant: [data.message[SESSION_ID][1] as any],
+              <TranscriptRowView
+                row={{
+                  type: "diff",
+                  key: `${USER_MSG_ID}:diff`,
+                  turn: USER_MSG_ID,
+                  queued: false,
+                  live: false,
+                  message: data.message[SESSION_ID][0] as any,
+                  diffs: mockDiffs,
                 }}
               />
             </div>

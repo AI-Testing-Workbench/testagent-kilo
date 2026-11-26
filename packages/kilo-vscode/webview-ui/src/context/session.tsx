@@ -185,7 +185,7 @@ interface SessionContextValue {
   getParts: (messageID: string) => Part[]
 
   // Move stashed parts into the reactive store for the given message IDs.
-  // Called by VscodeSessionTurn when the virtualizer renders a turn.
+  // Called by TranscriptRowView when the virtualizer renders a row.
   hydrateParts: (messageIDs: string[]) => void
 
   // testagent_change start 增加sdt进度卡片 SDT progress card state for current session
@@ -368,7 +368,7 @@ export const SessionProvider: ParentComponent = (props) => {
   const [pages, setPages] = createStore<Record<string, MessagePageState>>({})
 
   // Parts stash: holds parts from messagesLoaded outside the reactive store
-  // until a VscodeSessionTurn is rendered by the virtualizer and calls
+  // until a TranscriptRowView is rendered by the virtualizer and calls
   // hydrateParts(). This avoids writing parts for off-screen messages into
   // the store, which would trigger expensive DOM work for invisible content.
   const stash = new PartStash()

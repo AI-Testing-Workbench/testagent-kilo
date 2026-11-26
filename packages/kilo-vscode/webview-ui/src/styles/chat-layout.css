@@ -75,6 +75,19 @@
   padding: 12px 16px;
 }
 
+/* Rows that overflow Virtua's container must not change the scroll height
+   before Virtua measures them. See VirtualBox in MessageList.tsx. `clip` does
+   not create a scroll container, so sticky content keeps working. */
+[data-slot="message-list-virtual"] {
+  overflow: visible clip;
+}
+
+/* Queued rows are direct children of the gapped content container; their own
+   row padding would double the spacing between them. */
+.message-list-content > .vscode-session-turn {
+  padding-bottom: 0;
+}
+
 .message-list-loading {
   display: flex;
   flex-direction: column;
@@ -212,7 +225,7 @@
   gap: 12px;
   width: 100%;
   min-width: 0;
-  padding: 0 4px 12px;
+  padding: 0 4px 6px;
 }
 
 .vscode-session-turn-user {
