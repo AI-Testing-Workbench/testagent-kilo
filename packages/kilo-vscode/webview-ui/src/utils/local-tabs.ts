@@ -85,6 +85,23 @@ export function capTabs(state: LocalTabState): LocalTabState {
   return { ids, active: active && ids.includes(active) ? active : ids[0] }
 }
 
+// 超出上限时从最左边开始淘汰标签页（绝不淘汰当前 active），返回被淘汰的 id 供调用方清理草稿。
+export function trimTabs(state: LocalTabState, max = MAX_TABS): LocalTabState & { evicted: string[] } {
+  if (state.ids.length <= max) return { ids: state.ids, active: state.active, evicted: [] }
+  const evicted: string[] = []
+  const need = state.ids.length - max
+  let dropped = 0
+  const ids = state.ids.filter((id) => {
+    if (dropped < need && id !== state.active) {
+      dropped++
+      evicted.push(id)
+      return false
+    }
+    return true
+  })
+  return { ids, active: state.active, evicted }
+}
+
 // New composers become active immediately even before the backend creates a session.
 export function addPendingTab(state: LocalTabState, id: string): LocalTabState {
   return { ids: unique([...state.ids, id]), active: id }
