@@ -2056,6 +2056,9 @@ body.vscode-dark .slash-command-dropdown {
 
   [data-slot="permission-hint"] {
     font-size: 12px;
+    max-height: 150px;
+    overflow-y: auto;
+    word-break: break-all;
   }
 
   [data-slot="permission-patterns"] {
@@ -2063,6 +2066,8 @@ body.vscode-dark .slash-command-dropdown {
     flex-direction: column;
     gap: 2px;
     margin-bottom: 4px;
+    max-height: 150px;
+    overflow-y: auto;
   }
 
   [data-slot="permission-patterns-title"] {
