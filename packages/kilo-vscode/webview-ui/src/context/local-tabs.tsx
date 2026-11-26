@@ -12,9 +12,7 @@ import {
 import { useServer } from "./server"
 import { useSession } from "./session"
 import { useVSCode } from "./vscode"
-import { useLanguage } from "./language"
 import {
-  MAX_TABS,
   PENDING_TAB_PREFIX,
   activatePendingTab,
   addPendingTab,
@@ -29,6 +27,7 @@ import {
   restoreTabs,
   reuseOrOpenSessionTab,
   tabsForCreatedSession,
+  trimTabs,
   type LocalTabState,
 } from "../utils/local-tabs"
 import {
@@ -75,25 +74,20 @@ export const LocalTabsProvider: ParentComponent = (props) => {
   const [active, setActive] = createSignal(init.active)
   const [cloud, setCloud] = createSignal<string>()
   const fresh = new Set<string>()
-  const language = useLanguage()
   const current = (): LocalTabState => ({ ids: ids(), active: active() })
   const apply = (next: LocalTabState) => {
     if (!same(ids(), next.ids)) setIds(next.ids)
     if (active() !== next.active) setActive(next.active)
   }
-  const notifyLimit = () => {
-    vscode.postMessage({
-      type: "showWarningDialog",
-      message: language.t("session.tabs.limitReached", { limit: MAX_TABS }),
-    })
-  }
+  // 超出上限时直接淘汰最左边的标签页，不再弹出提示；被淘汰的草稿标签页需清理草稿。
   const applyTab = (next: LocalTabState) => {
-    if (next.ids.length > MAX_TABS) {
-      notifyLimit()
-      return false
+    const trimmed = trimTabs(next)
+    for (const id of trimmed.evicted) {
+      if (!isPendingTab(id)) continue
+      if (isPendingSend(id)) discardPendingDraft(id)
+      queueMicrotask(() => deletePendingDraft(id))
     }
-    apply(next)
-    return true
+    apply(trimmed)
   }
   const focus = (id: string | undefined) => {
     setCloud(undefined)
@@ -117,7 +111,7 @@ export const LocalTabsProvider: ParentComponent = (props) => {
 
   const open = (id: string) => {
     const prev = active()
-    if (!applyTab(reuseOrOpenSessionTab(current(), id))) return
+    applyTab(reuseOrOpenSessionTab(current(), id))
     if (prev && isPendingTab(prev)) {
       // Reused the active new-session tab — discard its draft so an empty
       // "New session" tab (and its input) doesn't linger.
@@ -128,7 +122,7 @@ export const LocalTabsProvider: ParentComponent = (props) => {
   }
 
   const openAfter = (source: string, id: string) => {
-    if (!applyTab(insertSessionTabAfter(current(), source, id))) return
+    applyTab(insertSessionTabAfter(current(), source, id))
     focus(id)
     persist()
   }
@@ -142,19 +136,7 @@ export const LocalTabsProvider: ParentComponent = (props) => {
       return existing
     }
     const id = pending()
-    // testagent_change start - 达到 tab 上限时不再阻止新建任务，默认关闭最左边的 tab
-    if (state.ids.length >= MAX_TABS) {
-      const evicted = state.ids[0]
-      apply({ ids: [...state.ids.slice(1), id], active: id })
-      if (isPendingTab(evicted)) {
-        if (isPendingSend(evicted)) discardPendingDraft(evicted)
-        queueMicrotask(() => deletePendingDraft(evicted))
-      }
-      focus(id)
-      return id
-    }
-    // testagent_change end
-    if (!applyTab(addPendingTab(state, id))) return ""
+    applyTab(addPendingTab(state, id))
     focus(id)
     return id
   }
@@ -235,19 +217,17 @@ export const LocalTabsProvider: ParentComponent = (props) => {
         if (message.draftID && promotePendingDraftDiscard(message.draftID, message.session.id)) return
         const next = tabsForCreatedSession(current(), message.session.id, message.draftID, message.activate)
         if (!next) return
-        if (!applyTab(next)) return
+        applyTab(next)
         fresh.add(message.session.id)
         focus(next.active)
         return
       }
       if (message.type === "cloudSessionImported") {
         const activate = cloud() === message.cloudSessionId
-        if (
-          !applyTab(
-            activate ? openSessionTab(current(), message.session.id) : addSessionTab(current(), message.session.id),
-          )
-        )
-          return
+        const next = activate
+          ? openSessionTab(current(), message.session.id)
+          : addSessionTab(current(), message.session.id)
+        applyTab(next)
         fresh.add(message.session.id)
         if (activate) setCloud(undefined)
         return
