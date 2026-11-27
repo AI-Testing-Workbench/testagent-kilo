@@ -463,6 +463,11 @@ export const SessionProvider: ParentComponent = (props) => {
   // Prevents handleMessagesLoaded from wiping them when it replaces the array.
   const pendingOptimistic = new Map<string, Set<string>>()
 
+  // Sessions the extension created for one of our placeholder tabs. Their first
+  // load must merge rather than replace — the command echo and the SDT cards
+  // live only in this webview, so a backend snapshot would drop them.
+  const locallyCreated = new Set<string>()
+
   // Store for sessions, messages, parts, todos, modelSelections, agentSelections
   const [store, setStore] = createStore<SessionStore>({
     sessions: {},
@@ -1103,6 +1108,10 @@ export const SessionProvider: ParentComponent = (props) => {
   // Event handlers
   function handleSessionCreated(session: SessionInfo, draftID?: string) {
     batch(() => {
+      // A draftID means the extension created this session for our placeholder
+      // tab, so the backend has never seen the transcript we are about to write.
+      if (draftID) locallyCreated.add(session.id)
+
       setStore("sessions", session.id, session)
 
       // Only initialize messages if none exist yet — a cloud session import
@@ -1676,6 +1685,7 @@ export const SessionProvider: ParentComponent = (props) => {
 
   function handleSessionDeleted(sessionID: string) {
     pendingOptimistic.delete(sessionID)
+    locallyCreated.delete(sessionID)
     batch(() => {
       // Collect message IDs so we can clean up their parts (store + stash)
       const msgs = store.messages[sessionID] ?? []
@@ -2502,7 +2512,10 @@ export const SessionProvider: ParentComponent = (props) => {
       return
     }
     patchPage(id, { loadingInitial: true, loadingOlder: false, before: undefined, hasMore: false })
-    vscode.postMessage({ type: "loadMessages", sessionID: id, mode: "replace", limit: MESSAGE_PAGE_LIMIT })
+    // A session we just created has transcript that only exists here — a
+    // "replace" snapshot from the backend would drop it.
+    const mode = locallyCreated.has(id) ? "focus" : "replace"
+    vscode.postMessage({ type: "loadMessages", sessionID: id, mode, limit: MESSAGE_PAGE_LIMIT })
   }
 
   function selectCloudSession(cloudSessionId: string) {
